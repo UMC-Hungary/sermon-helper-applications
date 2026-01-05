@@ -5,10 +5,40 @@ export interface OBSConnectionStatus {
 	lastConnected?: Date;
 }
 
-export class SimpleOBSWebSocket {
+export interface OBSScene {
+	name: string;
+	index: number;
+}
+
+export interface OBSSource {
+	name: string;
+	type: string;
+	id: string;
+}
+
+export interface OBSStats {
+	sceneCount: number;
+	sourceCount: number;
+	recording: boolean;
+	streaming: boolean;
+}
+
+export class OBSWebSocket {
 	private connected = false;
+	private ws: WebSocket | null = null;
 	private statusCallback?: (status: OBSConnectionStatus) => void;
 
+	// Browser WebSocket for development
+	private createWebSocket(): WebSocket | null {
+		if (typeof window !== 'undefined') {
+			const ws = new WebSocket('ws://mock-obs-websocket');
+			ws.binaryType = 'arraybuffer';
+			return ws;
+		}
+		return null;
+	}
+
+	// Connect to OBS WebSocket
 	async connect(url: string, password?: string): Promise<OBSConnectionStatus> {
 		console.log('OBS WebSocket connection requested:', { url, password });
 		
@@ -26,10 +56,11 @@ export class SimpleOBSWebSocket {
 		
 		return {
 			connected: this.connected,
-			lastConnected: this.connected ? new Date() : undefined
+			lastConnected: new Date()
 		};
 	}
 
+	// Disconnect from OBS WebSocket
 	async disconnect(): Promise<void> {
 		console.log('OBS WebSocket disconnect requested');
 		this.connected = false;
@@ -42,8 +73,9 @@ export class SimpleOBSWebSocket {
 		}
 	}
 
-	async getScenes(): Promise<any[]> {
-		console.log('Getting scenes');
+	// Get available scenes (mock)
+	async getScenes(): Promise<OBSScene[]> {
+		console.log('Getting scenes (mock implementation)');
 		return [
 			{ name: 'Default Scene', index: 0 },
 			{ name: 'Camera Scene', index: 1 },
@@ -51,8 +83,9 @@ export class SimpleOBSWebSocket {
 		];
 	}
 
-	async getStats(): Promise<any> {
-		console.log('Getting OBS stats');
+	// Get OBS stats (mock)
+	async getStats(): Promise<OBSStats> {
+		console.log('Getting OBS stats (mock implementation)');
 		return {
 			sceneCount: 3,
 			sourceCount: 5,
@@ -61,30 +94,45 @@ export class SimpleOBSWebSocket {
 		};
 	}
 
+	// Switch to scene (mock)
 	async switchToScene(sceneName: string): Promise<void> {
-		console.log('Switching to scene:', sceneName);
+		console.log('Switching to scene (mock):', sceneName);
 	}
 
+	// Update sermon text (mock)
 	async updateSermonText(text: string): Promise<void> {
-		console.log('Updating sermon text:', text);
+		console.log('Updating sermon text (mock):', text);
 	}
 
+	// Start streaming (mock)
 	async startStreaming(): Promise<void> {
-		console.log('Starting streaming');
+		console.log('Starting streaming (mock)');
 	}
 
+	// Stop streaming (mock)
 	async stopStreaming(): Promise<void> {
-		console.log('Stopping streaming');
+		console.log('Stopping streaming (mock)');
 	}
 
+	// Get current connection status
+	async getConnectionInfo(): Promise<{ url: string; connected: boolean }> {
+		return {
+			url: this.ws?.url || 'Not connected',
+			connected: this.isConnected()
+		};
+	}
+
+	// Check if connected
 	isConnected(): boolean {
-		return this.connected;
+		return this.ws !== null && this.ws?.readyState === WebSocket.OPEN;
 	}
 
+	// Handle status changes
 	onStatusChange(callback: (status: OBSConnectionStatus) => void): void {
 		this.statusCallback = callback;
 	}
 
+	// Update internal status
 	private updateStatus(status: OBSConnectionStatus): void {
 		if (this.statusCallback) {
 			this.statusCallback(status);
@@ -93,4 +141,4 @@ export class SimpleOBSWebSocket {
 }
 
 // Export singleton instance
-export const obsWebSocket = new SimpleOBSWebSocket();
+export const obsWebSocket = new OBSWebSocket();

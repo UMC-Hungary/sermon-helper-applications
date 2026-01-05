@@ -61,7 +61,7 @@
 		try {
 			const result = await obsWebSocket.connect(websocketUrl, websocketPassword);
 			
-			if (result) {
+			if (result.connected) {
 				toast({
 					title: "Connection Test",
 					description: "Successfully connected to OBS WebSocket server",
@@ -102,8 +102,6 @@
 			});
 		}
 	};
-
-
 </script>
 
 <div class="p-4 lg:p-8 space-y-6 pt-20 lg:pt-8">
@@ -212,7 +210,7 @@
 						<li>Open OBS Studio</li>
 						<li>Go to Tools → WebSocket Server Settings</li>
 						<li>Enable "Enable WebSocket server"</li>
-						<li>Note the server port (default: 4455)</li>
+						<li>Note server port (default: 4455)</li>
 						<li>Set a secure password</li>
 						<li>Click Apply and OK</li>
 						<li>Enter settings above and test connection</li>
