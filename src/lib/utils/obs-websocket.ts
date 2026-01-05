@@ -1,4 +1,3 @@
-import WebSocket from '@tauri-apps/plugin-websocket';
 import type { ObsSettings } from './obs-store';
 
 export interface OBSConnectionStatus {
@@ -26,89 +25,74 @@ export interface OBSStats {
 }
 
 class OBSWebSocketConnection {
-	private ws: WebSocket | null = null;
+	private obs: any = null;
 	private reconnectAttempts = 0;
 	private maxReconnectAttempts = 5;
 	private reconnectDelay = 3000;
 	private statusCallback?: (status: OBSConnectionStatus) => void;
 
-	// Check if running in Tauri environment
-	private isTauriApp = () => {
+	// Check if obs-websocket-js is available (browser environment)
+	private isOBSSupported = () => {
 		return typeof window !== 'undefined' && 
-			   typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+			   typeof (window as any).OBSWebSocket !== 'undefined';
 	};
 
-	// Mock WebSocket for browser environment
-	private createMockWebSocket(): any {
-		return {
-			connect: async (url: string, password?: string) => {
-				console.log('Mock WebSocket connection:', { url, password });
-				// Simulate connection delay
-				await new Promise(resolve => setTimeout(resolve, 1500));
-				return { connected: url.includes('localhost') };
-			},
-			
-			disconnect: () => {
-				console.log('Mock WebSocket disconnect');
-			},
-			
-			getScenes: async () => {
-				return [
-					{ name: 'Default Scene', index: 0 },
-					{ name: 'Camera Scene', index: 1 },
-					{ name: 'Slides Scene', index: 2 }
-				];
-			},
-			
-			getStats: async () => {
-				return {
-					sceneCount: 3,
-					sourceCount: 5,
-					recording: false,
-					streaming: false
-				};
-			},
-			
-			send: async (method: string, params?: any) => {
-				console.log('Mock WebSocket send:', method, params);
-				return { success: true };
-			}
-		};
-	}
-
 	async connect(url: string, password?: string): Promise<OBSConnectionStatus> {
-		if (!this.isTauriApp()) {
-			// Browser environment - use mock
-			const mock = this.createMockWebSocket();
-			const result = await mock.connect(url, password);
-			
-			this.updateStatus({
-				connected: result.connected,
-				lastConnected: new Date()
-			});
-			
-			return {
-				connected: result.connected,
-				lastConnected: new Date()
-			};
-		}
-
 		try {
-			// Tauri environment - use real WebSocket
-			this.ws = await WebSocket.connect(url);
-			
-			this.updateStatus({
-				connected: true,
-				lastConnected: new Date()
-			});
+			if (this.isOBSSupported()) {
+				// Browser environment - use obs-websocket-js
+				this.obs = new (window as any).OBSWebSocket({
+					address: url,
+					password: password || ''
+				});
 
-			// Reset reconnect attempts on successful connection
-			this.reconnectAttempts = 0;
+				// Set up event listeners
+				this.obs.on('ConnectionOpened', () => {
+					console.log('OBS Connection opened');
+					this.updateStatus({
+						connected: true,
+						lastConnected: new Date()
+					});
+				});
 
-			return {
-				connected: true,
-				lastConnected: new Date()
-			};
+				this.obs.on('ConnectionClosed', (data: any) => {
+					console.log('OBS Connection closed:', data);
+					this.updateStatus({
+						connected: false,
+						error: `Connection closed: ${data.code} - ${data.reason}`
+					});
+				});
+
+				this.obs.on('AuthenticationSuccess', () => {
+					console.log('OBS Authentication successful');
+				});
+
+				this.obs.on('AuthenticationFailure', (error: string) => {
+					console.error('OBS Authentication failed:', error);
+					this.updateStatus({
+						connected: false,
+						error: `Authentication failed: ${error}`
+					});
+				});
+
+				// Connect to OBS
+				await this.obs.connect();
+				
+				// Reset reconnect attempts on successful connection
+				this.reconnectAttempts = 0;
+
+				return {
+					connected: true,
+					lastConnected: new Date()
+				};
+			} else {
+				// Fallback for non-browser environments
+				console.log('Browser not available, using fallback');
+				return {
+					connected: false,
+					error: 'Browser environment required for OBS WebSocket'
+				};
+			}
 		} catch (error) {
 			console.error('WebSocket connection failed:', error);
 			
@@ -125,10 +109,10 @@ class OBSWebSocketConnection {
 	}
 
 	async disconnect(): Promise<void> {
-		if (this.ws) {
+		if (this.obs) {
 			try {
-				await this.ws.disconnect();
-				this.ws = null;
+				await this.obs.disconnect();
+				this.obs = null;
 				
 				this.updateStatus({
 					connected: false
@@ -140,18 +124,13 @@ class OBSWebSocketConnection {
 	}
 
 	async getScenes(): Promise<OBSScene[]> {
-		if (!this.isTauriApp()) {
-			const mock = this.createMockWebSocket();
-			return mock.getScenes();
-		}
-
-		if (!this.ws) {
+		if (!this.obs || !this.obs.connected) {
 			throw new Error('Not connected to OBS WebSocket');
 		}
 
 		try {
-			// For now, return mock data since OBS WebSocket API needs specific implementation
-			console.log('Getting scenes (mock implementation)');
+			// Mock implementation for now - getting scenes requires specific OBS API calls
+			console.log('Getting scenes (using mock implementation)');
 			return [
 				{ name: 'Default Scene', index: 0 },
 				{ name: 'Camera Scene', index: 1 },
@@ -164,18 +143,13 @@ class OBSWebSocketConnection {
 	}
 
 	async getStats(): Promise<OBSStats> {
-		if (!this.isTauriApp()) {
-			const mock = this.createMockWebSocket();
-			return mock.getStats();
-		}
-
-		if (!this.ws) {
+		if (!this.obs || !this.obs.connected) {
 			throw new Error('Not connected to OBS WebSocket');
 		}
 
 		try {
-			// For now, return mock data since OBS WebSocket API needs specific implementation
-			console.log('Getting OBS stats (mock implementation)');
+			// Mock implementation for now
+			console.log('Getting OBS stats (using mock implementation)');
 			return {
 				sceneCount: 3,
 				sourceCount: 5,
@@ -189,13 +163,7 @@ class OBSWebSocketConnection {
 	}
 
 	async switchToScene(sceneName: string): Promise<void> {
-		if (!this.isTauriApp()) {
-			const mock = this.createMockWebSocket();
-			await mock.send('SetCurrentScene', { 'scene-name': sceneName });
-			return;
-		}
-
-		if (!this.ws) {
+		if (!this.obs || !this.obs.connected) {
 			throw new Error('Not connected to OBS WebSocket');
 		}
 
@@ -209,13 +177,7 @@ class OBSWebSocketConnection {
 	}
 
 	async updateTextSource(sourceName: string, text: string): Promise<void> {
-		if (!this.isTauriApp()) {
-			const mock = this.createMockWebSocket();
-			await mock.send('SetTextSettings', { source: sourceName, text });
-			return;
-		}
-
-		if (!this.ws) {
+		if (!this.obs || !this.obs.connected) {
 			throw new Error('Not connected to OBS WebSocket');
 		}
 
@@ -229,12 +191,7 @@ class OBSWebSocketConnection {
 	}
 
 	async startStreaming(): Promise<void> {
-		if (!this.isTauriApp()) {
-			console.log('Mock: Start streaming');
-			return;
-		}
-
-		if (!this.ws) {
+		if (!this.obs || !this.obs.connected) {
 			throw new Error('Not connected to OBS WebSocket');
 		}
 
@@ -248,12 +205,7 @@ class OBSWebSocketConnection {
 	}
 
 	async stopStreaming(): Promise<void> {
-		if (!this.isTauriApp()) {
-			console.log('Mock: Stop streaming');
-			return;
-		}
-
-		if (!this.ws) {
+		if (!this.obs || !this.obs.connected) {
 			throw new Error('Not connected to OBS WebSocket');
 		}
 
@@ -267,7 +219,7 @@ class OBSWebSocketConnection {
 	}
 
 	isConnected(): boolean {
-		return this.ws !== null;
+		return this.obs !== null && this.obs.connected;
 	}
 
 	onStatusChange(callback: (status: OBSConnectionStatus) => void): void {
