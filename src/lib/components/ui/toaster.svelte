@@ -1,8 +1,5 @@
 <script lang="ts">
-	// todo: implement
+	import { Toaster } from 'svelte-sonner';
 </script>
 
-<div>
-	<!-- TODO: Implement Toaster component -->
-	<slot />
-</div>
+<Toaster position="bottom-right" />

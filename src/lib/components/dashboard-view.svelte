@@ -1,8 +1,25 @@
 <script lang="ts">
 	import type { SystemStatus } from "$lib/stores/types";
 	import ErrorMessages from "./ui/error-messages.svelte";
+	import Card from "./ui/card.svelte";
+	import Button from "./ui/button.svelte";
+	import Input from "./ui/input.svelte";
+	import Label from "./ui/label.svelte";
+	import Badge from "./ui/badge.svelte";
+	import Separator from "./ui/separator.svelte";
+	import { toast } from "$lib/utils/toast";
+	import {
+		Book,
+		FileText,
+		Youtube,
+		RefreshCw,
+		Edit2,
+		PlayCircle,
+		StopCircle,
+		Radio
+	} from "lucide-svelte";
 
-	// Event handlers - these are expected to be used by parent
+	// Event handlers
 	export let onNavigate: (view: string) => void = () => {};
 	export let onRecheck: () => Promise<void> = async () => {};
 	export let onTextusChange: (text: string) => void = () => {};
@@ -12,7 +29,7 @@
 	export let onYoutubeGoLive: () => void = () => {};
 	export let onYoutubeStopLive: () => void = () => {};
 
-	// Data props - these are used for data flow
+	// Data props
 	export let currentSermon = {
 		youtubeTitle: '',
 		youtubeScheduled: true,
@@ -30,20 +47,287 @@
 		youtubeLoggedIn: false,
 	};
 
-	// Reactive state - these might change during component lifecycle
+	// Reactive state
 	export let textus: string = '';
 	export let leckio: string = '';
 	export let obsStreaming: boolean = false;
 	export let youtubeOnAir: boolean = false;
 
-	// todo: implement
+	// Local state
+	let obsTitle = "The Love of God";
+
+	// Event handlers with toast notifications
+	const handleUpdateOBS = () => {
+		toast({
+			title: "OBS Updated",
+			description: "Sermon title has been updated in OBS"
+		});
+	};
+
+	const handleGenerateTextusPPT = () => {
+		toast({
+			title: "PPT Generated",
+			description: "PowerPoint for Textus is ready for download"
+		});
+	};
+
+	const handleGenerateLeckioPPT = () => {
+		toast({
+			title: "PPT Generated",
+			description: "PowerPoint for Leckio is ready for download"
+		});
+	};
 </script>
 
 <div class="p-4 lg:p-8 space-y-6 pt-20 lg:pt-8">
-	<ErrorMessages systemStatus={systemStatus} onRecheck={onRecheck} />
+	<!-- Section 1: Error Messages -->
+	<ErrorMessages {systemStatus} {onRecheck} />
 
-	<!-- TODO: Implement DashboardView component -->
-	<div>
-		<p>DashboardView component not yet implemented</p>
+	<!-- Section 2: Dashboard Header -->
+	<div class="mt-12 lg:mt-0">
+		<h2 class="text-3xl font-bold tracking-tight">Dashboard</h2>
+		<p class="text-muted-foreground">Manage your sermon preparation and system monitoring</p>
+	</div>
+
+	<!-- Section 3: Quick Access Cards -->
+	<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<!-- Bible Editor Card -->
+		<Card clickable onclick={() => onNavigate('bible')}>
+			<div slot="title">
+				<Book class="h-5 w-5" />
+				Bible Editor
+			</div>
+			<div slot="description">Search and edit scripture texts</div>
+			<div slot="content">
+				<Badge>Ready to use</Badge>
+			</div>
+		</Card>
+
+		<!-- Schedule Event Card -->
+		<Card clickable onclick={() => onNavigate('youtube-schedule')}>
+			<div slot="title">
+				<Youtube class="h-5 w-5" />
+				Schedule Event
+			</div>
+			<div slot="description">Plan your YouTube live streams</div>
+			<div slot="content">
+				<Badge variant="outline">Schedule Now</Badge>
+			</div>
+		</Card>
+
+		<!-- View Events Card -->
+		<Card clickable onclick={() => onNavigate('youtube-events')}>
+			<div slot="title">
+				<FileText class="h-5 w-5" />
+				View Events
+			</div>
+			<div slot="description">See your upcoming events</div>
+			<div slot="content">
+				<Badge variant="secondary">View All</Badge>
+			</div>
+		</Card>
+	</div>
+
+	<!-- Section 4: Current Sermon Status Card -->
+	<Card>
+		<div slot="title">Current Sermon Status</div>
+		<div slot="description">Monitor your live streaming status</div>
+		<div slot="content">
+			{#if currentSermon.youtubeScheduled}
+				<div class="space-y-4">
+					<!-- YouTube Title -->
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium">YouTube Event</p>
+							<p class="text-lg font-semibold">{currentSermon.youtubeTitle}</p>
+						</div>
+						<Button
+							buttonVariant="ghost"
+							buttonSize="icon"
+							onclick={() => onNavigate('youtube-schedule')}
+						>
+							<Edit2 class="h-4 w-4" />
+						</Button>
+					</div>
+
+					<!-- Status Badges -->
+					<div class="flex gap-2">
+						{#if youtubeOnAir}
+							<Badge variant="destructive">
+								<Radio class="h-3 w-3 mr-1 animate-pulse" />
+								Live Now
+							</Badge>
+						{:else}
+							<Badge variant="secondary">Scheduled</Badge>
+						{/if}
+
+						{#if obsStreaming}
+							<Badge variant="success">OBS Streaming</Badge>
+						{/if}
+					</div>
+
+					<Separator />
+
+					<!-- Control Buttons -->
+					<div class="flex flex-col sm:flex-row gap-3">
+						{#if obsStreaming}
+							<Button
+								buttonVariant="destructive"
+								onclick={onStopObsStream}
+								className="flex-1"
+							>
+								<StopCircle class="h-4 w-4 mr-2" />
+								Stop OBS Stream
+							</Button>
+						{:else}
+							<Button
+								onclick={onStartObsStream}
+								className="flex-1"
+							>
+								<PlayCircle class="h-4 w-4 mr-2" />
+								Start OBS Stream
+							</Button>
+						{/if}
+
+						{#if youtubeOnAir}
+							<Button
+								buttonVariant="destructive"
+								onclick={onYoutubeStopLive}
+								disabled={!obsStreaming}
+								className="flex-1"
+							>
+								<StopCircle class="h-4 w-4 mr-2" />
+								End YouTube Stream
+							</Button>
+						{:else}
+							<Button
+								onclick={onYoutubeGoLive}
+								disabled={!obsStreaming}
+								className="flex-1"
+							>
+								<PlayCircle class="h-4 w-4 mr-2" />
+								Go Live on YouTube
+							</Button>
+						{/if}
+					</div>
+
+					{#if !obsStreaming}
+						<p class="text-sm text-muted-foreground">
+							Start OBS streaming before going live on YouTube
+						</p>
+					{/if}
+				</div>
+			{:else}
+				<p class="text-sm text-muted-foreground">No YouTube event scheduled</p>
+			{/if}
+		</div>
+	</Card>
+
+	<!-- Section 5: Sermon Texts & OBS Control -->
+	<div class="grid gap-6 lg:grid-cols-2">
+		<!-- Sermon Texts Card -->
+		<Card>
+			<div slot="title">Sermon Texts</div>
+			<div slot="description">Manage your Bible readings</div>
+			<div slot="content">
+				<div class="space-y-4">
+					<!-- Textus Section -->
+					<div class="space-y-2">
+						<div class="flex items-center justify-between">
+							<Label>Textus</Label>
+							<Button
+								buttonVariant="ghost"
+								buttonSize="sm"
+								onclick={() => onNavigate('bible')}
+							>
+								<Edit2 class="h-3 w-3 mr-1" />
+								Edit
+							</Button>
+						</div>
+						<Input
+							type="text"
+							bind:value={textus}
+							oninput={() => onTextusChange(textus)}
+							placeholder="e.g., John 3:16-21"
+						/>
+						<Button
+							buttonVariant="outline"
+							buttonSize="sm"
+							onclick={handleGenerateTextusPPT}
+							className="w-full"
+						>
+							<FileText class="h-4 w-4 mr-2" />
+							Generate Textus PPT
+						</Button>
+					</div>
+
+					<Separator />
+
+					<!-- Leckio Section -->
+					<div class="space-y-2">
+						<div class="flex items-center justify-between">
+							<Label>Leckio</Label>
+							<Button
+								buttonVariant="ghost"
+								buttonSize="sm"
+								onclick={() => onNavigate('bible')}
+							>
+								<Edit2 class="h-3 w-3 mr-1" />
+								Edit
+							</Button>
+						</div>
+						<Input
+							type="text"
+							bind:value={leckio}
+							oninput={() => onLeckioChange(leckio)}
+							placeholder="e.g., Romans 8:28-39"
+						/>
+						<Button
+							buttonVariant="outline"
+							buttonSize="sm"
+							onclick={handleGenerateLeckioPPT}
+							className="w-full"
+						>
+							<FileText class="h-4 w-4 mr-2" />
+							Generate Leckio PPT
+						</Button>
+					</div>
+
+					<Button
+						buttonVariant="default"
+						onclick={() => onNavigate('bible')}
+						className="w-full"
+					>
+						<Book class="h-4 w-4 mr-2" />
+						Edit Bible Texts
+					</Button>
+				</div>
+			</div>
+		</Card>
+
+		<!-- OBS Control Card -->
+		<Card>
+			<div slot="title">OBS Control</div>
+			<div slot="description">Update your sermon title in OBS</div>
+			<div slot="content">
+				<div class="space-y-4">
+					<div class="space-y-2">
+						<Label>Sermon Title</Label>
+						<Input
+							type="text"
+							bind:value={obsTitle}
+							placeholder="Enter sermon title"
+						/>
+					</div>
+					<Button
+						onclick={handleUpdateOBS}
+						className="w-full"
+					>
+						<RefreshCw class="h-4 w-4 mr-2" />
+						Update OBS Title
+					</Button>
+				</div>
+			</div>
+		</Card>
 	</div>
 </div>
