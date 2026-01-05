@@ -44,9 +44,9 @@
 
 <!-- Mobile menu button -->
 <Button
-	variant="outline"
-	size="icon"
-	class="fixed top-4 left-4 z-40 lg:hidden bg-background shadow-md"
+	buttonVariant="outline"
+	buttonSize="icon"
+	className="fixed top-4 left-4 z-40 lg:hidden bg-background shadow-md"
 	onclick={onMobileMenuToggle}
 >
 	<Menu class="h-5 w-5" />
@@ -67,7 +67,7 @@
 	<div class="flex h-full flex-col bg-sidebar">
 		<div class="flex items-center justify-between border-b border-sidebar-border p-4">
 			<h1 class="text-lg font-semibold text-sidebar-foreground">Church Control</h1>
-			<Button variant="ghost" size="icon" class="lg:hidden" onclick={onMobileMenuToggle}>
+			<Button buttonVariant="ghost" buttonSize="icon" className="lg:hidden" onclick={onMobileMenuToggle}>
 				<X class="h-5 w-5" />
 			</Button>
 		</div>
@@ -77,7 +77,8 @@
 				{#each navItems as item}
 					{@const Icon = item.icon}
 					<Button
-						variant={activeView === item.id ? "secondary" : "ghost"}
+						buttonVariant={activeView === item.id ? "secondary" : "ghost"}
+						className="w-full justify-start"
 						onclick={() => {
 							onViewChange(item.id);
 							if (isMobileMenuOpen) onMobileMenuToggle();

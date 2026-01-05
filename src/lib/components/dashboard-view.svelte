@@ -93,46 +93,46 @@
 	<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 		<!-- Bible Editor Card -->
 		<Card clickable onclick={() => onNavigate('bible')}>
-			<div slot="title">
+			<svelte:fragment slot="title">
 				<Book class="h-5 w-5" />
 				Bible Editor
-			</div>
-			<div slot="description">Search and edit scripture texts</div>
-			<div slot="content">
+			</svelte:fragment>
+			<svelte:fragment slot="description">Search and edit scripture texts</svelte:fragment>
+			<svelte:fragment slot="content">
 				<Badge>Ready to use</Badge>
-			</div>
+			</svelte:fragment>
 		</Card>
 
 		<!-- Schedule Event Card -->
 		<Card clickable onclick={() => onNavigate('youtube-schedule')}>
-			<div slot="title">
+			<svelte:fragment slot="title">
 				<Youtube class="h-5 w-5" />
 				Schedule Event
-			</div>
-			<div slot="description">Plan your YouTube live streams</div>
-			<div slot="content">
+			</svelte:fragment>
+			<svelte:fragment slot="description">Plan your YouTube live streams</svelte:fragment>
+			<svelte:fragment slot="content">
 				<Badge variant="outline">Schedule Now</Badge>
-			</div>
+			</svelte:fragment>
 		</Card>
 
 		<!-- View Events Card -->
 		<Card clickable onclick={() => onNavigate('youtube-events')}>
-			<div slot="title">
+			<svelte:fragment slot="title">
 				<FileText class="h-5 w-5" />
 				View Events
-			</div>
-			<div slot="description">See your upcoming events</div>
-			<div slot="content">
+			</svelte:fragment>
+			<svelte:fragment slot="description">See your upcoming events</svelte:fragment>
+			<svelte:fragment slot="content">
 				<Badge variant="secondary">View All</Badge>
-			</div>
+			</svelte:fragment>
 		</Card>
 	</div>
 
 	<!-- Section 4: Current Sermon Status Card -->
 	<Card>
-		<div slot="title">Current Sermon Status</div>
-		<div slot="description">Monitor your live streaming status</div>
-		<div slot="content">
+		<svelte:fragment slot="title">Current Sermon Status</svelte:fragment>
+		<svelte:fragment slot="description">Monitor your live streaming status</svelte:fragment>
+		<svelte:fragment slot="content">
 			{#if currentSermon.youtubeScheduled}
 				<div class="space-y-4">
 					<!-- YouTube Title -->
@@ -220,16 +220,16 @@
 			{:else}
 				<p class="text-sm text-muted-foreground">No YouTube event scheduled</p>
 			{/if}
-		</div>
+		</svelte:fragment>
 	</Card>
 
 	<!-- Section 5: Sermon Texts & OBS Control -->
 	<div class="grid gap-6 lg:grid-cols-2">
 		<!-- Sermon Texts Card -->
 		<Card>
-			<div slot="title">Sermon Texts</div>
-			<div slot="description">Manage your Bible readings</div>
-			<div slot="content">
+			<svelte:fragment slot="title">Sermon Texts</svelte:fragment>
+			<svelte:fragment slot="description">Manage your Bible readings</svelte:fragment>
+			<svelte:fragment slot="content">
 				<div class="space-y-4">
 					<!-- Textus Section -->
 					<div class="space-y-2">
@@ -302,14 +302,14 @@
 						Edit Bible Texts
 					</Button>
 				</div>
-			</div>
+			</svelte:fragment>
 		</Card>
 
 		<!-- OBS Control Card -->
 		<Card>
-			<div slot="title">OBS Control</div>
-			<div slot="description">Update your sermon title in OBS</div>
-			<div slot="content">
+			<svelte:fragment slot="title">OBS Control</svelte:fragment>
+			<svelte:fragment slot="description">Update your sermon title in OBS</svelte:fragment>
+			<svelte:fragment slot="content">
 				<div class="space-y-4">
 					<div class="space-y-2">
 						<Label>Sermon Title</Label>
@@ -327,7 +327,7 @@
 						Update OBS Title
 					</Button>
 				</div>
-			</div>
+			</svelte:fragment>
 		</Card>
 	</div>
 </div>

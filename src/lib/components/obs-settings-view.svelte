@@ -6,7 +6,9 @@
 	import Input from "./ui/input.svelte";
 	import Label from "./ui/label.svelte";
 	import { toast } from "$lib/utils/toast";
+	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
 	import { Settings, Save, TestTube } from "lucide-svelte";
+	import { onMount } from "svelte";
 
 	// Event handler
 	export let onRecheck: () => Promise<void> = async () => {};
@@ -26,6 +28,24 @@
 	let websocketUrl: string = "ws://localhost:4455";
 	let websocketPassword: string = "";
 	let isTesting: boolean = false;
+	let isLoading: boolean = true;
+
+	// Load settings on mount
+	onMount(async () => {
+		try {
+			const settings = await obsSettingsStore.getSettings();
+			websocketUrl = settings.websocketUrl;
+			websocketPassword = settings.websocketPassword;
+		} catch (error) {
+			console.error('Failed to load OBS settings:', error);
+			toast({
+				title: "Error",
+				description: "Failed to load OBS settings from storage",
+			});
+		} finally {
+			isLoading = false;
+		}
+	});
 
 	// Event handlers
 	const handleTestConnection = async () => {
@@ -41,12 +61,24 @@
 		}, 1500);
 	};
 
-	const handleSaveSettings = () => {
-		// Mock save functionality
-		toast({
-			title: "Settings Saved",
-			description: "OBS WebSocket settings have been updated",
-		});
+	const handleSaveSettings = async () => {
+		try {
+			await obsSettingsStore.saveSettings({
+				websocketUrl,
+				websocketPassword,
+			});
+			
+			toast({
+				title: "Settings Saved",
+				description: "OBS WebSocket settings have been updated",
+			});
+		} catch (error) {
+			console.error('Failed to save OBS settings:', error);
+			toast({
+				title: "Error",
+				description: "Failed to save OBS settings",
+			});
+		}
 	};
 </script>
 
@@ -79,6 +111,7 @@
 						type="text"
 						bind:value={websocketUrl}
 						placeholder="ws://localhost:4455"
+						disabled={isLoading}
 					/>
 					<p class="text-xs text-muted-foreground">
 						Default OBS WebSocket URL. Change if you've configured a different port.
@@ -93,6 +126,7 @@
 						type="password"
 						bind:value={websocketPassword}
 						placeholder="Enter your OBS WebSocket password"
+						disabled={isLoading}
 					/>
 					<p class="text-xs text-muted-foreground">Set in OBS Studio under Tools → WebSocket Server Settings</p>
 				</div>
@@ -102,7 +136,7 @@
 					<Button
 						buttonVariant="outline"
 						onclick={handleTestConnection}
-						disabled={isTesting}
+						disabled={isTesting || isLoading}
 						className="flex-1 bg-transparent"
 					>
 						<TestTube class="mr-2 h-4 w-4" />
@@ -111,10 +145,11 @@
 					
 					<Button
 						onclick={handleSaveSettings}
+						disabled={isLoading}
 						className="flex-1"
 					>
 						<Save class="mr-2 h-4 w-4" />
-						Save Settings
+						{isLoading ? "Loading..." : "Save Settings"}
 					</Button>
 				</div>
 
