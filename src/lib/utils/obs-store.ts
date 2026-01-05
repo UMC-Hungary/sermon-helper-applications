@@ -10,13 +10,47 @@ const DEFAULT_SETTINGS: ObsSettings = {
 	websocketPassword: '',
 };
 
+// Check if running in Tauri environment
+const isTauriApp = () => {
+	return typeof window !== 'undefined' && 
+		   typeof window.__TAURI_INTERNALS__ !== 'undefined';
+};
+
+// LocalStorage fallback for browser development
+class LocalStorageStore {
+	constructor(private storeName: string) {}
+
+	async get(key: string): Promise<any> {
+		const value = localStorage.getItem(`${this.storeName}_${key}`);
+		return value ? JSON.parse(value) : null;
+	}
+	
+	async set(key: string, value: any): Promise<void> {
+		localStorage.setItem(`${this.storeName}_${key}`, JSON.stringify(value));
+	}
+	
+	async save(): Promise<void> {
+		// localStorage is auto-saving
+	}
+}
+
 class ObsSettingsStore {
 	private store: any = null;
 	private readonly storeName = 'obs-settings.json';
 
 	async init(): Promise<void> {
 		if (!this.store) {
-			this.store = await load(this.storeName);
+			if (isTauriApp()) {
+				try {
+					this.store = await load(this.storeName);
+				} catch (error) {
+					console.warn('Failed to initialize Tauri store, using localStorage fallback:', error);
+					this.store = new LocalStorageStore(this.storeName);
+				}
+			} else {
+				// Browser environment - use localStorage
+				this.store = new LocalStorageStore(this.storeName);
+			}
 		}
 	}
 

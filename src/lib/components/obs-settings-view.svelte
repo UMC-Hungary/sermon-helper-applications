@@ -74,6 +74,7 @@
 			});
 		} catch (error) {
 			console.error('Failed to save OBS settings:', error);
+			
 			toast({
 				title: "Error",
 				description: "Failed to save OBS settings",
