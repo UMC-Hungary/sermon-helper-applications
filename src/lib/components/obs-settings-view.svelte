@@ -7,7 +7,8 @@
 	import Label from "./ui/label.svelte";
 	import { toast } from "$lib/utils/toast";
 	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
-	import { Settings, Save, TestTube } from "lucide-svelte";
+	import { obsWebSocket, type OBSConnectionStatus } from "$lib/utils/obs-websocket";
+	import { Settings, Save, TestTube, Wifi, WifiOff } from "lucide-svelte";
 	import { onMount } from "svelte";
 
 	// Event handler
@@ -29,6 +30,7 @@
 	let websocketPassword: string = "";
 	let isTesting: boolean = false;
 	let isLoading: boolean = true;
+	let connectionStatus: OBSConnectionStatus = { connected: false };
 
 	// Load settings on mount
 	onMount(async () => {
@@ -45,20 +47,40 @@
 		} finally {
 			isLoading = false;
 		}
+
+		// Set up connection status monitoring
+		obsWebSocket.onStatusChange((status) => {
+			connectionStatus = status;
+		});
 	});
 
 	// Event handlers
 	const handleTestConnection = async () => {
 		isTesting = true;
 		
-		// Simulate connection test with timeout
-		setTimeout(() => {
-			isTesting = false;
+		try {
+			const result = await obsWebSocket.connect(websocketUrl, websocketPassword);
+			
+			if (result.connected) {
+				toast({
+					title: "Connection Test",
+					description: "Successfully connected to OBS WebSocket server",
+				});
+			} else {
+				toast({
+					title: "Connection Failed",
+					description: result.error || "Failed to connect to OBS WebSocket server",
+				});
+			}
+		} catch (error) {
+			console.error('Connection test failed:', error);
 			toast({
-				title: "Connection Test",
-				description: "Successfully connected to OBS WebSocket server",
+				title: "Connection Failed",
+				description: "Failed to test OBS WebSocket connection",
 			});
-		}, 1500);
+		} finally {
+			isTesting = false;
+		}
 	};
 
 	const handleSaveSettings = async () => {
@@ -152,6 +174,34 @@
 						<Save class="mr-2 h-4 w-4" />
 						{isLoading ? "Loading..." : "Save Settings"}
 					</Button>
+				</div>
+
+				<!-- Connection Status -->
+				<div class="rounded-lg bg-muted/50 p-4 space-y-3">
+					<div class="flex items-center justify-between">
+						<h4 class="font-medium text-sm">Connection Status</h4>
+						<div class="flex items-center gap-2">
+							{#if connectionStatus.connected}
+								<Wifi class="h-4 w-4 text-green-600" />
+								<span class="text-sm text-green-600 font-medium">Connected</span>
+							{:else}
+								<WifiOff class="h-4 w-4 text-red-600" />
+								<span class="text-sm text-red-600 font-medium">Disconnected</span>
+							{/if}
+						</div>
+					</div>
+					
+					{#if connectionStatus.lastConnected}
+						<p class="text-xs text-muted-foreground">
+							Last connected: {new Date(connectionStatus.lastConnected).toLocaleString()}
+						</p>
+					{/if}
+					
+					{#if connectionStatus.error}
+						<p class="text-xs text-red-600">
+							Error: {connectionStatus.error}
+						</p>
+					{/if}
 				</div>
 
 				<!-- Setup Instructions -->
