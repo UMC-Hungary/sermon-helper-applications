@@ -13,7 +13,8 @@ const DEFAULT_SETTINGS: ObsSettings = {
 // Check if running in Tauri environment
 const isTauriApp = () => {
 	return typeof window !== 'undefined' && 
-		   typeof window.__TAURI_INTERNALS__ !== 'undefined';
+		   // @ts-ignore - Tauri internal property
+		   typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
 };
 
 // LocalStorage fallback for browser development
