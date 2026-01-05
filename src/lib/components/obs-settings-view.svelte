@@ -6,8 +6,8 @@
 	import Input from "./ui/input.svelte";
 	import Label from "./ui/label.svelte";
 	import { toast } from "$lib/utils/toast";
-	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
 	import { obsWebSocket, type OBSConnectionStatus } from "$lib/utils/obs-websocket";
+	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
 	import { Settings, Save, TestTube, Wifi, WifiOff } from "lucide-svelte";
 	import { onMount } from "svelte";
 
@@ -39,7 +39,7 @@
 			websocketUrl = settings.websocketUrl;
 			websocketPassword = settings.websocketPassword;
 		} catch (error) {
-			console.error('Failed to load OBS settings:', error);
+			console.error("Failed to load OBS settings:", error);
 			toast({
 				title: "Error",
 				description: "Failed to load OBS settings from storage",
@@ -47,11 +47,11 @@
 		} finally {
 			isLoading = false;
 		}
+	});
 
-		// Set up connection status monitoring
-		obsWebSocket.onStatusChange((status) => {
-			connectionStatus = status;
-		});
+	// Set up connection status monitoring
+	obsWebSocket.onStatusChange((status) => {
+		connectionStatus = status;
 	});
 
 	// Event handlers
@@ -61,7 +61,7 @@
 		try {
 			const result = await obsWebSocket.connect(websocketUrl, websocketPassword);
 			
-			if (result.connected) {
+			if (result) {
 				toast({
 					title: "Connection Test",
 					description: "Successfully connected to OBS WebSocket server",
@@ -69,11 +69,11 @@
 			} else {
 				toast({
 					title: "Connection Failed",
-					description: result.error || "Failed to connect to OBS WebSocket server",
+					description: "Failed to connect to OBS WebSocket server",
 				});
 			}
 		} catch (error) {
-			console.error('Connection test failed:', error);
+			console.error("Connection test failed:", error);
 			toast({
 				title: "Connection Failed",
 				description: "Failed to test OBS WebSocket connection",
@@ -95,14 +95,15 @@
 				description: "OBS WebSocket settings have been updated",
 			});
 		} catch (error) {
-			console.error('Failed to save OBS settings:', error);
-			
+			console.error("Failed to save OBS settings:", error);
 			toast({
 				title: "Error",
 				description: "Failed to save OBS settings",
 			});
 		}
 	};
+
+
 </script>
 
 <div class="p-4 lg:p-8 space-y-6 pt-20 lg:pt-8">
@@ -137,7 +138,7 @@
 						disabled={isLoading}
 					/>
 					<p class="text-xs text-muted-foreground">
-						Default OBS WebSocket URL. Change if you've configured a different port.
+						Default OBS WebSocket URL. Change if you have configured a different port.
 					</p>
 				</div>
 
@@ -155,7 +156,7 @@
 				</div>
 
 				<!-- Action Buttons -->
-				<div class="flex gap-3">
+				<div class="flex gap-3 pt-2">
 					<Button
 						buttonVariant="outline"
 						onclick={handleTestConnection}
@@ -214,7 +215,7 @@
 						<li>Note the server port (default: 4455)</li>
 						<li>Set a secure password</li>
 						<li>Click Apply and OK</li>
-						<li>Enter the settings above and test the connection</li>
+						<li>Enter settings above and test connection</li>
 					</ol>
 				</div>
 			</div>
