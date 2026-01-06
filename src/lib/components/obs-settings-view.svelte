@@ -60,7 +60,7 @@
 		
 		try {
 			const result = await obsWebSocket.connect(websocketUrl, websocketPassword);
-			
+
 			if (result.connected) {
 				toast({
 					title: "Connection Test",
