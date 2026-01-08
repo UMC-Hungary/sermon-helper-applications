@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { SystemStatus } from "$lib/stores/types";
-	import ErrorMessages from "./ui/error-messages.svelte";
-	import Card from "./ui/card.svelte";
-	import Button from "./ui/button.svelte";
-	import Input from "./ui/input.svelte";
-	import Label from "./ui/label.svelte";
+	import Card from "$lib/components/ui/card.svelte";
+	import Button from "$lib/components/ui/button.svelte";
+	import Input from "$lib/components/ui/input.svelte";
+	import Label from "$lib/components/ui/label.svelte";
 	import { toast } from "$lib/utils/toast";
-	import { obsWebSocket, type OBSConnectionStatus } from "$lib/utils/obs-websocket";
+	import { obsWebSocket } from "$lib/utils/obs-websocket";
+	import { obsStatus } from "$lib/stores/system-store";
 	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
 	import { Settings, Save, TestTube, Wifi, WifiOff } from "lucide-svelte";
 	import { onMount } from "svelte";
@@ -14,23 +14,13 @@
 	// Event handler
 	export let onRecheck: () => Promise<void> = async () => {};
 
-	// Data props
-	export let systemStatus: SystemStatus = {
-		obs: true,
-		rodeInterface: true,
-		mainDisplay: true,
-		secondaryDisplay: true,
-		airplayDisplay: false,
-		displayAlignment: false,
-		youtubeLoggedIn: false,
-	};
+
 
 	// State
 	let websocketUrl: string = "ws://localhost:4455";
 	let websocketPassword: string = "";
 	let isTesting: boolean = false;
 	let isLoading: boolean = true;
-	let connectionStatus: OBSConnectionStatus = { connected: false };
 
 	// Load settings on mount
 	onMount(async () => {
@@ -47,11 +37,6 @@
 		} finally {
 			isLoading = false;
 		}
-	});
-
-	// Set up connection status monitoring
-	obsWebSocket.onStatusChange((status) => {
-		connectionStatus = status;
 	});
 
 	// Event handlers
@@ -85,6 +70,9 @@
 
 	const handleSaveSettings = async () => {
 		try {
+			// Disconnect current connection before saving new settings
+			obsWebSocket.disconnect();
+			
 			await obsSettingsStore.saveSettings({
 				websocketUrl,
 				websocketPassword,
@@ -94,6 +82,23 @@
 				title: "Settings Saved",
 				description: "OBS WebSocket settings have been updated",
 			});
+			
+			// Try to reconnect with new settings after a short delay
+			setTimeout(async () => {
+				const reconnectResult = await obsWebSocket.autoconnect();
+				if (!reconnectResult.connected) {
+					toast({
+						title: "Reconnect Failed",
+						description: reconnectResult.error || "Failed to reconnect to OBS with new settings",
+					});
+				} else {
+					toast({
+						title: "Reconnected Successfully",
+						description: "OBS WebSocket connected with new settings",
+					});
+				}
+			}, 1000); // Wait 1 second before reconnecting
+			
 		} catch (error) {
 			console.error("Failed to save OBS settings:", error);
 			toast({
@@ -105,8 +110,6 @@
 </script>
 
 <div class="p-4 lg:p-8 space-y-6 pt-20 lg:pt-8">
-	<ErrorMessages systemStatus={systemStatus} onRecheck={onRecheck} />
-
 	<div class="mt-12 lg:mt-0">
 		<h2 class="text-3xl font-bold tracking-tight">OBS Settings</h2>
 		<p class="text-muted-foreground">Configure OBS Studio WebSocket connection</p>
@@ -158,7 +161,7 @@
 					<Button
 						buttonVariant="outline"
 						onclick={handleTestConnection}
-						disabled={isTesting || isLoading}
+						disabled={$obsStatus.connected || isTesting || isLoading}
 						className="flex-1 bg-transparent"
 					>
 						<TestTube class="mr-2 h-4 w-4" />
@@ -180,7 +183,7 @@
 					<div class="flex items-center justify-between">
 						<h4 class="font-medium text-sm">Connection Status</h4>
 						<div class="flex items-center gap-2">
-							{#if connectionStatus.connected}
+							{#if $obsStatus.connected}
 								<Wifi class="h-4 w-4 text-green-600" />
 								<span class="text-sm text-green-600 font-medium">Connected</span>
 							{:else}
@@ -190,15 +193,15 @@
 						</div>
 					</div>
 					
-					{#if connectionStatus.lastConnected}
+					{#if $obsStatus.lastConnected}
 						<p class="text-xs text-muted-foreground">
-							Last connected: {new Date(connectionStatus.lastConnected).toLocaleString()}
+							Last connected: {new Date($obsStatus.lastConnected).toLocaleString()}
 						</p>
 					{/if}
 					
-					{#if connectionStatus.error}
+					{#if $obsStatus.error}
 						<p class="text-xs text-red-600">
-							Error: {connectionStatus.error}
+							Error: {$obsStatus.error}
 						</p>
 					{/if}
 				</div>
