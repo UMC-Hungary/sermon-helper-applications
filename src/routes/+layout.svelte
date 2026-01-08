@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { Toaster } from 'svelte-sonner';
+    import { Toaster } from 'svelte-sonner';
     import ErrorMessages from "$lib/components/ui/error-messages.svelte";
     import Sidebar from '$lib/components/sidebar.svelte';
 
@@ -45,12 +45,11 @@
 <Toaster 
 		position="bottom-right" 
 		toastOptions={{
-			unstyled: true,
 			classes: {
-				success: 'bg-white text-gray-800 border-2 border-green-600 rounded-md shadow-lg p-4 mb-2',
-				error: 'bg-white text-gray-800 border-2 border-red-600 rounded-md shadow-lg p-4 mb-2',
-				warning: 'bg-white text-gray-800 border-2 border-yellow-500 rounded-md shadow-lg p-4 mb-2',
-				info: 'bg-white text-gray-800 border-2 border-blue-600 rounded-md shadow-lg p-4 mb-2',
+				success: 'bg-white text-gray-800 border-2 border-green-600',
+				error: 'bg-white text-gray-800 border-2 border-red-600',  
+				warning: 'bg-white text-gray-800 border-2 border-yellow-500',
+				info: 'bg-white text-gray-800 border-2 border-blue-600',
 			},
 		}}
 	/>
