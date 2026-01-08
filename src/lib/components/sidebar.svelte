@@ -1,26 +1,17 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Home, Book, Youtube, Calendar, Settings } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Home, Book, Youtube, Calendar, Settings, Loader2 } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import Separator from '$lib/components/ui/separator.svelte';
+	import { systemStore } from '$lib/stores/system-store';
+	import { page } from '$app/state';
 
 	type Status = "active" | "inactive" | "warning";
 
-	export let activeView: string = 'dashboard';
-	export let onViewChange: (view: "dashboard" | "bible" | "youtube-schedule" | "youtube-events" | "obs-settings") => void = () => {};
 	export let isMobileMenuOpen = false;
 	export let onMobileMenuToggle: () => void = () => {};
-	export let systemStatus = {
-		obs: true,
-		rodeInterface: true,
-		mainDisplay: true,
-		secondaryDisplay: true,
-		airplayDisplay: false,
-		displayAlignment: false,
-		youtubeLoggedIn: false,
-	};
 	export let currentSermon = {
 		textus: '',
 		leckio: '',
@@ -30,11 +21,11 @@
 	};
 
 	const navItems = [
-		{ id: 'dashboard' as const, label: 'Dashboard', icon: Home },
-		{ id: 'bible' as const, label: 'Bible Editor', icon: Book },
-		{ id: 'youtube-schedule' as const, label: 'Schedule Event', icon: Calendar },
-		{ id: 'youtube-events' as const, label: 'YouTube Events', icon: Youtube },
-		{ id: 'obs-settings' as const, label: 'OBS Settings', icon: Settings },
+		{ id: '/', label: 'Dashboard', icon: Home },
+		{ id: '/bible', label: 'Bible Editor', icon: Book },
+		{ id: '/youtube-schedule', label: 'Schedule Event', icon: Calendar },
+		{ id: '/youtube-events', label: 'YouTube Events', icon: Youtube },
+		{ id: '/obs-settings', label: 'OBS Settings', icon: Settings },
 	];
 
 	function handleSystemRecheck() {
@@ -77,10 +68,10 @@
 				{#each navItems as item}
 					{@const Icon = item.icon}
 					<Button
-						buttonVariant={activeView === item.id ? "secondary" : "ghost"}
+						buttonVariant={page.url.pathname === item.id ? "secondary" : "ghost"}
 						className="w-full justify-start"
+						href={item.id}
 						onclick={() => {
-							onViewChange(item.id);
 							if (isMobileMenuOpen) onMobileMenuToggle();
 						}}
 					>
@@ -97,7 +88,9 @@
 				<div class="space-y-1">
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">OBS Running</span>
-						{#if systemStatus.obs}
+						{#if $systemStore.obsLoading}
+							<Loader2 class="h-4 w-4 text-blue-600 animate-spin" />
+						{:else if $systemStore.obs}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -106,7 +99,7 @@
 					
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">Rode Interface</span>
-						{#if systemStatus.rodeInterface}
+						{#if $systemStore.rodeInterface}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -115,7 +108,7 @@
 					
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">Main Display</span>
-						{#if systemStatus.mainDisplay}
+						{#if $systemStore.mainDisplay}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -124,7 +117,7 @@
 					
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">Secondary Display</span>
-						{#if systemStatus.secondaryDisplay}
+						{#if $systemStore.secondaryDisplay}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -133,7 +126,7 @@
 					
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">AirPlay Display</span>
-						{#if systemStatus.airplayDisplay}
+						{#if $systemStore.airplayDisplay}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -142,7 +135,7 @@
 					
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">Display Alignment</span>
-						{#if systemStatus.displayAlignment}
+						{#if $systemStore.displayAlignment}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -151,7 +144,7 @@
 					
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">YouTube Logged In</span>
-						{#if systemStatus.youtubeLoggedIn}
+						{#if $systemStore.youtubeLoggedIn}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />

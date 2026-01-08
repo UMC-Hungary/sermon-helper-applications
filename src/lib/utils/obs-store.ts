@@ -17,21 +17,50 @@ const isTauriApp = () => {
 		   typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
 };
 
+// Check if localStorage is available
+const isLocalStorageAvailable = () => {
+	return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+};
+
 // LocalStorage fallback for browser development
 class LocalStorageStore {
 	constructor(private storeName: string) {}
 
 	async get(key: string): Promise<any> {
+		if (!isLocalStorageAvailable()) {
+			return null;
+		}
 		const value = localStorage.getItem(`${this.storeName}_${key}`);
 		return value ? JSON.parse(value) : null;
 	}
 	
 	async set(key: string, value: any): Promise<void> {
+		if (!isLocalStorageAvailable()) {
+			return;
+		}
 		localStorage.setItem(`${this.storeName}_${key}`, JSON.stringify(value));
 	}
 	
 	async save(): Promise<void> {
 		// localStorage is auto-saving
+	}
+}
+
+// In-memory fallback for SSR or when localStorage is not available
+class MemoryStore {
+	constructor(private storeName: string) {}
+	private data: Record<string, any> = {};
+
+	async get(key: string): Promise<any> {
+		return this.data[key] || null;
+	}
+	
+	async set(key: string, value: any): Promise<void> {
+		this.data[key] = value;
+	}
+	
+	async save(): Promise<void> {
+		// In-memory, no save needed
 	}
 }
 
@@ -45,12 +74,20 @@ class ObsSettingsStore {
 				try {
 					this.store = await load(this.storeName);
 				} catch (error) {
-					console.warn('Failed to initialize Tauri store, using localStorage fallback:', error);
-					this.store = new LocalStorageStore(this.storeName);
+					console.warn('Failed to initialize Tauri store, using fallback:', error);
+					if (isLocalStorageAvailable()) {
+						this.store = new LocalStorageStore(this.storeName);
+					} else {
+						this.store = new MemoryStore(this.storeName);
+					}
 				}
 			} else {
-				// Browser environment - use localStorage
-				this.store = new LocalStorageStore(this.storeName);
+				// Browser environment - use localStorage if available, otherwise memory store
+				if (isLocalStorageAvailable()) {
+					this.store = new LocalStorageStore(this.storeName);
+				} else {
+					this.store = new MemoryStore(this.storeName);
+				}
 			}
 		}
 	}

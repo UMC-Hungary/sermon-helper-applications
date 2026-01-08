@@ -14,7 +14,10 @@ export default {
     strictPort: true,
   },
   ssr: {
-    noExternal: true
+    noExternal: ['@tauri-apps/api']
+  },
+  optimizeDeps: {
+    include: ['debug']
   },
   experimental: {
     forceSsrPreload: false

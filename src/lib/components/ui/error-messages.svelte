@@ -7,7 +7,9 @@
 	import Button from "./button.svelte";
 	import Badge from "./badge.svelte";
 	import ScrollArea from "./scroll-area.svelte";
-	import { AlertCircle, Info, RefreshCw } from "lucide-svelte";
+	import { AlertCircle, Info, RefreshCw, Settings, Wifi } from "lucide-svelte";
+	import { page } from '$app/state';
+	import { systemStore, obsStatus } from '$lib/stores/system-store';
 
 	interface ErrorMessage {
 		id: string;
@@ -16,10 +18,12 @@
 		status: keyof SystemStatus;
 		detailedSteps: string[];
 		imageUrl?: string;
+		hasActions?: boolean;
 	}
 
-	export let systemStatus: SystemStatus;
+
 	export let onRecheck: () => void = () => {};
+	export let onReconnect: () => void = () => {};
 
 	let isRechecking = false;
 	let selectedErrorId: string | null = null;
@@ -65,10 +69,11 @@
 				"Open OBS Studio application",
 				"Ensure OBS is fully loaded before proceeding",
 				"Check that the WebSocket server is enabled in OBS Tools > WebSocket Server Settings",
-				"Verify the port and password match your configuration",
+				"Verify that the port and password match your configuration",
 				"Click Recheck to verify the connection",
 			],
 			imageUrl: "/obs-studio-websocket-settings.jpg",
+			hasActions: true,
 		},
 		{
 			id: "rode",
@@ -100,7 +105,7 @@
 		},
 	];
 
-	$: activeErrors = errorMessages.filter((error) => !systemStatus[error.status]);
+	$: activeErrors = errorMessages.filter((error) => !$systemStore[error.status]);
 
 	$: selectedError = selectedErrorId
 		? errorMessages.find(e => e.id === selectedErrorId)
@@ -109,6 +114,12 @@
 	const handleRecheck = async () => {
 		isRechecking = true;
 		await onRecheck();
+		setTimeout(() => (isRechecking = false), 500);
+	};
+
+	const handleReconnect = async () => {
+		isRechecking = true;
+		await onReconnect();
 		setTimeout(() => (isRechecking = false), 500);
 	};
 
@@ -135,18 +146,20 @@
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">
 				<AlertCircle class="h-5 w-5 text-destructive" />
-				<h3 class="font-semibold">System Issues Detected</h3>
-				<Badge variant="destructive">{activeErrors.length}</Badge>
+					<h3 class="font-semibold">System Issues Detected</h3>
+					<Badge variant="destructive">{activeErrors.length}</Badge>
 			</div>
-			<Button
-				buttonVariant="outline"
-				buttonSize="sm"
-				onclick={handleRecheck}
-				disabled={isRechecking}
-			>
-				<RefreshCw class={cn("h-4 w-4 mr-2", isRechecking && "animate-spin")} />
-				Re-check
-			</Button>
+			<div class="flex gap-2">
+				<Button
+					buttonVariant="outline"
+					buttonSize="sm"
+					onclick={handleRecheck}
+					disabled={isRechecking}
+				>
+					<RefreshCw class={cn("h-4 w-4 mr-2", isRechecking && "animate-spin")} />
+					Re-check
+				</Button>
+			</div>
 		</div>
 
 		<div class="space-y-3">
@@ -156,15 +169,55 @@
 					<AlertTitle>{error.title}</AlertTitle>
 					<AlertDescription className="flex items-start justify-between gap-4">
 						<span>{error.description}</span>
-						<Button
-							buttonVariant="outline"
-							buttonSize="sm"
-							className="shrink-0 bg-transparent"
-							onclick={() => openDialog(error.id)}
-						>
-							<Info class="h-4 w-4 mr-2" />
-							Read More
-						</Button>
+						{#if error.hasActions}
+							<div class="flex gap-2">
+								{#if page.url.pathname !== '/obs-settings'}
+								<Button
+									buttonVariant="outline"
+									buttonSize="sm"
+									className="shrink-0 bg-transparent"
+									href={'/obs-settings'}
+								>
+									<Settings class="h-4 w-4 mr-2" />
+									Go to OBS Settings
+								</Button>
+								{/if}
+								{#if error.id === 'obs'}
+									<Button
+										buttonVariant="outline"
+										buttonSize="sm"
+										onclick={handleReconnect}
+										disabled={isRechecking}
+									>
+				{#if $obsStatus.loading || $obsStatus.reconnecting || isRechecking}
+					<RefreshCw class="h-4 w-4 mr-2 animate-spin" />
+					Connecting...
+				{:else}
+					<Wifi class={cn("h-4 w-4 mr-2")} />
+					Re-Connect
+				{/if}
+									</Button>
+								{/if}
+								<Button
+									buttonVariant="outline"
+									buttonSize="sm"
+									onclick={() => openDialog(error.id)}
+								>
+									<Info class="h-4 w-4 mr-2" />
+									Read More
+								</Button>
+							</div>
+						{:else}
+							<Button
+								buttonVariant="outline"
+								buttonSize="sm"
+								className="shrink-0 bg-transparent"
+								onclick={() => openDialog(error.id)}
+							>
+								<Info class="h-4 w-4 mr-2" />
+								Read More
+							</Button>
+						{/if}
 					</AlertDescription>
 				</Alert>
 			{/each}
