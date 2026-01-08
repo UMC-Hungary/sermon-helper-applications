@@ -48,21 +48,24 @@
 	const handleUpdateOBS = () => {
 		toast({
 			title: "OBS Updated",
-			description: "Sermon title has been updated in OBS"
+			description: "Sermon title has been updated in OBS",
+			variant: "success"
 		});
 	};
 
 	const handleGenerateTextusPPT = () => {
 		toast({
 			title: "PPT Generated",
-			description: "PowerPoint for Textus is ready for download"
+			description: "PowerPoint for Textus is ready for download",
+			variant: "success"
 		});
 	};
 
 	const handleGenerateLeckioPPT = () => {
 		toast({
 			title: "PPT Generated",
-			description: "PowerPoint for Leckio is ready for download"
+			description: "PowerPoint for Leckio is ready for download",
+			variant: "success"
 		});
 	};
 </script>

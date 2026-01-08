@@ -33,6 +33,7 @@
 			toast({
 				title: "Error",
 				description: "Failed to load OBS settings from storage",
+				variant: "error"
 			});
 		} finally {
 			isLoading = false;
@@ -50,11 +51,13 @@
 				toast({
 					title: "Connection Test",
 					description: "Successfully connected to OBS WebSocket server",
+					variant: "success"
 				});
 			} else {
 				toast({
 					title: "Connection Failed",
 					description: "Failed to connect to OBS WebSocket server",
+					variant: "error"
 				});
 			}
 		} catch (error) {
@@ -62,6 +65,7 @@
 			toast({
 				title: "Connection Failed",
 				description: "Failed to test OBS WebSocket connection",
+				variant: "error"
 			});
 		} finally {
 			isTesting = false;
@@ -79,6 +83,7 @@
 			toast({
 				title: "Settings Saved",
 				description: "OBS WebSocket settings have been updated",
+				variant: "success"
 			});
 
 			setTimeout(async () => {
@@ -87,11 +92,13 @@
 					toast({
 						title: "Reconnect Failed",
 						description: reconnectResult.error || "Failed to reconnect to OBS with new settings",
+						variant: "error"
 					});
 				} else {
 					toast({
 						title: "Reconnected Successfully",
 						description: "OBS WebSocket connected with new settings",
+						variant: "success"
 					});
 				}
 			}, 1000); // Wait 1 second before reconnecting
@@ -101,6 +108,7 @@
 			toast({
 				title: "Error",
 				description: "Failed to save OBS settings",
+				variant: "error"
 			});
 		}
 	};
