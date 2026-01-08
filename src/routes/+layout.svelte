@@ -47,10 +47,10 @@
 		toastOptions={{
 			unstyled: true,
 			classes: {
-				success: 'bg-green-600 text-white border border-green-700 rounded-md shadow-lg p-4 mb-2',
-				error: 'bg-red-600 text-white border border-red-700 rounded-md shadow-lg p-4 mb-2',
-				warning: 'bg-yellow-500 text-black border border-yellow-600 rounded-md shadow-lg p-4 mb-2',
-				info: 'bg-blue-600 text-white border border-blue-700 rounded-md shadow-lg p-4 mb-2',
+				success: 'bg-white text-gray-800 border-2 border-green-600 rounded-md shadow-lg p-4 mb-2',
+				error: 'bg-white text-gray-800 border-2 border-red-600 rounded-md shadow-lg p-4 mb-2',
+				warning: 'bg-white text-gray-800 border-2 border-yellow-500 rounded-md shadow-lg p-4 mb-2',
+				info: 'bg-white text-gray-800 border-2 border-blue-600 rounded-md shadow-lg p-4 mb-2',
 			},
 		}}
 	/>
