@@ -3,8 +3,17 @@
     import { Toaster } from 'svelte-sonner';
     import ErrorMessages from "$lib/components/ui/error-messages.svelte";
     import Sidebar from '$lib/components/sidebar.svelte';
+    import '$lib/i18n'; // Initialize i18n at module level
+    import { loadSavedLocale } from '$lib/i18n';
+    import { isLoading } from 'svelte-i18n';
+    import { onMount } from 'svelte';
 
     let { children } = $props();
+
+    onMount(() => {
+        // Load locale from Tauri store if running in Tauri
+        loadSavedLocale();
+    });
 
     let isMobileMenuOpen = false;
 
@@ -54,6 +63,11 @@
 		}}
 	/>
 
+{#if $isLoading}
+<div class="flex h-screen items-center justify-center bg-background">
+    <div class="animate-pulse text-muted-foreground">Loading...</div>
+</div>
+{:else}
 <div class="flex h-screen overflow-hidden bg-background">
     <Sidebar
             isMobileMenuOpen={isMobileMenuOpen}
@@ -69,3 +83,4 @@
         </div>
     </main>
 </div>
+{/if}

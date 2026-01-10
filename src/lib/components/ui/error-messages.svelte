@@ -10,13 +10,14 @@
 	import { AlertCircle, Info, RefreshCw, Settings, Wifi } from "lucide-svelte";
 	import { page } from '$app/state';
 	import { systemStore, obsStatus } from '$lib/stores/system-store';
+	import { _ } from 'svelte-i18n';
 
 	interface ErrorMessage {
 		id: string;
-		title: string;
-		description: string;
+		titleKey: string;
+		descriptionKey: string;
 		status: keyof SystemStatus;
-		detailedSteps: string[];
+		stepsKey: string;
 		imageUrl?: string;
 		hasActions?: boolean;
 	}
@@ -32,76 +33,43 @@
 	const errorMessages: ErrorMessage[] = [
 		{
 			id: "airplay",
-			title: "AirPlay Display Not Connected",
-			description: "The AirPlay display is not detected. Check your connection.",
+			titleKey: "errors.airplayDisplay.title",
+			descriptionKey: "errors.airplayDisplay.description",
 			status: "airplayDisplay",
-			detailedSteps: [
-				"Open System Settings on your Mac",
-				"Navigate to Displays section",
-				"Click on the AirPlay Display dropdown",
-				"Select your AirPlay device from the list",
-				"Ensure your Mac and AirPlay device are on the same WiFi network",
-				"If the device doesn't appear, restart both your Mac and the AirPlay receiver",
-			],
+			stepsKey: "errors.airplayDisplay.steps",
 			imageUrl: "/macos-display-settings-airplay.jpg",
 		},
 		{
 			id: "display-alignment",
-			title: "Display Alignment Incorrect",
-			description: "Your displays are not properly aligned. Adjust in System Settings.",
+			titleKey: "errors.displayAlignment.title",
+			descriptionKey: "errors.displayAlignment.description",
 			status: "displayAlignment",
-			detailedSteps: [
-				"Open System Settings on your Mac",
-				"Go to Displays section",
-				"Click on Arrange Displays",
-				"Drag the display rectangles to match your physical setup",
-				"Align the menu bar to your primary display",
-				"Click Done to save the arrangement",
-			],
+			stepsKey: "errors.displayAlignment.steps",
 			imageUrl: "/macos-display-arrangement-settings.jpg",
 		},
 		{
 			id: "obs",
-			title: "OBS Not Running",
-			description: "OBS Studio is not currently running on your system.",
+			titleKey: "errors.obs.title",
+			descriptionKey: "errors.obs.description",
 			status: "obs",
-			detailedSteps: [
-				"Open OBS Studio application",
-				"Ensure OBS is fully loaded before proceeding",
-				"Check that the WebSocket server is enabled in OBS Tools > WebSocket Server Settings",
-				"Verify that the port and password match your configuration",
-				"Click Recheck to verify the connection",
-			],
+			stepsKey: "errors.obs.steps",
 			imageUrl: "/obs-studio-websocket-settings.jpg",
 			hasActions: true,
 		},
 		{
 			id: "rode",
-			title: "Rode Audio Interface Not Connected",
-			description: "The Rode audio interface is not detected.",
+			titleKey: "errors.rodeInterface.title",
+			descriptionKey: "errors.rodeInterface.description",
 			status: "rodeInterface",
-			detailedSteps: [
-				"Check the USB/Thunderbolt connection to your Mac",
-				"Open System Settings > Sound",
-				"Select the Input tab",
-				"Verify your Rode interface appears in the list",
-				"Set it as the default input device if needed",
-				"Try unplugging and reconnecting the interface",
-			],
+			stepsKey: "errors.rodeInterface.steps",
 			imageUrl: "/macos-sound-settings-audio-interface.jpg",
 		},
 		{
 			id: "youtube-login",
-			title: "YouTube Not Logged In",
-			description: "You need to log in to YouTube to schedule events.",
+			titleKey: "errors.youtubeLogin.title",
+			descriptionKey: "errors.youtubeLogin.description",
 			status: "youtubeLoggedIn",
-			detailedSteps: [
-				"Click the 'Login with Google' button",
-				"Select your church's Google account",
-				"Grant the necessary permissions for YouTube access",
-				"Ensure your account has permission to create live streams",
-				"After successful login, you can schedule YouTube events",
-			],
+			stepsKey: "errors.youtubeLogin.steps",
 		},
 	];
 
@@ -146,7 +114,7 @@
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">
 				<AlertCircle class="h-5 w-5 text-destructive" />
-					<h3 class="font-semibold">System Issues Detected</h3>
+					<h3 class="font-semibold">{$_('errors.title')}</h3>
 					<Badge variant="destructive">{activeErrors.length}</Badge>
 			</div>
 			<div class="flex gap-2">
@@ -157,7 +125,7 @@
 					disabled={isRechecking}
 				>
 					<RefreshCw class={cn("h-4 w-4 mr-2", isRechecking && "animate-spin")} />
-					Re-check
+					{$_('errors.recheck')}
 				</Button>
 			</div>
 		</div>
@@ -166,9 +134,9 @@
 			{#each activeErrors as error (error.id)}
 				<Alert variant="destructive">
 					<AlertCircle class="h-4 w-4" />
-					<AlertTitle>{error.title}</AlertTitle>
+					<AlertTitle>{$_(error.titleKey)}</AlertTitle>
 					<AlertDescription className="flex items-start justify-between gap-4">
-						<span>{error.description}</span>
+						<span>{$_(error.descriptionKey)}</span>
 						{#if error.hasActions}
 							<div class="flex gap-2">
 								{#if page.url.pathname !== '/obs-settings'}
@@ -179,7 +147,7 @@
 									href={'/obs-settings'}
 								>
 									<Settings class="h-4 w-4 mr-2" />
-									Go to OBS Settings
+									{$_('errors.goToObsSettings')}
 								</Button>
 								{/if}
 								{#if error.id === 'obs'}
@@ -191,10 +159,10 @@
 									>
 				{#if $obsStatus.loading || $obsStatus.reconnecting || isRechecking}
 					<RefreshCw class="h-4 w-4 mr-2 animate-spin" />
-					Connecting...
+					{$_('errors.connecting')}
 				{:else}
 					<Wifi class={cn("h-4 w-4 mr-2")} />
-					Re-Connect
+					{$_('errors.reconnect')}
 				{/if}
 									</Button>
 								{/if}
@@ -204,7 +172,7 @@
 									onclick={() => openDialog(error.id)}
 								>
 									<Info class="h-4 w-4 mr-2" />
-									Read More
+									{$_('errors.readMore')}
 								</Button>
 							</div>
 						{:else}
@@ -215,7 +183,7 @@
 								onclick={() => openDialog(error.id)}
 							>
 								<Info class="h-4 w-4 mr-2" />
-								Read More
+								{$_('errors.readMore')}
 							</Button>
 						{/if}
 					</AlertDescription>
@@ -234,10 +202,10 @@
 			<div class="p-6">
 				<div class="space-y-2 mb-4">
 					<h2 class="text-lg font-semibold leading-none tracking-tight">
-						{selectedError.title}
+						{$_(selectedError.titleKey)}
 					</h2>
 					<p class="text-sm text-muted-foreground">
-						Follow these steps to resolve the issue
+						{$_('errors.followSteps')}
 					</p>
 				</div>
 				<ScrollArea className="max-h-[60vh] pr-4">
@@ -246,14 +214,14 @@
 							<div class="rounded-lg overflow-hidden border">
 								<img
 									src={selectedError.imageUrl || "/placeholder.svg"}
-									alt={selectedError.title}
+									alt={$_(selectedError.titleKey)}
 									class="w-full h-auto"
 									onerror={handleImageError}
 								/>
 							</div>
 						{/if}
 						<ol class="space-y-3 list-decimal list-inside">
-							{#each selectedError.detailedSteps as step, index (index)}
+							{#each $_(selectedError.stepsKey) as step, index (index)}
 								<li class="text-sm leading-relaxed">
 									{step}
 								</li>
@@ -263,7 +231,7 @@
 				</ScrollArea>
 				<div class="mt-4 flex justify-end">
 					<Button buttonVariant="outline" onclick={closeDialog}>
-						Close
+						{$_('errors.close')}
 					</Button>
 				</div>
 			</div>

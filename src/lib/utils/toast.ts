@@ -12,11 +12,13 @@ interface ToastOptions {
 export function toast({ title, description, variant = 'info', duration }: ToastOptions) {
 	if (variant === 'success') {
 		sonnerToast.success(title || '', {
+			style: 'border: 2px solid green !important;',
 			description,
 			duration,
 		});
 	} else if (variant === 'error') {
 		sonnerToast.error(title || '', {
+			style: 'border: 2px solid red !important;',
 			description,
 			duration,
 		});
@@ -32,20 +34,3 @@ export function toast({ title, description, variant = 'info', duration }: ToastO
 		});
 	}
 }
-
-// Convenience methods for specific variants
-export const toastSuccess = (title: string, description?: string, duration?: number) => {
-	toast({ title, description, variant: 'success', duration });
-};
-
-export const toastError = (title: string, description?: string, duration?: number) => {
-	toast({ title, description, variant: 'error', duration });
-};
-
-export const toastWarning = (title: string, description?: string, duration?: number) => {
-	toast({ title, description, variant: 'warning', duration });
-};
-
-export const toastInfo = (title: string, description?: string, duration?: number) => {
-	toast({ title, description, variant: 'info', duration });
-};

@@ -1,0 +1,270 @@
+{
+	"sidebar": {
+		"appTitle": "Gyülekezeti Vezérlő",
+		"nav": {
+			"dashboard": "Vezérlőpult",
+			"bibleEditor": "Biblia Szerkesztő",
+			"scheduleEvent": "Esemény Ütemezése",
+			"youtubeEvents": "YouTube Események",
+			"obsSettings": "OBS Beállítások"
+		},
+		"systemStatus": {
+			"title": "Rendszer Állapot",
+			"obsRunning": "OBS Fut",
+			"rodeInterface": "Rode Interfész",
+			"mainDisplay": "Fő Kijelző",
+			"secondaryDisplay": "Másodlagos Kijelző",
+			"airplayDisplay": "AirPlay Kijelző",
+			"displayAlignment": "Kijelző Igazítás",
+			"youtubeLoggedIn": "YouTube Bejelentkezve"
+		},
+		"currentSermon": {
+			"title": "Aktuális Prédikáció",
+			"textus": "Textus",
+			"leckio": "Leckio",
+			"youtube": "YouTube",
+			"streamLive": "Élő Adás",
+			"scheduled": "Ütemezve",
+			"notScheduled": "Nincs ütemezve"
+		},
+		"language": "Nyelv"
+	},
+	"dashboard": {
+		"title": "Vezérlőpult",
+		"subtitle": "Prédikáció előkészítés és rendszer megfigyelés kezelése",
+		"cards": {
+			"bibleEditor": {
+				"title": "Biblia Szerkesztő",
+				"description": "Szentírás szövegek keresése és szerkesztése",
+				"badge": "Használatra kész"
+			},
+			"scheduleEvent": {
+				"title": "Esemény Ütemezése",
+				"description": "YouTube élő közvetítések tervezése",
+				"badge": "Ütemezés Most"
+			},
+			"viewEvents": {
+				"title": "Események Megtekintése",
+				"description": "Közelgő események megtekintése",
+				"badge": "Összes Megtekintése"
+			}
+		},
+		"sermonStatus": {
+			"title": "Aktuális Prédikáció Állapot",
+			"description": "Élő közvetítés állapotának figyelése",
+			"youtubeEvent": "YouTube Esemény",
+			"liveNow": "Élőben",
+			"scheduled": "Ütemezve",
+			"obsStreaming": "OBS Közvetít",
+			"startObs": "OBS Közvetítés Indítása",
+			"stopObs": "OBS Közvetítés Leállítása",
+			"goLive": "Élő Adás Indítása YouTube-on",
+			"endStream": "YouTube Közvetítés Befejezése",
+			"startObsFirst": "Indítsa el az OBS közvetítést mielőtt élőbe menne a YouTube-on",
+			"noEventScheduled": "Nincs ütemezett YouTube esemény"
+		},
+		"sermonTexts": {
+			"title": "Prédikáció Szövegek",
+			"description": "Bibliai felolvasások kezelése",
+			"textus": "Textus",
+			"leckio": "Leckio",
+			"edit": "Szerkesztés",
+			"generateTextusPpt": "Textus PPT Generálása",
+			"generateLeckioPpt": "Leckio PPT Generálása",
+			"editBibleTexts": "Biblia Szövegek Szerkesztése",
+			"textusPlaceholder": "pl. János 3:16-21",
+			"leckioPlaceholder": "pl. Róma 8:28-39"
+		},
+		"obsControl": {
+			"title": "OBS Vezérlés",
+			"description": "Prédikáció címének frissítése az OBS-ben",
+			"sermonTitle": "Prédikáció Címe",
+			"sermonTitlePlaceholder": "Adja meg a prédikáció címét",
+			"updateObsTitle": "OBS Cím Frissítése"
+		}
+	},
+	"obsSettings": {
+		"title": "OBS Beállítások",
+		"subtitle": "OBS Studio WebSocket kapcsolat konfigurálása",
+		"card": {
+			"title": "WebSocket Konfiguráció",
+			"description": "Csatlakozás az OBS Studiohoz WebSocket-en keresztül a jelenetek, források és közvetítési információk vezérléséhez"
+		},
+		"form": {
+			"websocketUrl": "WebSocket URL",
+			"websocketUrlHint": "Alapértelmezett OBS WebSocket URL. Módosítsa, ha más portot állított be.",
+			"websocketPassword": "WebSocket Jelszó",
+			"websocketPasswordPlaceholder": "Adja meg az OBS WebSocket jelszavát",
+			"websocketPasswordHint": "Beállítható az OBS Studio Eszközök → WebSocket Szerver Beállítások menüpontjában",
+			"testConnection": "Kapcsolat Tesztelése",
+			"testing": "Tesztelés...",
+			"saveSettings": "Beállítások Mentése",
+			"loading": "Betöltés..."
+		},
+		"status": {
+			"title": "Kapcsolat Állapota",
+			"connected": "Csatlakoztatva",
+			"disconnected": "Nincs kapcsolat",
+			"lastConnected": "Utoljára csatlakozva",
+			"error": "Hiba"
+		},
+		"instructions": {
+			"title": "Beállítási Útmutató",
+			"step1": "Nyissa meg az OBS Studio-t",
+			"step2": "Menjen az Eszközök → WebSocket Szerver Beállítások menübe",
+			"step3": "Engedélyezze a \"WebSocket szerver engedélyezése\" opciót",
+			"step4": "Jegyezze fel a szerver portját (alapértelmezett: 4455)",
+			"step5": "Állítson be egy biztonságos jelszót",
+			"step6": "Kattintson az Alkalmaz és OK gombokra",
+			"step7": "Adja meg a fenti beállításokat és tesztelje a kapcsolatot"
+		}
+	},
+	"errors": {
+		"title": "Rendszerhibák Észlelve",
+		"recheck": "Újraellenőrzés",
+		"goToObsSettings": "OBS Beállításokhoz",
+		"reconnect": "Újracsatlakozás",
+		"connecting": "Csatlakozás...",
+		"readMore": "Részletek",
+		"close": "Bezárás",
+		"followSteps": "Kövesse ezeket a lépéseket a probléma megoldásához",
+		"airplayDisplay": {
+			"title": "AirPlay Kijelző Nincs Csatlakoztatva",
+			"description": "Az AirPlay kijelző nem észlelhető. Ellenőrizze a kapcsolatot.",
+			"steps": [
+				"Nyissa meg a Rendszerbeállításokat a Mac-en",
+				"Navigáljon a Kijelzők részhez",
+				"Kattintson az AirPlay Kijelző legördülő menüre",
+				"Válassza ki az AirPlay eszközét a listából",
+				"Győződjön meg róla, hogy a Mac és az AirPlay eszköz ugyanazon a WiFi hálózaton van",
+				"Ha az eszköz nem jelenik meg, indítsa újra a Mac-et és az AirPlay vevőt"
+			]
+		},
+		"displayAlignment": {
+			"title": "Kijelző Igazítás Helytelen",
+			"description": "A kijelzők nincsenek megfelelően igazítva. Állítsa be a Rendszerbeállításokban.",
+			"steps": [
+				"Nyissa meg a Rendszerbeállításokat a Mac-en",
+				"Menjen a Kijelzők részhez",
+				"Kattintson a Kijelzők Elrendezése opcióra",
+				"Húzza a kijelző téglalapokat a fizikai elrendezésnek megfelelően",
+				"Igazítsa a menüsort az elsődleges kijelzőhöz",
+				"Kattintson a Kész gombra az elrendezés mentéséhez"
+			]
+		},
+		"obs": {
+			"title": "OBS Nem Fut",
+			"description": "Az OBS Studio jelenleg nem fut a rendszeren.",
+			"steps": [
+				"Nyissa meg az OBS Studio alkalmazást",
+				"Győződjön meg róla, hogy az OBS teljesen betöltődött mielőtt folytatná",
+				"Ellenőrizze, hogy a WebSocket szerver engedélyezve van az OBS Eszközök > WebSocket Szerver Beállítások menüben",
+				"Ellenőrizze, hogy a port és a jelszó megegyezik a konfigurációval",
+				"Kattintson az Újraellenőrzés gombra a kapcsolat ellenőrzéséhez"
+			]
+		},
+		"rodeInterface": {
+			"title": "Rode Audio Interfész Nincs Csatlakoztatva",
+			"description": "A Rode audio interfész nem észlelhető.",
+			"steps": [
+				"Ellenőrizze az USB/Thunderbolt kapcsolatot a Mac-hez",
+				"Nyissa meg a Rendszerbeállítások > Hang menüt",
+				"Válassza a Bemenet fület",
+				"Ellenőrizze, hogy a Rode interfész megjelenik a listában",
+				"Állítsa be alapértelmezett bemeneti eszközként, ha szükséges",
+				"Próbálja meg kihúzni és újra csatlakoztatni az interfészt"
+			]
+		},
+		"youtubeLogin": {
+			"title": "YouTube Nincs Bejelentkezve",
+			"description": "Be kell jelentkeznie a YouTube-ra események ütemezéséhez.",
+			"steps": [
+				"Kattintson a 'Bejelentkezés Google-lel' gombra",
+				"Válassza ki a gyülekezet Google fiókját",
+				"Adja meg a szükséges engedélyeket a YouTube hozzáféréshez",
+				"Győződjön meg róla, hogy a fióknak van jogosultsága élő közvetítések létrehozásához",
+				"Sikeres bejelentkezés után ütemezhet YouTube eseményeket"
+			]
+		}
+	},
+	"toasts": {
+		"obsUpdated": {
+			"title": "OBS Frissítve",
+			"description": "A prédikáció címe frissítve lett az OBS-ben"
+		},
+		"pptGenerated": {
+			"title": "PPT Létrehozva",
+			"descriptionTextus": "A Textus PowerPoint készen áll a letöltésre",
+			"descriptionLeckio": "A Leckio PowerPoint készen áll a letöltésre"
+		},
+		"settingsSaved": {
+			"title": "Beállítások Mentve",
+			"description": "Az OBS WebSocket beállítások frissítve lettek"
+		},
+		"connectionTest": {
+			"title": "Kapcsolat Teszt",
+			"success": "Sikeresen csatlakozott az OBS WebSocket szerverhez",
+			"failed": "Nem sikerült csatlakozni az OBS WebSocket szerverhez"
+		},
+		"reconnected": {
+			"title": "Sikeresen Újracsatlakozva",
+			"description": "OBS WebSocket csatlakoztatva az új beállításokkal"
+		},
+		"error": {
+			"title": "Hiba",
+			"loadSettings": "Nem sikerült betölteni az OBS beállításokat a tárolóból",
+			"saveSettings": "Nem sikerült menteni az OBS beállításokat",
+			"connectionFailed": "Nem sikerült tesztelni az OBS WebSocket kapcsolatot",
+			"reconnectFailed": "Nem sikerült újracsatlakozni az OBS-hez az új beállításokkal"
+		}
+	},
+	"bible": {
+		"title": "Biblia Szerkesztő",
+		"subtitle": "Szentírás szövegek keresése, lekérése és szerkesztése prédikációhoz",
+		"tabs": {
+			"textus": "Textus",
+			"leckio": "Leckio"
+		},
+		"search": {
+			"titleTextus": "Textus Keresése",
+			"titleLeckio": "Leckio Keresése",
+			"description": "Adja meg a szentírás hivatkozást a Biblia API-ból történő lekéréshez",
+			"label": "Szentírás Hivatkozás",
+			"placeholderTextus": "pl. János 3:16-21",
+			"placeholderLeckio": "pl. Róma 8:28-39",
+			"fetch": "Lekérés"
+		},
+		"verses": {
+			"title": "Versek",
+			"description": "Kattintson a szerkesztésre a versek módosításához",
+			"saveAll": "Összes Mentése"
+		},
+		"toasts": {
+			"fetching": {
+				"title": "Szentírás Lekérése",
+				"description": "{reference} betöltése a Biblia API-ból..."
+			},
+			"saved": {
+				"title": "Változtatások Mentve",
+				"description": "A szentírás szerkesztések sikeresen mentve"
+			}
+		}
+	},
+	"youtubeSchedule": {
+		"title": "YouTube Esemény Ütemezése",
+		"subtitle": "Közelgő élő közvetítések tervezése"
+	},
+	"youtubeEvents": {
+		"title": "YouTube Események",
+		"subtitle": "Ütemezett események megtekintése és kezelése"
+	},
+	"common": {
+		"save": "Mentés",
+		"cancel": "Mégse",
+		"close": "Bezárás",
+		"edit": "Szerkesztés",
+		"delete": "Törlés",
+		"loading": "Betöltés...",
+		"error": "Hiba"
+	}
+}

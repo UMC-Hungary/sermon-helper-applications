@@ -10,6 +10,7 @@
 	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
 	import { Settings, Save, TestTube, Wifi, WifiOff } from "lucide-svelte";
 	import { onMount } from "svelte";
+	import { _ } from 'svelte-i18n';
 
 	// Event handler
 	export let onRecheck: () => Promise<void> = async () => {};
@@ -31,9 +32,10 @@
 		} catch (error) {
 			console.error("Failed to load OBS settings:", error);
 			toast({
-				title: "Error",
-				description: "Failed to load OBS settings from storage",
-				variant: "error"
+				title: $_('toasts.error.title'),
+				description: $_('toasts.error.loadSettings'),
+				variant: "error",
+				duration: 100000
 			});
 		} finally {
 			isLoading = false;
@@ -43,29 +45,32 @@
 	// Event handlers
 	const handleTestConnection = async () => {
 		isTesting = true;
-		
+
 		try {
 			const result = await obsWebSocket.connect(websocketUrl, websocketPassword);
 
 			if (result.connected) {
 				toast({
-					title: "Connection Test",
-					description: "Successfully connected to OBS WebSocket server",
-					variant: "success"
+					title: $_('toasts.connectionTest.title'),
+					description: $_('toasts.connectionTest.success'),
+					variant: "success",
+					duration: 100000
 				});
 			} else {
 				toast({
-					title: "Connection Failed",
-					description: "Failed to connect to OBS WebSocket server",
-					variant: "error"
+					title: $_('toasts.connectionTest.title'),
+					description: $_('toasts.connectionTest.failed'),
+					variant: "error",
+					duration: 100000
 				});
 			}
 		} catch (error) {
 			console.error("Connection test failed:", error);
 			toast({
-				title: "Connection Failed",
-				description: "Failed to test OBS WebSocket connection",
-				variant: "error"
+				title: $_('toasts.connectionTest.title'),
+				description: $_('toasts.error.connectionFailed'),
+				variant: "error",
+				duration: 100000
 			});
 		} finally {
 			isTesting = false;
@@ -79,62 +84,66 @@
 				websocketUrl,
 				websocketPassword,
 			});
-			
+
 			toast({
-				title: "Settings Saved",
-				description: "OBS WebSocket settings have been updated",
-				variant: "success"
+				title: $_('toasts.settingsSaved.title'),
+				description: $_('toasts.settingsSaved.description'),
+				variant: "success",
+				duration: 100000
 			});
 
 			setTimeout(async () => {
 				const reconnectResult = await obsWebSocket.autoconnect();
 				if (!reconnectResult.connected) {
 					toast({
-						title: "Reconnect Failed",
-						description: reconnectResult.error || "Failed to reconnect to OBS with new settings",
-						variant: "error"
+						title: $_('toasts.error.title'),
+						description: reconnectResult.error || $_('toasts.error.reconnectFailed'),
+						variant: "error",
+						duration: 100000
 					});
 				} else {
 					toast({
-						title: "Reconnected Successfully",
-						description: "OBS WebSocket connected with new settings",
-						variant: "success"
+						title: $_('toasts.reconnected.title'),
+						description: $_('toasts.reconnected.description'),
+						variant: "success",
+						duration: 100000
 					});
 				}
 			}, 1000); // Wait 1 second before reconnecting
-			
+
 		} catch (error) {
 			console.error("Failed to save OBS settings:", error);
 			toast({
-				title: "Error",
-				description: "Failed to save OBS settings",
-				variant: "error"
+				title: $_('toasts.error.title'),
+				description: $_('toasts.error.saveSettings'),
+				variant: "error",
+				duration: 100000
 			});
 		}
 	};
 </script>
 
 <div class="mt-12 lg:mt-0">
-	<h2 class="text-3xl font-bold tracking-tight">OBS Settings</h2>
-	<p class="text-muted-foreground">Configure OBS Studio WebSocket connection</p>
+	<h2 class="text-3xl font-bold tracking-tight">{$_('obsSettings.title')}</h2>
+	<p class="text-muted-foreground">{$_('obsSettings.subtitle')}</p>
 </div>
 
 <!-- OBS Settings Card -->
 <Card className="max-w-2xl">
 	<svelte:fragment slot="title">
 		<Settings class="h-5 w-5" />
-		WebSocket Configuration
+		{$_('obsSettings.card.title')}
 	</svelte:fragment>
 
 	<svelte:fragment slot="description">
-		Connect to OBS Studio via WebSocket to control scenes, sources, and stream information
+		{$_('obsSettings.card.description')}
 	</svelte:fragment>
 
 	<svelte:fragment slot="content">
 		<div class="space-y-6">
 			<!-- WebSocket URL Input -->
 			<div class="space-y-2">
-				<Label for="websocket-url">WebSocket URL</Label>
+				<Label for="websocket-url">{$_('obsSettings.form.websocketUrl')}</Label>
 				<Input
 					id="websocket-url"
 					type="text"
@@ -143,21 +152,21 @@
 					disabled={isLoading}
 				/>
 				<p class="text-xs text-muted-foreground">
-					Default OBS WebSocket URL. Change if you have configured a different port.
+					{$_('obsSettings.form.websocketUrlHint')}
 				</p>
 			</div>
 
 			<!-- WebSocket Password Input -->
 			<div class="space-y-2">
-				<Label for="websocket-password">WebSocket Password</Label>
+				<Label for="websocket-password">{$_('obsSettings.form.websocketPassword')}</Label>
 				<Input
 					id="websocket-password"
 					type="password"
 					bind:value={websocketPassword}
-					placeholder="Enter your OBS WebSocket password"
+					placeholder={$_('obsSettings.form.websocketPasswordPlaceholder')}
 					disabled={isLoading}
 				/>
-				<p class="text-xs text-muted-foreground">Set in OBS Studio under Tools → WebSocket Server Settings</p>
+				<p class="text-xs text-muted-foreground">{$_('obsSettings.form.websocketPasswordHint')}</p>
 			</div>
 
 			<!-- Action Buttons -->
@@ -169,7 +178,7 @@
 					className="flex-1 bg-transparent"
 				>
 					<TestTube class="mr-2 h-4 w-4" />
-					{isTesting ? "Testing..." : "Test Connection"}
+					{isTesting ? $_('obsSettings.form.testing') : $_('obsSettings.form.testConnection')}
 				</Button>
 
 				<Button
@@ -178,49 +187,49 @@
 					className="flex-1"
 				>
 					<Save class="mr-2 h-4 w-4" />
-					{isLoading ? "Loading..." : "Save Settings"}
+					{isLoading ? $_('obsSettings.form.loading') : $_('obsSettings.form.saveSettings')}
 				</Button>
 			</div>
 
 			<!-- Connection Status -->
 			<div class="rounded-lg bg-muted/50 p-4 space-y-3">
 				<div class="flex items-center justify-between">
-					<h4 class="font-medium text-sm">Connection Status</h4>
+					<h4 class="font-medium text-sm">{$_('obsSettings.status.title')}</h4>
 					<div class="flex items-center gap-2">
 						{#if $obsStatus.connected}
 							<Wifi class="h-4 w-4 text-green-600" />
-							<span class="text-sm text-green-600 font-medium">Connected</span>
+							<span class="text-sm text-green-600 font-medium">{$_('obsSettings.status.connected')}</span>
 						{:else}
 							<WifiOff class="h-4 w-4 text-red-600" />
-							<span class="text-sm text-red-600 font-medium">Disconnected</span>
+							<span class="text-sm text-red-600 font-medium">{$_('obsSettings.status.disconnected')}</span>
 						{/if}
 					</div>
 				</div>
 
 				{#if $obsStatus.lastConnected}
 					<p class="text-xs text-muted-foreground">
-						Last connected: {new Date($obsStatus.lastConnected).toLocaleString()}
+						{$_('obsSettings.status.lastConnected')}: {new Date($obsStatus.lastConnected).toLocaleString()}
 					</p>
 				{/if}
 
 				{#if $obsStatus.error}
 					<p class="text-xs text-red-600">
-						Error: {$obsStatus.error}
+						{$_('obsSettings.status.error')}: {$obsStatus.error}
 					</p>
 				{/if}
 			</div>
 
 			<!-- Setup Instructions -->
 			<div class="rounded-lg bg-muted p-4 space-y-2">
-				<h4 class="font-medium text-sm">Setup Instructions</h4>
+				<h4 class="font-medium text-sm">{$_('obsSettings.instructions.title')}</h4>
 				<ol class="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-					<li>Open OBS Studio</li>
-					<li>Go to Tools → WebSocket Server Settings</li>
-					<li>Enable "Enable WebSocket server"</li>
-					<li>Note server port (default: 4455)</li>
-					<li>Set a secure password</li>
-					<li>Click Apply and OK</li>
-					<li>Enter settings above and test connection</li>
+					<li>{$_('obsSettings.instructions.step1')}</li>
+					<li>{$_('obsSettings.instructions.step2')}</li>
+					<li>{$_('obsSettings.instructions.step3')}</li>
+					<li>{$_('obsSettings.instructions.step4')}</li>
+					<li>{$_('obsSettings.instructions.step5')}</li>
+					<li>{$_('obsSettings.instructions.step6')}</li>
+					<li>{$_('obsSettings.instructions.step7')}</li>
 				</ol>
 			</div>
 		</div>

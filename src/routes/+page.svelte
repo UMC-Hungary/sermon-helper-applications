@@ -6,6 +6,7 @@
 	import Badge from "$lib/components/ui/badge.svelte";
 	import Separator from "$lib/components/ui/separator.svelte";
 	import { toast } from "$lib/utils/toast";
+	import { _ } from 'svelte-i18n';
 	import {
 		Book,
 		FileText,
@@ -47,24 +48,24 @@
 	// Event handlers with toast notifications
 	const handleUpdateOBS = () => {
 		toast({
-			title: "OBS Updated",
-			description: "Sermon title has been updated in OBS",
+			title: $_('toasts.obsUpdated.title'),
+			description: $_('toasts.obsUpdated.description'),
 			variant: "success"
 		});
 	};
 
 	const handleGenerateTextusPPT = () => {
 		toast({
-			title: "PPT Generated",
-			description: "PowerPoint for Textus is ready for download",
+			title: $_('toasts.pptGenerated.title'),
+			description: $_('toasts.pptGenerated.descriptionTextus'),
 			variant: "success"
 		});
 	};
 
 	const handleGenerateLeckioPPT = () => {
 		toast({
-			title: "PPT Generated",
-			description: "PowerPoint for Leckio is ready for download",
+			title: $_('toasts.pptGenerated.title'),
+			description: $_('toasts.pptGenerated.descriptionLeckio'),
 			variant: "success"
 		});
 	};
@@ -72,8 +73,8 @@
 
 <!-- Section 2: Dashboard Header -->
 <div class="mt-12 lg:mt-0">
-	<h2 class="text-3xl font-bold tracking-tight">Dashboard</h2>
-	<p class="text-muted-foreground">Manage your sermon preparation and system monitoring</p>
+	<h2 class="text-3xl font-bold tracking-tight">{$_('dashboard.title')}</h2>
+	<p class="text-muted-foreground">{$_('dashboard.subtitle')}</p>
 </div>
 
 <!-- Section 3: Quick Access Cards -->
@@ -82,11 +83,11 @@
 	<Card clickable href={'/bible'}>
 		<svelte:fragment slot="title">
 			<Book class="h-5 w-5" />
-			Bible Editor
+			{$_('dashboard.cards.bibleEditor.title')}
 		</svelte:fragment>
-		<svelte:fragment slot="description">Search and edit scripture texts</svelte:fragment>
+		<svelte:fragment slot="description">{$_('dashboard.cards.bibleEditor.description')}</svelte:fragment>
 		<svelte:fragment slot="content">
-			<Badge>Ready to use</Badge>
+			<Badge>{$_('dashboard.cards.bibleEditor.badge')}</Badge>
 		</svelte:fragment>
 	</Card>
 
@@ -94,11 +95,11 @@
 	<Card clickable href={'/youtube-schedule'}>
 		<svelte:fragment slot="title">
 			<Youtube class="h-5 w-5" />
-			Schedule Event
+			{$_('dashboard.cards.scheduleEvent.title')}
 		</svelte:fragment>
-		<svelte:fragment slot="description">Plan your YouTube live streams</svelte:fragment>
+		<svelte:fragment slot="description">{$_('dashboard.cards.scheduleEvent.description')}</svelte:fragment>
 		<svelte:fragment slot="content">
-			<Badge variant="outline">Schedule Now</Badge>
+			<Badge variant="outline">{$_('dashboard.cards.scheduleEvent.badge')}</Badge>
 		</svelte:fragment>
 	</Card>
 
@@ -106,26 +107,26 @@
 	<Card clickable href={'/youtube-events'}>
 		<svelte:fragment slot="title">
 			<FileText class="h-5 w-5" />
-			View Events
+			{$_('dashboard.cards.viewEvents.title')}
 		</svelte:fragment>
-		<svelte:fragment slot="description">See your upcoming events</svelte:fragment>
+		<svelte:fragment slot="description">{$_('dashboard.cards.viewEvents.description')}</svelte:fragment>
 		<svelte:fragment slot="content">
-			<Badge variant="secondary">View All</Badge>
+			<Badge variant="secondary">{$_('dashboard.cards.viewEvents.badge')}</Badge>
 		</svelte:fragment>
 	</Card>
 </div>
 
 <!-- Section 4: Current Sermon Status Card -->
 <Card>
-	<svelte:fragment slot="title">Current Sermon Status</svelte:fragment>
-	<svelte:fragment slot="description">Monitor your live streaming status</svelte:fragment>
+	<svelte:fragment slot="title">{$_('dashboard.sermonStatus.title')}</svelte:fragment>
+	<svelte:fragment slot="description">{$_('dashboard.sermonStatus.description')}</svelte:fragment>
 	<svelte:fragment slot="content">
 		{#if currentSermon.youtubeScheduled}
 			<div class="space-y-4">
 				<!-- YouTube Title -->
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-sm font-medium">YouTube Event</p>
+						<p class="text-sm font-medium">{$_('dashboard.sermonStatus.youtubeEvent')}</p>
 						<p class="text-lg font-semibold">{currentSermon.youtubeTitle}</p>
 					</div>
 					<Button
@@ -142,14 +143,14 @@
 					{#if youtubeOnAir}
 						<Badge variant="destructive">
 							<Radio class="h-3 w-3 mr-1 animate-pulse" />
-							Live Now
+							{$_('dashboard.sermonStatus.liveNow')}
 						</Badge>
 					{:else}
-						<Badge variant="secondary">Scheduled</Badge>
+						<Badge variant="secondary">{$_('dashboard.sermonStatus.scheduled')}</Badge>
 					{/if}
 
 					{#if obsStreaming}
-						<Badge variant="success">OBS Streaming</Badge>
+						<Badge variant="success">{$_('dashboard.sermonStatus.obsStreaming')}</Badge>
 					{/if}
 				</div>
 
@@ -164,7 +165,7 @@
 								className="flex-1"
 						>
 							<StopCircle class="h-4 w-4 mr-2" />
-							Stop OBS Stream
+							{$_('dashboard.sermonStatus.stopObs')}
 						</Button>
 					{:else}
 						<Button
@@ -172,7 +173,7 @@
 								className="flex-1"
 						>
 							<PlayCircle class="h-4 w-4 mr-2" />
-							Start OBS Stream
+							{$_('dashboard.sermonStatus.startObs')}
 						</Button>
 					{/if}
 
@@ -184,7 +185,7 @@
 								className="flex-1"
 						>
 							<StopCircle class="h-4 w-4 mr-2" />
-							End YouTube Stream
+							{$_('dashboard.sermonStatus.endStream')}
 						</Button>
 					{:else}
 						<Button
@@ -193,19 +194,19 @@
 								className="flex-1"
 						>
 							<PlayCircle class="h-4 w-4 mr-2" />
-							Go Live on YouTube
+							{$_('dashboard.sermonStatus.goLive')}
 						</Button>
 					{/if}
 				</div>
 
 				{#if !obsStreaming}
 					<p class="text-sm text-muted-foreground">
-						Start OBS streaming before going live on YouTube
+						{$_('dashboard.sermonStatus.startObsFirst')}
 					</p>
 				{/if}
 			</div>
 		{:else}
-			<p class="text-sm text-muted-foreground">No YouTube event scheduled</p>
+			<p class="text-sm text-muted-foreground">{$_('dashboard.sermonStatus.noEventScheduled')}</p>
 		{/if}
 	</svelte:fragment>
 </Card>
@@ -214,28 +215,28 @@
 <div class="grid gap-6 lg:grid-cols-2">
 	<!-- Sermon Texts Card -->
 	<Card>
-		<svelte:fragment slot="title">Sermon Texts</svelte:fragment>
-		<svelte:fragment slot="description">Manage your Bible readings</svelte:fragment>
+		<svelte:fragment slot="title">{$_('dashboard.sermonTexts.title')}</svelte:fragment>
+		<svelte:fragment slot="description">{$_('dashboard.sermonTexts.description')}</svelte:fragment>
 		<svelte:fragment slot="content">
 			<div class="space-y-4">
 				<!-- Textus Section -->
 				<div class="space-y-2">
 					<div class="flex items-center justify-between">
-						<Label>Textus</Label>
+						<Label>{$_('dashboard.sermonTexts.textus')}</Label>
 						<Button
 								buttonVariant="ghost"
 								buttonSize="sm"
 								href={'/bible'}
 						>
 							<Edit2 class="h-3 w-3 mr-1" />
-							Edit
+							{$_('dashboard.sermonTexts.edit')}
 						</Button>
 					</div>
 					<Input
 							type="text"
 							bind:value={textus}
 							oninput={() => onTextusChange(textus)}
-							placeholder="e.g., John 3:16-21"
+							placeholder={$_('dashboard.sermonTexts.textusPlaceholder')}
 					/>
 					<Button
 							buttonVariant="outline"
@@ -244,7 +245,7 @@
 							className="w-full"
 					>
 						<FileText class="h-4 w-4 mr-2" />
-						Generate Textus PPT
+						{$_('dashboard.sermonTexts.generateTextusPpt')}
 					</Button>
 				</div>
 
@@ -253,21 +254,21 @@
 				<!-- Leckio Section -->
 				<div class="space-y-2">
 					<div class="flex items-center justify-between">
-						<Label>Leckio</Label>
+						<Label>{$_('dashboard.sermonTexts.leckio')}</Label>
 						<Button
 								buttonVariant="ghost"
 								buttonSize="sm"
 								href={'/bible'}
 						>
 							<Edit2 class="h-3 w-3 mr-1" />
-							Edit
+							{$_('dashboard.sermonTexts.edit')}
 						</Button>
 					</div>
 					<Input
 							type="text"
 							bind:value={leckio}
 							oninput={() => onLeckioChange(leckio)}
-							placeholder="e.g., Romans 8:28-39"
+							placeholder={$_('dashboard.sermonTexts.leckioPlaceholder')}
 					/>
 					<Button
 							buttonVariant="outline"
@@ -276,7 +277,7 @@
 							className="w-full"
 					>
 						<FileText class="h-4 w-4 mr-2" />
-						Generate Leckio PPT
+						{$_('dashboard.sermonTexts.generateLeckioPpt')}
 					</Button>
 				</div>
 
@@ -286,7 +287,7 @@
 						className="w-full"
 				>
 					<Book class="h-4 w-4 mr-2" />
-					Edit Bible Texts
+					{$_('dashboard.sermonTexts.editBibleTexts')}
 				</Button>
 			</div>
 		</svelte:fragment>
@@ -294,16 +295,16 @@
 
 	<!-- OBS Control Card -->
 	<Card>
-		<svelte:fragment slot="title">OBS Control</svelte:fragment>
-		<svelte:fragment slot="description">Update your sermon title in OBS</svelte:fragment>
+		<svelte:fragment slot="title">{$_('dashboard.obsControl.title')}</svelte:fragment>
+		<svelte:fragment slot="description">{$_('dashboard.obsControl.description')}</svelte:fragment>
 		<svelte:fragment slot="content">
 			<div class="space-y-4">
 				<div class="space-y-2">
-					<Label>Sermon Title</Label>
+					<Label>{$_('dashboard.obsControl.sermonTitle')}</Label>
 					<Input
 							type="text"
 							bind:value={obsTitle}
-							placeholder="Enter sermon title"
+							placeholder={$_('dashboard.obsControl.sermonTitlePlaceholder')}
 					/>
 				</div>
 				<Button
@@ -311,7 +312,7 @@
 						className="w-full"
 				>
 					<RefreshCw class="h-4 w-4 mr-2" />
-					Update OBS Title
+					{$_('dashboard.obsControl.updateObsTitle')}
 				</Button>
 			</div>
 		</svelte:fragment>

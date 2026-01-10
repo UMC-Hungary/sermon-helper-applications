@@ -1,0 +1,270 @@
+{
+	"sidebar": {
+		"appTitle": "Church Control",
+		"nav": {
+			"dashboard": "Dashboard",
+			"bibleEditor": "Bible Editor",
+			"scheduleEvent": "Schedule Event",
+			"youtubeEvents": "YouTube Events",
+			"obsSettings": "OBS Settings"
+		},
+		"systemStatus": {
+			"title": "System Status",
+			"obsRunning": "OBS Running",
+			"rodeInterface": "Rode Interface",
+			"mainDisplay": "Main Display",
+			"secondaryDisplay": "Secondary Display",
+			"airplayDisplay": "AirPlay Display",
+			"displayAlignment": "Display Alignment",
+			"youtubeLoggedIn": "YouTube Logged In"
+		},
+		"currentSermon": {
+			"title": "Current Sermon",
+			"textus": "Textus",
+			"leckio": "Leckio",
+			"youtube": "YouTube",
+			"streamLive": "Stream Live",
+			"scheduled": "Scheduled",
+			"notScheduled": "Not scheduled"
+		},
+		"language": "Language"
+	},
+	"dashboard": {
+		"title": "Dashboard",
+		"subtitle": "Manage your sermon preparation and system monitoring",
+		"cards": {
+			"bibleEditor": {
+				"title": "Bible Editor",
+				"description": "Search and edit scripture texts",
+				"badge": "Ready to use"
+			},
+			"scheduleEvent": {
+				"title": "Schedule Event",
+				"description": "Plan your YouTube live streams",
+				"badge": "Schedule Now"
+			},
+			"viewEvents": {
+				"title": "View Events",
+				"description": "See your upcoming events",
+				"badge": "View All"
+			}
+		},
+		"sermonStatus": {
+			"title": "Current Sermon Status",
+			"description": "Monitor your live streaming status",
+			"youtubeEvent": "YouTube Event",
+			"liveNow": "Live Now",
+			"scheduled": "Scheduled",
+			"obsStreaming": "OBS Streaming",
+			"startObs": "Start OBS Stream",
+			"stopObs": "Stop OBS Stream",
+			"goLive": "Go Live on YouTube",
+			"endStream": "End YouTube Stream",
+			"startObsFirst": "Start OBS streaming before going live on YouTube",
+			"noEventScheduled": "No YouTube event scheduled"
+		},
+		"sermonTexts": {
+			"title": "Sermon Texts",
+			"description": "Manage your Bible readings",
+			"textus": "Textus",
+			"leckio": "Leckio",
+			"edit": "Edit",
+			"generateTextusPpt": "Generate Textus PPT",
+			"generateLeckioPpt": "Generate Leckio PPT",
+			"editBibleTexts": "Edit Bible Texts",
+			"textusPlaceholder": "e.g., John 3:16-21",
+			"leckioPlaceholder": "e.g., Romans 8:28-39"
+		},
+		"obsControl": {
+			"title": "OBS Control",
+			"description": "Update your sermon title in OBS",
+			"sermonTitle": "Sermon Title",
+			"sermonTitlePlaceholder": "Enter sermon title",
+			"updateObsTitle": "Update OBS Title"
+		}
+	},
+	"obsSettings": {
+		"title": "OBS Settings",
+		"subtitle": "Configure OBS Studio WebSocket connection",
+		"card": {
+			"title": "WebSocket Configuration",
+			"description": "Connect to OBS Studio via WebSocket to control scenes, sources, and stream information"
+		},
+		"form": {
+			"websocketUrl": "WebSocket URL",
+			"websocketUrlHint": "Default OBS WebSocket URL. Change if you have configured a different port.",
+			"websocketPassword": "WebSocket Password",
+			"websocketPasswordPlaceholder": "Enter your OBS WebSocket password",
+			"websocketPasswordHint": "Set in OBS Studio under Tools → WebSocket Server Settings",
+			"testConnection": "Test Connection",
+			"testing": "Testing...",
+			"saveSettings": "Save Settings",
+			"loading": "Loading..."
+		},
+		"status": {
+			"title": "Connection Status",
+			"connected": "Connected",
+			"disconnected": "Disconnected",
+			"lastConnected": "Last connected",
+			"error": "Error"
+		},
+		"instructions": {
+			"title": "Setup Instructions",
+			"step1": "Open OBS Studio",
+			"step2": "Go to Tools → WebSocket Server Settings",
+			"step3": "Enable \"Enable WebSocket server\"",
+			"step4": "Note server port (default: 4455)",
+			"step5": "Set a secure password",
+			"step6": "Click Apply and OK",
+			"step7": "Enter settings above and test connection"
+		}
+	},
+	"errors": {
+		"title": "System Issues Detected",
+		"recheck": "Re-check",
+		"goToObsSettings": "Go to OBS Settings",
+		"reconnect": "Re-Connect",
+		"connecting": "Connecting...",
+		"readMore": "Read More",
+		"close": "Close",
+		"followSteps": "Follow these steps to resolve the issue",
+		"airplayDisplay": {
+			"title": "AirPlay Display Not Connected",
+			"description": "The AirPlay display is not detected. Check your connection.",
+			"steps": [
+				"Open System Settings on your Mac",
+				"Navigate to Displays section",
+				"Click on the AirPlay Display dropdown",
+				"Select your AirPlay device from the list",
+				"Ensure your Mac and AirPlay device are on the same WiFi network",
+				"If the device doesn't appear, restart both your Mac and the AirPlay receiver"
+			]
+		},
+		"displayAlignment": {
+			"title": "Display Alignment Incorrect",
+			"description": "Your displays are not properly aligned. Adjust in System Settings.",
+			"steps": [
+				"Open System Settings on your Mac",
+				"Go to Displays section",
+				"Click on Arrange Displays",
+				"Drag the display rectangles to match your physical setup",
+				"Align the menu bar to your primary display",
+				"Click Done to save the arrangement"
+			]
+		},
+		"obs": {
+			"title": "OBS Not Running",
+			"description": "OBS Studio is not currently running on your system.",
+			"steps": [
+				"Open OBS Studio application",
+				"Ensure OBS is fully loaded before proceeding",
+				"Check that the WebSocket server is enabled in OBS Tools > WebSocket Server Settings",
+				"Verify that the port and password match your configuration",
+				"Click Recheck to verify the connection"
+			]
+		},
+		"rodeInterface": {
+			"title": "Rode Audio Interface Not Connected",
+			"description": "The Rode audio interface is not detected.",
+			"steps": [
+				"Check the USB/Thunderbolt connection to your Mac",
+				"Open System Settings > Sound",
+				"Select the Input tab",
+				"Verify your Rode interface appears in the list",
+				"Set it as the default input device if needed",
+				"Try unplugging and reconnecting the interface"
+			]
+		},
+		"youtubeLogin": {
+			"title": "YouTube Not Logged In",
+			"description": "You need to log in to YouTube to schedule events.",
+			"steps": [
+				"Click the 'Login with Google' button",
+				"Select your church's Google account",
+				"Grant the necessary permissions for YouTube access",
+				"Ensure your account has permission to create live streams",
+				"After successful login, you can schedule YouTube events"
+			]
+		}
+	},
+	"toasts": {
+		"obsUpdated": {
+			"title": "OBS Updated",
+			"description": "Sermon title has been updated in OBS"
+		},
+		"pptGenerated": {
+			"title": "PPT Generated",
+			"descriptionTextus": "PowerPoint for Textus is ready for download",
+			"descriptionLeckio": "PowerPoint for Leckio is ready for download"
+		},
+		"settingsSaved": {
+			"title": "Settings Saved",
+			"description": "OBS WebSocket settings have been updated"
+		},
+		"connectionTest": {
+			"title": "Connection Test",
+			"success": "Successfully connected to OBS WebSocket server",
+			"failed": "Failed to connect to OBS WebSocket server"
+		},
+		"reconnected": {
+			"title": "Reconnected Successfully",
+			"description": "OBS WebSocket connected with new settings"
+		},
+		"error": {
+			"title": "Error",
+			"loadSettings": "Failed to load OBS settings from storage",
+			"saveSettings": "Failed to save OBS settings",
+			"connectionFailed": "Failed to test OBS WebSocket connection",
+			"reconnectFailed": "Failed to reconnect to OBS with new settings"
+		}
+	},
+	"bible": {
+		"title": "Bible Editor",
+		"subtitle": "Search, fetch, and edit scripture texts for your sermon",
+		"tabs": {
+			"textus": "Textus",
+			"leckio": "Leckio"
+		},
+		"search": {
+			"titleTextus": "Search Textus",
+			"titleLeckio": "Search Leckio",
+			"description": "Enter scripture reference to fetch from Bible API",
+			"label": "Scripture Reference",
+			"placeholderTextus": "e.g., John 3:16-21",
+			"placeholderLeckio": "e.g., Romans 8:28-39",
+			"fetch": "Fetch"
+		},
+		"verses": {
+			"title": "Verses",
+			"description": "Click edit to modify verses",
+			"saveAll": "Save All"
+		},
+		"toasts": {
+			"fetching": {
+				"title": "Fetching Scripture",
+				"description": "Loading {reference} from Bible API..."
+			},
+			"saved": {
+				"title": "Changes Saved",
+				"description": "Scripture edits have been saved successfully"
+			}
+		}
+	},
+	"youtubeSchedule": {
+		"title": "Schedule YouTube Event",
+		"subtitle": "Plan your upcoming live streams"
+	},
+	"youtubeEvents": {
+		"title": "YouTube Events",
+		"subtitle": "View and manage your scheduled events"
+	},
+	"common": {
+		"save": "Save",
+		"cancel": "Cancel",
+		"close": "Close",
+		"edit": "Edit",
+		"delete": "Delete",
+		"loading": "Loading...",
+		"error": "Error"
+	}
+}
