@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { SystemStatus } from "$lib/stores/types";
 	import Card from "$lib/components/ui/card.svelte";
 	import Button from "$lib/components/ui/button.svelte";
 	import Input from "$lib/components/ui/input.svelte";
@@ -12,18 +11,13 @@
 	import { onMount } from "svelte";
 	import { _ } from 'svelte-i18n';
 
-	// Event handler
 	export let onRecheck: () => Promise<void> = async () => {};
 
-
-
-	// State
 	let websocketUrl: string = "ws://localhost:4455";
 	let websocketPassword: string = "";
 	let isTesting: boolean = false;
 	let isLoading: boolean = true;
 
-	// Load settings on mount
 	onMount(async () => {
 		try {
 			const settings = await obsSettingsStore.getSettings();
@@ -47,23 +41,14 @@
 		isTesting = true;
 
 		try {
-			const result = await obsWebSocket.connect(websocketUrl, websocketPassword);
+			const result = await obsWebSocket.connect(websocketUrl, websocketPassword).then();
 
-			if (result.connected) {
-				toast({
-					title: $_('toasts.connectionTest.title'),
-					description: $_('toasts.connectionTest.success'),
-					variant: "success",
-					duration: 100000
-				});
-			} else {
-				toast({
-					title: $_('toasts.connectionTest.title'),
-					description: $_('toasts.connectionTest.failed'),
-					variant: "error",
-					duration: 100000
-				});
-			}
+			toast({
+				title: $_('toasts.connectionTest.title'),
+				description: $_('toasts.connectionTest.success'),
+				variant: "success",
+				duration: 100000
+			});
 		} catch (error) {
 			console.error("Connection test failed:", error);
 			toast({
@@ -93,7 +78,7 @@
 			});
 
 			setTimeout(async () => {
-				const reconnectResult = await obsWebSocket.autoconnect();
+				const reconnectResult = await obsWebSocket.connect(websocketUrl, websocketPassword);
 				if (!reconnectResult.connected) {
 					toast({
 						title: $_('toasts.error.title'),

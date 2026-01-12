@@ -1,3 +1,7 @@
+mod bible;
+
+use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -10,7 +14,12 @@ pub fn run() {
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            fetch_bible_v2,
+            fetch_bible_suggestions,
+            fetch_bible_legacy
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

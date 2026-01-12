@@ -7,12 +7,13 @@
     import { loadSavedLocale } from '$lib/i18n';
     import { isLoading } from 'svelte-i18n';
     import { onMount } from 'svelte';
+    import {obsWebSocket} from "$lib/utils/obs-websocket";
 
     let { children } = $props();
 
     onMount(() => {
-        // Load locale from Tauri store if running in Tauri
         loadSavedLocale();
+        obsWebSocket.autoconnect();
     });
 
     let isMobileMenuOpen = false;

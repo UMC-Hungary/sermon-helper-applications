@@ -210,6 +210,14 @@
 			"title": "Reconnected Successfully",
 			"description": "OBS WebSocket connected with new settings"
 		},
+		"eventScheduled": {
+			"title": "Event Scheduled",
+			"description": "YouTube live event has been created successfully"
+		},
+		"loggedIn": {
+			"title": "Logged In",
+			"description": "Successfully logged in with Google"
+		},
 		"error": {
 			"title": "Error",
 			"loadSettings": "Failed to load OBS settings from storage",
@@ -230,33 +238,96 @@
 			"titleLeckio": "Search Leckio",
 			"description": "Enter scripture reference to fetch from Bible API",
 			"label": "Scripture Reference",
-			"placeholderTextus": "e.g., John 3:16-21",
-			"placeholderLeckio": "e.g., Romans 8:28-39",
-			"fetch": "Fetch"
+			"translation": "Translation",
+			"placeholderTextus": "e.g., Jn 3,16-21",
+			"placeholderLeckio": "e.g., Rom 8,28-39",
+			"fetch": "Fetch",
+			"v2Hint": "Results will appear as you type"
+		},
+		"translations": {
+			"v2Label": "V2 (Immediate)",
+			"legacyLabel": "Legacy (Select from list)"
 		},
 		"verses": {
 			"title": "Verses",
 			"description": "Click edit to modify verses",
-			"saveAll": "Save All"
+			"saveAll": "Save All",
+			"clear": "Clear"
 		},
 		"toasts": {
 			"fetching": {
 				"title": "Fetching Scripture",
 				"description": "Loading {reference} from Bible API..."
 			},
+			"fetched": {
+				"title": "Scripture Loaded",
+				"description": "Loaded {count} verses for {reference}"
+			},
 			"saved": {
 				"title": "Changes Saved",
 				"description": "Scripture edits have been saved successfully"
+			},
+			"error": {
+				"title": "Error",
+				"emptyQuery": "Please enter a scripture reference"
 			}
 		}
 	},
 	"youtubeSchedule": {
 		"title": "Schedule YouTube Event",
-		"subtitle": "Plan your upcoming live streams"
+		"subtitle": "Create a new YouTube live stream event for your sermon",
+		"loginRequired": {
+			"title": "YouTube Login Required",
+			"description": "You need to log in with your Google account to schedule YouTube events.",
+			"loginButton": "Login with Google"
+		},
+		"eventDetails": {
+			"title": "Event Details",
+			"description": "Fill in the details for your YouTube live event",
+			"eventTitle": {
+				"label": "Event Title",
+				"placeholder": "Sunday Service - The Love of God"
+			},
+			"speaker": {
+				"label": "Speaker",
+				"placeholder": "Pastor John Smith"
+			},
+			"date": {
+				"label": "Date"
+			},
+			"time": {
+				"label": "Time"
+			},
+			"privacy": {
+				"label": "Privacy Setting",
+				"options": {
+					"public": "Public",
+					"unlisted": "Unlisted",
+					"private": "Private"
+				}
+			},
+			"description": {
+				"label": "Description",
+				"placeholder": "Include Textus and Leckio references here...",
+				"tip": "Tip: The Textus and Leckio values will be automatically included in the description"
+			},
+			"scheduleButton": "Schedule Event"
+		}
 	},
 	"youtubeEvents": {
 		"title": "YouTube Events",
-		"subtitle": "View and manage your scheduled events"
+		"subtitle": "View and manage scheduled YouTube live events",
+		"eventsCount": "{count} Events",
+		"edit": "Edit",
+		"delete": "Delete",
+		"editEvent": {
+			"title": "Edit Event",
+			"description": "Opening event editor..."
+		},
+		"deleteEvent": {
+			"title": "Event Deleted",
+			"description": "YouTube event has been removed"
+		}
 	},
 	"common": {
 		"save": "Save",

@@ -210,6 +210,14 @@
 			"title": "Sikeresen Újracsatlakozva",
 			"description": "OBS WebSocket csatlakoztatva az új beállításokkal"
 		},
+		"eventScheduled": {
+			"title": "Esemény Ütemezve",
+			"description": "YouTube élő esemény sikeresen létrehozva"
+		},
+		"loggedIn": {
+			"title": "Bejelentkezve",
+			"description": "Sikeresen bejelentkezve Google fiókkal"
+		},
 		"error": {
 			"title": "Hiba",
 			"loadSettings": "Nem sikerült betölteni az OBS beállításokat a tárolóból",
@@ -230,33 +238,96 @@
 			"titleLeckio": "Leckio Keresése",
 			"description": "Adja meg a szentírás hivatkozást a Biblia API-ból történő lekéréshez",
 			"label": "Szentírás Hivatkozás",
-			"placeholderTextus": "pl. János 3:16-21",
-			"placeholderLeckio": "pl. Róma 8:28-39",
-			"fetch": "Lekérés"
+			"translation": "Fordítás",
+			"placeholderTextus": "pl. Jn 3,16-21",
+			"placeholderLeckio": "pl. Róm 8,28-39",
+			"fetch": "Lekérés",
+			"v2Hint": "Az eredmények gépelés közben megjelennek"
+		},
+		"translations": {
+			"v2Label": "V2 (Azonnali)",
+			"legacyLabel": "Hagyományos (Listából választás)"
 		},
 		"verses": {
 			"title": "Versek",
 			"description": "Kattintson a szerkesztésre a versek módosításához",
-			"saveAll": "Összes Mentése"
+			"saveAll": "Összes Mentése",
+			"clear": "Törlés"
 		},
 		"toasts": {
 			"fetching": {
 				"title": "Szentírás Lekérése",
 				"description": "{reference} betöltése a Biblia API-ból..."
 			},
+			"fetched": {
+				"title": "Szentírás Betöltve",
+				"description": "{count} vers betöltve ehhez: {reference}"
+			},
 			"saved": {
 				"title": "Változtatások Mentve",
 				"description": "A szentírás szerkesztések sikeresen mentve"
+			},
+			"error": {
+				"title": "Hiba",
+				"emptyQuery": "Kérjük, adjon meg egy szentírás hivatkozást"
 			}
 		}
 	},
 	"youtubeSchedule": {
 		"title": "YouTube Esemény Ütemezése",
-		"subtitle": "Közelgő élő közvetítések tervezése"
+		"subtitle": "Hozzon létre új YouTube élő közvetítési eseményt a prédikációjához",
+		"loginRequired": {
+			"title": "YouTube Bejelentkezés Szükséges",
+			"description": "Be kell jelentkeznie Google fiókjával YouTube események ütemezéséhez.",
+			"loginButton": "Bejelentkezés Google-lel"
+		},
+		"eventDetails": {
+			"title": "Esemény Részletei",
+			"description": "Töltse ki a részleteket a YouTube élő eseményhez",
+			"eventTitle": {
+				"label": "Esemény Címe",
+				"placeholder": "Vasárnapi Istentisztelet - Isten Szeretete"
+			},
+			"speaker": {
+				"label": "Beszélő",
+				"placeholder": "Prédikátor John Smith"
+			},
+			"date": {
+				"label": "Dátum"
+			},
+			"time": {
+				"label": "Idő"
+			},
+			"privacy": {
+				"label": "Adatvédelmi Beállítás",
+				"options": {
+					"public": "Nyilvános",
+					"unlisted": "Nem listázott",
+					"private": "Privát"
+				}
+			},
+			"description": {
+				"label": "Leírás",
+				"placeholder": "Adja hozzá a Textus és Leckio hivatkozásokat itt...",
+				"tip": "Tipp: A Textus és Leckio értékek automatikusan bekerülnek a leírásba"
+			},
+			"scheduleButton": "Esemény Ütemezése"
+		}
 	},
 	"youtubeEvents": {
 		"title": "YouTube Események",
-		"subtitle": "Ütemezett események megtekintése és kezelése"
+		"subtitle": "Ütemezett YouTube élő események megtekintése és kezelése",
+		"eventsCount": "{count} Esemény",
+		"edit": "Szerkesztés",
+		"delete": "Törlés",
+		"editEvent": {
+			"title": "Esemény Szerkesztése",
+			"description": "Eseményszerkesztő megnyitása..."
+		},
+		"deleteEvent": {
+			"title": "Esemény Törölve",
+			"description": "YouTube esemény eltávolítva"
+		}
 	},
 	"common": {
 		"save": "Mentés",

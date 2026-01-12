@@ -19,8 +19,11 @@ export interface SystemStatus {
 export interface YoutubeEvent {
 	id: string;
 	title: string;
-	scheduledStartTime: string;
-	status: string;
+	speaker: string;
+	date: string;
+	time: string;
+	privacy: "public" | "private" | "unlisted";
+	status: "scheduled" | "live" | "completed";
 }
 
 export interface ScheduleItem {
