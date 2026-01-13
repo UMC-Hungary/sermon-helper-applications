@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import Card from '$lib/components/ui/card.svelte';
 	import Button from '$lib/components/ui/button.svelte';
@@ -15,6 +16,7 @@
 	import { toast } from '$lib/utils/toast';
 	import { bibleApi } from '$lib/utils/bible-api';
 	import { bibleStore } from '$lib/stores/bible-store';
+	import { appSettingsStore, appSettings } from '$lib/utils/app-settings-store';
 	import { isV2Translation, type BibleTranslation, type LegacySuggestion } from '$lib/types/bible';
 	import { debounce } from '$lib/utils/debounce';
 	import { Search, Save, Edit2, Check, Loader2, X } from 'lucide-svelte';
@@ -24,6 +26,20 @@
 
 	// Subscribe to store
 	const state = $derived($bibleStore);
+
+	// Initialize bible store with persisted translation (already loaded by layout)
+	// Use $effect to run once on mount
+	let initialized = false;
+	$effect(() => {
+		if (!initialized) {
+			const savedTranslation = $appSettings.bibleTranslation as BibleTranslation;
+			untrack(() => {
+				bibleStore.setTranslation('textus', savedTranslation);
+				bibleStore.setTranslation('leckio', savedTranslation);
+			});
+			initialized = true;
+		}
+	});
 
 	// Debounced function to fetch suggestions for legacy translations
 	const debouncedFetchSuggestions = debounce(async (term: string, tab: TabType) => {
@@ -77,10 +93,17 @@
 	}
 
 	// Handle translation change
-	function handleTranslationChange(tab: TabType, translation: BibleTranslation) {
+	async function handleTranslationChange(tab: TabType, translation: BibleTranslation) {
 		bibleStore.setTranslation(tab, translation);
 		bibleStore.clearSuggestions();
 		bibleStore.clearVerses(tab);
+
+		// Persist the translation
+		try {
+			await appSettingsStore.set('bibleTranslation', translation);
+		} catch (error) {
+			console.error('Failed to persist translation:', error);
+		}
 
 		// If there's already a query, re-fetch with new translation
 		const query = state[tab].query;

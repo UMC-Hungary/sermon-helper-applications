@@ -7,11 +7,15 @@
     import { loadSavedLocale } from '$lib/i18n';
     import { isLoading } from 'svelte-i18n';
     import { onMount } from 'svelte';
-    import {obsWebSocket} from "$lib/utils/obs-websocket";
+    import { obsWebSocket } from "$lib/utils/obs-websocket";
+    import { appSettingsStore, appSettingsLoaded } from '$lib/utils/app-settings-store';
 
     let { children } = $props();
 
-    onMount(() => {
+    onMount(async () => {
+        // Load app settings first (before rendering pages)
+        await appSettingsStore.load();
+
         loadSavedLocale();
         obsWebSocket.autoconnect();
     });
@@ -64,7 +68,7 @@
 		}}
 	/>
 
-{#if $isLoading}
+{#if $isLoading || !$appSettingsLoaded}
 <div class="flex h-screen items-center justify-center bg-background">
     <div class="animate-pulse text-muted-foreground">Loading...</div>
 </div>

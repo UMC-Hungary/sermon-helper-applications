@@ -1,4 +1,4 @@
-import { load } from '@tauri-apps/plugin-store';
+import { createStorageBackend, type StorageBackend } from './storage-helpers';
 
 export interface ObsSettings {
 	websocketUrl: string;
@@ -10,99 +10,28 @@ const DEFAULT_SETTINGS: ObsSettings = {
 	websocketPassword: '',
 };
 
-// Check if running in Tauri environment
-const isTauriApp = () => {
-	return typeof window !== 'undefined' && 
-		   // @ts-ignore - Tauri internal property
-		   typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
-};
-
-// Check if localStorage is available
-const isLocalStorageAvailable = () => {
-	return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-};
-
-// LocalStorage fallback for browser development
-class LocalStorageStore {
-	constructor(private storeName: string) {}
-
-	async get(key: string): Promise<any> {
-		if (!isLocalStorageAvailable()) {
-			return null;
-		}
-		const value = localStorage.getItem(`${this.storeName}_${key}`);
-		return value ? JSON.parse(value) : null;
-	}
-	
-	async set(key: string, value: any): Promise<void> {
-		if (!isLocalStorageAvailable()) {
-			return;
-		}
-		localStorage.setItem(`${this.storeName}_${key}`, JSON.stringify(value));
-	}
-	
-	async save(): Promise<void> {
-		// localStorage is auto-saving
-	}
-}
-
-// In-memory fallback for SSR or when localStorage is not available
-class MemoryStore {
-	constructor(private storeName: string) {}
-	private data: Record<string, any> = {};
-
-	async get(key: string): Promise<any> {
-		return this.data[key] || null;
-	}
-	
-	async set(key: string, value: any): Promise<void> {
-		this.data[key] = value;
-	}
-	
-	async save(): Promise<void> {
-		// In-memory, no save needed
-	}
-}
-
 class ObsSettingsStore {
-	private store: any = null;
+	private store: StorageBackend | null = null;
 	private readonly storeName = 'obs-settings.json';
 
 	async init(): Promise<void> {
 		if (!this.store) {
-			if (isTauriApp()) {
-				try {
-					this.store = await load(this.storeName);
-				} catch (error) {
-					console.warn('Failed to initialize Tauri store, using fallback:', error);
-					if (isLocalStorageAvailable()) {
-						this.store = new LocalStorageStore(this.storeName);
-					} else {
-						this.store = new MemoryStore(this.storeName);
-					}
-				}
-			} else {
-				// Browser environment - use localStorage if available, otherwise memory store
-				if (isLocalStorageAvailable()) {
-					this.store = new LocalStorageStore(this.storeName);
-				} else {
-					this.store = new MemoryStore(this.storeName);
-				}
-			}
+			this.store = await createStorageBackend(this.storeName);
 		}
 	}
 
 	async getSettings(): Promise<ObsSettings> {
 		await this.init();
-		
+
 		if (!this.store) {
 			return DEFAULT_SETTINGS;
 		}
 
 		try {
-			const url = (await this.store.get('websocketUrl')) || DEFAULT_SETTINGS.websocketUrl;
-			const password = (await this.store.get('websocketPassword')) || DEFAULT_SETTINGS.websocketPassword;
-			
+			const url = (await this.store.get('websocketUrl')) ?? DEFAULT_SETTINGS.websocketUrl;
+			const password =
+				(await this.store.get('websocketPassword')) ?? DEFAULT_SETTINGS.websocketPassword;
+
 			return {
 				websocketUrl: url,
 				websocketPassword: password,
@@ -115,7 +44,7 @@ class ObsSettingsStore {
 
 	async saveSettings(settings: Partial<ObsSettings>): Promise<void> {
 		await this.init();
-		
+
 		if (!this.store) {
 			throw new Error('Store not initialized');
 		}
