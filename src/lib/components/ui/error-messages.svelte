@@ -7,9 +7,12 @@
 	import Button from "./button.svelte";
 	import Badge from "./badge.svelte";
 	import ScrollArea from "./scroll-area.svelte";
-	import { AlertCircle, Info, RefreshCw, Settings, Wifi } from "lucide-svelte";
+	import { AlertCircle, AlertTriangle, Info, RefreshCw, Settings, Wifi, Plus, LogIn } from "lucide-svelte";
+	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
 	import { page } from '$app/state';
 	import { systemStore, obsStatus } from '$lib/stores/system-store';
+	import { todayEvent } from '$lib/stores/event-store';
+	import { appSettingsLoaded } from '$lib/utils/app-settings-store';
 	import { _ } from 'svelte-i18n';
 
 	interface ErrorMessage {
@@ -29,6 +32,7 @@
 	let isRechecking = false;
 	let selectedErrorId: string | null = null;
 	let dialogElement: HTMLDialogElement;
+	let showYoutubeLoginModal = false;
 
 	const errorMessages: ErrorMessage[] = [
 		{
@@ -75,6 +79,15 @@
 
 	$: activeErrors = errorMessages.filter((error) => !$systemStore[error.status]);
 
+	// Check if there's no event for today (only when settings are loaded)
+	$: hasNoEventToday = $appSettingsLoaded && !$todayEvent;
+
+	// Check if we should show the no-event warning (not on events pages)
+	$: showNoEventWarning = hasNoEventToday && !page.url.pathname.startsWith('/events');
+
+	// Total issues count (system errors + no event today warning)
+	$: totalIssues = activeErrors.length + (showNoEventWarning ? 1 : 0);
+
 	$: selectedError = selectedErrorId
 		? errorMessages.find(e => e.id === selectedErrorId)
 		: null;
@@ -107,15 +120,15 @@
 	};
 </script>
 
-{#if activeErrors.length === 0}
-	<!-- No errors, return null -->
+{#if totalIssues === 0}
+	<!-- No issues, return null -->
 {:else}
 	<div class="space-y-4 mb-6">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">
 				<AlertCircle class="h-5 w-5 text-destructive" />
 					<h3 class="font-semibold">{$_('errors.title')}</h3>
-					<Badge variant="destructive">{activeErrors.length}</Badge>
+					<Badge variant="destructive">{totalIssues}</Badge>
 			</div>
 			<div class="flex gap-2">
 				<Button
@@ -131,6 +144,27 @@
 		</div>
 
 		<div class="space-y-3">
+			<!-- No Event Today Warning -->
+			{#if showNoEventWarning}
+				<Alert variant="warning">
+					<AlertTriangle class="h-4 w-4" />
+					<AlertTitle>{$_('events.noEventToday.title')}</AlertTitle>
+					<AlertDescription className="flex items-start justify-between gap-4">
+						<span>{$_('events.noEventToday.description')}</span>
+						<Button
+							buttonVariant="outline"
+							buttonSize="sm"
+							className="shrink-0 bg-transparent"
+							href="/events/new"
+						>
+							<Plus class="h-4 w-4 mr-2" />
+							{$_('events.noEventToday.action')}
+						</Button>
+					</AlertDescription>
+				</Alert>
+			{/if}
+
+			<!-- System Errors -->
 			{#each activeErrors as error (error.id)}
 				<Alert variant="destructive">
 					<AlertCircle class="h-4 w-4" />
@@ -169,6 +203,27 @@
 								<Button
 									buttonVariant="outline"
 									buttonSize="sm"
+									onclick={() => openDialog(error.id)}
+								>
+									<Info class="h-4 w-4 mr-2" />
+									{$_('errors.readMore')}
+								</Button>
+							</div>
+						{:else if error.id === 'youtube-login'}
+							<div class="flex gap-2">
+								<Button
+									buttonVariant="outline"
+									buttonSize="sm"
+									className="shrink-0 bg-transparent"
+									onclick={() => (showYoutubeLoginModal = true)}
+								>
+									<LogIn class="h-4 w-4 mr-2" />
+									{$_('youtube.modal.loginButton')}
+								</Button>
+								<Button
+									buttonVariant="outline"
+									buttonSize="sm"
+									className="shrink-0 bg-transparent"
 									onclick={() => openDialog(error.id)}
 								>
 									<Info class="h-4 w-4 mr-2" />
@@ -237,4 +292,10 @@
 			</div>
 		{/if}
 	</dialog>
+
+	<!-- YouTube Login Modal -->
+	<YouTubeLoginModal
+		open={showYoutubeLoginModal}
+		onClose={() => (showYoutubeLoginModal = false)}
+	/>
 {/if}

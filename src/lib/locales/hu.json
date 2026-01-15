@@ -3,6 +3,7 @@
 		"appTitle": "Gyülekezeti Vezérlő",
 		"nav": {
 			"dashboard": "Vezérlőpult",
+			"events": "Istentiszteleti Események",
 			"bibleEditor": "Biblia Szerkesztő",
 			"scheduleEvent": "Esemény Ütemezése",
 			"youtubeEvents": "YouTube Események",
@@ -18,16 +19,30 @@
 			"displayAlignment": "Kijelző Igazítás",
 			"youtubeLoggedIn": "YouTube Bejelentkezve"
 		},
-		"currentSermon": {
-			"title": "Aktuális Prédikáció",
+		"upcomingEvent": {
+			"title": "Közelgő Esemény",
 			"textus": "Textus",
 			"leckio": "Leckio",
-			"youtube": "YouTube",
-			"streamLive": "Élő Adás",
-			"scheduled": "Ütemezve",
-			"notScheduled": "Nincs ütemezve"
+			"scheduledDate": "Ütemezve",
+			"today": "Ma",
+			"edit": "Szerkesztés",
+			"noUpcoming": {
+				"title": "Nincs Közelgő Esemény",
+				"description": "Hozzon létre egy eseményt, hogy itt megjelenjen"
+			},
+			"youtube": {
+				"scheduled": "Ütemezve YouTube-on",
+				"notScheduled": "Nincs ütemezve",
+				"schedule": "Ütemezés YouTube-on",
+				"scheduling": "Ütemezés...",
+				"loginFirst": "Bejelentkezés YouTube-ra"
+			}
 		},
-		"language": "Nyelv"
+		"language": "Nyelv",
+		"theme": "Téma",
+		"themeSystem": "Rendszer",
+		"themeLight": "Világos",
+		"themeDark": "Sötét"
 	},
 	"dashboard": {
 		"title": "Vezérlőpult",
@@ -327,6 +342,114 @@
 		"deleteEvent": {
 			"title": "Esemény Törölve",
 			"description": "YouTube esemény eltávolítva"
+		}
+	},
+	"events": {
+		"title": "Istentiszteleti Események",
+		"subtitle": "Közelgő és elmúlt istentiszteleti események kezelése",
+		"addEvent": "Esemény Hozzáadása",
+		"upcomingTitle": "Közelgő Események",
+		"pastTitle": "Elmúlt Események",
+		"confirmDelete": "Biztosan törölni szeretné ezt az eseményt?",
+		"noTime": "Nincs időpont megadva",
+		"noSpeaker": "Nincs beszélő megadva",
+		"textusLabel": "Textus",
+		"leckioLabel": "Leckio",
+		"badges": {
+			"today": "Ma",
+			"upcoming": "Közelgő",
+			"past": "Elmúlt"
+		},
+		"empty": {
+			"title": "Nincsenek Események",
+			"description": "Hozza létre az első istentiszteleti eseményt a kezdéshez"
+		},
+		"noEventToday": {
+			"title": "Nincs Mai Esemény Ütemezve",
+			"description": "Nincs mai istentiszteleti esemény ütemezve. Hozzon létre egyet az előkészületekhez.",
+			"action": "Esemény Létrehozása"
+		},
+		"form": {
+			"basicInfo": "Alapadatok",
+			"title": "Esemény Címe",
+			"titlePlaceholder": "Vasárnapi Istentisztelet - Isten Szeretete",
+			"date": "Dátum",
+			"time": "Idő",
+			"speaker": "Beszélő",
+			"speakerPlaceholder": "Prédikátor John Smith",
+			"description": "Leírás",
+			"descriptionPlaceholder": "Esemény leírása a YouTube-hoz...",
+			"privacy": "YouTube Láthatóság",
+			"privacyOptions": {
+				"public": "Nyilvános",
+				"unlisted": "Nem listázott",
+				"private": "Privát"
+			},
+			"textus": "Textus (Elsődleges Felolvasás)",
+			"leckio": "Leckio (Másodlagos Felolvasás)",
+			"bibleReferences": "Bibliai Hivatkozások",
+			"biblePlaceholder": "pl. Jn 3,16-21",
+			"calculatedTitle": "YouTube Cím",
+			"calculatedTitleEmpty": "Válassz dátumot a cím generálásához",
+			"clear": "Törlés",
+			"save": "Esemény Mentése",
+			"cancel": "Mégse",
+			"fetchError": "Nem sikerült lekérni a Biblia verseket",
+			"validation": {
+				"title": "Kérjük, adjon meg egy esemény címet",
+				"date": "Kérjük, válasszon egy dátumot"
+			}
+		},
+		"toasts": {
+			"created": {
+				"title": "Esemény Létrehozva",
+				"description": "Istentiszteleti esemény sikeresen létrehozva"
+			},
+			"updated": {
+				"title": "Esemény Frissítve",
+				"description": "Istentiszteleti esemény sikeresen frissítve"
+			},
+			"deleted": {
+				"title": "Esemény Törölve",
+				"description": "Istentiszteleti esemény eltávolítva"
+			},
+			"error": {
+				"title": "Hiba",
+				"description": "Hiba történt az esemény mentése közben"
+			}
+		}
+	},
+	"youtube": {
+		"modal": {
+			"title": "YouTube Bejelentkezés",
+			"description": "Jelentkezzen be Google fiókjával YouTube élő események ütemezéséhez.",
+			"configRequired": "API Konfiguráció Szükséges",
+			"configDescription": "Adja meg a YouTube Data API v3 hitelesítő adatait a Google Cloud Console-ból.",
+			"clientId": "Client ID",
+			"clientIdPlaceholder": "Az OAuth 2.0 Client ID-ja",
+			"clientSecret": "Client Secret",
+			"clientSecretPlaceholder": "Az OAuth 2.0 Client Secret-je",
+			"redirectUri": "Átirányítási URI",
+			"saveConfig": "Konfiguráció Mentése",
+			"configureCredentials": "API Hitelesítők Beállítása",
+			"loginButton": "Bejelentkezés Google-lel",
+			"waitingForLogin": "Várakozás a bejelentkezésre...",
+			"configSaved": "Beállítások Mentve",
+			"configSavedDescription": "YouTube API hitelesítő adatok mentve",
+			"error": "Hiba",
+			"enterBoth": "Kérjük, adja meg a Client ID-t és a Client Secret-et is",
+			"loginFailed": "Nem sikerült elindítani a bejelentkezést"
+		},
+		"scheduling": {
+			"title": "YouTube Ütemezés",
+			"notScheduled": "Ütemezze ezt az eseményt YouTube élő közvetítésként.",
+			"scheduleButton": "Ütemezés YouTube-on",
+			"scheduling": "Ütemezés...",
+			"scheduled": "YouTube Esemény Ütemezve",
+			"scheduledDescription": "A YouTube élő esemény sikeresen létrehozva",
+			"viewInStudio": "Megtekintés a YouTube Studio-ban",
+			"failed": "Nem sikerült ütemezni a YouTube eseményt",
+			"updateFailed": "Nem sikerült frissíteni a YouTube eseményt"
 		}
 	},
 	"common": {

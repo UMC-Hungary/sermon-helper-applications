@@ -9,7 +9,7 @@ interface ToastOptions {
 	duration?: number;
 }
 
-export function toast({ title, description, variant = 'info', duration }: ToastOptions) {
+export function toast({ title, description, variant = 'info', duration = 100000 }: ToastOptions) {
 	if (variant === 'success') {
 		sonnerToast.success(title || '', {
 			style: 'border: 2px solid green !important;',

@@ -79,9 +79,7 @@
 	};
 </script>
 
-<div class="p-4 lg:p-8 space-y-6 pt-20 lg:pt-8">
-	<ErrorMessages {onRecheck} />
-
+<div>
 	<div class="flex items-center justify-between">
 		<div>
 			<h2 class="text-3xl font-bold tracking-tight">YouTube Events</h2>
@@ -97,15 +95,15 @@
 			<Card>
 				<CardHeader>
 					<div class="flex items-start justify-between">
-						<CardTitle class="text-lg leading-tight">{event.title}</CardTitle>
+						<CardTitle className="text-lg leading-tight">{event.title}</CardTitle>
 						<Badge variant={getStatusBadgeVariant(event.status)}>{event.status}</Badge>
 					</div>
-					<CardDescription class="flex items-center gap-1 mt-2">
+					<CardDescription className="flex items-center gap-1 mt-2">
 						<User class="h-3 w-3" />
 						{event.speaker}
 					</CardDescription>
 				</CardHeader>
-				<CardContent class="space-y-4">
+				<CardContent className="space-y-4">
 					<div class="space-y-2 text-sm">
 						<div class="flex items-center gap-2 text-muted-foreground">
 							<Calendar class="h-4 w-4" />

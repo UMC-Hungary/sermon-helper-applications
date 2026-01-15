@@ -3,6 +3,7 @@
 		"appTitle": "Church Control",
 		"nav": {
 			"dashboard": "Dashboard",
+			"events": "Service Events",
 			"bibleEditor": "Bible Editor",
 			"scheduleEvent": "Schedule Event",
 			"youtubeEvents": "YouTube Events",
@@ -18,16 +19,30 @@
 			"displayAlignment": "Display Alignment",
 			"youtubeLoggedIn": "YouTube Logged In"
 		},
-		"currentSermon": {
-			"title": "Current Sermon",
+		"upcomingEvent": {
+			"title": "Upcoming Event",
 			"textus": "Textus",
 			"leckio": "Leckio",
-			"youtube": "YouTube",
-			"streamLive": "Stream Live",
-			"scheduled": "Scheduled",
-			"notScheduled": "Not scheduled"
+			"scheduledDate": "Scheduled",
+			"today": "Today",
+			"edit": "Edit",
+			"noUpcoming": {
+				"title": "No Upcoming Events",
+				"description": "Create an event to see it here"
+			},
+			"youtube": {
+				"scheduled": "Scheduled on YouTube",
+				"notScheduled": "Not scheduled",
+				"schedule": "Schedule on YouTube",
+				"scheduling": "Scheduling...",
+				"loginFirst": "Login to YouTube"
+			}
 		},
-		"language": "Language"
+		"language": "Language",
+		"theme": "Theme",
+		"themeSystem": "System",
+		"themeLight": "Light",
+		"themeDark": "Dark"
 	},
 	"dashboard": {
 		"title": "Dashboard",
@@ -327,6 +342,114 @@
 		"deleteEvent": {
 			"title": "Event Deleted",
 			"description": "YouTube event has been removed"
+		}
+	},
+	"events": {
+		"title": "Service Events",
+		"subtitle": "Manage upcoming and past service events",
+		"addEvent": "Add Event",
+		"upcomingTitle": "Upcoming Events",
+		"pastTitle": "Past Events",
+		"confirmDelete": "Are you sure you want to delete this event?",
+		"noTime": "No time set",
+		"noSpeaker": "No speaker set",
+		"textusLabel": "Textus",
+		"leckioLabel": "Leckio",
+		"badges": {
+			"today": "Today",
+			"upcoming": "Upcoming",
+			"past": "Past"
+		},
+		"empty": {
+			"title": "No Events",
+			"description": "Create your first service event to get started"
+		},
+		"noEventToday": {
+			"title": "No Event Scheduled for Today",
+			"description": "There is no service event scheduled for today. Create one to start preparing.",
+			"action": "Create Event"
+		},
+		"form": {
+			"basicInfo": "Basic Information",
+			"title": "Event Title",
+			"titlePlaceholder": "Sunday Service - The Love of God",
+			"date": "Date",
+			"time": "Time",
+			"speaker": "Speaker",
+			"speakerPlaceholder": "Pastor John Smith",
+			"description": "Description",
+			"descriptionPlaceholder": "Event description for YouTube...",
+			"privacy": "YouTube Privacy",
+			"privacyOptions": {
+				"public": "Public",
+				"unlisted": "Unlisted",
+				"private": "Private"
+			},
+			"textus": "Textus (Primary Reading)",
+			"leckio": "Leckio (Secondary Reading)",
+			"bibleReferences": "Bible References",
+			"biblePlaceholder": "e.g., Jn 3,16-21",
+			"calculatedTitle": "YouTube Title",
+			"calculatedTitleEmpty": "Select a date to generate title",
+			"clear": "Clear",
+			"save": "Save Event",
+			"cancel": "Cancel",
+			"fetchError": "Failed to fetch Bible verses",
+			"validation": {
+				"title": "Please enter an event title",
+				"date": "Please select a date"
+			}
+		},
+		"toasts": {
+			"created": {
+				"title": "Event Created",
+				"description": "Service event has been created successfully"
+			},
+			"updated": {
+				"title": "Event Updated",
+				"description": "Service event has been updated successfully"
+			},
+			"deleted": {
+				"title": "Event Deleted",
+				"description": "Service event has been removed"
+			},
+			"error": {
+				"title": "Error",
+				"description": "An error occurred while saving the event"
+			}
+		}
+	},
+	"youtube": {
+		"modal": {
+			"title": "YouTube Login",
+			"description": "Log in with your Google account to schedule YouTube live events.",
+			"configRequired": "API Configuration Required",
+			"configDescription": "Enter your YouTube Data API v3 credentials from the Google Cloud Console.",
+			"clientId": "Client ID",
+			"clientIdPlaceholder": "Your OAuth 2.0 Client ID",
+			"clientSecret": "Client Secret",
+			"clientSecretPlaceholder": "Your OAuth 2.0 Client Secret",
+			"redirectUri": "Redirect URI",
+			"saveConfig": "Save Configuration",
+			"configureCredentials": "Configure API Credentials",
+			"loginButton": "Login with Google",
+			"waitingForLogin": "Waiting for login...",
+			"configSaved": "Settings Saved",
+			"configSavedDescription": "YouTube API credentials have been saved",
+			"error": "Error",
+			"enterBoth": "Please enter both Client ID and Client Secret",
+			"loginFailed": "Failed to start login"
+		},
+		"scheduling": {
+			"title": "YouTube Scheduling",
+			"notScheduled": "Schedule this event as a YouTube live broadcast.",
+			"scheduleButton": "Schedule in YouTube",
+			"scheduling": "Scheduling...",
+			"scheduled": "YouTube Event Scheduled",
+			"scheduledDescription": "The YouTube live event has been created successfully",
+			"viewInStudio": "View in YouTube Studio",
+			"failed": "Failed to schedule YouTube event",
+			"updateFailed": "Failed to update YouTube event"
 		}
 	},
 	"common": {

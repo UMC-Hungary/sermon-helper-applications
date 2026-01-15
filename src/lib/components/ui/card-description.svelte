@@ -1,14 +1,9 @@
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
 
-	interface CardDescriptionProps {
-		class?: string;
-		children?: import('svelte').Snippet;
-	}
-
-	let { class: className, children }: CardDescriptionProps = $props();
+	export let className: string = '';
 </script>
 
 <p class={cn('text-sm text-muted-foreground', className)}>
-	{@render children?.()}
+	<slot />
 </p>

@@ -6,32 +6,32 @@
     import '$lib/i18n'; // Initialize i18n at module level
     import { loadSavedLocale } from '$lib/i18n';
     import { isLoading } from 'svelte-i18n';
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { obsWebSocket } from "$lib/utils/obs-websocket";
     import { appSettingsStore, appSettingsLoaded } from '$lib/utils/app-settings-store';
+    import { initTheme } from '$lib/stores/theme-store';
+    import { initOAuthHandler } from '$lib/utils/oauth-handler';
+    import { youtubeAuthStore } from '$lib/stores/youtube-store';
+    import { updateYoutubeLogin } from '$lib/stores/system-store';
+    import { refreshStore } from '$lib/stores/refresh-store';
 
     let { children } = $props();
 
     onMount(async () => {
-        // Load app settings first (before rendering pages)
+        await initTheme();
         await appSettingsStore.load();
-
+        await initOAuthHandler();
+        updateYoutubeLogin(youtubeAuthStore.isLoggedIn());
         loadSavedLocale();
         obsWebSocket.autoconnect();
+        refreshStore.start();
+    });
+
+    onDestroy(() => {
+        refreshStore.stop();
     });
 
     let isMobileMenuOpen = false;
-
-    let textus = 'John 3:16-21';
-    let leckio = 'Romans 8:28-39';
-
-    let currentSermon = {
-        youtubeTitle: 'The Love of God - Sunday Service',
-        youtubeScheduled: true,
-        streamStarted: false,
-    };
-
-    let youtubeOnAir = false;
 
     const handleSystemRecheck = async () => {
         console.log('[v0] Rechecking system status...');
@@ -77,7 +77,6 @@
     <Sidebar
             isMobileMenuOpen={isMobileMenuOpen}
             onMobileMenuToggle={() => isMobileMenuOpen = !isMobileMenuOpen}
-            currentSermon={{ textus, leckio, ...currentSermon }}
     />
 
     <main class="flex-1 overflow-y-auto">

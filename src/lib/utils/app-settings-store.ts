@@ -1,15 +1,27 @@
 import { writable, get } from 'svelte/store';
 import { createStorageBackend, type StorageBackend } from './storage-helpers';
+import type { ServiceEvent } from '$lib/types/event';
+import type { YouTubeTokens, YouTubeOAuthConfig } from '$lib/types/youtube';
 
 export interface AppSettings {
 	bibleTranslation: string;
-	// Future fields:
-	// eventList: string[];
-	// preferredLanguage: string;
+	eventList: ServiceEvent[];
+	draftEvent: ServiceEvent | null;
+	draftEventOriginalId: string | null; // If editing, stores the original event ID
+	draftSaved: boolean; // True if the draft was saved (form should not reopen)
+	// YouTube OAuth settings
+	youtubeTokens: YouTubeTokens | null;
+	youtubeOAuthConfig: YouTubeOAuthConfig | null;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
 	bibleTranslation: 'RUF_v2',
+	eventList: [],
+	draftEvent: null,
+	draftEventOriginalId: null,
+	draftSaved: false,
+	youtubeTokens: null,
+	youtubeOAuthConfig: null,
 };
 
 // Reactive store for app settings - can be subscribed to by components
@@ -95,7 +107,7 @@ class AppSettingsStore {
 			for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof AppSettings)[]) {
 				const value = await this.store.get(key);
 				if (value !== null) {
-					settings[key] = value;
+					(settings as unknown as Record<string, unknown>)[key] = value;
 				}
 			}
 
