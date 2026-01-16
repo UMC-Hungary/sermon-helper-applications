@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 	import { toast } from '$lib/utils/toast';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -12,10 +13,17 @@
 	let downloadTotal = $state(0);
 	let showUpdateDialog = $state(false);
 	let updateInstance: any = $state(null);
+	let isTauri = $state(false);
+
+	function checkIsTauri(): boolean {
+		if (!browser) return false;
+		return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+	}
 
 	async function checkForUpdates(showNoUpdateToast = false) {
+		if (!isTauri) return;
+
 		try {
-			// Dynamic import to avoid SSR issues
 			const { check } = await import('@tauri-apps/plugin-updater');
 			const update = await check();
 
@@ -47,7 +55,7 @@
 	}
 
 	async function downloadAndInstall() {
-		if (!updateInstance) return;
+		if (!updateInstance || !isTauri) return;
 
 		isDownloading = true;
 		downloadProgress = 0;
@@ -74,10 +82,8 @@
 				duration: 2000
 			});
 
-			// Wait a moment for the toast to be visible
 			await new Promise(resolve => setTimeout(resolve, 1500));
 
-			// Dynamic import to avoid SSR issues
 			const { relaunch } = await import('@tauri-apps/plugin-process');
 			await relaunch();
 		} catch (error) {
@@ -104,15 +110,14 @@
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 	}
 
-	$effect(() => {
-		if (downloadTotal > 0) {
-			const percent = Math.round((downloadProgress / downloadTotal) * 100);
-			console.log(`Download progress: ${percent}%`);
-		}
-	});
-
 	onMount(() => {
-		// Check for updates after a short delay to not block app startup
+		isTauri = checkIsTauri();
+
+		if (!isTauri) {
+			console.log('Not running in Tauri, skipping update check');
+			return;
+		}
+
 		const timer = setTimeout(() => {
 			checkForUpdates(false);
 		}, 3000);
@@ -120,11 +125,10 @@
 		return () => clearTimeout(timer);
 	});
 
-	// Export for manual check from settings
 	export { checkForUpdates };
 </script>
 
-{#if showUpdateDialog && updateAvailable}
+{#if isTauri && showUpdateDialog && updateAvailable}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<Card className="w-full max-w-md mx-4">
 			<svelte:fragment slot="title">
