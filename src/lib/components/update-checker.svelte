@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { check } from '@tauri-apps/plugin-updater';
-	import { relaunch } from '@tauri-apps/plugin-process';
 	import { toast } from '$lib/utils/toast';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -13,10 +11,12 @@
 	let downloadProgress = $state(0);
 	let downloadTotal = $state(0);
 	let showUpdateDialog = $state(false);
-	let updateInstance: Awaited<ReturnType<typeof check>> | null = $state(null);
+	let updateInstance: any = $state(null);
 
 	async function checkForUpdates(showNoUpdateToast = false) {
 		try {
+			// Dynamic import to avoid SSR issues
+			const { check } = await import('@tauri-apps/plugin-updater');
 			const update = await check();
 
 			if (update) {
@@ -54,7 +54,7 @@
 		downloadTotal = 0;
 
 		try {
-			await updateInstance.downloadAndInstall((event) => {
+			await updateInstance.downloadAndInstall((event: any) => {
 				switch (event.event) {
 					case 'Started':
 						downloadTotal = event.data.contentLength || 0;
@@ -76,6 +76,9 @@
 
 			// Wait a moment for the toast to be visible
 			await new Promise(resolve => setTimeout(resolve, 1500));
+
+			// Dynamic import to avoid SSR issues
+			const { relaunch } = await import('@tauri-apps/plugin-process');
 			await relaunch();
 		} catch (error) {
 			console.error('Failed to install update:', error);
