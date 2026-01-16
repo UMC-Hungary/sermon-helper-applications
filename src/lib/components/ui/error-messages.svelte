@@ -7,13 +7,15 @@
 	import Button from "./button.svelte";
 	import Badge from "./badge.svelte";
 	import ScrollArea from "./scroll-area.svelte";
-	import { AlertCircle, AlertTriangle, Info, RefreshCw, Settings, Wifi, Plus, LogIn } from "lucide-svelte";
+	import { AlertCircle, AlertTriangle, Info, RefreshCw, Settings, Wifi, Plus, LogIn, Cpu } from "lucide-svelte";
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
 	import { page } from '$app/state';
 	import { systemStore, obsStatus } from '$lib/stores/system-store';
 	import { todayEvent } from '$lib/stores/event-store';
 	import { appSettingsLoaded } from '$lib/utils/app-settings-store';
 	import { _ } from 'svelte-i18n';
+	import { failingRequiredDevices, obsDeviceStatuses } from '$lib/stores/obs-device-status-store';
+	import { recheckDevice } from '$lib/utils/obs-device-checker';
 
 	interface ErrorMessage {
 		id: string;
@@ -85,8 +87,8 @@
 	// Check if we should show the no-event warning (not on events pages)
 	$: showNoEventWarning = hasNoEventToday && !page.url.pathname.startsWith('/events');
 
-	// Total issues count (system errors + no event today warning)
-	$: totalIssues = activeErrors.length + (showNoEventWarning ? 1 : 0);
+	// Total issues count (system errors + no event today warning + failing OBS devices)
+	$: totalIssues = activeErrors.length + (showNoEventWarning ? 1 : 0) + $failingRequiredDevices.length;
 
 	$: selectedError = selectedErrorId
 		? errorMessages.find(e => e.id === selectedErrorId)
@@ -241,6 +243,45 @@
 								{$_('errors.readMore')}
 							</Button>
 						{/if}
+					</AlertDescription>
+				</Alert>
+			{/each}
+
+			<!-- Dynamic OBS Device Errors -->
+			{#each $failingRequiredDevices as device (device.id)}
+				{@const status = $obsDeviceStatuses.get(device.id)}
+				<Alert variant="destructive">
+					<Cpu class="h-4 w-4" />
+					<AlertTitle>{device.name} {$_('errors.obsDevice.notFound')}</AlertTitle>
+					<AlertDescription className="flex items-start justify-between gap-4">
+						<span>
+							{$_('errors.obsDevice.description', { values: { name: device.name, type: device.type } })}
+							{#if status?.error}
+								<span class="text-xs block mt-1 opacity-75">{status.error}</span>
+							{/if}
+						</span>
+						<div class="flex gap-2">
+							<Button
+								buttonVariant="outline"
+								buttonSize="sm"
+								className="shrink-0 bg-transparent"
+								onclick={() => recheckDevice(device.id)}
+							>
+								<RefreshCw class="h-4 w-4 mr-2" />
+								{$_('errors.recheck')}
+							</Button>
+							{#if page.url.pathname !== '/obs-devices'}
+								<Button
+									buttonVariant="outline"
+									buttonSize="sm"
+									className="shrink-0 bg-transparent"
+									href="/obs-devices"
+								>
+									<Settings class="h-4 w-4 mr-2" />
+									{$_('errors.obsDevice.configure')}
+								</Button>
+							{/if}
+						</div>
 					</AlertDescription>
 				</Alert>
 			{/each}

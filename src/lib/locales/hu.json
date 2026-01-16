@@ -7,7 +7,8 @@
 			"bibleEditor": "Biblia Szerkesztő",
 			"scheduleEvent": "Esemény Ütemezése",
 			"youtubeEvents": "YouTube Események",
-			"obsSettings": "OBS Beállítások"
+			"obsSettings": "OBS Beállítások",
+			"obsDevices": "OBS Eszközök"
 		},
 		"systemStatus": {
 			"title": "Rendszer Állapot",
@@ -36,7 +37,9 @@
 				"schedule": "Ütemezés YouTube-on",
 				"scheduling": "Ütemezés...",
 				"loginFirst": "Bejelentkezés YouTube-ra"
-			}
+			},
+			"browserSources": "Böngésző Források",
+			"refreshBrowserSource": "Böngésző forrás frissítése"
 		},
 		"language": "Nyelv",
 		"theme": "Téma",
@@ -200,6 +203,11 @@
 				"Győződjön meg róla, hogy a fióknak van jogosultsága élő közvetítések létrehozásához",
 				"Sikeres bejelentkezés után ütemezhet YouTube eseményeket"
 			]
+		},
+		"obsDevice": {
+			"notFound": "Nem Található",
+			"description": "A szükséges {type} eszköz \"{name}\" nem elérhető az OBS-ben.",
+			"configure": "Beállítás"
 		}
 	},
 	"toasts": {
@@ -460,5 +468,56 @@
 		"delete": "Törlés",
 		"loading": "Betöltés...",
 		"error": "Hiba"
+	},
+	"obsDevices": {
+		"title": "OBS Eszközök",
+		"subtitle": "Kijelzők, audio eszközök és böngésző források konfigurálása az OBS-hez",
+		"refreshFromObs": "Frissítés OBS-ből",
+		"loadingObs": "Betöltés...",
+		"recheckAll": "Összes Újraellenőrzése",
+		"checking": "Ellenőrzés...",
+		"required": "Szükséges",
+		"source": "Forrás",
+		"goToObsSettings": "OBS Beállításokhoz",
+		"displays": {
+			"title": "Kijelzők",
+			"description": "Kijelző rögzítő források konfigurálása az OBS-ben",
+			"add": "Kijelző Hozzáadása"
+		},
+		"audio": {
+			"title": "Audio Eszközök",
+			"description": "Audio rögzítő források konfigurálása az OBS-ben",
+			"add": "Audio Eszköz Hozzáadása"
+		},
+		"browser": {
+			"title": "Böngésző Források",
+			"description": "Böngésző források konfigurálása dinamikus URL sablonokkal",
+			"add": "Böngésző Forrás Hozzáadása"
+		},
+		"form": {
+			"name": "Név",
+			"namePlaceholder": "Megjelenítési név ehhez az eszközhöz",
+			"obsSource": "OBS Forrás",
+			"selectSource": "OBS forrás kiválasztása...",
+			"device": "Eszköz",
+			"selectDevice": "Eszköz kiválasztása...",
+			"markRequired": "Jelölés szükségesként (hiba megjelenítése, ha nem elérhető)",
+			"urlTemplate": "URL Sablon",
+			"urlTemplateHint": "Elérhető változók: ${textus}, ${lekcio}",
+			"save": "Mentés",
+			"cancel": "Mégse"
+		},
+		"toasts": {
+			"dataLoaded": "OBS Adatok Betöltve",
+			"dataLoadedDescription": "Az elérhető eszközök és források frissítve",
+			"deviceAdded": "Eszköz Hozzáadva",
+			"deviceRemoved": "Eszköz Eltávolítva",
+			"browserAdded": "Böngésző Forrás Hozzáadva",
+			"browserRemoved": "Böngésző Forrás Eltávolítva"
+		},
+		"errors": {
+			"obsNotConnected": "Az OBS nincs csatlakoztatva. Kérjük, először csatlakozzon az OBS-hez.",
+			"fillAllFields": "Kérjük, töltse ki az összes kötelező mezőt"
+		}
 	}
 }

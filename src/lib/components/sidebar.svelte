@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Home, Youtube, Calendar, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Home, Youtube, Calendar, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, Cpu, RefreshCw } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -15,6 +15,10 @@
 	import { youtubeApi } from '$lib/utils/youtube-api';
 	import { toast } from '$lib/utils/toast';
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
+	import { requiredDeviceConfigs } from '$lib/stores/obs-devices-store';
+	import { obsDeviceStatuses, obsBrowserStatuses, isCheckingDevices } from '$lib/stores/obs-device-status-store';
+	import { browserSourceConfigs } from '$lib/stores/obs-devices-store';
+	import { manualRefreshBrowserSource } from '$lib/utils/obs-device-checker';
 
 	type Status = "active" | "inactive" | "warning";
 
@@ -92,6 +96,7 @@
 		{ id: '/youtube-schedule', labelKey: 'sidebar.nav.scheduleEvent', icon: Calendar },
 		{ id: '/youtube-events', labelKey: 'sidebar.nav.youtubeEvents', icon: Youtube },
 		{ id: '/obs-settings', labelKey: 'sidebar.nav.obsSettings', icon: Settings },
+		{ id: '/obs-devices', labelKey: 'sidebar.nav.obsDevices', icon: Cpu },
 	];
 
 	function handleSystemRecheck() {
@@ -216,6 +221,21 @@
 							<XCircle class="h-4 w-4 text-red-600" />
 						{/if}
 					</div>
+
+					<!-- Dynamic OBS Device Status Rows -->
+					{#each $requiredDeviceConfigs as device (device.id)}
+						{@const status = $obsDeviceStatuses.get(device.id)}
+						<div class="flex items-center justify-between py-2">
+							<span class="text-sm text-muted-foreground">{device.name}</span>
+							{#if $isCheckingDevices && !status}
+								<Loader2 class="h-4 w-4 text-blue-600 animate-spin" />
+							{:else if status?.available && status?.assigned}
+								<CheckCircle2 class="h-4 w-4 text-green-600" />
+							{:else}
+								<XCircle class="h-4 w-4 text-red-600" />
+							{/if}
+						</div>
+					{/each}
 				</div>
 			</Card>
 
@@ -308,6 +328,42 @@
 								</div>
 							{/if}
 						</div>
+
+						<!-- Browser Source Status -->
+						{#if $browserSourceConfigs.length > 0}
+							<div class="pt-2 border-t border-border">
+								<span class="text-xs text-muted-foreground mb-2 block">{$_('sidebar.upcomingEvent.browserSources')}</span>
+								{#each $browserSourceConfigs as config (config.id)}
+									{@const status = $obsBrowserStatuses.get(config.id)}
+									<div class="flex items-center justify-between py-1">
+										<span class="text-sm text-muted-foreground">{config.name}</span>
+										{#if status?.refreshPending}
+											<Loader2 class="h-4 w-4 text-blue-600 animate-spin" />
+										{:else if status?.matches}
+											<CheckCircle2 class="h-4 w-4 text-green-600" />
+										{:else if status?.refreshSuccess === false}
+											<button
+												type="button"
+												onclick={() => manualRefreshBrowserSource(config.id)}
+												class="p-1 hover:bg-muted rounded transition-colors"
+												title={$_('sidebar.upcomingEvent.refreshBrowserSource')}
+											>
+												<RefreshCw class="h-4 w-4 text-amber-600" />
+											</button>
+										{:else}
+											<button
+												type="button"
+												onclick={() => manualRefreshBrowserSource(config.id)}
+												class="p-1 hover:bg-muted rounded transition-colors"
+												title={$_('sidebar.upcomingEvent.refreshBrowserSource')}
+											>
+												<RefreshCw class="h-4 w-4 text-amber-600" />
+											</button>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
 
 						<!-- Edit Button -->
 						<Button

@@ -1,7 +1,8 @@
 // Real OBS WebSocket service for sermon app
 import OBSWebSocket, { OBSWebSocketError } from "obs-websocket-js";
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { obsSettingsStore } from "./obs-store";
+import type { ObsDevice, ObsInputInfo } from "$lib/types/obs-devices";
 
 export interface OBSConnectionStatus {
 	connected: boolean;
@@ -119,6 +120,126 @@ export class LocalOBSWebSocket {
 			this.obs = null;
 		}
 		this.updateStatus(false, false, false);
+	}
+
+	/**
+	 * Check if OBS is connected
+	 */
+	isConnected(): boolean {
+		return get(this.status).connected;
+	}
+
+	/**
+	 * Get list of available property items for an input source
+	 * Used to get available displays (display_uuid) or audio devices (device_id)
+	 */
+	async getInputPropertyItems(
+		inputName: string,
+		propertyName: string
+	): Promise<ObsDevice[]> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			const result = await this.obs.call('GetInputPropertiesListPropertyItems', {
+				inputName,
+				propertyName
+			});
+
+			const items = result.propertyItems as Array<{ itemName: string; itemValue: string }> || [];
+			return items.map((item) => ({
+				itemName: item.itemName,
+				itemValue: item.itemValue
+			}));
+		} catch (error) {
+			console.error('Failed to get input property items:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get current settings for an input source
+	 */
+	async getInputSettings(inputName: string): Promise<Record<string, unknown>> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			const result = await this.obs.call('GetInputSettings', { inputName });
+			return (result.inputSettings || {}) as Record<string, unknown>;
+		} catch (error) {
+			console.error('Failed to get input settings:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Set settings for an input source
+	 * Used to auto-assign devices or update browser source URLs
+	 */
+	async setInputSettings(
+		inputName: string,
+		inputSettings: Record<string, unknown>
+	): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			await this.obs.call('SetInputSettings', {
+				inputName,
+				inputSettings: inputSettings as Record<string, string | number | boolean>
+			});
+			console.log('SetInputSettings success:', inputName, inputSettings);
+		} catch (error) {
+			console.error('Failed to set input settings:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get list of all inputs, optionally filtered by kind
+	 */
+	async getInputList(inputKind?: string): Promise<ObsInputInfo[]> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			const result = await this.obs.call('GetInputList', inputKind ? { inputKind } : undefined);
+			const inputs = result.inputs as Array<{ inputName: string; inputKind: string; inputUuid?: string }> || [];
+			return inputs.map((input) => ({
+				inputName: input.inputName,
+				inputKind: input.inputKind,
+				inputUuid: input.inputUuid
+			}));
+		} catch (error) {
+			console.error('Failed to get input list:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Refresh a browser source by pressing the "Refresh" button
+	 * This triggers a page reload in the browser source
+	 */
+	async refreshBrowserSource(inputName: string): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			await this.obs.call('PressInputPropertiesButton', {
+				inputName,
+				propertyName: 'refreshnocache'
+			});
+			console.log('Browser source refreshed:', inputName);
+		} catch (error) {
+			console.error('Failed to refresh browser source:', error);
+			throw error;
+		}
 	}
 }
 

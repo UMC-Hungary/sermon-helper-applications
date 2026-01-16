@@ -7,7 +7,8 @@
 			"bibleEditor": "Bible Editor",
 			"scheduleEvent": "Schedule Event",
 			"youtubeEvents": "YouTube Events",
-			"obsSettings": "OBS Settings"
+			"obsSettings": "OBS Settings",
+			"obsDevices": "OBS Devices"
 		},
 		"systemStatus": {
 			"title": "System Status",
@@ -36,7 +37,9 @@
 				"schedule": "Schedule on YouTube",
 				"scheduling": "Scheduling...",
 				"loginFirst": "Login to YouTube"
-			}
+			},
+			"browserSources": "Browser Sources",
+			"refreshBrowserSource": "Refresh browser source"
 		},
 		"language": "Language",
 		"theme": "Theme",
@@ -200,6 +203,11 @@
 				"Ensure your account has permission to create live streams",
 				"After successful login, you can schedule YouTube events"
 			]
+		},
+		"obsDevice": {
+			"notFound": "Not Found",
+			"description": "The required {type} device \"{name}\" is not available in OBS.",
+			"configure": "Configure"
 		}
 	},
 	"toasts": {
@@ -460,5 +468,56 @@
 		"delete": "Delete",
 		"loading": "Loading...",
 		"error": "Error"
+	},
+	"obsDevices": {
+		"title": "OBS Devices",
+		"subtitle": "Configure displays, audio devices, and browser sources for OBS",
+		"refreshFromObs": "Refresh from OBS",
+		"loadingObs": "Loading...",
+		"recheckAll": "Re-check All",
+		"checking": "Checking...",
+		"required": "Required",
+		"source": "Source",
+		"goToObsSettings": "Go to OBS Settings",
+		"displays": {
+			"title": "Displays",
+			"description": "Configure display capture sources in OBS",
+			"add": "Add Display"
+		},
+		"audio": {
+			"title": "Audio Devices",
+			"description": "Configure audio capture sources in OBS",
+			"add": "Add Audio Device"
+		},
+		"browser": {
+			"title": "Browser Sources",
+			"description": "Configure browser sources with dynamic URL templates",
+			"add": "Add Browser Source"
+		},
+		"form": {
+			"name": "Name",
+			"namePlaceholder": "Display name for this device",
+			"obsSource": "OBS Source",
+			"selectSource": "Select OBS source...",
+			"device": "Device",
+			"selectDevice": "Select device...",
+			"markRequired": "Mark as required (show error if not available)",
+			"urlTemplate": "URL Template",
+			"urlTemplateHint": "Available variables: ${textus}, ${lekcio}",
+			"save": "Save",
+			"cancel": "Cancel"
+		},
+		"toasts": {
+			"dataLoaded": "OBS Data Loaded",
+			"dataLoadedDescription": "Available devices and sources have been refreshed",
+			"deviceAdded": "Device Added",
+			"deviceRemoved": "Device Removed",
+			"browserAdded": "Browser Source Added",
+			"browserRemoved": "Browser Source Removed"
+		},
+		"errors": {
+			"obsNotConnected": "OBS is not connected. Please connect to OBS first.",
+			"fillAllFields": "Please fill in all required fields"
+		}
 	}
 }

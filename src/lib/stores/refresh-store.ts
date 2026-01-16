@@ -3,6 +3,7 @@ import { eventStore, eventList } from './event-store';
 import { youtubeApi } from '$lib/utils/youtube-api';
 import { systemStore } from './system-store';
 import type { YouTubePrivacyStatus, YouTubeLifeCycleStatus } from '$lib/types/event';
+import { checkAllObsDevices } from '$lib/utils/obs-device-checker';
 
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
@@ -42,38 +43,49 @@ function createRefreshStore() {
 			});
 		},
 
-		// Sync YouTube broadcasts with local events
+		// Sync YouTube broadcasts with local events and check OBS devices
 		async sync() {
 			const $systemStore = get(systemStore);
-			if (!$systemStore.youtubeLoggedIn) return;
 
 			update((s) => ({ ...s, isSyncing: true }));
 
 			try {
-				const events = get(eventList);
-				const scheduledEvents = events.filter((e) => e.youtubeScheduledId);
-
-				for (const event of scheduledEvents) {
+				// Check OBS devices if OBS is connected
+				if ($systemStore.obs) {
 					try {
-						const broadcast = await youtubeApi.getBroadcast(event.youtubeScheduledId!);
-
-						if (!broadcast) {
-							// Broadcast no longer exists - remove ID
-							await eventStore.updateEvent(event.id, {
-								youtubeScheduledId: undefined,
-								youtubeLifeCycleStatus: undefined
-							});
-						} else {
-							// Update status from YouTube
-							await eventStore.updateEvent(event.id, {
-								youtubePrivacyStatus: broadcast.status
-									.privacyStatus as YouTubePrivacyStatus,
-								youtubeLifeCycleStatus: broadcast.status
-									.lifeCycleStatus as YouTubeLifeCycleStatus
-							});
-						}
+						await checkAllObsDevices();
 					} catch (error) {
-						console.error(`Failed to sync event ${event.id}:`, error);
+						console.error('Failed to check OBS devices:', error);
+					}
+				}
+
+				// Sync YouTube broadcasts if logged in
+				if ($systemStore.youtubeLoggedIn) {
+					const events = get(eventList);
+					const scheduledEvents = events.filter((e) => e.youtubeScheduledId);
+
+					for (const event of scheduledEvents) {
+						try {
+							const broadcast = await youtubeApi.getBroadcast(event.youtubeScheduledId!);
+
+							if (!broadcast) {
+								// Broadcast no longer exists - remove ID
+								await eventStore.updateEvent(event.id, {
+									youtubeScheduledId: undefined,
+									youtubeLifeCycleStatus: undefined
+								});
+							} else {
+								// Update status from YouTube
+								await eventStore.updateEvent(event.id, {
+									youtubePrivacyStatus: broadcast.status
+										.privacyStatus as YouTubePrivacyStatus,
+									youtubeLifeCycleStatus: broadcast.status
+										.lifeCycleStatus as YouTubeLifeCycleStatus
+								});
+							}
+						} catch (error) {
+							console.error(`Failed to sync event ${event.id}:`, error);
+						}
 					}
 				}
 

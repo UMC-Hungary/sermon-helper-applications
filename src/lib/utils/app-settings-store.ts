@@ -2,6 +2,8 @@ import { writable, get } from 'svelte/store';
 import { createStorageBackend, type StorageBackend } from './storage-helpers';
 import type { ServiceEvent } from '$lib/types/event';
 import type { YouTubeTokens, YouTubeOAuthConfig } from '$lib/types/youtube';
+import type { ObsDevicesSettings } from '$lib/types/obs-devices';
+import { DEFAULT_OBS_DEVICES_SETTINGS } from '$lib/types/obs-devices';
 
 export interface AppSettings {
 	bibleTranslation: string;
@@ -12,6 +14,8 @@ export interface AppSettings {
 	// YouTube OAuth settings
 	youtubeTokens: YouTubeTokens | null;
 	youtubeOAuthConfig: YouTubeOAuthConfig | null;
+	// OBS device and source configurations
+	obsDevicesSettings: ObsDevicesSettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -22,6 +26,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 	draftSaved: false,
 	youtubeTokens: null,
 	youtubeOAuthConfig: null,
+	obsDevicesSettings: DEFAULT_OBS_DEVICES_SETTINGS,
 };
 
 // Reactive store for app settings - can be subscribed to by components
