@@ -357,266 +357,272 @@
 	}
 </script>
 
-<div class="space-y-6">
-	<!-- Basic Info -->
-	<Card>
-		<svelte:fragment slot="title">{$_('events.form.basicInfo')}</svelte:fragment>
-		<svelte:fragment slot="content">
-			<div class="grid gap-4 md:grid-cols-2">
-				<div class="md:col-span-2 space-y-2">
-					<Label for="event-title">{$_('events.form.title')}</Label>
-					<Input
-						id="event-title"
-						bind:value={formData.title}
-						placeholder={$_('events.form.titlePlaceholder')}
-					/>
-				</div>
-
-				<div class="space-y-2">
-					<Label for="event-date">{$_('events.form.date')}</Label>
-					<Input id="event-date" type="date" bind:value={formData.date} />
-				</div>
-
-				<div class="space-y-2">
-					<Label for="event-time">{$_('events.form.time')}</Label>
-					<Input id="event-time" type="time" bind:value={formData.time} />
-				</div>
-
-				<div class="md:col-span-2 space-y-2">
-					<Label for="event-speaker">{$_('events.form.speaker')}</Label>
-					<Input
-						id="event-speaker"
-						bind:value={formData.speaker}
-						placeholder={$_('events.form.speakerPlaceholder')}
-					/>
-				</div>
-
-				<div class="md:col-span-2 space-y-2">
-					<Label for="event-description">{$_('events.form.description')}</Label>
-					<Textarea
-						id="event-description"
-						bind:value={formData.description}
-						placeholder={$_('events.form.descriptionPlaceholder')}
-						rows={3}
-					/>
-				</div>
-
-				<!-- YouTube Privacy Setting -->
-				<div class="md:col-span-2 space-y-2">
-					<Label for="event-privacy">{$_('events.form.privacy')}</Label>
-					<select
-						id="event-privacy"
-						bind:value={formData.youtubePrivacyStatus}
-						class="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-					>
-						<option value="public">{$_('events.form.privacyOptions.public')}</option>
-						<option value="unlisted">{$_('events.form.privacyOptions.unlisted')}</option>
-						<option value="private">{$_('events.form.privacyOptions.private')}</option>
-					</select>
-				</div>
-
-				<!-- Calculated YouTube Title -->
-				<div class="md:col-span-2 space-y-2">
-					<div class="flex items-center justify-between">
-						<Label>{$_('events.form.calculatedTitle')}</Label>
-						<Badge
-							variant={calculatedTitleLength > MAX_TITLE_LENGTH ? 'destructive' : 'secondary'}
-							className="text-xs"
-						>
-							[{calculatedTitleLength}/{MAX_TITLE_LENGTH}]
-						</Badge>
-					</div>
-					<div
-						class="p-3 rounded-md border bg-muted/50 text-sm {calculatedTitleLength > MAX_TITLE_LENGTH ? 'border-destructive' : ''}"
-					>
-						{calculatedTitle || $_('events.form.calculatedTitleEmpty')}
-					</div>
-				</div>
-			</div>
-		</svelte:fragment>
-	</Card>
-
-	<!-- Bible References with Tabs -->
-	<Card>
-		<svelte:fragment slot="title">
-			<BookOpen class="h-5 w-5 mr-2 inline" />
-			{$_('events.form.bibleReferences')}
-		</svelte:fragment>
-		<svelte:fragment slot="content">
-			<Tabs defaultValue="textus">
-				<TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-					<TabsTrigger value="textus">{$_('bible.tabs.textus')}</TabsTrigger>
-					<TabsTrigger value="leckio">{$_('bible.tabs.leckio')}</TabsTrigger>
-				</TabsList>
-
-				{#each ['textus', 'leckio'] as field}
-					{@const isTextus = field === 'textus'}
-					{@const loading = isTextus ? textusLoading : leckioLoading}
-					{@const query = isTextus ? textusQuery : leckioQuery}
-					{@const translation = isTextus ? formData.textusTranslation : formData.leckioTranslation}
-					{@const verses = isTextus ? formData.textusVerses : formData.leckioVerses}
-					{@const label = isTextus ? formData.textus : formData.leckio}
-
-					<TabsContent value={field}>
-						<div class="space-y-4">
-							<!-- Search controls -->
-							<div class="flex gap-2 flex-wrap">
-								<div class="w-36 space-y-2">
-									<Label>{$_('bible.search.translation')}</Label>
-									<TranslationSelector
-										value={translation}
-										onValueChange={(v) => handleTranslationChange(field as 'textus' | 'leckio', v)}
-										id={`${field}-translation`}
-									/>
-								</div>
-
-								<div class="flex-1 min-w-[200px] space-y-2 relative">
-									<Label for={`${field}-search`}>{$_('bible.search.label')}</Label>
-									<Input
-										id={`${field}-search`}
-										value={query}
-										oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
-											handleBibleInput(field as 'textus' | 'leckio', e.currentTarget.value)}
-										placeholder={$_('events.form.biblePlaceholder')}
-									/>
-									{#if showSuggestions && activeSuggestionField === field}
-										<BibleSuggestions
-											{suggestions}
-											visible={true}
-											onSelect={(s) => handleSuggestionSelect(field as 'textus' | 'leckio', s)}
-										/>
-									{/if}
-								</div>
-
-								<Button
-									className="mt-auto"
-									onclick={() => handleSearch(field as 'textus' | 'leckio')}
-									disabled={loading}
-								>
-									{#if loading}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									{:else}
-										<Search class="mr-2 h-4 w-4" />
-									{/if}
-									{$_('bible.search.fetch')}
-								</Button>
-							</div>
-
-							<!-- Verses with inline editing -->
-							{#if verses.length > 0}
-								<div class="border rounded-md bg-muted/30">
-									<div class="flex items-center justify-between p-3 border-b">
-										<Badge variant="secondary">{label}</Badge>
-										<Button
-											buttonVariant="ghost"
-											buttonSize="sm"
-											onclick={() => clearVerses(field as 'textus' | 'leckio')}
-										>
-											<X class="h-4 w-4 mr-1" />
-											{$_('events.form.clear')}
-										</Button>
-									</div>
-									<div class="max-h-60 overflow-y-auto">
-										{#each verses as verse, index (index)}
-											<div
-												class="flex gap-3 items-start p-2 hover:bg-accent/30 transition-colors {index !== verses.length - 1 ? 'border-b' : ''}"
-											>
-												<Badge variant="outline" className="shrink-0 mt-0.5 text-xs">
-													{verse.chapter}:{verse.verse}
-												</Badge>
-												{#if verse.editing}
-													<Textarea
-														value={verse.text}
-														oninput={(e: Event & { currentTarget: HTMLTextAreaElement }) =>
-															handleVerseChange(field as 'textus' | 'leckio', index, e.currentTarget.value)}
-														className="flex-1 min-h-[60px] text-sm"
-													/>
-												{:else}
-													<p class="flex-1 text-sm leading-relaxed">{verse.text}</p>
-												{/if}
-												<Button
-													buttonVariant="ghost"
-													buttonSize="icon"
-													className="shrink-0 h-8 w-8"
-													onclick={() => toggleEditing(field as 'textus' | 'leckio', index)}
-												>
-													{#if verse.editing}
-														<Check class="h-4 w-4" />
-													{:else}
-														<Edit2 class="h-4 w-4" />
-													{/if}
-												</Button>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/if}
+<div class="grid gap-6 lg:grid-cols-3 min-h-screen">
+	<!-- Left Column: Main Edit Block and YouTube Scheduling -->
+	<div class="space-y-6 lg:col-span-1">
+		<!-- Basic Info -->
+		<Card>
+			<svelte:fragment slot="title">{$_('events.form.basicInfo')}</svelte:fragment>
+			<svelte:fragment slot="content">
+				<div class="grid gap-4 md:grid-cols-2">
+					<!-- Calculated YouTube Title -->
+					<div class="md:col-span-2 space-y-2">
+						<div class="flex items-center justify-between">
+							<Label>{$_('events.form.calculatedTitle')}</Label>
+							<Badge
+									variant={calculatedTitleLength > MAX_TITLE_LENGTH ? 'destructive' : 'secondary'}
+									className="text-xs"
+							>
+								[{calculatedTitleLength}/{MAX_TITLE_LENGTH}]
+							</Badge>
 						</div>
-					</TabsContent>
-				{/each}
-			</Tabs>
-		</svelte:fragment>
-	</Card>
-
-	<!-- YouTube Scheduling -->
-	<Card>
-		<svelte:fragment slot="title">
-			<Youtube class="h-5 w-5 mr-2 inline" />
-			{$_('youtube.scheduling.title')}
-		</svelte:fragment>
-		<svelte:fragment slot="content">
-			{#if formData.youtubeScheduledId}
-				<!-- Scheduled state -->
-				<div
-					class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
-				>
-					<div class="flex items-center gap-2">
-						<Check class="h-5 w-5 text-green-600 dark:text-green-400" />
-						<span class="font-medium text-green-800 dark:text-green-200"
-							>{$_('youtube.scheduling.scheduled')}</span
+						<div
+								class="p-3 rounded-md border bg-muted/50 text-sm {calculatedTitleLength > MAX_TITLE_LENGTH ? 'border-destructive' : ''}"
 						>
+							{calculatedTitle || $_('events.form.calculatedTitleEmpty')}
+						</div>
 					</div>
-					<Button
-						buttonVariant="outline"
-						buttonSize="sm"
-						href={youtubeApi.getYoutubeStudioUrl(formData.youtubeScheduledId)}
-						target="_blank"
-					>
-						<ExternalLink class="h-4 w-4 mr-1" />
-						{$_('youtube.scheduling.viewInStudio')}
-					</Button>
-				</div>
-			{:else}
-				<!-- Not scheduled state -->
-				<div class="space-y-3">
-					<p class="text-sm text-muted-foreground">
-						{$_('youtube.scheduling.notScheduled')}
-					</p>
-					<Button onclick={handleScheduleYoutube} disabled={isSchedulingYoutube}>
-						{#if isSchedulingYoutube}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-							{$_('youtube.scheduling.scheduling')}
-						{:else}
-							<Youtube class="mr-2 h-4 w-4" />
-							{$_('youtube.scheduling.scheduleButton')}
-						{/if}
-					</Button>
-				</div>
-			{/if}
-		</svelte:fragment>
-	</Card>
 
-	<!-- Actions -->
-	<div class="flex justify-end gap-2">
-		<Button buttonVariant="outline" onclick={onCancel}>
-			<X class="mr-2 h-4 w-4" />
-			{$_('events.form.cancel')}
-		</Button>
-		<Button onclick={handleSave}>
-			<Save class="mr-2 h-4 w-4" />
-			{$_('events.form.save')}
-		</Button>
+					<div class="md:col-span-2 space-y-2">
+						<Label for="event-title">{$_('events.form.title')}</Label>
+						<Input
+							id="event-title"
+							bind:value={formData.title}
+							placeholder={$_('events.form.titlePlaceholder')}
+						/>
+					</div>
+
+					<div class="space-y-2">
+						<Label for="event-date">{$_('events.form.date')}</Label>
+						<Input id="event-date" type="date" bind:value={formData.date} />
+					</div>
+
+					<div class="space-y-2">
+						<Label for="event-time">{$_('events.form.time')}</Label>
+						<Input id="event-time" type="time" bind:value={formData.time} />
+					</div>
+
+					<div class="md:col-span-2 space-y-2">
+						<Label for="event-speaker">{$_('events.form.speaker')}</Label>
+						<Input
+							id="event-speaker"
+							bind:value={formData.speaker}
+							placeholder={$_('events.form.speakerPlaceholder')}
+						/>
+					</div>
+
+					<div class="md:col-span-2 space-y-2">
+						<Label for="event-description">{$_('events.form.description')}</Label>
+						<Textarea
+							id="event-description"
+							bind:value={formData.description}
+							placeholder={$_('events.form.descriptionPlaceholder')}
+							rows={3}
+						/>
+					</div>
+
+					<!-- YouTube Privacy Setting -->
+					<div class="md:col-span-2 space-y-2">
+						<Label for="event-privacy">{$_('events.form.privacy')}</Label>
+						<select
+							id="event-privacy"
+							bind:value={formData.youtubePrivacyStatus}
+							class="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+						>
+							<option value="public">{$_('events.form.privacyOptions.public')}</option>
+							<option value="unlisted">{$_('events.form.privacyOptions.unlisted')}</option>
+							<option value="private">{$_('events.form.privacyOptions.private')}</option>
+						</select>
+					</div>
+				</div>
+			</svelte:fragment>
+		</Card>
+
+		<!-- YouTube Scheduling -->
+		<Card>
+			<svelte:fragment slot="title">
+				<Youtube class="h-5 w-5 mr-2 inline" />
+				{$_('youtube.scheduling.title')}
+			</svelte:fragment>
+			<svelte:fragment slot="content">
+				{#if formData.youtubeScheduledId}
+					<!-- Scheduled state -->
+					<div
+						class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
+					>
+						<div class="flex items-center gap-2">
+							<Check class="h-5 w-5 text-green-600 dark:text-green-400" />
+							<span class="font-medium text-green-800 dark:text-green-200"
+								>{$_('youtube.scheduling.scheduled')}</span
+							>
+						</div>
+						<Button
+							buttonVariant="outline"
+							buttonSize="sm"
+							href={youtubeApi.getYoutubeStudioUrl(formData.youtubeScheduledId)}
+							target="_blank"
+						>
+							<ExternalLink class="h-4 w-4 mr-1" />
+							{$_('youtube.scheduling.viewInStudio')}
+						</Button>
+					</div>
+				{:else}
+					<!-- Not scheduled state -->
+					<div class="space-y-3">
+						<p class="text-sm text-muted-foreground">
+							{$_('youtube.scheduling.notScheduled')}
+						</p>
+						<Button onclick={handleScheduleYoutube} disabled={isSchedulingYoutube}>
+							{#if isSchedulingYoutube}
+								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+								{$_('youtube.scheduling.scheduling')}
+							{:else}
+								<Youtube class="mr-2 h-4 w-4" />
+								{$_('youtube.scheduling.scheduleButton')}
+							{/if}
+						</Button>
+					</div>
+				{/if}
+			</svelte:fragment>
+		</Card>
 	</div>
+
+	<!-- Right Column: Bible References -->
+	<div class="md:col-span-1 lg:col-span-2">
+		<!-- Bible References with Tabs -->
+		<Card class="h-full">
+			<svelte:fragment slot="title">
+				<BookOpen class="h-5 w-5 mr-2 inline" />
+				{$_('events.form.bibleReferences')}
+			</svelte:fragment>
+			<svelte:fragment slot="content">
+				<Tabs defaultValue="textus">
+					<TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+						<TabsTrigger value="textus">{$_('bible.tabs.textus')}</TabsTrigger>
+						<TabsTrigger value="leckio">{$_('bible.tabs.leckio')}</TabsTrigger>
+					</TabsList>
+
+					{#each ['textus', 'leckio'] as field}
+						{@const isTextus = field === 'textus'}
+						{@const loading = isTextus ? textusLoading : leckioLoading}
+						{@const query = isTextus ? textusQuery : leckioQuery}
+						{@const translation = isTextus ? formData.textusTranslation : formData.leckioTranslation}
+						{@const verses = isTextus ? formData.textusVerses : formData.leckioVerses}
+						{@const label = isTextus ? formData.textus : formData.leckio}
+
+						<TabsContent value={field}>
+							<div class="space-y-4">
+								<!-- Search controls -->
+								<div class="flex gap-2 flex-wrap">
+									<div class="w-36 space-y-2">
+										<Label>{$_('bible.search.translation')}</Label>
+										<TranslationSelector
+											value={translation}
+											onValueChange={(v) => handleTranslationChange(field as 'textus' | 'leckio', v)}
+											id={`${field}-translation`}
+										/>
+									</div>
+
+									<div class="flex-1 min-w-[200px] space-y-2 relative">
+										<Label for={`${field}-search`}>{$_('bible.search.label')}</Label>
+										<Input
+											id={`${field}-search`}
+											value={query}
+											oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
+												handleBibleInput(field as 'textus' | 'leckio', e.currentTarget.value)}
+											placeholder={$_('events.form.biblePlaceholder')}
+										/>
+										{#if showSuggestions && activeSuggestionField === field}
+											<BibleSuggestions
+												{suggestions}
+												visible={true}
+												onSelect={(s) => handleSuggestionSelect(field as 'textus' | 'leckio', s)}
+											/>
+										{/if}
+									</div>
+
+									<Button
+										className="mt-auto"
+										onclick={() => handleSearch(field as 'textus' | 'leckio')}
+										disabled={loading}
+									>
+										{#if loading}
+											<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+										{:else}
+											<Search class="mr-2 h-4 w-4" />
+										{/if}
+										{$_('bible.search.fetch')}
+									</Button>
+								</div>
+
+								<!-- Verses with inline editing -->
+								{#if verses.length > 0}
+									<div class="border rounded-md bg-muted/30">
+										<div class="flex items-center justify-between p-3 border-b">
+											<Badge variant="secondary">{label}</Badge>
+											<Button
+												buttonVariant="ghost"
+												buttonSize="sm"
+												onclick={() => clearVerses(field as 'textus' | 'leckio')}
+											>
+												<X class="h-4 w-4 mr-1" />
+												{$_('events.form.clear')}
+											</Button>
+										</div>
+										<div class="max-h-60 overflow-y-auto">
+											{#each verses as verse, index (index)}
+												<div
+													class="flex gap-3 items-start p-2 hover:bg-accent/30 transition-colors {index !== verses.length - 1 ? 'border-b' : ''}"
+												>
+													<Badge variant="outline" className="shrink-0 mt-0.5 text-xs">
+														{verse.chapter}:{verse.verse}
+													</Badge>
+													{#if verse.editing}
+														<Textarea
+															value={verse.text}
+															oninput={(e: Event & { currentTarget: HTMLTextAreaElement }) =>
+																handleVerseChange(field as 'textus' | 'leckio', index, e.currentTarget.value)}
+															className="flex-1 min-h-[60px] text-sm"
+														/>
+													{:else}
+														<p class="flex-1 text-sm leading-relaxed">{verse.text}</p>
+													{/if}
+													<Button
+														buttonVariant="ghost"
+														buttonSize="icon"
+														className="shrink-0 h-8 w-8"
+														onclick={() => toggleEditing(field as 'textus' | 'leckio', index)}
+													>
+														{#if verse.editing}
+															<Check class="h-4 w-4" />
+														{:else}
+															<Edit2 class="h-4 w-4" />
+														{/if}
+													</Button>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						</TabsContent>
+					{/each}
+				</Tabs>
+			</svelte:fragment>
+		</Card>
+	</div>
+</div>
+
+<!-- Actions -->
+<div class="flex justify-end gap-2 mt-6">
+	<Button buttonVariant="outline" onclick={onCancel}>
+		<X class="mr-2 h-4 w-4" />
+		{$_('events.form.cancel')}
+	</Button>
+	<Button onclick={handleSave}>
+		<Save class="mr-2 h-4 w-4" />
+		{$_('events.form.save')}
+	</Button>
 </div>
 
 <!-- YouTube Login Modal -->
