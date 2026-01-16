@@ -115,6 +115,16 @@ jobs:
       - name: Build Tauri app
         run: pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
+      - name: Sign macOS app
+        if: runner.os == 'macOS'
+        run: |
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle -name "*.app" -type d | head -1)
+          if [ -n "$APP_PATH" ]; then
+            echo "Signing: $APP_PATH"
+            codesign --force --deep --sign - "$APP_PATH"
+            echo "Signed successfully"
+          fi
+
       # Upload artifacts (for non-tag builds)
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -151,6 +161,27 @@ jobs:
         with:
           draft: true
           generate_release_notes: true
+          body: |
+            ## Installation
+
+            ### Windows
+            Download `.exe` (NSIS installer) or `.msi` (Windows Installer).
+
+            ### macOS
+            Download the `.dmg` for your architecture:
+            - **Apple Silicon (M1/M2/M3)**: `*-aarch64.dmg`
+            - **Intel**: `*-x64.dmg`
+
+            **Note:** If macOS shows "app is damaged", run this in Terminal:
+            ```bash
+            xattr -cr /Applications/sermon-helper-tauri.app
+            ```
+
+            ### Linux
+            - `.deb` - Debian/Ubuntu
+            - `.rpm` - Fedora/RHEL
+            - `.AppImage` - Universal (make executable with `chmod +x`)
+
           files: |
             artifacts/**/*.exe
             artifacts/**/*.msi
