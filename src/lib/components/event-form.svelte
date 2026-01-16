@@ -569,7 +569,7 @@
 												{$_('events.form.clear')}
 											</Button>
 										</div>
-										<div class="max-h-60 overflow-y-auto">
+										<div>
 											{#each verses as verse, index (index)}
 												<div
 													class="flex gap-3 items-start p-2 hover:bg-accent/30 transition-colors {index !== verses.length - 1 ? 'border-b' : ''}"
