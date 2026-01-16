@@ -120,7 +120,10 @@ class BibleApiService {
         label: response.keres.hivatkozas,
       };
     } else {
-      const url = `${this.config.legacyApiUrl}/api/idezet${reference}/${translation}`;
+      // Strip leading slash if present and encode only spaces (preserve commas for Hungarian notation)
+      const cleanRef = reference.startsWith('/') ? reference.slice(1) : reference;
+      const encodedRef = cleanRef.replace(/ /g, '%20');
+      const url = `${this.config.legacyApiUrl}/api/idezet/${encodedRef}/${translation}`;
       const response = await fetch(url);
 
       if (!response.ok) {

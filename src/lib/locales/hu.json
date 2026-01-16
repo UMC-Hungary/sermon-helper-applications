@@ -38,6 +38,14 @@
 				"scheduling": "Ütemezés...",
 				"loginFirst": "Bejelentkezés YouTube-ra"
 			},
+			"pptx": {
+				"title": "PPTX Generálása",
+				"noVerses": "Nincsenek elérhető versek ehhez a hivatkozáshoz",
+				"noFolder": "Kérjük, először válasszon ki egy kimeneti mappát",
+				"generated": "A PPTX fájl elkészült",
+				"failed": "Nem sikerült létrehozni a PPTX fájlt",
+				"changeFolder": "Kimeneti mappa módosítása"
+			},
 			"browserSources": "Böngésző Források",
 			"refreshBrowserSource": "Böngésző forrás frissítése"
 		},
@@ -211,6 +219,9 @@
 		}
 	},
 	"toasts": {
+		"success": {
+			"title": "Sikeres"
+		},
 		"obsUpdated": {
 			"title": "OBS Frissítve",
 			"description": "A prédikáció címe frissítve lett az OBS-ben"

@@ -38,6 +38,14 @@
 				"scheduling": "Scheduling...",
 				"loginFirst": "Login to YouTube"
 			},
+			"pptx": {
+				"title": "Generate PPTX",
+				"noVerses": "No verses available for this reference",
+				"noFolder": "Please select an output folder first",
+				"generated": "PPTX file has been generated",
+				"failed": "Failed to generate PPTX file",
+				"changeFolder": "Change output folder"
+			},
 			"browserSources": "Browser Sources",
 			"refreshBrowserSource": "Refresh browser source"
 		},
@@ -211,6 +219,9 @@
 		}
 	},
 	"toasts": {
+		"success": {
+			"title": "Success"
+		},
 		"obsUpdated": {
 			"title": "OBS Updated",
 			"description": "Sermon title has been updated in OBS"

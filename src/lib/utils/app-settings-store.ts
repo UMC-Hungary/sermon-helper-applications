@@ -16,6 +16,8 @@ export interface AppSettings {
 	youtubeOAuthConfig: YouTubeOAuthConfig | null;
 	// OBS device and source configurations
 	obsDevicesSettings: ObsDevicesSettings;
+	// PPTX output folder path (Tauri only)
+	pptxOutputPath: string | null;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -27,6 +29,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 	youtubeTokens: null,
 	youtubeOAuthConfig: null,
 	obsDevicesSettings: DEFAULT_OBS_DEVICES_SETTINGS,
+	pptxOutputPath: null,
 };
 
 // Reactive store for app settings - can be subscribed to by components

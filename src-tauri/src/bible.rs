@@ -13,7 +13,7 @@ pub struct V2ParsedRef {
     pub book: String,
     pub book_id: i32,
     pub chapter_from: i32,
-    pub chapter_to: i32,
+    pub chapter_to: Option<i32>,
     pub verse_from: Option<i32>,
     pub verse_to: Option<i32>,
 }
@@ -132,7 +132,7 @@ pub async fn fetch_bible_v2(
     translation: String,
     api_url: String,
 ) -> Result<V2SuggestResponse, String> {
-    let url = format!("{}/suggest/{}/{}", api_url, reference, translation);
+    let url = format!("{}/suggest/{}/{}", api_url, urlencoding::encode(&reference), translation);
 
     let client = reqwest::Client::new();
     let response = client
@@ -196,6 +196,11 @@ pub async fn fetch_bible_suggestions(
     Ok(filtered)
 }
 
+// Encode only spaces in path segments (preserve commas, slashes, etc.)
+fn encode_path_segment(s: &str) -> String {
+    s.replace(" ", "%20")
+}
+
 // Legacy API: Fetch verses by reference
 #[tauri::command]
 pub async fn fetch_bible_legacy(
@@ -203,7 +208,9 @@ pub async fn fetch_bible_legacy(
     translation: String,
     api_url: String,
 ) -> Result<LegacySearchResponse, String> {
-    let url = format!("{}/api/idezet/{}/{}", api_url, urlencoding::encode(&reference), translation);
+    // Strip leading slash if present and encode only spaces
+    let clean_ref = reference.trim_start_matches('/');
+    let url = format!("{}/api/idezet/{}/{}", api_url, encode_path_segment(clean_ref), translation);
 
     let client = reqwest::Client::new();
     let response = client

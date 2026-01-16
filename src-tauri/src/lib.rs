@@ -18,6 +18,8 @@ pub fn run() {
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Register the deep link scheme on Linux/Windows (macOS uses Info.plist)
             // In dev mode, this may fail if the app isn't installed - that's OK

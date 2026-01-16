@@ -357,7 +357,25 @@
 	}
 </script>
 
-<div class="grid gap-6 lg:grid-cols-3 min-h-screen">
+<!-- Calculated YouTube Title -->
+<div class="md:col-span-2 space-y-2">
+	<div class="flex items-center justify-between">
+		<Label>{$_('events.form.calculatedTitle')}</Label>
+		<Badge
+				variant={calculatedTitleLength > MAX_TITLE_LENGTH ? 'destructive' : 'secondary'}
+				className="text-xs"
+		>
+			[{calculatedTitleLength}/{MAX_TITLE_LENGTH}]
+		</Badge>
+	</div>
+	<div
+			class="p-3 rounded-md border bg-muted/50 text-sm {calculatedTitleLength > MAX_TITLE_LENGTH ? 'border-destructive' : ''}"
+	>
+		{calculatedTitle || $_('events.form.calculatedTitleEmpty')}
+	</div>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-3 min-h-screen mt-6">
 	<!-- Left Column: Main Edit Block and YouTube Scheduling -->
 	<div class="space-y-6 lg:col-span-1">
 		<!-- Basic Info -->
@@ -365,24 +383,6 @@
 			<svelte:fragment slot="title">{$_('events.form.basicInfo')}</svelte:fragment>
 			<svelte:fragment slot="content">
 				<div class="grid gap-4 md:grid-cols-2">
-					<!-- Calculated YouTube Title -->
-					<div class="md:col-span-2 space-y-2">
-						<div class="flex items-center justify-between">
-							<Label>{$_('events.form.calculatedTitle')}</Label>
-							<Badge
-									variant={calculatedTitleLength > MAX_TITLE_LENGTH ? 'destructive' : 'secondary'}
-									className="text-xs"
-							>
-								[{calculatedTitleLength}/{MAX_TITLE_LENGTH}]
-							</Badge>
-						</div>
-						<div
-								class="p-3 rounded-md border bg-muted/50 text-sm {calculatedTitleLength > MAX_TITLE_LENGTH ? 'border-destructive' : ''}"
-						>
-							{calculatedTitle || $_('events.form.calculatedTitleEmpty')}
-						</div>
-					</div>
-
 					<div class="md:col-span-2 space-y-2">
 						<Label for="event-title">{$_('events.form.title')}</Label>
 						<Input

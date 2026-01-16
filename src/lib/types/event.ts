@@ -27,6 +27,10 @@ export interface ServiceEvent {
 	youtubeLifeCycleStatus?: YouTubeLifeCycleStatus;
 	videoUploadState?: VideoUploadState;
 
+	// PPTX generation timestamps
+	textusGeneratedAt?: string;
+	leckioGeneratedAt?: string;
+
 	// Metadata
 	createdAt: string;
 	updatedAt: string;

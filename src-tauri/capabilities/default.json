@@ -10,6 +10,12 @@
     "opener:default",
     "store:default",
     "websocket:default",
-    "deep-link:default"
+    "deep-link:default",
+    "dialog:default",
+    "fs:default",
+    "fs:allow-document-write-recursive",
+    "fs:allow-download-write-recursive",
+    "fs:allow-home-write-recursive",
+    "fs:allow-desktop-write-recursive"
   ]
 }

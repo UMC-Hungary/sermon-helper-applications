@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Home, Youtube, Calendar, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, Cpu, RefreshCw } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Home, Youtube, Calendar, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, Cpu, RefreshCw, Check, FileText, FolderOpen } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -19,6 +19,10 @@
 	import { obsDeviceStatuses, obsBrowserStatuses, isCheckingDevices } from '$lib/stores/obs-device-status-store';
 	import { browserSourceConfigs } from '$lib/stores/obs-devices-store';
 	import { manualRefreshBrowserSource } from '$lib/utils/obs-device-checker';
+	import { generatePptx } from '$lib/utils/pptx-generator';
+	import { savePptxFile, pickOutputFolder, openFolder } from '$lib/utils/file-saver';
+	import { appSettings, appSettingsStore } from '$lib/utils/app-settings-store';
+	import { isTauriApp } from '$lib/utils/storage-helpers';
 
 	type Status = "active" | "inactive" | "warning";
 
@@ -33,6 +37,97 @@
 	// State for YouTube scheduling
 	let isScheduling = false;
 	let showYoutubeLoginModal = false;
+
+	// State for PPTX generation
+	let generatingTextus = false;
+	let generatingLeckio = false;
+	$: isTauri = isTauriApp();
+	$: pptxOutputPath = $appSettings.pptxOutputPath;
+
+	// Handle PPTX generation
+	async function handleGeneratePptx(type: 'textus' | 'leckio') {
+		if (!nextEvent) return;
+
+		const verses = type === 'textus' ? nextEvent.textusVerses : nextEvent.leckioVerses;
+		const reference = type === 'textus' ? nextEvent.textus : nextEvent.leckio;
+
+		if (!verses?.length || !reference) {
+			toast({
+				title: $_('toasts.error.title'),
+				description: $_('sidebar.upcomingEvent.pptx.noVerses'),
+				variant: 'error'
+			});
+			return;
+		}
+
+		// Check if output path is configured (Tauri only)
+		if (isTauri && !pptxOutputPath) {
+			const selectedPath = await pickOutputFolder();
+			if (!selectedPath) {
+				toast({
+					title: $_('toasts.error.title'),
+					description: $_('sidebar.upcomingEvent.pptx.noFolder'),
+					variant: 'error'
+				});
+				return;
+			}
+			await appSettingsStore.set('pptxOutputPath', selectedPath);
+		}
+
+		// Set loading state
+		if (type === 'textus') {
+			generatingTextus = true;
+		} else {
+			generatingLeckio = true;
+		}
+
+		try {
+			// Generate PPTX
+			const blob = await generatePptx({ reference, verses, type });
+			const filename = `${type === 'textus' ? 'textus' : 'lekcio'}.pptx`;
+
+			// Save or download
+			const result = await savePptxFile(blob, filename, $appSettings.pptxOutputPath);
+
+			if (result.success) {
+				// Update event with generation timestamp
+				const timestampField = type === 'textus' ? 'textusGeneratedAt' : 'leckioGeneratedAt';
+				await eventStore.updateEvent(nextEvent.id, { [timestampField]: new Date().toISOString() });
+
+				toast({
+					title: $_('toasts.success.title'),
+					description: $_('sidebar.upcomingEvent.pptx.generated'),
+					variant: 'success'
+				});
+			} else {
+				toast({
+					title: $_('toasts.error.title'),
+					description: result.error || $_('sidebar.upcomingEvent.pptx.failed'),
+					variant: 'error'
+				});
+			}
+		} catch (error) {
+			toast({
+				title: $_('toasts.error.title'),
+				description: error instanceof Error ? error.message : $_('sidebar.upcomingEvent.pptx.failed'),
+				variant: 'error'
+			});
+		} finally {
+			if (type === 'textus') {
+				generatingTextus = false;
+			} else {
+				generatingLeckio = false;
+			}
+		}
+	}
+
+	// Change output folder
+	async function handleChangeFolder() {
+		const selectedPath = await pickOutputFolder();
+		if (selectedPath) {
+			await appSettingsStore.set('pptxOutputPath', selectedPath);
+		}
+	}
 
 	// Schedule the upcoming event on YouTube
 	async function scheduleUpcomingEvent() {
@@ -276,6 +371,71 @@
 							<div>
 								<span class="text-xs text-muted-foreground">{$_('sidebar.upcomingEvent.leckio')}</span>
 								<p class="text-sm font-medium text-card-foreground">{nextEvent.leckio}</p>
+							</div>
+						{/if}
+
+						<!-- PPTX Generation Buttons -->
+						{#if nextEvent.textus || nextEvent.leckio}
+							<div class="pt-2 border-t border-border">
+								<span class="text-xs text-muted-foreground mb-2 block">{$_('sidebar.upcomingEvent.pptx.title')}</span>
+								<div class="flex gap-2">
+									{#if nextEvent.textus}
+										<Button
+											buttonVariant="outline"
+											buttonSize="sm"
+											className="flex-1"
+											onclick={() => handleGeneratePptx('textus')}
+											disabled={generatingTextus || !nextEvent.textusVerses?.length}
+										>
+											{#if generatingTextus}
+												<Loader2 class="h-4 w-4 mr-1 animate-spin" />
+											{:else if nextEvent.textusGeneratedAt}
+												<Check class="h-4 w-4 mr-1 text-green-600" />
+											{:else}
+												<FileText class="h-4 w-4 mr-1" />
+											{/if}
+											Textus
+										</Button>
+									{/if}
+									{#if nextEvent.leckio}
+										<Button
+											buttonVariant="outline"
+											buttonSize="sm"
+											className="flex-1"
+											onclick={() => handleGeneratePptx('leckio')}
+											disabled={generatingLeckio || !nextEvent.leckioVerses?.length}
+										>
+											{#if generatingLeckio}
+												<Loader2 class="h-4 w-4 mr-1 animate-spin" />
+											{:else if nextEvent.leckioGeneratedAt}
+												<Check class="h-4 w-4 mr-1 text-green-600" />
+											{:else}
+												<FileText class="h-4 w-4 mr-1" />
+											{/if}
+											Lekció
+										</Button>
+									{/if}
+								</div>
+								{#if isTauri && pptxOutputPath}
+									<button
+										type="button"
+										onclick={() => openFolder(pptxOutputPath!)}
+										class="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+									>
+										<FolderOpen class="h-3 w-3" />
+										<span class="truncate">{pptxOutputPath}</span>
+									</button>
+								{/if}
+								{#if isTauri}
+									<Button
+										buttonVariant="ghost"
+										buttonSize="sm"
+										className="w-full mt-1 text-xs"
+										onclick={handleChangeFolder}
+									>
+										{$_('sidebar.upcomingEvent.pptx.changeFolder')}
+									</Button>
+								{/if}
 							</div>
 						{/if}
 
