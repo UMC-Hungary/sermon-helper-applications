@@ -14,6 +14,7 @@
     import { youtubeAuthStore } from '$lib/stores/youtube-store';
     import { updateYoutubeLogin } from '$lib/stores/system-store';
     import { refreshStore } from '$lib/stores/refresh-store';
+    import UpdateChecker from '$lib/components/update-checker.svelte';
 
     let { children } = $props();
 
@@ -60,17 +61,18 @@
     let onRecheck: () => Promise<void> = async () => {};
 </script>
 
-<Toaster 
-		position="bottom-right" 
+<Toaster
+		position="bottom-right"
 		toastOptions={{
 			classes: {
 				success: 'bg-white text-gray-800 border-2 border-green-600',
-				error: 'bg-white text-gray-800 border-2 border-red-600',  
+				error: 'bg-white text-gray-800 border-2 border-red-600',
 				warning: 'bg-white text-gray-800 border-2 border-yellow-500',
 				info: 'bg-white text-gray-800 border-2 border-blue-600',
 			},
 		}}
 	/>
+<UpdateChecker />
 
 {#if $isLoading || !$appSettingsLoaded}
 <div class="flex h-screen items-center justify-center bg-background">

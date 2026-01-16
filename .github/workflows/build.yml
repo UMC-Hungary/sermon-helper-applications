@@ -15,6 +15,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
 jobs:
   build:
@@ -132,11 +134,17 @@ jobs:
           name: ${{ matrix.name }}
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.rpm
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.rpm.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.sig
           if-no-files-found: error
 
   # Create release (only on version tags)
@@ -148,6 +156,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -155,6 +166,79 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R artifacts
+
+      - name: Generate latest.json manifest
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          REPO="UMC-Hungary/sermon-helper-applications"
+
+          # Read signatures
+          WINDOWS_SIG=""
+          MACOS_ARM_SIG=""
+          MACOS_INTEL_SIG=""
+          LINUX_APPIMAGE_SIG=""
+          LINUX_DEB_SIG=""
+
+          # Windows NSIS signature
+          if [ -f artifacts/Windows-x64/nsis/*.exe.sig ]; then
+            WINDOWS_SIG=$(cat artifacts/Windows-x64/nsis/*.exe.sig)
+          fi
+
+          # macOS ARM signature
+          if [ -f artifacts/macOS-ARM64/dmg/*.dmg.sig ]; then
+            MACOS_ARM_SIG=$(cat artifacts/macOS-ARM64/dmg/*.dmg.sig)
+          fi
+
+          # macOS Intel signature
+          if [ -f artifacts/macOS-Intel/dmg/*.dmg.sig ]; then
+            MACOS_INTEL_SIG=$(cat artifacts/macOS-Intel/dmg/*.dmg.sig)
+          fi
+
+          # Linux AppImage signature
+          if [ -f artifacts/Linux-x64/appimage/*.AppImage.sig ]; then
+            LINUX_APPIMAGE_SIG=$(cat artifacts/Linux-x64/appimage/*.AppImage.sig)
+          fi
+
+          # Linux deb signature
+          if [ -f artifacts/Linux-x64/deb/*.deb.sig ]; then
+            LINUX_DEB_SIG=$(cat artifacts/Linux-x64/deb/*.deb.sig)
+          fi
+
+          # Get actual filenames
+          WINDOWS_EXE=$(basename artifacts/Windows-x64/nsis/*.exe 2>/dev/null | head -1 || echo "")
+          MACOS_ARM_DMG=$(basename artifacts/macOS-ARM64/dmg/*.dmg 2>/dev/null | head -1 || echo "")
+          MACOS_INTEL_DMG=$(basename artifacts/macOS-Intel/dmg/*.dmg 2>/dev/null | head -1 || echo "")
+          LINUX_APPIMAGE=$(basename artifacts/Linux-x64/appimage/*.AppImage 2>/dev/null | head -1 || echo "")
+
+          # Create latest.json
+          cat > latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": "Release v${VERSION}",
+            "pub_date": "${DATE}",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "${WINDOWS_SIG}",
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${WINDOWS_EXE}"
+              },
+              "darwin-aarch64": {
+                "signature": "${MACOS_ARM_SIG}",
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${MACOS_ARM_DMG}"
+              },
+              "darwin-x86_64": {
+                "signature": "${MACOS_INTEL_SIG}",
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${MACOS_INTEL_DMG}"
+              },
+              "linux-x86_64": {
+                "signature": "${LINUX_APPIMAGE_SIG}",
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${LINUX_APPIMAGE}"
+              }
+            }
+          }
+          EOF
+
+          cat latest.json
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -183,9 +267,16 @@ jobs:
             - `.AppImage` - Universal (make executable with `chmod +x`)
 
           files: |
+            latest.json
             artifacts/**/*.exe
+            artifacts/**/*.exe.sig
             artifacts/**/*.msi
+            artifacts/**/*.msi.sig
             artifacts/**/*.dmg
+            artifacts/**/*.dmg.sig
             artifacts/**/*.deb
+            artifacts/**/*.deb.sig
             artifacts/**/*.rpm
+            artifacts/**/*.rpm.sig
             artifacts/**/*.AppImage
+            artifacts/**/*.AppImage.sig
