@@ -104,35 +104,40 @@
 	}
 </script>
 
-<!-- Mobile menu button -->
-<Button
-	buttonVariant="outline"
-	buttonSize="icon"
-	className="fixed top-4 left-4 z-40 lg:hidden bg-background shadow-md"
-	onclick={onMobileMenuToggle}
->
-	<Menu class="h-5 w-5" />
-</Button>
+ <!-- Mobile menu button -->
+ <Button
+ 	buttonVariant="outline"
+ 	buttonSize="icon"
+ 	className="fixed top-4 left-4 z-50 md:hidden bg-background shadow-md hover:bg-accent border-2 active:scale-95 transition-transform"
+ 	onclick={() => {
+ 		console.log('[Mobile Menu] Button clicked');
+ 		onMobileMenuToggle();
+ 	}}
+ 	type="button"
+ 	aria-label="Toggle mobile menu"
+ >
+ 	<Menu class="h-5 w-5" />
+ </Button>
 
-<!-- Mobile sidebar overlay -->
-{#if isMobileMenuOpen}
-	<div class="fixed inset-0 z-50 bg-black/50 lg:hidden" onclick={onMobileMenuToggle} onkeydown={(e) => e.key === 'Enter' && onMobileMenuToggle()} role="button" tabindex="0"></div>
-{/if}
+ <!-- Mobile sidebar overlay -->
+ {#if isMobileMenuOpen}
+ 	<div class="fixed inset-0 z-40 bg-black/50 md:hidden" onclick={onMobileMenuToggle} onkeydown={(e) => e.key === 'Enter' && onMobileMenuToggle()} role="button" tabindex="0"></div>
+ {/if}
 
-<!-- Sidebar -->
-<aside
-	class={cn(
-		"fixed inset-y-0 left-0 z-[60] w-72 transform transition-transform duration-200 lg:relative lg:translate-x-0".split(' '),
-		isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-	)}
->
+ <!-- Sidebar -->
+ <aside
+ 	class={cn(
+ 		"fixed inset-y-0 left-0 z-[70] w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0".split(' '),
+ 		isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+ 	)}
+ >
 	<div class="flex h-full flex-col bg-sidebar">
-		<div class="flex items-center justify-between border-b border-sidebar-border p-4">
-			<h1 class="text-lg font-semibold text-sidebar-foreground">{$_('sidebar.appTitle')}</h1>
-			<Button buttonVariant="ghost" buttonSize="icon" className="lg:hidden" onclick={onMobileMenuToggle}>
-				<X class="h-5 w-5" />
-			</Button>
-		</div>
+ 		<div class="flex items-center justify-between border-b border-sidebar-border p-4">
+ 			<h1 class="text-lg font-semibold text-sidebar-foreground">{$_('sidebar.appTitle')}</h1>
+ 			<Button buttonVariant="ghost" buttonSize="icon" className="md:hidden" onclick={onMobileMenuToggle}>
+ 				<X class="h-5 w-5" />
+ 			</Button>
+ 		</div>
 
 		<div class="flex-1 overflow-y-auto p-4 space-y-6">
 			<nav class="space-y-2">

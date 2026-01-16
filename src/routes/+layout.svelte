@@ -31,7 +31,11 @@
         refreshStore.stop();
     });
 
-    let isMobileMenuOpen = false;
+    let isMobileMenuOpen = $state(false);
+
+    function toggleMobileMenu() {
+        isMobileMenuOpen = !isMobileMenuOpen;
+    }
 
     const handleSystemRecheck = async () => {
         console.log('[v0] Rechecking system status...');
@@ -76,15 +80,15 @@
 <div class="flex h-screen overflow-hidden bg-background">
     <Sidebar
             isMobileMenuOpen={isMobileMenuOpen}
-            onMobileMenuToggle={() => isMobileMenuOpen = !isMobileMenuOpen}
+            onMobileMenuToggle={toggleMobileMenu}
     />
 
-    <main class="flex-1 overflow-y-auto">
-        <div class="p-4 lg:p-8 space-y-6 pt-20 lg:pt-8">
-            <ErrorMessages onRecheck={onRecheck} />
+     <main class="flex-1 overflow-y-auto">
+         <div class="p-4 md:p-8 space-y-6 pt-20 md:pt-8">
+             <ErrorMessages onRecheck={onRecheck} />
 
-            {@render children()}
-        </div>
-    </main>
+             {@render children()}
+         </div>
+     </main>
 </div>
 {/if}
