@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Church livestream control desktop application built with **Tauri 2 + SvelteKit 5 + TypeScript**. Port of a React/Next.js web app at `/home/church-control-app` (use as reference implementation).
+Church livestream control desktop application built with **Tauri 2 + SvelteKit 5 + TypeScript**.
 
 ## Commands
 
@@ -49,20 +49,18 @@ type SystemStatus = {
   rodeInterface: boolean;
   mainDisplay: boolean;
   secondaryDisplay: boolean;
-  airplayDisplay: boolean;
-  displayAlignment: boolean;
   youtubeLoggedIn: boolean;
 }
 ```
 
 ## Implementation Status
 
-**Complete:** Sidebar, UI components, OBS WebSocket integration, toast system, error messages display
+**Complete:** Sidebar, UI components, OBS WebSocket integration, toast system, error messages display, Service Events
 
-**Stubs:** Dashboard actions, Bible editor, YouTube events/scheduling (use React version at `/home/church-control-app` as reference)
+**Stubs:** Bible editor
 
 ## Type Definitions
 
 Two SystemStatus definitions exist:
-- `src/lib/stores/types.ts` - Flat structure (correct, matches React)
+- `src/lib/stores/types.ts` - Flat structure (correct)
 - `src/lib/types.ts` - Nested structure (outdated, to be consolidated)

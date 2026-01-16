@@ -2,11 +2,8 @@
 	"sidebar": {
 		"appTitle": "Church Control",
 		"nav": {
-			"dashboard": "Dashboard",
 			"events": "Service Events",
 			"bibleEditor": "Bible Editor",
-			"scheduleEvent": "Schedule Event",
-			"youtubeEvents": "YouTube Events",
 			"obsSettings": "OBS Settings",
 			"obsDevices": "OBS Devices"
 		},
@@ -16,8 +13,6 @@
 			"rodeInterface": "Rode Interface",
 			"mainDisplay": "Main Display",
 			"secondaryDisplay": "Secondary Display",
-			"airplayDisplay": "AirPlay Display",
-			"displayAlignment": "Display Alignment",
 			"youtubeLoggedIn": "YouTube Logged In"
 		},
 		"upcomingEvent": {
@@ -54,60 +49,6 @@
 		"themeSystem": "System",
 		"themeLight": "Light",
 		"themeDark": "Dark"
-	},
-	"dashboard": {
-		"title": "Dashboard",
-		"subtitle": "Manage your sermon preparation and system monitoring",
-		"cards": {
-			"bibleEditor": {
-				"title": "Bible Editor",
-				"description": "Search and edit scripture texts",
-				"badge": "Ready to use"
-			},
-			"scheduleEvent": {
-				"title": "Schedule Event",
-				"description": "Plan your YouTube live streams",
-				"badge": "Schedule Now"
-			},
-			"viewEvents": {
-				"title": "View Events",
-				"description": "See your upcoming events",
-				"badge": "View All"
-			}
-		},
-		"sermonStatus": {
-			"title": "Current Sermon Status",
-			"description": "Monitor your live streaming status",
-			"youtubeEvent": "YouTube Event",
-			"liveNow": "Live Now",
-			"scheduled": "Scheduled",
-			"obsStreaming": "OBS Streaming",
-			"startObs": "Start OBS Stream",
-			"stopObs": "Stop OBS Stream",
-			"goLive": "Go Live on YouTube",
-			"endStream": "End YouTube Stream",
-			"startObsFirst": "Start OBS streaming before going live on YouTube",
-			"noEventScheduled": "No YouTube event scheduled"
-		},
-		"sermonTexts": {
-			"title": "Sermon Texts",
-			"description": "Manage your Bible readings",
-			"textus": "Textus",
-			"leckio": "Leckio",
-			"edit": "Edit",
-			"generateTextusPpt": "Generate Textus PPT",
-			"generateLeckioPpt": "Generate Leckio PPT",
-			"editBibleTexts": "Edit Bible Texts",
-			"textusPlaceholder": "e.g., John 3:16-21",
-			"leckioPlaceholder": "e.g., Romans 8:28-39"
-		},
-		"obsControl": {
-			"title": "OBS Control",
-			"description": "Update your sermon title in OBS",
-			"sermonTitle": "Sermon Title",
-			"sermonTitlePlaceholder": "Enter sermon title",
-			"updateObsTitle": "Update OBS Title"
-		}
 	},
 	"obsSettings": {
 		"title": "OBS Settings",
@@ -154,30 +95,6 @@
 		"readMore": "Read More",
 		"close": "Close",
 		"followSteps": "Follow these steps to resolve the issue",
-		"airplayDisplay": {
-			"title": "AirPlay Display Not Connected",
-			"description": "The AirPlay display is not detected. Check your connection.",
-			"steps": [
-				"Open System Settings on your Mac",
-				"Navigate to Displays section",
-				"Click on the AirPlay Display dropdown",
-				"Select your AirPlay device from the list",
-				"Ensure your Mac and AirPlay device are on the same WiFi network",
-				"If the device doesn't appear, restart both your Mac and the AirPlay receiver"
-			]
-		},
-		"displayAlignment": {
-			"title": "Display Alignment Incorrect",
-			"description": "Your displays are not properly aligned. Adjust in System Settings.",
-			"steps": [
-				"Open System Settings on your Mac",
-				"Go to Displays section",
-				"Click on Arrange Displays",
-				"Drag the display rectangles to match your physical setup",
-				"Align the menu bar to your primary display",
-				"Click Done to save the arrangement"
-			]
-		},
 		"obs": {
 			"title": "OBS Not Running",
 			"description": "OBS Studio is not currently running on your system.",
@@ -305,62 +222,6 @@
 				"title": "Error",
 				"emptyQuery": "Please enter a scripture reference"
 			}
-		}
-	},
-	"youtubeSchedule": {
-		"title": "Schedule YouTube Event",
-		"subtitle": "Create a new YouTube live stream event for your sermon",
-		"loginRequired": {
-			"title": "YouTube Login Required",
-			"description": "You need to log in with your Google account to schedule YouTube events.",
-			"loginButton": "Login with Google"
-		},
-		"eventDetails": {
-			"title": "Event Details",
-			"description": "Fill in the details for your YouTube live event",
-			"eventTitle": {
-				"label": "Event Title",
-				"placeholder": "Sunday Service - The Love of God"
-			},
-			"speaker": {
-				"label": "Speaker",
-				"placeholder": "Pastor John Smith"
-			},
-			"date": {
-				"label": "Date"
-			},
-			"time": {
-				"label": "Time"
-			},
-			"privacy": {
-				"label": "Privacy Setting",
-				"options": {
-					"public": "Public",
-					"unlisted": "Unlisted",
-					"private": "Private"
-				}
-			},
-			"description": {
-				"label": "Description",
-				"placeholder": "Include Textus and Leckio references here...",
-				"tip": "Tip: The Textus and Leckio values will be automatically included in the description"
-			},
-			"scheduleButton": "Schedule Event"
-		}
-	},
-	"youtubeEvents": {
-		"title": "YouTube Events",
-		"subtitle": "View and manage scheduled YouTube live events",
-		"eventsCount": "{count} Events",
-		"edit": "Edit",
-		"delete": "Delete",
-		"editEvent": {
-			"title": "Edit Event",
-			"description": "Opening event editor..."
-		},
-		"deleteEvent": {
-			"title": "Event Deleted",
-			"description": "YouTube event has been removed"
 		}
 	},
 	"events": {

@@ -1,5 +1,4 @@
 import { writable, derived } from 'svelte/store';
-import type { SystemStatus } from './types';
 import { obsWebSocket } from '../utils/obs-websocket';
 
 // Create writable store for non-OBS system components only
@@ -8,8 +7,6 @@ function createNonObsSystemStore() {
 		rodeInterface: true,
 		mainDisplay: true,
 		secondaryDisplay: true,
-		airplayDisplay: false,
-		displayAlignment: false,
 		youtubeLoggedIn: false,
 	});
 
@@ -27,12 +24,6 @@ function createNonObsSystemStore() {
 		updateSecondaryDisplay: (status: boolean) => {
 			update(current => ({ ...current, secondaryDisplay: status }));
 		},
-		updateAirplayDisplay: (status: boolean) => {
-			update(current => ({ ...current, airplayDisplay: status }));
-		},
-		updateDisplayAlignment: (status: boolean) => {
-			update(current => ({ ...current, displayAlignment: status }));
-		},
 		updateYoutubeLogin: (status: boolean) => {
 			update(current => ({ ...current, youtubeLoggedIn: status }));
 		},
@@ -42,8 +33,6 @@ function createNonObsSystemStore() {
 				rodeInterface: true,
 				mainDisplay: true,
 				secondaryDisplay: true,
-				airplayDisplay: false,
-				displayAlignment: false,
 				youtubeLoggedIn: false,
 			});
 		}
@@ -61,8 +50,6 @@ export const systemStore = derived(
 		rodeInterface: $nonObs.rodeInterface,
 		mainDisplay: $nonObs.mainDisplay,
 		secondaryDisplay: $nonObs.secondaryDisplay,
-		airplayDisplay: $nonObs.airplayDisplay,
-		displayAlignment: $nonObs.displayAlignment,
 		youtubeLoggedIn: $nonObs.youtubeLoggedIn,
 	})
 );
@@ -82,12 +69,10 @@ export const isSystemReady = derived(systemStore, $system => {
 });
 
 // Export individual update methods for non-OBS components
-export const { 
+export const {
 	updateRodeInterface,
 	updateMainDisplay,
 	updateSecondaryDisplay,
-	updateAirplayDisplay,
-	updateDisplayAlignment,
 	updateYoutubeLogin,
 	reset
 } = nonObsSystemStore;

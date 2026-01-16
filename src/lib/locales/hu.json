@@ -2,11 +2,8 @@
 	"sidebar": {
 		"appTitle": "Gyülekezeti Vezérlő",
 		"nav": {
-			"dashboard": "Vezérlőpult",
 			"events": "Istentiszteleti Események",
 			"bibleEditor": "Biblia Szerkesztő",
-			"scheduleEvent": "Esemény Ütemezése",
-			"youtubeEvents": "YouTube Események",
 			"obsSettings": "OBS Beállítások",
 			"obsDevices": "OBS Eszközök"
 		},
@@ -16,8 +13,6 @@
 			"rodeInterface": "Rode Interfész",
 			"mainDisplay": "Fő Kijelző",
 			"secondaryDisplay": "Másodlagos Kijelző",
-			"airplayDisplay": "AirPlay Kijelző",
-			"displayAlignment": "Kijelző Igazítás",
 			"youtubeLoggedIn": "YouTube Bejelentkezve"
 		},
 		"upcomingEvent": {
@@ -54,60 +49,6 @@
 		"themeSystem": "Rendszer",
 		"themeLight": "Világos",
 		"themeDark": "Sötét"
-	},
-	"dashboard": {
-		"title": "Vezérlőpult",
-		"subtitle": "Prédikáció előkészítés és rendszer megfigyelés kezelése",
-		"cards": {
-			"bibleEditor": {
-				"title": "Biblia Szerkesztő",
-				"description": "Szentírás szövegek keresése és szerkesztése",
-				"badge": "Használatra kész"
-			},
-			"scheduleEvent": {
-				"title": "Esemény Ütemezése",
-				"description": "YouTube élő közvetítések tervezése",
-				"badge": "Ütemezés Most"
-			},
-			"viewEvents": {
-				"title": "Események Megtekintése",
-				"description": "Közelgő események megtekintése",
-				"badge": "Összes Megtekintése"
-			}
-		},
-		"sermonStatus": {
-			"title": "Aktuális Prédikáció Állapot",
-			"description": "Élő közvetítés állapotának figyelése",
-			"youtubeEvent": "YouTube Esemény",
-			"liveNow": "Élőben",
-			"scheduled": "Ütemezve",
-			"obsStreaming": "OBS Közvetít",
-			"startObs": "OBS Közvetítés Indítása",
-			"stopObs": "OBS Közvetítés Leállítása",
-			"goLive": "Élő Adás Indítása YouTube-on",
-			"endStream": "YouTube Közvetítés Befejezése",
-			"startObsFirst": "Indítsa el az OBS közvetítést mielőtt élőbe menne a YouTube-on",
-			"noEventScheduled": "Nincs ütemezett YouTube esemény"
-		},
-		"sermonTexts": {
-			"title": "Prédikáció Szövegek",
-			"description": "Bibliai felolvasások kezelése",
-			"textus": "Textus",
-			"leckio": "Leckio",
-			"edit": "Szerkesztés",
-			"generateTextusPpt": "Textus PPT Generálása",
-			"generateLeckioPpt": "Leckio PPT Generálása",
-			"editBibleTexts": "Biblia Szövegek Szerkesztése",
-			"textusPlaceholder": "pl. János 3:16-21",
-			"leckioPlaceholder": "pl. Róma 8:28-39"
-		},
-		"obsControl": {
-			"title": "OBS Vezérlés",
-			"description": "Prédikáció címének frissítése az OBS-ben",
-			"sermonTitle": "Prédikáció Címe",
-			"sermonTitlePlaceholder": "Adja meg a prédikáció címét",
-			"updateObsTitle": "OBS Cím Frissítése"
-		}
 	},
 	"obsSettings": {
 		"title": "OBS Beállítások",
@@ -154,30 +95,6 @@
 		"readMore": "Részletek",
 		"close": "Bezárás",
 		"followSteps": "Kövesse ezeket a lépéseket a probléma megoldásához",
-		"airplayDisplay": {
-			"title": "AirPlay Kijelző Nincs Csatlakoztatva",
-			"description": "Az AirPlay kijelző nem észlelhető. Ellenőrizze a kapcsolatot.",
-			"steps": [
-				"Nyissa meg a Rendszerbeállításokat a Mac-en",
-				"Navigáljon a Kijelzők részhez",
-				"Kattintson az AirPlay Kijelző legördülő menüre",
-				"Válassza ki az AirPlay eszközét a listából",
-				"Győződjön meg róla, hogy a Mac és az AirPlay eszköz ugyanazon a WiFi hálózaton van",
-				"Ha az eszköz nem jelenik meg, indítsa újra a Mac-et és az AirPlay vevőt"
-			]
-		},
-		"displayAlignment": {
-			"title": "Kijelző Igazítás Helytelen",
-			"description": "A kijelzők nincsenek megfelelően igazítva. Állítsa be a Rendszerbeállításokban.",
-			"steps": [
-				"Nyissa meg a Rendszerbeállításokat a Mac-en",
-				"Menjen a Kijelzők részhez",
-				"Kattintson a Kijelzők Elrendezése opcióra",
-				"Húzza a kijelző téglalapokat a fizikai elrendezésnek megfelelően",
-				"Igazítsa a menüsort az elsődleges kijelzőhöz",
-				"Kattintson a Kész gombra az elrendezés mentéséhez"
-			]
-		},
 		"obs": {
 			"title": "OBS Nem Fut",
 			"description": "Az OBS Studio jelenleg nem fut a rendszeren.",
@@ -305,62 +222,6 @@
 				"title": "Hiba",
 				"emptyQuery": "Kérjük, adjon meg egy szentírás hivatkozást"
 			}
-		}
-	},
-	"youtubeSchedule": {
-		"title": "YouTube Esemény Ütemezése",
-		"subtitle": "Hozzon létre új YouTube élő közvetítési eseményt a prédikációjához",
-		"loginRequired": {
-			"title": "YouTube Bejelentkezés Szükséges",
-			"description": "Be kell jelentkeznie Google fiókjával YouTube események ütemezéséhez.",
-			"loginButton": "Bejelentkezés Google-lel"
-		},
-		"eventDetails": {
-			"title": "Esemény Részletei",
-			"description": "Töltse ki a részleteket a YouTube élő eseményhez",
-			"eventTitle": {
-				"label": "Esemény Címe",
-				"placeholder": "Vasárnapi Istentisztelet - Isten Szeretete"
-			},
-			"speaker": {
-				"label": "Beszélő",
-				"placeholder": "Prédikátor John Smith"
-			},
-			"date": {
-				"label": "Dátum"
-			},
-			"time": {
-				"label": "Idő"
-			},
-			"privacy": {
-				"label": "Adatvédelmi Beállítás",
-				"options": {
-					"public": "Nyilvános",
-					"unlisted": "Nem listázott",
-					"private": "Privát"
-				}
-			},
-			"description": {
-				"label": "Leírás",
-				"placeholder": "Adja hozzá a Textus és Leckio hivatkozásokat itt...",
-				"tip": "Tipp: A Textus és Leckio értékek automatikusan bekerülnek a leírásba"
-			},
-			"scheduleButton": "Esemény Ütemezése"
-		}
-	},
-	"youtubeEvents": {
-		"title": "YouTube Események",
-		"subtitle": "Ütemezett YouTube élő események megtekintése és kezelése",
-		"eventsCount": "{count} Esemény",
-		"edit": "Szerkesztés",
-		"delete": "Törlés",
-		"editEvent": {
-			"title": "Esemény Szerkesztése",
-			"description": "Eseményszerkesztő megnyitása..."
-		},
-		"deleteEvent": {
-			"title": "Esemény Törölve",
-			"description": "YouTube esemény eltávolítva"
 		}
 	},
 	"events": {

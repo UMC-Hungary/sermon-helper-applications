@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Home, Youtube, Calendar, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, Cpu, RefreshCw, Check, FileText, FolderOpen } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, Cpu, RefreshCw, Check, FileText, FolderOpen } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -186,10 +186,7 @@
 	}
 
 	const navItems = [
-		{ id: '/', labelKey: 'sidebar.nav.dashboard', icon: Home },
 		{ id: '/events', labelKey: 'sidebar.nav.events', icon: CalendarDays },
-		{ id: '/youtube-schedule', labelKey: 'sidebar.nav.scheduleEvent', icon: Calendar },
-		{ id: '/youtube-events', labelKey: 'sidebar.nav.youtubeEvents', icon: Youtube },
 		{ id: '/obs-settings', labelKey: 'sidebar.nav.obsSettings', icon: Settings },
 		{ id: '/obs-devices', labelKey: 'sidebar.nav.obsDevices', icon: Cpu },
 	];
@@ -222,7 +219,7 @@
  <!-- Sidebar -->
  <aside
  	class={cn(
- 		"fixed inset-y-0 left-0 z-[70] w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0".split(' '),
+ 		"fixed inset-y-0 left-0 z-70 w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0".split(' '),
  		isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
  	)}
  >
@@ -289,24 +286,6 @@
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.secondaryDisplay')}</span>
 						{#if $systemStore.secondaryDisplay}
-							<CheckCircle2 class="h-4 w-4 text-green-600" />
-						{:else}
-							<XCircle class="h-4 w-4 text-red-600" />
-						{/if}
-					</div>
-
-					<div class="flex items-center justify-between py-2">
-						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.airplayDisplay')}</span>
-						{#if $systemStore.airplayDisplay}
-							<CheckCircle2 class="h-4 w-4 text-green-600" />
-						{:else}
-							<XCircle class="h-4 w-4 text-red-600" />
-						{/if}
-					</div>
-
-					<div class="flex items-center justify-between py-2">
-						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.displayAlignment')}</span>
-						{#if $systemStore.displayAlignment}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />
@@ -419,7 +398,7 @@
 								{#if isTauri && pptxOutputPath}
 									<button
 										type="button"
-										onclick={() => openFolder(pptxOutputPath!)}
+										onclick={() => openFolder(pptxOutputPath)}
 										class="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 									>
 										<FolderOpen class="h-3 w-3" />
@@ -448,14 +427,14 @@
 									onclick={openYoutubeStudio}
 									class="flex items-center gap-2 w-full text-left hover:bg-muted/50 rounded p-1 -m-1 transition-colors"
 								>
-									<CheckCircle2 class="h-4 w-4 text-green-600 flex-shrink-0" />
+									<CheckCircle2 class="h-4 w-4 text-green-600 shrink-0" />
 									<span class="text-sm text-green-600">{$_('sidebar.upcomingEvent.youtube.scheduled')}</span>
 								</button>
 							{:else if $systemStore.youtubeLoggedIn}
 								<!-- Not scheduled but logged in - show schedule button -->
 								<div class="space-y-1">
 									<div class="flex items-center gap-2">
-										<XCircle class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+										<XCircle class="h-4 w-4 text-muted-foreground shrink-0" />
 										<span class="text-sm text-muted-foreground">{$_('sidebar.upcomingEvent.youtube.notScheduled')}</span>
 									</div>
 									<Button
@@ -478,7 +457,7 @@
 								<!-- Not logged in - show login button -->
 								<div class="space-y-1">
 									<div class="flex items-center gap-2">
-										<XCircle class="h-4 w-4 text-muted-foreground flex-shrink-0" />
+										<XCircle class="h-4 w-4 text-muted-foreground shrink-0" />
 										<span class="text-sm text-muted-foreground">{$_('sidebar.upcomingEvent.youtube.notScheduled')}</span>
 									</div>
 									<Button

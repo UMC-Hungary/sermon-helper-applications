@@ -4,8 +4,6 @@ export interface SystemStatus {
 		rodeInterface?: boolean;
 		mainDisplay?: boolean;
 		secondaryDisplay?: boolean;
-		airplayDisplay?: boolean;
-		displayAlignment?: boolean;
 	};
 	youtube: {
 		authenticated: boolean;

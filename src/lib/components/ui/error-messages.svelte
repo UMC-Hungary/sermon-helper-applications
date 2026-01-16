@@ -38,22 +38,6 @@
 
 	const errorMessages: ErrorMessage[] = [
 		{
-			id: "airplay",
-			titleKey: "errors.airplayDisplay.title",
-			descriptionKey: "errors.airplayDisplay.description",
-			status: "airplayDisplay",
-			stepsKey: "errors.airplayDisplay.steps",
-			imageUrl: "/macos-display-settings-airplay.jpg",
-		},
-		{
-			id: "display-alignment",
-			titleKey: "errors.displayAlignment.title",
-			descriptionKey: "errors.displayAlignment.description",
-			status: "displayAlignment",
-			stepsKey: "errors.displayAlignment.steps",
-			imageUrl: "/macos-display-arrangement-settings.jpg",
-		},
-		{
 			id: "obs",
 			titleKey: "errors.obs.title",
 			descriptionKey: "errors.obs.description",
