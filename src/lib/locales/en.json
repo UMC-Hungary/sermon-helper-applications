@@ -4,7 +4,8 @@
 		"nav": {
 			"events": "Service Events",
 			"bibleEditor": "Bible Editor",
-			"obsConfig": "OBS Configuration"
+			"obsConfig": "OBS Configuration",
+			"settings": "Settings"
 		},
 		"systemStatus": {
 			"title": "System Status",
@@ -343,6 +344,21 @@
 	"obsConfig": {
 		"title": "OBS Configuration",
 		"subtitle": "Configure OBS connection and device mappings"
+	},
+	"settings": {
+		"title": "Settings",
+		"subtitle": "Configure application settings and manage data",
+		"importExport": {
+			"title": "Data Management",
+			"description": "Export your settings to a file or import from a backup",
+			"export": "Export Settings",
+			"import": "Import Settings",
+			"includeYoutubeTokens": "Include YouTube credentials",
+			"warning": "Importing will overwrite all current settings",
+			"exportSuccess": "Settings exported successfully",
+			"importSuccess": "Settings imported successfully",
+			"importError": "Failed to import settings"
+		}
 	},
 	"obsDevices": {
 		"title": "OBS Devices",

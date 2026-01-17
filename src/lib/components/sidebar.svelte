@@ -187,7 +187,7 @@
 
 	const navItems = [
 		{ id: '/events', labelKey: 'sidebar.nav.events', icon: CalendarDays },
-		{ id: '/obs-config', labelKey: 'sidebar.nav.obsConfig', icon: Settings },
+		{ id: '/obs-config', labelKey: 'sidebar.nav.settings', icon: Settings },
 	];
 
 	function handleSystemRecheck() {

@@ -4,7 +4,8 @@
 		"nav": {
 			"events": "Istentiszteleti Események",
 			"bibleEditor": "Biblia Szerkesztő",
-			"obsConfig": "OBS Konfiguráció"
+			"obsConfig": "OBS Konfiguráció",
+			"settings": "Beállítások"
 		},
 		"systemStatus": {
 			"title": "Rendszer Állapot",
@@ -343,6 +344,21 @@
 	"obsConfig": {
 		"title": "OBS Konfiguráció",
 		"subtitle": "OBS kapcsolat és eszköz hozzárendelések konfigurálása"
+	},
+	"settings": {
+		"title": "Beállítások",
+		"subtitle": "Alkalmazás beállítások és adatkezelés",
+		"importExport": {
+			"title": "Adatkezelés",
+			"description": "Exportálja beállításait fájlba vagy importáljon biztonsági mentésből",
+			"export": "Beállítások Exportálása",
+			"import": "Beállítások Importálása",
+			"includeYoutubeTokens": "YouTube hitelesítő adatok belefoglalása",
+			"warning": "Az importálás felülírja az összes jelenlegi beállítást",
+			"exportSuccess": "Beállítások sikeresen exportálva",
+			"importSuccess": "Beállítások sikeresen importálva",
+			"importError": "Nem sikerült importálni a beállításokat"
+		}
 	},
 	"obsDevices": {
 		"title": "OBS Eszközök",
