@@ -4,8 +4,7 @@
 		"nav": {
 			"events": "Service Events",
 			"bibleEditor": "Bible Editor",
-			"obsSettings": "OBS Settings",
-			"obsDevices": "OBS Devices"
+			"obsConfig": "OBS Configuration"
 		},
 		"systemStatus": {
 			"title": "System Status",
@@ -340,6 +339,10 @@
 		"delete": "Delete",
 		"loading": "Loading...",
 		"error": "Error"
+	},
+	"obsConfig": {
+		"title": "OBS Configuration",
+		"subtitle": "Configure OBS connection and device mappings"
 	},
 	"obsDevices": {
 		"title": "OBS Devices",

@@ -27,7 +27,6 @@
 		hasActions?: boolean;
 	}
 
-
 	export let onRecheck: () => void = () => {};
 	export let onReconnect: () => void = () => {};
 
@@ -159,12 +158,12 @@
 						<span>{$_(error.descriptionKey)}</span>
 						{#if error.hasActions}
 							<div class="flex gap-2">
-								{#if page.url.pathname !== '/obs-settings'}
+								{#if page.url.pathname !== '/obs-config'}
 								<Button
 									buttonVariant="outline"
 									buttonSize="sm"
 									className="shrink-0 bg-transparent"
-									href={'/obs-settings'}
+									href={'/obs-config'}
 								>
 									<Settings class="h-4 w-4 mr-2" />
 									{$_('errors.goToObsSettings')}
@@ -254,12 +253,12 @@
 								<RefreshCw class="h-4 w-4 mr-2" />
 								{$_('errors.recheck')}
 							</Button>
-							{#if page.url.pathname !== '/obs-devices'}
+							{#if page.url.pathname !== '/obs-config'}
 								<Button
 									buttonVariant="outline"
 									buttonSize="sm"
 									className="shrink-0 bg-transparent"
-									href="/obs-devices"
+									href="/obs-config"
 								>
 									<Settings class="h-4 w-4 mr-2" />
 									{$_('errors.obsDevice.configure')}

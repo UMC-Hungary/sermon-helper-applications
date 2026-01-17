@@ -35,8 +35,7 @@
 		ObsDevice,
 		ObsInputInfo,
 		ObsDeviceConfig,
-		ObsBrowserSourceConfig,
-		ObsDeviceType
+		ObsBrowserSourceConfig
 	} from "$lib/types/obs-devices";
 
 	// Available devices and sources from OBS
@@ -365,12 +364,7 @@
 	);
 </script>
 
-<div class="mt-12 lg:mt-0">
-	<h2 class="text-3xl font-bold tracking-tight">{$_("obsDevices.title")}</h2>
-	<p class="text-muted-foreground">{$_("obsDevices.subtitle")}</p>
-</div>
-
-<!-- Refresh Data Button -->
+<!-- Refresh Data Buttons -->
 <div class="flex gap-3 mb-6">
 	<Button
 		buttonVariant="outline"
@@ -392,20 +386,17 @@
 </div>
 
 {#if !$obsStatus.connected}
-	<Card className="max-w-2xl">
+	<Card>
 		<svelte:fragment slot="content">
 			<div class="flex items-center gap-3 text-amber-600">
 				<AlertCircle class="h-5 w-5" />
 				<p>{$_("obsDevices.errors.obsNotConnected")}</p>
 			</div>
-			<Button href="/obs-settings" className="mt-4">
-				{$_("obsDevices.goToObsSettings")}
-			</Button>
 		</svelte:fragment>
 	</Card>
 {:else}
 	<!-- Displays Section -->
-	<Card className="max-w-3xl mb-6">
+	<Card className="mb-6">
 		<svelte:fragment slot="title">
 			<Monitor class="h-5 w-5" />
 			{$_("obsDevices.displays.title")}
@@ -504,7 +495,7 @@
 	</Card>
 
 	<!-- Audio Devices Section -->
-	<Card className="max-w-3xl mb-6">
+	<Card className="mb-6">
 		<svelte:fragment slot="title">
 			<Volume2 class="h-5 w-5" />
 			{$_("obsDevices.audio.title")}
@@ -603,7 +594,7 @@
 	</Card>
 
 	<!-- Browser Sources Section -->
-	<Card className="max-w-3xl">
+	<Card>
 		<svelte:fragment slot="title">
 			<Globe class="h-5 w-5" />
 			{$_("obsDevices.browser.title")}

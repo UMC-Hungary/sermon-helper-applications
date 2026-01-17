@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, Cpu, RefreshCw, Check, FileText, FolderOpen } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, RefreshCw, Check, FileText, FolderOpen } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -187,8 +187,7 @@
 
 	const navItems = [
 		{ id: '/events', labelKey: 'sidebar.nav.events', icon: CalendarDays },
-		{ id: '/obs-settings', labelKey: 'sidebar.nav.obsSettings', icon: Settings },
-		{ id: '/obs-devices', labelKey: 'sidebar.nav.obsDevices', icon: Cpu },
+		{ id: '/obs-config', labelKey: 'sidebar.nav.obsConfig', icon: Settings },
 	];
 
 	function handleSystemRecheck() {
@@ -224,8 +223,7 @@
  	)}
  >
 	<div class="flex h-full flex-col bg-sidebar">
- 		<div class="flex items-center justify-between border-b border-sidebar-border p-4">
- 			<h1 class="text-lg font-semibold text-sidebar-foreground">{$_('sidebar.appTitle')}</h1>
+ 		<div class="flex items-center justify-between">
  			<Button buttonVariant="ghost" buttonSize="icon" className="md:hidden" onclick={onMobileMenuToggle}>
  				<X class="h-5 w-5" />
  			</Button>

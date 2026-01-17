@@ -4,8 +4,7 @@
 		"nav": {
 			"events": "Istentiszteleti Események",
 			"bibleEditor": "Biblia Szerkesztő",
-			"obsSettings": "OBS Beállítások",
-			"obsDevices": "OBS Eszközök"
+			"obsConfig": "OBS Konfiguráció"
 		},
 		"systemStatus": {
 			"title": "Rendszer Állapot",
@@ -340,6 +339,10 @@
 		"delete": "Törlés",
 		"loading": "Betöltés...",
 		"error": "Hiba"
+	},
+	"obsConfig": {
+		"title": "OBS Konfiguráció",
+		"subtitle": "OBS kapcsolat és eszköz hozzárendelések konfigurálása"
 	},
 	"obsDevices": {
 		"title": "OBS Eszközök",

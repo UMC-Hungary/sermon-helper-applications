@@ -6,12 +6,10 @@
 	import { toast } from "$lib/utils/toast";
 	import { obsWebSocket } from "$lib/utils/obs-websocket";
 	import { obsStatus } from "$lib/stores/system-store";
-	import { obsSettingsStore, type ObsSettings } from "$lib/utils/obs-store";
+	import { obsSettingsStore } from "$lib/utils/obs-store";
 	import { Settings, Save, TestTube, Wifi, WifiOff } from "lucide-svelte";
 	import { onMount } from "svelte";
 	import { _ } from 'svelte-i18n';
-
-	export let onRecheck: () => Promise<void> = async () => {};
 
 	let websocketUrl: string = "ws://localhost:4455";
 	let websocketPassword: string = "";
@@ -108,13 +106,8 @@
 	};
 </script>
 
-<div class="mt-12 lg:mt-0">
-	<h2 class="text-3xl font-bold tracking-tight">{$_('obsSettings.title')}</h2>
-	<p class="text-muted-foreground">{$_('obsSettings.subtitle')}</p>
-</div>
-
 <!-- OBS Settings Card -->
-<Card className="max-w-2xl">
+<Card>
 	<svelte:fragment slot="title">
 		<Settings class="h-5 w-5" />
 		{$_('obsSettings.card.title')}
