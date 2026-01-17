@@ -15,17 +15,55 @@
     import { updateYoutubeLogin } from '$lib/stores/system-store';
     import { refreshStore } from '$lib/stores/refresh-store';
     import UpdateChecker from '$lib/components/update-checker.svelte';
+    import { browser } from '$app/environment';
 
     let { children } = $props();
 
+    // Logging helper that works in both browser and Tauri
+    async function log(level: 'info' | 'error' | 'warn' | 'debug', message: string) {
+        console.log(`[${level.toUpperCase()}] ${message}`);
+        if (browser && '__TAURI_INTERNALS__' in window) {
+            try {
+                const { info, error, warn, debug } = await import('@tauri-apps/plugin-log');
+                const logFn = { info, error, warn, debug }[level];
+                await logFn(message);
+            } catch (e) {
+                console.error('Failed to log to Tauri:', e);
+            }
+        }
+    }
+
     onMount(async () => {
-        await initTheme();
-        await appSettingsStore.load();
-        await initOAuthHandler();
-        updateYoutubeLogin(youtubeAuthStore.isLoggedIn());
-        loadSavedLocale();
-        obsWebSocket.autoconnect();
-        refreshStore.start();
+        await log('info', 'Layout onMount started');
+        try {
+            await log('info', 'Initializing theme...');
+            await initTheme();
+            await log('info', 'Theme initialized');
+
+            await log('info', 'Loading app settings...');
+            await appSettingsStore.load();
+            await log('info', 'App settings loaded');
+
+            await log('info', 'Initializing OAuth handler...');
+            await initOAuthHandler();
+            await log('info', 'OAuth handler initialized');
+
+            updateYoutubeLogin(youtubeAuthStore.isLoggedIn());
+            await log('info', 'YouTube login status updated');
+
+            loadSavedLocale();
+            await log('info', 'Locale loaded');
+
+            obsWebSocket.autoconnect();
+            await log('info', 'OBS autoconnect started');
+
+            refreshStore.start();
+            await log('info', 'Refresh store started');
+
+            await log('info', 'Layout onMount completed successfully');
+        } catch (e) {
+            await log('error', `Layout onMount error: ${e}`);
+        }
     });
 
     onDestroy(() => {

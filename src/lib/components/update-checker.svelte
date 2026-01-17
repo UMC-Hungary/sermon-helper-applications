@@ -15,17 +15,37 @@
 	let updateInstance: any = $state(null);
 	let isTauri = $state(false);
 
+	// Logging helper
+	async function log(level: 'info' | 'error' | 'warn' | 'debug', message: string) {
+		console.log(`[UpdateChecker][${level.toUpperCase()}] ${message}`);
+		if (browser && '__TAURI_INTERNALS__' in window) {
+			try {
+				const { info, error, warn, debug } = await import('@tauri-apps/plugin-log');
+				const logFn = { info, error, warn, debug }[level];
+				await logFn(`[UpdateChecker] ${message}`);
+			} catch (e) {
+				// Ignore logging errors
+			}
+		}
+	}
+
 	function checkIsTauri(): boolean {
 		if (!browser) return false;
 		return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 	}
 
 	async function checkForUpdates(showNoUpdateToast = false) {
-		if (!isTauri) return;
+		if (!isTauri) {
+			await log('info', 'Skipping update check - not in Tauri environment');
+			return;
+		}
 
+		await log('info', 'Checking for updates...');
 		try {
 			const { check } = await import('@tauri-apps/plugin-updater');
+			await log('info', 'Updater plugin loaded, calling check()...');
 			const update = await check();
+			await log('info', `Update check result: ${update ? `v${update.version} available` : 'no update'}`);
 
 			if (update) {
 				updateInstance = update;
@@ -42,11 +62,21 @@
 				});
 			}
 		} catch (error) {
-			console.error('Failed to check for updates:', error);
-			if (showNoUpdateToast) {
+			const errorMsg = String(error);
+			// "Could not fetch a valid release JSON" is expected when no releases exist yet
+			const isNoReleaseError = errorMsg.includes('Could not fetch a valid release JSON');
+
+			if (isNoReleaseError) {
+				await log('info', 'No releases published yet - skipping update check');
+			} else {
+				await log('error', `Update check failed: ${errorMsg}`);
+				console.error('Failed to check for updates:', error);
+			}
+
+			if (showNoUpdateToast && !isNoReleaseError) {
 				toast({
 					title: 'Update check failed',
-					description: String(error),
+					description: errorMsg,
 					variant: 'error',
 					duration: 5000
 				});
@@ -111,13 +141,16 @@
 	}
 
 	onMount(() => {
+		log('info', 'UpdateChecker component mounted');
 		isTauri = checkIsTauri();
+		log('info', `Tauri environment detected: ${isTauri}`);
 
 		if (!isTauri) {
-			console.log('Not running in Tauri, skipping update check');
+			log('info', 'Not running in Tauri, skipping update check');
 			return;
 		}
 
+		log('info', 'Scheduling update check in 3 seconds...');
 		const timer = setTimeout(() => {
 			checkForUpdates(false);
 		}, 3000);
