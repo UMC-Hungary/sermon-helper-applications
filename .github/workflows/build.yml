@@ -35,13 +35,13 @@ jobs:
           # macOS ARM (M1/M2/M3)
           - platform: macos-latest
             target: aarch64-apple-darwin
-            bundles: dmg
+            bundles: dmg,app
             name: macOS-ARM64
 
           # macOS Intel
           - platform: macos-latest
             target: x86_64-apple-darwin
-            bundles: dmg
+            bundles: dmg,app
             name: macOS-Intel
 
           # Linux
@@ -138,7 +138,8 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.rpm
@@ -185,14 +186,14 @@ jobs:
             WINDOWS_SIG=$(cat artifacts/Windows-x64/nsis/*.exe.sig)
           fi
 
-          # macOS ARM signature
-          if [ -f artifacts/macOS-ARM64/dmg/*.dmg.sig ]; then
-            MACOS_ARM_SIG=$(cat artifacts/macOS-ARM64/dmg/*.dmg.sig)
+          # macOS ARM signature (from .app.tar.gz bundle, not dmg)
+          if [ -f artifacts/macOS-ARM64/macos/*.app.tar.gz.sig ]; then
+            MACOS_ARM_SIG=$(cat artifacts/macOS-ARM64/macos/*.app.tar.gz.sig)
           fi
 
-          # macOS Intel signature
-          if [ -f artifacts/macOS-Intel/dmg/*.dmg.sig ]; then
-            MACOS_INTEL_SIG=$(cat artifacts/macOS-Intel/dmg/*.dmg.sig)
+          # macOS Intel signature (from .app.tar.gz bundle, not dmg)
+          if [ -f artifacts/macOS-Intel/macos/*.app.tar.gz.sig ]; then
+            MACOS_INTEL_SIG=$(cat artifacts/macOS-Intel/macos/*.app.tar.gz.sig)
           fi
 
           # Linux AppImage signature
@@ -207,8 +208,8 @@ jobs:
 
           # Get actual filenames
           WINDOWS_EXE=$(basename artifacts/Windows-x64/nsis/*.exe 2>/dev/null | head -1 || echo "")
-          MACOS_ARM_DMG=$(basename artifacts/macOS-ARM64/dmg/*.dmg 2>/dev/null | head -1 || echo "")
-          MACOS_INTEL_DMG=$(basename artifacts/macOS-Intel/dmg/*.dmg 2>/dev/null | head -1 || echo "")
+          MACOS_ARM_APP=$(basename artifacts/macOS-ARM64/macos/*.app.tar.gz 2>/dev/null | head -1 || echo "")
+          MACOS_INTEL_APP=$(basename artifacts/macOS-Intel/macos/*.app.tar.gz 2>/dev/null | head -1 || echo "")
           LINUX_APPIMAGE=$(basename artifacts/Linux-x64/appimage/*.AppImage 2>/dev/null | head -1 || echo "")
 
           # Create latest.json
@@ -224,11 +225,11 @@ jobs:
               },
               "darwin-aarch64": {
                 "signature": "${MACOS_ARM_SIG}",
-                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${MACOS_ARM_DMG}"
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${MACOS_ARM_APP}"
               },
               "darwin-x86_64": {
                 "signature": "${MACOS_INTEL_SIG}",
-                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${MACOS_INTEL_DMG}"
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${MACOS_INTEL_APP}"
               },
               "linux-x86_64": {
                 "signature": "${LINUX_APPIMAGE_SIG}",
@@ -273,7 +274,8 @@ jobs:
             artifacts/**/*.msi
             artifacts/**/*.msi.sig
             artifacts/**/*.dmg
-            artifacts/**/*.dmg.sig
+            artifacts/**/*.app.tar.gz
+            artifacts/**/*.app.tar.gz.sig
             artifacts/**/*.deb
             artifacts/**/*.deb.sig
             artifacts/**/*.rpm
