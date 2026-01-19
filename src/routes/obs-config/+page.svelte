@@ -3,6 +3,7 @@
 	import ObsConnectionSettings from '$lib/components/obs-connection-settings.svelte';
 	import ObsDeviceConfigs from '$lib/components/obs-device-configs.svelte';
 	import ImportExportSettings from '$lib/components/import-export-settings.svelte';
+	import UpdateSettings from '$lib/components/update-settings.svelte';
 </script>
 
 <div class="mt-12 lg:mt-0">
@@ -15,5 +16,6 @@
 	<div class="space-y-6">
 		<ObsDeviceConfigs />
 		<ImportExportSettings />
+		<UpdateSettings />
 	</div>
 </div>

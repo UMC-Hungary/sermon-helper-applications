@@ -358,6 +358,15 @@
 			"exportSuccess": "Beállítások sikeresen exportálva",
 			"importSuccess": "Beállítások sikeresen importálva",
 			"importError": "Nem sikerült importálni a beállításokat"
+		},
+		"update": {
+			"title": "Alkalmazás Frissítések",
+			"description": "Az alkalmazás új verzióinak ellenőrzése",
+			"currentVersion": "Jelenlegi verzió",
+			"checkForUpdates": "Frissítések Keresése",
+			"checking": "Ellenőrzés...",
+			"upToDate": "A legújabb verziót futtatja",
+			"devMode": "Verzióinformáció nem elérhető (fejlesztői mód)"
 		}
 	},
 	"obsDevices": {
