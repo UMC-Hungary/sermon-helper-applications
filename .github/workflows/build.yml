@@ -127,6 +127,42 @@ jobs:
             echo "Signed successfully"
           fi
 
+      # Rename macOS tarballs to include architecture
+      - name: Rename macOS tarballs with architecture
+        if: runner.os == 'macOS'
+        run: |
+          MACOS_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/macos"
+          if [ -d "$MACOS_DIR" ]; then
+            # Determine architecture suffix
+            if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
+              ARCH="aarch64"
+            else
+              ARCH="x64"
+            fi
+
+            # Rename .app.tar.gz files
+            for f in "$MACOS_DIR"/*.app.tar.gz; do
+              if [ -f "$f" ]; then
+                BASENAME=$(basename "$f" .app.tar.gz)
+                NEW_NAME="${BASENAME}_${ARCH}.app.tar.gz"
+                mv "$f" "$MACOS_DIR/$NEW_NAME"
+                echo "Renamed: $f -> $MACOS_DIR/$NEW_NAME"
+              fi
+            done
+
+            # Rename .app.tar.gz.sig files
+            for f in "$MACOS_DIR"/*.app.tar.gz.sig; do
+              if [ -f "$f" ]; then
+                BASENAME=$(basename "$f" .app.tar.gz.sig)
+                NEW_NAME="${BASENAME}_${ARCH}.app.tar.gz.sig"
+                mv "$f" "$MACOS_DIR/$NEW_NAME"
+                echo "Renamed: $f -> $MACOS_DIR/$NEW_NAME"
+              fi
+            done
+
+            ls -la "$MACOS_DIR"
+          fi
+
       # Upload artifacts (for non-tag builds)
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -187,13 +223,13 @@ jobs:
           fi
 
           # macOS ARM signature (from .app.tar.gz bundle, not dmg)
-          if [ -f artifacts/macOS-ARM64/macos/*.app.tar.gz.sig ]; then
-            MACOS_ARM_SIG=$(cat artifacts/macOS-ARM64/macos/*.app.tar.gz.sig)
+          if [ -f artifacts/macOS-ARM64/macos/*_aarch64.app.tar.gz.sig ]; then
+            MACOS_ARM_SIG=$(cat artifacts/macOS-ARM64/macos/*_aarch64.app.tar.gz.sig)
           fi
 
           # macOS Intel signature (from .app.tar.gz bundle, not dmg)
-          if [ -f artifacts/macOS-Intel/macos/*.app.tar.gz.sig ]; then
-            MACOS_INTEL_SIG=$(cat artifacts/macOS-Intel/macos/*.app.tar.gz.sig)
+          if [ -f artifacts/macOS-Intel/macos/*_x64.app.tar.gz.sig ]; then
+            MACOS_INTEL_SIG=$(cat artifacts/macOS-Intel/macos/*_x64.app.tar.gz.sig)
           fi
 
           # Linux AppImage signature
@@ -208,8 +244,8 @@ jobs:
 
           # Get actual filenames
           WINDOWS_EXE=$(basename artifacts/Windows-x64/nsis/*.exe 2>/dev/null | head -1 || echo "")
-          MACOS_ARM_APP=$(basename artifacts/macOS-ARM64/macos/*.app.tar.gz 2>/dev/null | head -1 || echo "")
-          MACOS_INTEL_APP=$(basename artifacts/macOS-Intel/macos/*.app.tar.gz 2>/dev/null | head -1 || echo "")
+          MACOS_ARM_APP=$(basename artifacts/macOS-ARM64/macos/*_aarch64.app.tar.gz 2>/dev/null | head -1 || echo "")
+          MACOS_INTEL_APP=$(basename artifacts/macOS-Intel/macos/*_x64.app.tar.gz 2>/dev/null | head -1 || echo "")
           LINUX_APPIMAGE=$(basename artifacts/Linux-x64/appimage/*.AppImage 2>/dev/null | head -1 || echo "")
 
           # Create latest.json
