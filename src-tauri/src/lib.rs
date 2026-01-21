@@ -1,8 +1,13 @@
 mod bible;
 mod local_server;
+mod video_upload;
 
 use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
 use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
+use video_upload::{
+    scan_recording_directory, get_video_file_info, init_youtube_upload,
+    upload_video_chunk, get_upload_status, cancel_upload
+};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -41,7 +46,14 @@ pub fn run() {
             fetch_bible_legacy,
             start_oauth_callback_server,
             start_oauth_flow_with_callback,
-            get_oauth_redirect_uri
+            get_oauth_redirect_uri,
+            // Video upload commands
+            scan_recording_directory,
+            get_video_file_info,
+            init_youtube_upload,
+            upload_video_chunk,
+            get_upload_status,
+            cancel_upload
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

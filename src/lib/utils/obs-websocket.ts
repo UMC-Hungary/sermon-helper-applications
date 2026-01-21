@@ -3,6 +3,17 @@ import OBSWebSocket, { OBSWebSocketError } from "obs-websocket-js";
 import { writable, derived, get } from 'svelte/store';
 import { obsSettingsStore } from "./obs-store";
 import type { ObsDevice, ObsInputInfo } from "$lib/types/obs-devices";
+import type { OBSMediaStatus, OBSOutputState } from "$lib/types/obs-streaming";
+import { DEFAULT_MEDIA_STATUS, formatTimecode } from "$lib/types/obs-streaming";
+
+// Lazy import to avoid circular dependencies
+let refreshStoreModule: typeof import('$lib/stores/refresh-store') | null = null;
+async function triggerYoutubeSync() {
+	if (!refreshStoreModule) {
+		refreshStoreModule = await import('$lib/stores/refresh-store');
+	}
+	refreshStoreModule.refreshStore.triggerSync();
+}
 
 export interface OBSConnectionStatus {
 	connected: boolean;
@@ -14,7 +25,12 @@ export interface OBSConnectionStatus {
 
 export class LocalOBSWebSocket {
 	private obs: OBSWebSocket | null = null;
-	
+
+	// Client-side timer for timecode updates (no polling)
+	private timecodeInterval: ReturnType<typeof setInterval> | null = null;
+	private streamStartTime: number | null = null;  // Timestamp when stream started
+	private recordStartTime: number | null = null;  // Timestamp when record started
+
 	private status = writable<OBSConnectionStatus>({
 		connected: false,
 		loading: true,
@@ -23,7 +39,10 @@ export class LocalOBSWebSocket {
 		error: undefined
 	});
 
+	private mediaStatus = writable<OBSMediaStatus>(DEFAULT_MEDIA_STATUS);
+
 	public readonly obsStatus = derived(this.status, $status => $status);
+	public readonly obsMediaStatus = derived(this.mediaStatus, $media => $media);
 
 	private updateStatus(connected: boolean, loading: boolean = false, reconnecting: boolean = false, error?: string): void {
 		this.status.set({
@@ -41,10 +60,12 @@ export class LocalOBSWebSocket {
 		try {
 			this.obs = new OBSWebSocket();
 			this.obs.connect(url, password || undefined, { rpcVersion: 1 })
-				.then(() => {
+				.then(async () => {
 					console.log('OBS WebSocket connected');
 					this.updateStatus(true, false, false);
 					this.obs?.call('GetVersion').then(version => console.log('OBS Version:', version));
+					// Fetch initial stream/record status
+					await this.fetchInitialMediaStatus();
 				})
 				.catch((error: OBSWebSocketError) => {
 					try { this.obs?.disconnect(); } catch {}
@@ -61,6 +82,24 @@ export class LocalOBSWebSocket {
 			this.obs.on('ConnectionClosed', (error: OBSWebSocketError) => {
 				console.log('OBS WebSocket closed:', error);
 				this.updateStatus(false, false, false, `Connection closed: ${error}`);
+				// Stop timecode timer and reset media status on disconnect
+				this.stopTimecodeTimer();
+				this.streamStartTime = null;
+				this.recordStartTime = null;
+				this.mediaStatus.set(DEFAULT_MEDIA_STATUS);
+			});
+
+			// Stream state change events
+			this.obs.on('StreamStateChanged', (data) => {
+				console.log('Stream state changed:', data);
+				this.handleStreamStateChange(data.outputActive, data.outputState as OBSOutputState);
+			});
+
+			// Record state change events
+			this.obs.on('RecordStateChanged', (data) => {
+				console.log('Record state changed:', data);
+				const paused = 'outputPaused' in data ? (data as { outputPaused?: boolean }).outputPaused ?? false : false;
+				this.handleRecordStateChange(data.outputActive, data.outputState as OBSOutputState, paused);
 			});
 
 			return {
@@ -110,6 +149,11 @@ export class LocalOBSWebSocket {
 	}
 
 	async disconnect(): Promise<void> {
+		// Stop timecode timer before disconnecting
+		this.stopTimecodeTimer();
+		this.streamStartTime = null;
+		this.recordStartTime = null;
+
 		if (this.obs) {
 			try {
 				await this.obs.disconnect();
@@ -120,6 +164,7 @@ export class LocalOBSWebSocket {
 			this.obs = null;
 		}
 		this.updateStatus(false, false, false);
+		this.mediaStatus.set(DEFAULT_MEDIA_STATUS);
 	}
 
 	/**
@@ -239,6 +284,349 @@ export class LocalOBSWebSocket {
 		} catch (error) {
 			console.error('Failed to refresh browser source:', error);
 			throw error;
+		}
+	}
+
+	/**
+	 * Fetch initial stream and record status from OBS
+	 * Called after connection is established
+	 */
+	private async fetchInitialMediaStatus(): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			return;
+		}
+
+		try {
+			// Fetch stream status
+			const streamStatus = await this.obs.call('GetStreamStatus');
+			const streamDuration = streamStatus.outputDuration || 0;
+
+			// If streaming is active, calculate start time from current duration
+			if (streamStatus.outputActive) {
+				this.streamStartTime = Date.now() - streamDuration;
+			}
+
+			this.mediaStatus.update((current) => ({
+				...current,
+				stream: {
+					active: streamStatus.outputActive,
+					reconnecting: streamStatus.outputReconnecting,
+					timecode: streamStatus.outputTimecode || '00:00:00',
+					duration: streamDuration,
+					state: streamStatus.outputActive ? 'OBS_WEBSOCKET_OUTPUT_STARTED' : 'OBS_WEBSOCKET_OUTPUT_STOPPED'
+				}
+			}));
+			console.log('Initial stream status:', streamStatus);
+		} catch (error) {
+			console.warn('Failed to get stream status (streaming may not be configured):', error);
+		}
+
+		try {
+			// Fetch record status
+			const recordStatus = await this.obs.call('GetRecordStatus');
+			const recordDuration = recordStatus.outputDuration || 0;
+
+			// If recording is active, calculate start time from current duration
+			if (recordStatus.outputActive) {
+				this.recordStartTime = Date.now() - recordDuration;
+			}
+
+			this.mediaStatus.update((current) => ({
+				...current,
+				record: {
+					active: recordStatus.outputActive,
+					paused: recordStatus.outputPaused,
+					timecode: recordStatus.outputTimecode || '00:00:00',
+					duration: recordDuration,
+					state: recordStatus.outputActive ? 'OBS_WEBSOCKET_OUTPUT_STARTED' : 'OBS_WEBSOCKET_OUTPUT_STOPPED'
+				}
+			}));
+			console.log('Initial record status:', recordStatus);
+		} catch (error) {
+			console.warn('Failed to get record status:', error);
+		}
+
+		// Start timecode timer if either is active
+		this.updateTimecodeTimer();
+	}
+
+	/**
+	 * Handle stream state change from WebSocket event
+	 */
+	private async handleStreamStateChange(active: boolean, state: OBSOutputState): Promise<void> {
+		if (active && state === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
+			// Stream just started - fetch initial duration and set start time
+			try {
+				const streamStatus = await this.obs?.call('GetStreamStatus');
+				const initialDuration = streamStatus?.outputDuration || 0;
+				this.streamStartTime = Date.now() - initialDuration;
+				console.log('Stream started, initial duration:', initialDuration);
+			} catch {
+				// Fallback: assume stream just started now
+				this.streamStartTime = Date.now();
+			}
+		} else if (!active) {
+			// Stream stopped
+			this.streamStartTime = null;
+		}
+
+		this.mediaStatus.update((current) => ({
+			...current,
+			stream: {
+				...current.stream,
+				active,
+				state,
+				// Reset timecode when stopped
+				timecode: active ? current.stream.timecode : '00:00:00',
+				duration: active ? current.stream.duration : 0
+			}
+		}));
+
+		this.updateTimecodeTimer();
+
+		// Trigger YouTube sync when stream starts or stops
+		// This ensures YouTube broadcast status is updated promptly
+		if (state === 'OBS_WEBSOCKET_OUTPUT_STARTED' || state === 'OBS_WEBSOCKET_OUTPUT_STOPPED') {
+			triggerYoutubeSync();
+		}
+	}
+
+	/**
+	 * Handle record state change from WebSocket event
+	 */
+	private async handleRecordStateChange(active: boolean, state: OBSOutputState, paused: boolean): Promise<void> {
+		if (active && state === 'OBS_WEBSOCKET_OUTPUT_STARTED') {
+			// Recording just started - fetch initial duration and set start time
+			try {
+				const recordStatus = await this.obs?.call('GetRecordStatus');
+				const initialDuration = recordStatus?.outputDuration || 0;
+				this.recordStartTime = Date.now() - initialDuration;
+				console.log('Recording started, initial duration:', initialDuration);
+			} catch {
+				// Fallback: assume recording just started now
+				this.recordStartTime = Date.now();
+			}
+		} else if (!active) {
+			// Recording stopped
+			this.recordStartTime = null;
+		}
+
+		this.mediaStatus.update((current) => ({
+			...current,
+			record: {
+				...current.record,
+				active,
+				state,
+				paused,
+				// Reset timecode when stopped
+				timecode: active ? current.record.timecode : '00:00:00',
+				duration: active ? current.record.duration : 0
+			}
+		}));
+
+		this.updateTimecodeTimer();
+	}
+
+	/**
+	 * Update timecode timer based on current stream/record activity
+	 * Starts timer when streaming or recording, stops when neither
+	 */
+	private updateTimecodeTimer(): void {
+		const status = get(this.mediaStatus);
+		const needsTimer = status.stream.active || status.record.active;
+
+		if (needsTimer && !this.timecodeInterval) {
+			this.startTimecodeTimer();
+		} else if (!needsTimer && this.timecodeInterval) {
+			this.stopTimecodeTimer();
+		}
+	}
+
+	/**
+	 * Start the client-side timecode timer
+	 * Updates timecode every second based on elapsed time (no API calls)
+	 */
+	private startTimecodeTimer(): void {
+		if (this.timecodeInterval) {
+			return; // Already running
+		}
+
+		console.log('Starting client-side timecode timer');
+		this.timecodeInterval = setInterval(() => {
+			this.updateTimecodes();
+		}, 1000);
+	}
+
+	/**
+	 * Stop the client-side timecode timer
+	 */
+	private stopTimecodeTimer(): void {
+		if (this.timecodeInterval) {
+			console.log('Stopping client-side timecode timer');
+			clearInterval(this.timecodeInterval);
+			this.timecodeInterval = null;
+		}
+	}
+
+	/**
+	 * Update timecodes based on elapsed time since start
+	 * Called every second by the timer (no API calls)
+	 */
+	private updateTimecodes(): void {
+		const now = Date.now();
+
+		this.mediaStatus.update((current) => {
+			const updates: Partial<OBSMediaStatus> = {};
+
+			// Update stream timecode if active
+			if (current.stream.active && this.streamStartTime !== null) {
+				const elapsed = now - this.streamStartTime;
+				updates.stream = {
+					...current.stream,
+					duration: elapsed,
+					timecode: formatTimecode(elapsed)
+				};
+			}
+
+			// Update record timecode if active (and not paused)
+			if (current.record.active && this.recordStartTime !== null && !current.record.paused) {
+				const elapsed = now - this.recordStartTime;
+				updates.record = {
+					...current.record,
+					duration: elapsed,
+					timecode: formatTimecode(elapsed)
+				};
+			}
+
+			return { ...current, ...updates };
+		});
+	}
+
+	/**
+	 * Start streaming
+	 */
+	async startStream(): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			await this.obs.call('StartStream');
+			console.log('Stream started');
+		} catch (error) {
+			console.error('Failed to start stream:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Stop streaming
+	 */
+	async stopStream(): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			await this.obs.call('StopStream');
+			console.log('Stream stopped');
+		} catch (error) {
+			console.error('Failed to stop stream:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Start recording
+	 */
+	async startRecord(): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			await this.obs.call('StartRecord');
+			console.log('Recording started');
+		} catch (error) {
+			console.error('Failed to start recording:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Stop recording
+	 */
+	async stopRecord(): Promise<void> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			await this.obs.call('StopRecord');
+			console.log('Recording stopped');
+		} catch (error) {
+			console.error('Failed to stop recording:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Toggle stream state (start if stopped, stop if started)
+	 */
+	async toggleStream(): Promise<void> {
+		const status = get(this.mediaStatus);
+		if (status.stream.active) {
+			await this.stopStream();
+		} else {
+			await this.startStream();
+		}
+	}
+
+	/**
+	 * Toggle record state (start if stopped, stop if started)
+	 */
+	async toggleRecord(): Promise<void> {
+		const status = get(this.mediaStatus);
+		if (status.record.active) {
+			await this.stopRecord();
+		} else {
+			await this.startRecord();
+		}
+	}
+
+	/**
+	 * Get the recording output directory from OBS
+	 */
+	async getRecordDirectory(): Promise<string> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			const result = await this.obs.call('GetRecordDirectory');
+			return result.recordDirectory;
+		} catch (error) {
+			console.error('Failed to get record directory:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get the last recorded file path from OBS (if available)
+	 * Note: This may not be available on all OBS versions
+	 */
+	async getLastRecordedFilePath(): Promise<string | null> {
+		if (!this.obs || !this.isConnected()) {
+			throw new Error('OBS not connected');
+		}
+
+		try {
+			const status = await this.obs.call('GetRecordStatus');
+			// outputPath is available in some OBS WebSocket versions
+			return (status as { outputPath?: string }).outputPath || null;
+		} catch (error) {
+			console.warn('Could not get last recorded file path:', error);
+			return null;
 		}
 	}
 }

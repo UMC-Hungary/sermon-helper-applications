@@ -46,8 +46,7 @@
 			} else {
 				toast({
 					title: $_('settings.update.upToDate'),
-					variant: 'info',
-					duration: 3000
+					variant: 'info'
 				});
 			}
 		} catch (error) {
@@ -57,16 +56,14 @@
 			if (isNoReleaseError) {
 				toast({
 					title: $_('settings.update.upToDate'),
-					variant: 'info',
-					duration: 3000
+					variant: 'info'
 				});
 			} else {
 				console.error('Failed to check for updates:', error);
 				toast({
 					title: $_('toasts.error.title'),
 					description: errorMsg,
-					variant: 'error',
-					duration: 5000
+					variant: 'error'
 				});
 			}
 		} finally {

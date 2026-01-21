@@ -12,13 +12,11 @@ interface ToastOptions {
 export function toast({ title, description, variant = 'info', duration = 100000 }: ToastOptions) {
 	if (variant === 'success') {
 		sonnerToast.success(title || '', {
-			style: 'border: 2px solid green !important;',
 			description,
 			duration,
 		});
 	} else if (variant === 'error') {
 		sonnerToast.error(title || '', {
-			style: 'border: 2px solid red !important;',
 			description,
 			duration,
 		});

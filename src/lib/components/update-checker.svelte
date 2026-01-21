@@ -57,8 +57,7 @@
 				toast({
 					title: 'No updates available',
 					description: 'You are running the latest version.',
-					variant: 'info',
-					duration: 3000
+					variant: 'info'
 				});
 			}
 		} catch (error) {

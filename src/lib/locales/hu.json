@@ -332,6 +332,30 @@
 			"updateFailed": "Nem sikerült frissíteni a YouTube eseményt"
 		}
 	},
+	"streaming": {
+		"stream": "Közvetítés",
+		"record": "Felvétel",
+		"obsNotConnected": "Csatlakozz az OBS-hez a vezérléshez",
+		"errors": {
+			"streamFailed": "Nem sikerült váltani a közvetítést",
+			"recordFailed": "Nem sikerült váltani a felvételt"
+		},
+		"youtube": {
+			"goLive": "Élő adás",
+			"goingLive": "Indítás...",
+			"liveSuccess": "Élő adásban!",
+			"liveSuccessDescription": "A YouTube közvetítés most élő",
+			"liveFailed": "Nem sikerült elindítani az élő adást",
+			"status": {
+				"created": "Létrehozás...",
+				"ready": "Kész",
+				"testing": "Tesztelés",
+				"live": "Élő",
+				"complete": "Befejezve",
+				"unknown": "Ismeretlen"
+			}
+		}
+	},
 	"common": {
 		"save": "Mentés",
 		"cancel": "Mégse",
@@ -339,7 +363,48 @@
 		"edit": "Szerkesztés",
 		"delete": "Törlés",
 		"loading": "Betöltés...",
-		"error": "Hiba"
+		"error": "Hiba",
+		"latest": "Legújabb",
+		"public": "Nyilvános",
+		"unlisted": "Nem listázott",
+		"private": "Privát",
+		"comingSoon": "Hamarosan"
+	},
+	"eventSession": {
+		"title": "Munkamenet",
+		"states": {
+			"idle": "Várakozás",
+			"preparing": "Előkészítés",
+			"active": "Aktív",
+			"finalizing": "Befejezés",
+			"completed": "Kész",
+			"paused": "Szünetel"
+		},
+		"automation": {
+			"uploadingRecording": "Felvétel feltöltése...",
+			"uploadingTo": "Feltöltés ide: {platform}...",
+			"publishingVideo": "Videó közzététele...",
+			"endingBroadcast": "Élő közvetítés befejezése...",
+			"completed": "Automatikus feldolgozás kész",
+			"failed": "Automatikus feldolgozás sikertelen: {error}",
+			"triggerManually": "Utófeldolgozás Indítása"
+		},
+		"connection": {
+			"lost": "Kapcsolat Elveszett",
+			"reconnecting": "Újracsatlakozás...",
+			"resumed": "Kapcsolat helyreállt"
+		}
+	},
+	"recording": {
+		"selectFile": {
+			"title": "Felvétel Kiválasztása",
+			"description": "Több felvétel található ({count}). Kérjük, válassza ki a megfelelőt feltöltéshez.",
+			"useLatest": "Legújabb Használata",
+			"useLongest": "Leghosszabb Használata",
+			"autoSelected": "Felvétel automatikusan kiválasztva: {filename}",
+			"noRecordingFound": "Nem található megfelelő felvétel",
+			"multipleLongVideos": "Több hosszú felvétel található, kérjük válasszon"
+		}
 	},
 	"obsConfig": {
 		"title": "OBS Konfiguráció",
@@ -367,6 +432,32 @@
 			"checking": "Ellenőrzés...",
 			"upToDate": "A legújabb verziót futtatja",
 			"devMode": "Verzióinformáció nem elérhető (fejlesztői mód)"
+		},
+		"upload": {
+			"title": "Feltöltési Beállítások",
+			"description": "Automatikus feltöltés konfigurálása videó platformokra események után",
+			"saved": "Feltöltési beállítások mentve",
+			"global": "Általános Beállítások",
+			"minDuration": "Minimum időtartam (perc)",
+			"minDurationHint": "Az ennél rövidebb események nem indítanak automatikus feltöltést",
+			"shortThreshold": "Rövid videó küszöb (perc)",
+			"shortThresholdHint": "Az ennél rövidebb videók figyelmen kívül maradnak kiválasztáskor",
+			"retryAttempts": "Újrapróbálkozások száma",
+			"chunkSize": "Darabméret (MB)",
+			"youtube": {
+				"title": "YouTube",
+				"autoUpload": "Felvétel automatikus feltöltése esemény után",
+				"autoPublish": "Videó automatikus közzététele amikor kész",
+				"defaultPrivacy": "Alapértelmezett láthatóság",
+				"useEventPrivacy": "Esemény-specifikus láthatóság használata",
+				"saved": "YouTube feltöltési beállítások mentve"
+			},
+			"facebook": {
+				"title": "Facebook",
+				"autoUpload": "Automatikus feltöltés Facebook oldalra",
+				"selectPage": "Oldal Kiválasztása",
+				"crosspost": "Megosztás idővonalon is"
+			}
 		}
 	},
 	"obsDevices": {

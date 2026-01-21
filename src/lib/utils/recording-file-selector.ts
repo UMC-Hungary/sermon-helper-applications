@@ -1,8 +1,21 @@
 // Recording file selection utility
 // Handles automatic selection of the correct recording file when multiple exist
 
-import { invoke } from '@tauri-apps/api/core';
 import type { RecordingFile, RecordingSelectionResult } from '$lib/types/event-session';
+
+// Check if running in Tauri
+function isTauri(): boolean {
+	return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+// Dynamic import for Tauri API (only when in Tauri environment)
+async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+	if (!isTauri()) {
+		throw new Error('Recording file selection is only available in the desktop app');
+	}
+	const { invoke } = await import('@tauri-apps/api/core');
+	return invoke<T>(command, args);
+}
 
 // Default thresholds
 const DEFAULT_SHORT_VIDEO_THRESHOLD_SECONDS = 10 * 60; // 10 minutes
@@ -40,7 +53,7 @@ export async function selectRecording(
 
 	try {
 		// Get all video files from recording directory via Rust
-		const allFiles = await invoke<RecordingFile[]>('scan_recording_directory', {
+		const allFiles = await invokeCommand<RecordingFile[]>('scan_recording_directory', {
 			directory: recordingDir,
 			sessionStart: scanStart,
 			sessionEnd: scanEnd

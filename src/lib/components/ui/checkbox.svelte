@@ -2,17 +2,19 @@
 	import { cn } from '$lib/utils';
 
 	interface Props {
+		id?: string;
 		checked?: boolean;
 		disabled?: boolean;
 		onchange?: (event: Event) => void;
 		className?: string;
 	}
 
-	let { checked = $bindable(false), disabled = false, onchange, className = '' }: Props = $props();
+	let { id, checked = $bindable(false), disabled = false, onchange, className = '' }: Props = $props();
 </script>
 
 <input
 	type="checkbox"
+	{id}
 	{checked}
 	{disabled}
 	{onchange}

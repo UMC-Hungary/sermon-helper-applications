@@ -15,6 +15,8 @@
 	import { youtubeApi } from '$lib/utils/youtube-api';
 	import { toast } from '$lib/utils/toast';
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
+	import SidebarStreamingControls from '$lib/components/sidebar-streaming-controls.svelte';
+	import EventSessionStatus from '$lib/components/event-session-status.svelte';
 	import { requiredDeviceConfigs } from '$lib/stores/obs-devices-store';
 	import { obsDeviceStatuses, obsBrowserStatuses, isCheckingDevices } from '$lib/stores/obs-device-status-store';
 	import { browserSourceConfigs } from '$lib/stores/obs-devices-store';
@@ -178,10 +180,21 @@
 	}
 
 	// Open YouTube Studio for the scheduled event
-	function openYoutubeStudio() {
+	async function openYoutubeStudio() {
 		if (nextEvent?.youtubeScheduledId) {
 			const url = youtubeApi.getYoutubeStudioUrl(nextEvent.youtubeScheduledId);
-			window.open(url, '_blank');
+			if (isTauri) {
+				try {
+					const { openUrl } = await import('@tauri-apps/plugin-opener');
+					await openUrl(url);
+				} catch (err) {
+					console.error('Failed to open URL with Tauri opener:', err);
+					// Fallback to window.open
+					window.open(url, '_blank');
+				}
+			} else {
+				window.open(url, '_blank');
+			}
 		}
 	}
 
@@ -189,10 +202,6 @@
 		{ id: '/events', labelKey: 'sidebar.nav.events', icon: CalendarDays },
 		{ id: '/obs-config', labelKey: 'sidebar.nav.settings', icon: Settings },
 	];
-
-	function handleSystemRecheck() {
-		console.log('[v0] Rechecking system status...');
-	}
 </script>
 
  <!-- Mobile menu button -->
@@ -326,6 +335,12 @@
 
 				{#if nextEvent}
 					<div class="space-y-3">
+						<!-- Streaming Controls (only show for today's event) -->
+						{#if isToday}
+							<SidebarStreamingControls event={nextEvent} />
+							<EventSessionStatus />
+						{/if}
+
 						<!-- Event Title -->
 						<p class="text-sm font-medium text-card-foreground line-clamp-2">{nextEvent.title}</p>
 

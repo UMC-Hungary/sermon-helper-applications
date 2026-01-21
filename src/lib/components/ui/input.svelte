@@ -3,11 +3,11 @@
 	import type { HTMLInputAttributes } from "svelte/elements";
 
 	type InputProps = HTMLInputAttributes & {
-		value?: string;
+		value?: string | number;
 	};
 
 	export let type: string = "text";
-	export let value: string | undefined = undefined;
+	export let value: string | number | undefined = undefined;
 	export let placeholder: string | undefined = undefined;
 	export let disabled: boolean = false;
 	export let className: string = "";

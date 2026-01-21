@@ -1,9 +1,34 @@
 // YouTube Upload Service
 // Implements resumable upload to YouTube via Rust backend
 
-import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { get } from 'svelte/store';
+
+// Check if running in Tauri
+function isTauri(): boolean {
+	return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+// Dynamic imports for Tauri API
+async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+	if (!isTauri()) {
+		throw new Error('Video upload is only available in the desktop app');
+	}
+	const { invoke } = await import('@tauri-apps/api/core');
+	return invoke<T>(command, args);
+}
+
+async function listenToEvent<T>(
+	event: string,
+	handler: (event: { payload: T }) => void
+): Promise<() => void> {
+	if (!isTauri()) {
+		return () => {}; // No-op unlisten
+	}
+	const { listen } = await import('@tauri-apps/api/event');
+	return listen<T>(event, handler);
+}
+
+type UnlistenFn = () => void;
 import { youtubeTokens } from '$lib/stores/youtube-store';
 import { youtubeApi } from '$lib/utils/youtube-api';
 import { uploadSettingsStore } from '$lib/stores/upload-settings-store';
@@ -54,13 +79,13 @@ export class YouTubeUploadService implements IUploadService {
 		const accessToken = await youtubeApi.getValidAccessToken();
 
 		// Get file info
-		const fileInfo = await invoke<VideoFileInfo>('get_video_file_info', { path: filePath });
+		const fileInfo = await invokeCommand<VideoFileInfo>('get_video_file_info', { path: filePath });
 		if (!fileInfo.exists) {
 			throw new Error(`Video file does not exist: ${filePath}`);
 		}
 
 		// Initialize upload via Rust backend
-		const uploadUri = await invoke<string>('init_youtube_upload', {
+		const uploadUri = await invokeCommand<string>('init_youtube_upload', {
 			accessToken,
 			filePath,
 			title: metadata.title.substring(0, 100), // YouTube title limit
@@ -82,7 +107,7 @@ export class YouTubeUploadService implements IUploadService {
 		const chunkSize = settings.chunkSizeMB * 1024 * 1024;
 
 		// Set up progress listener
-		this.progressUnlisten = await listen<ProgressEvent>('upload-progress', (event) => {
+		this.progressUnlisten = await listenToEvent<ProgressEvent>('upload-progress', (event) => {
 			onProgress({
 				bytesUploaded: event.payload.bytesUploaded,
 				totalBytes: event.payload.totalBytes,
@@ -96,7 +121,7 @@ export class YouTubeUploadService implements IUploadService {
 
 			// Upload in chunks
 			while (bytesUploaded < totalBytes) {
-				const result = await invoke<UploadChunkResult>('upload_video_chunk', {
+				const result = await invokeCommand<UploadChunkResult>('upload_video_chunk', {
 					uploadUri: session.uploadUri,
 					filePath: session.filePath,
 					startByte: bytesUploaded,
@@ -130,7 +155,7 @@ export class YouTubeUploadService implements IUploadService {
 	// Resume an interrupted upload
 	async resume(session: UploadSession): Promise<UploadSession> {
 		// Query YouTube for how much was uploaded
-		const bytesUploaded = await invoke<number>('get_upload_status', {
+		const bytesUploaded = await invokeCommand<number>('get_upload_status', {
 			uploadUri: session.uploadUri,
 			totalSize: session.fileSize
 		});
@@ -147,7 +172,7 @@ export class YouTubeUploadService implements IUploadService {
 	// Cancel an upload
 	async cancel(session: UploadSession): Promise<void> {
 		try {
-			await invoke('cancel_upload', { uploadUri: session.uploadUri });
+			await invokeCommand('cancel_upload', { uploadUri: session.uploadUri });
 			console.log('[YouTubeUpload] Upload cancelled');
 		} catch (error) {
 			console.warn('[YouTubeUpload] Failed to cancel upload:', error);

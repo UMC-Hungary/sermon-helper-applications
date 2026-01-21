@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Radio, Circle, Play, Loader2, Square } from 'lucide-svelte';
+	import { Radio, Circle, Play, Loader2, Square, Youtube } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import { _ } from 'svelte-i18n';
@@ -15,8 +15,9 @@
 		recordControls
 	} from '$lib/stores/streaming-store';
 	import { youtubeApi } from '$lib/utils/youtube-api';
+	import { refreshStore } from '$lib/stores/refresh-store';
 	import { toast } from '$lib/utils/toast';
-	import type { ServiceEvent } from '$lib/types/event';
+	import type { ServiceEvent, YouTubeLifeCycleStatus } from '$lib/types/event';
 
 	// Props
 	export let event: ServiceEvent | null = null;
@@ -27,6 +28,13 @@
 	// Computed states
 	$: isOBSConnected = $systemStore.obs;
 	$: hasYoutubeBroadcast = event?.youtubeScheduledId != null;
+	$: youtubeStatus = event?.youtubeLifeCycleStatus as YouTubeLifeCycleStatus | undefined;
+
+	// YouTube status checks
+	$: isYoutubeLive = youtubeStatus === 'live';
+	$: isYoutubeComplete = youtubeStatus === 'complete';
+	$: isYoutubeReady = youtubeStatus === 'ready' || youtubeStatus === 'testing';
+	$: canGoLive = hasYoutubeBroadcast && isYoutubeReady && !isYoutubeLive && !isYoutubeComplete;
 
 	// Handle stream toggle
 	async function handleStreamToggle() {
@@ -56,7 +64,7 @@
 
 	// Handle YouTube Go Live
 	async function handleGoLive() {
-		if (!event?.youtubeScheduledId) return;
+		if (!event?.youtubeScheduledId || !canGoLive) return;
 
 		isGoingLive = true;
 		try {
@@ -66,6 +74,8 @@
 				description: $_('streaming.youtube.liveSuccessDescription'),
 				variant: 'success'
 			});
+			// Sync YouTube status immediately after going live
+			await refreshStore.triggerSync();
 		} catch (error) {
 			toast({
 				title: $_('toasts.error.title'),
@@ -74,6 +84,24 @@
 			});
 		} finally {
 			isGoingLive = false;
+		}
+	}
+
+	// Get YouTube status display text
+	function getYoutubeStatusText(status: YouTubeLifeCycleStatus | undefined): string {
+		switch (status) {
+			case 'created':
+				return $_('streaming.youtube.status.created');
+			case 'ready':
+				return $_('streaming.youtube.status.ready');
+			case 'testing':
+				return $_('streaming.youtube.status.testing');
+			case 'live':
+				return $_('streaming.youtube.status.live');
+			case 'complete':
+				return $_('streaming.youtube.status.complete');
+			default:
+				return $_('streaming.youtube.status.unknown');
 		}
 	}
 </script>
@@ -142,23 +170,43 @@
 		</div>
 	</div>
 
-	<!-- YouTube Go Live Button (only shown when broadcast is scheduled) -->
+	<!-- YouTube Status and Controls (only shown when broadcast is scheduled) -->
 	{#if hasYoutubeBroadcast && $systemStore.youtubeLoggedIn}
-		<Button
-			buttonVariant="outline"
-			buttonSize="sm"
-			className="w-full"
-			onclick={handleGoLive}
-			disabled={isGoingLive}
-		>
-			{#if isGoingLive}
-				<Loader2 class="h-4 w-4 mr-2 animate-spin" />
-				{$_('streaming.youtube.goingLive')}
+		<div class="flex items-center gap-2 pt-2 border-t border-border">
+			<Youtube class="h-4 w-4 text-red-500 shrink-0" />
+
+			{#if isYoutubeLive}
+				<!-- Live indicator -->
+				<div class="flex items-center gap-2 flex-1">
+					<span class="relative flex h-2 w-2">
+						<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+						<span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+					</span>
+					<span class="text-sm font-medium text-red-500">{$_('streaming.youtube.status.live')}</span>
+				</div>
+			{:else if isYoutubeComplete}
+				<!-- Completed indicator -->
+				<span class="text-sm text-muted-foreground flex-1">{$_('streaming.youtube.status.complete')}</span>
 			{:else}
-				<Play class="h-4 w-4 mr-2 fill-red-500 text-red-500" />
-				{$_('streaming.youtube.goLive')}
+				<!-- Status + Go Live button -->
+				<span class="text-sm text-muted-foreground flex-1">{getYoutubeStatusText(youtubeStatus)}</span>
+				{#if canGoLive}
+					<Button
+						buttonVariant="outline"
+						buttonSize="sm"
+						onclick={handleGoLive}
+						disabled={isGoingLive}
+					>
+						{#if isGoingLive}
+							<Loader2 class="h-4 w-4 animate-spin" />
+						{:else}
+							<Play class="h-4 w-4 fill-red-500 text-red-500" />
+						{/if}
+						<span class="text-xs">{$_('streaming.youtube.goLive')}</span>
+					</Button>
+				{/if}
 			{/if}
-		</Button>
+		</div>
 	{/if}
 
 	<!-- OBS Not Connected Warning -->

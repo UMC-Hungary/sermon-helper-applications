@@ -26,8 +26,7 @@
 			toast({
 				title: $_('toasts.error.title'),
 				description: $_('toasts.error.loadSettings'),
-				variant: "error",
-				duration: 100000
+				variant: "error"
 			});
 		} finally {
 			isLoading = false;
@@ -44,16 +43,14 @@
 			toast({
 				title: $_('toasts.connectionTest.title'),
 				description: $_('toasts.connectionTest.success'),
-				variant: "success",
-				duration: 100000
+				variant: "success"
 			});
 		} catch (error) {
 			console.error("Connection test failed:", error);
 			toast({
 				title: $_('toasts.connectionTest.title'),
 				description: $_('toasts.error.connectionFailed'),
-				variant: "error",
-				duration: 100000
+				variant: "error"
 			});
 		} finally {
 			isTesting = false;
@@ -71,8 +68,7 @@
 			toast({
 				title: $_('toasts.settingsSaved.title'),
 				description: $_('toasts.settingsSaved.description'),
-				variant: "success",
-				duration: 100000
+				variant: "success"
 			});
 
 			setTimeout(async () => {
@@ -81,15 +77,13 @@
 					toast({
 						title: $_('toasts.error.title'),
 						description: reconnectResult.error || $_('toasts.error.reconnectFailed'),
-						variant: "error",
-						duration: 100000
+						variant: "error"
 					});
 				} else {
 					toast({
 						title: $_('toasts.reconnected.title'),
 						description: $_('toasts.reconnected.description'),
-						variant: "success",
-						duration: 100000
+						variant: "success"
 					});
 				}
 			}, 1000); // Wait 1 second before reconnecting
@@ -99,8 +93,7 @@
 			toast({
 				title: $_('toasts.error.title'),
 				description: $_('toasts.error.saveSettings'),
-				variant: "error",
-				duration: 100000
+				variant: "error"
 			});
 		}
 	};

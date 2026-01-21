@@ -332,6 +332,30 @@
 			"updateFailed": "Failed to update YouTube event"
 		}
 	},
+	"streaming": {
+		"stream": "Stream",
+		"record": "Record",
+		"obsNotConnected": "Connect to OBS to enable controls",
+		"errors": {
+			"streamFailed": "Failed to toggle stream",
+			"recordFailed": "Failed to toggle recording"
+		},
+		"youtube": {
+			"goLive": "Go Live",
+			"goingLive": "Going live...",
+			"liveSuccess": "Now Live!",
+			"liveSuccessDescription": "Your YouTube broadcast is now live",
+			"liveFailed": "Failed to go live on YouTube",
+			"status": {
+				"created": "Creating...",
+				"ready": "Ready",
+				"testing": "Testing",
+				"live": "Live",
+				"complete": "Ended",
+				"unknown": "Unknown"
+			}
+		}
+	},
 	"common": {
 		"save": "Save",
 		"cancel": "Cancel",
@@ -339,7 +363,48 @@
 		"edit": "Edit",
 		"delete": "Delete",
 		"loading": "Loading...",
-		"error": "Error"
+		"error": "Error",
+		"latest": "Latest",
+		"public": "Public",
+		"unlisted": "Unlisted",
+		"private": "Private",
+		"comingSoon": "Coming soon"
+	},
+	"eventSession": {
+		"title": "Session",
+		"states": {
+			"idle": "Idle",
+			"preparing": "Preparing",
+			"active": "Active",
+			"finalizing": "Finalizing",
+			"completed": "Completed",
+			"paused": "Paused"
+		},
+		"automation": {
+			"uploadingRecording": "Uploading recording...",
+			"uploadingTo": "Uploading to {platform}...",
+			"publishingVideo": "Publishing video...",
+			"endingBroadcast": "Ending live broadcast...",
+			"completed": "Post-event automation completed",
+			"failed": "Automation failed: {error}",
+			"triggerManually": "Start Post-Event Processing"
+		},
+		"connection": {
+			"lost": "Connection Lost",
+			"reconnecting": "Reconnecting...",
+			"resumed": "Connection restored"
+		}
+	},
+	"recording": {
+		"selectFile": {
+			"title": "Select Recording",
+			"description": "Multiple recordings found ({count}). Please select the correct one to upload.",
+			"useLatest": "Use Latest",
+			"useLongest": "Use Longest",
+			"autoSelected": "Recording auto-selected: {filename}",
+			"noRecordingFound": "No suitable recording found",
+			"multipleLongVideos": "Multiple long recordings found, please select one"
+		}
 	},
 	"obsConfig": {
 		"title": "OBS Configuration",
@@ -367,6 +432,32 @@
 			"checking": "Checking...",
 			"upToDate": "You are running the latest version",
 			"devMode": "Version info unavailable (development mode)"
+		},
+		"upload": {
+			"title": "Upload Settings",
+			"description": "Configure automatic upload to video platforms after events",
+			"saved": "Upload settings saved",
+			"global": "Global Settings",
+			"minDuration": "Minimum duration (minutes)",
+			"minDurationHint": "Events shorter than this won't trigger auto-upload",
+			"shortThreshold": "Short video threshold (minutes)",
+			"shortThresholdHint": "Videos shorter than this are ignored when selecting",
+			"retryAttempts": "Retry attempts",
+			"chunkSize": "Chunk size (MB)",
+			"youtube": {
+				"title": "YouTube",
+				"autoUpload": "Auto-upload recording after event",
+				"autoPublish": "Publish video automatically when ready",
+				"defaultPrivacy": "Default privacy",
+				"useEventPrivacy": "Use event-specific privacy setting",
+				"saved": "YouTube upload settings saved"
+			},
+			"facebook": {
+				"title": "Facebook",
+				"autoUpload": "Auto-upload to Facebook Page",
+				"selectPage": "Select Page",
+				"crosspost": "Also post to timeline"
+			}
 		}
 	},
 	"obsDevices": {

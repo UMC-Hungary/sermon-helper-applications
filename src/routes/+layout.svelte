@@ -14,6 +14,7 @@
     import { youtubeAuthStore } from '$lib/stores/youtube-store';
     import { updateYoutubeLogin } from '$lib/stores/system-store';
     import { refreshStore } from '$lib/stores/refresh-store';
+    import { sessionIntegration } from '$lib/services/session-integration';
     import UpdateChecker from '$lib/components/update-checker.svelte';
     import { browser } from '$app/environment';
 
@@ -60,6 +61,9 @@
             refreshStore.start();
             await log('info', 'Refresh store started');
 
+            await sessionIntegration.init();
+            await log('info', 'Session integration initialized');
+
             await log('info', 'Layout onMount completed successfully');
         } catch (e) {
             await log('error', `Layout onMount error: ${e}`);
@@ -76,39 +80,12 @@
         isMobileMenuOpen = !isMobileMenuOpen;
     }
 
-    const handleSystemRecheck = async () => {
-        console.log('[v0] Rechecking system status...');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-    };
-
-    const handleYoutubeLogin = () => {
-        // systemStatus = { ...systemStatus, youtubeLoggedIn: true };
-    };
-
-    let isRechecking = false;
-
-    function handleRecheck(): void {
-        isRechecking = true;
-        // Simulate recheck logic
-        setTimeout(() => {
-            isRechecking = false;
-        }, 2000);
-    }
-
     // Event handler
     let onRecheck: () => Promise<void> = async () => {};
 </script>
 
 <Toaster
-		position="bottom-right"
-		toastOptions={{
-			classes: {
-				success: 'bg-white text-gray-800 border-2 border-green-600',
-				error: 'bg-white text-gray-800 border-2 border-red-600',
-				warning: 'bg-white text-gray-800 border-2 border-yellow-500',
-				info: 'bg-white text-gray-800 border-2 border-blue-600',
-			},
-		}}
+        position="top-right" richColors closeButton
 	/>
 <UpdateChecker />
 

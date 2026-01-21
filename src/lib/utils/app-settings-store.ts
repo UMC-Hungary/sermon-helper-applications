@@ -4,6 +4,15 @@ import type { ServiceEvent } from '$lib/types/event';
 import type { YouTubeTokens, YouTubeOAuthConfig } from '$lib/types/youtube';
 import type { ObsDevicesSettings } from '$lib/types/obs-devices';
 import { DEFAULT_OBS_DEVICES_SETTINGS } from '$lib/types/obs-devices';
+import type { EventSession } from '$lib/types/event-session';
+import type { UploadSettings } from '$lib/types/upload-config';
+import { DEFAULT_UPLOAD_SETTINGS } from '$lib/types/upload-config';
+
+// Session storage structure
+interface SessionStorage {
+	currentSession: EventSession | null;
+	sessionHistory: EventSession[];
+}
 
 export interface AppSettings {
 	bibleTranslation: string;
@@ -18,6 +27,10 @@ export interface AppSettings {
 	obsDevicesSettings: ObsDevicesSettings;
 	// PPTX output folder path (Tauri only)
 	pptxOutputPath: string | null;
+	// Event session tracking (for post-event automation)
+	eventSession: SessionStorage | null;
+	// Upload settings (multi-platform)
+	uploadSettings: UploadSettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -30,6 +43,8 @@ const DEFAULT_SETTINGS: AppSettings = {
 	youtubeOAuthConfig: null,
 	obsDevicesSettings: DEFAULT_OBS_DEVICES_SETTINGS,
 	pptxOutputPath: null,
+	eventSession: null,
+	uploadSettings: DEFAULT_UPLOAD_SETTINGS,
 };
 
 // Reactive store for app settings - can be subscribed to by components

@@ -415,6 +415,54 @@ class YouTubeApiService {
 		return `https://studio.youtube.com/video/${broadcastId}/livestreaming`;
 	}
 
+	/**
+	 * Transition a broadcast to a new status
+	 * Used to start/end live streaming
+	 * @param broadcastId - The YouTube broadcast ID
+	 * @param status - Target status: 'testing' (preview), 'live' (start streaming), or 'complete' (end stream)
+	 */
+	async transitionBroadcast(
+		broadcastId: string,
+		status: 'testing' | 'live' | 'complete'
+	): Promise<YouTubeBroadcastResponse> {
+		const accessToken = await this.getValidAccessToken();
+
+		const response = await fetch(
+			`${YOUTUBE_API_BASE}/liveBroadcasts/transition?broadcastStatus=${status}&id=${broadcastId}&part=snippet,status`,
+			{
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+					'Content-Type': 'application/json'
+				}
+			}
+		);
+
+		if (!response.ok) {
+			const error = await response.json();
+			throw new Error(error.error?.message || `Failed to transition broadcast to ${status}`);
+		}
+
+		return response.json();
+	}
+
+	/**
+	 * Go live - transition broadcast from ready/testing to live
+	 * This is a convenience wrapper around transitionBroadcast
+	 * @param broadcastId - The YouTube broadcast ID
+	 */
+	async goLive(broadcastId: string): Promise<YouTubeBroadcastResponse> {
+		return this.transitionBroadcast(broadcastId, 'live');
+	}
+
+	/**
+	 * End a live broadcast
+	 * @param broadcastId - The YouTube broadcast ID
+	 */
+	async endBroadcast(broadcastId: string): Promise<YouTubeBroadcastResponse> {
+		return this.transitionBroadcast(broadcastId, 'complete');
+	}
+
 	// Logout - clear tokens
 	async logout(): Promise<void> {
 		await youtubeAuthStore.clearTokens();
