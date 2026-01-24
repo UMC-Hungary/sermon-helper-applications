@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { derived } from 'svelte/store';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
 	import Alert from '$lib/components/ui/alert.svelte';
 	import AlertTitle from '$lib/components/ui/alert-title.svelte';
 	import AlertDescription from '$lib/components/ui/alert-description.svelte';
-	import { currentSession, sessionState, uploadProgress } from '$lib/stores/event-session-store';
+	import { currentSession, sessionState } from '$lib/stores/event-session-store';
+	import { eventList } from '$lib/stores/event-store';
 	import { sessionIntegration } from '$lib/services/session-integration';
 	import {
 		Activity,
@@ -16,9 +18,19 @@
 		AlertCircle,
 		Loader2,
 		Clock,
-		Play
+		Play,
+		ExternalLink
 	} from 'lucide-svelte';
-	import type { EventSessionState, PlatformUploadProgress } from '$lib/types/event-session';
+	import type { EventSessionState } from '$lib/types/event-session';
+
+	// Get the event associated with the current session
+	const sessionEvent = derived(
+		[currentSession, eventList],
+		([$session, $events]) => {
+			if (!$session) return null;
+			return $events.find(e => e.id === $session.eventId) ?? null;
+		}
+	);
 
 	// Get badge variant for state
 	function getStateVariant(
@@ -62,13 +74,6 @@
 		}
 	}
 
-	// Format progress percentage
-	function formatProgress(progress: PlatformUploadProgress): string {
-		if (progress.status === 'completed') return '100%';
-		if (progress.status === 'pending') return '0%';
-		return `${progress.percentage.toFixed(0)}%`;
-	}
-
 	// Handle manual trigger of post-event automation
 	async function handleTriggerAutomation() {
 		await sessionIntegration.triggerPostEventAutomation();
@@ -96,24 +101,18 @@
 				</Badge>
 			</div>
 
-			<!-- Upload Progress (when finalizing) -->
-			{#if $sessionState === 'FINALIZING' && $uploadProgress.length > 0}
-				<div class="space-y-2">
-					{#each $uploadProgress as platform}
-						<div class="space-y-1">
-							<div class="flex items-center justify-between text-xs">
-								<span class="text-muted-foreground">{platform.name}</span>
-								<span class="font-medium">{formatProgress(platform)}</span>
-							</div>
-							<div class="h-1.5 bg-muted rounded-full overflow-hidden">
-								<div
-									class="h-full bg-primary transition-all duration-300"
-									style="width: {platform.percentage}%"
-								></div>
-							</div>
-						</div>
-					{/each}
-				</div>
+			<!-- Event title with link -->
+			{#if $sessionEvent}
+				<a
+					href="/events/{$sessionEvent.id}"
+					class="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors group"
+				>
+					<span class="truncate">{$sessionEvent.title}</span>
+					<ExternalLink class="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+				</a>
+				<p class="text-xs text-muted-foreground -mt-2">
+					{$sessionEvent.date} • {$sessionEvent.time}
+				</p>
 			{/if}
 
 			<!-- Paused state warning -->

@@ -393,6 +393,10 @@
 			"lost": "Connection Lost",
 			"reconnecting": "Reconnecting...",
 			"resumed": "Connection restored"
+		},
+		"youtube": {
+			"notConnected": "YouTube Not Connected",
+			"connectToUpload": "Connect to YouTube to upload the recording."
 		}
 	},
 	"recording": {
@@ -487,6 +491,28 @@
 			"paused": "Paused",
 			"processing": "Processing",
 			"completed": "Completed",
+			"failed": "Failed"
+		}
+	},
+	"videoUploader": {
+		"title": "Video Uploader",
+		"youtubeNotConnected": "YouTube Not Connected",
+		"connectToUpload": "Connect to YouTube to upload recordings.",
+		"sessionManaged": "This upload is managed by the current session",
+		"resumed": "Upload resumed",
+		"resumeFailed": "Failed to resume upload",
+		"cancelled": "Upload cancelled",
+		"cancelFailed": "Failed to cancel upload",
+		"allResumed": "All uploads resumed",
+		"resumeAllFailed": "Failed to resume uploads",
+		"resumeAll": "Resume All",
+		"resume": "Resume",
+		"cancel": "Cancel",
+		"status": {
+			"pending": "Pending",
+			"uploading": "Uploading",
+			"paused": "Paused",
+			"processing": "Processing",
 			"failed": "Failed"
 		}
 	},

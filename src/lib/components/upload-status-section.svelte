@@ -1,27 +1,21 @@
 <script lang="ts">
-	import { _ } from 'svelte-i18n';
-	import Card from '$lib/components/ui/card.svelte';
 	import EventSessionStatus from '$lib/components/event-session-status.svelte';
-	import PendingUploadsList from '$lib/components/pending-uploads-list.svelte';
+	import VideoUploader from '$lib/components/video-uploader.svelte';
 	import { currentSession } from '$lib/stores/event-session-store';
-	import { hasPendingUploads } from '$lib/stores/pending-uploads-store';
+	import { hasUploads } from '$lib/stores/unified-uploads-store';
 
-	// Show section if there's an active session OR pending uploads
-	$: showSection = $currentSession || $hasPendingUploads;
+	// Show section if there's an active session OR uploads in progress/pending
+	$: showSection = $currentSession || $hasUploads;
 </script>
 
 {#if showSection}
 	<div class="space-y-3">
-		<!-- Current session status (if active) - has its own Card -->
+		<!-- Current session status (OBS streaming/recording state) -->
 		{#if $currentSession}
 			<EventSessionStatus />
 		{/if}
 
-		<!-- Pending uploads from past events -->
-		{#if $hasPendingUploads}
-			<Card className="p-3">
-				<PendingUploadsList />
-			</Card>
-		{/if}
+		<!-- Video Uploader (unified list of all uploads) -->
+		<VideoUploader />
 	</div>
 {/if}

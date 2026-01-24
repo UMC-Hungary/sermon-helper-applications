@@ -393,6 +393,10 @@
 			"lost": "Kapcsolat Elveszett",
 			"reconnecting": "Újracsatlakozás...",
 			"resumed": "Kapcsolat helyreállt"
+		},
+		"youtube": {
+			"notConnected": "YouTube Nincs Csatlakoztatva",
+			"connectToUpload": "Csatlakozz a YouTube-hoz a felvétel feltöltéséhez."
 		}
 	},
 	"recording": {
@@ -487,6 +491,28 @@
 			"paused": "Szünetel",
 			"processing": "Feldolgozás",
 			"completed": "Kész",
+			"failed": "Sikertelen"
+		}
+	},
+	"videoUploader": {
+		"title": "Videó Feltöltő",
+		"youtubeNotConnected": "YouTube Nincs Csatlakoztatva",
+		"connectToUpload": "Csatlakozz a YouTube-hoz a felvételek feltöltéséhez.",
+		"sessionManaged": "Ezt a feltöltést az aktuális munkamenet kezeli",
+		"resumed": "Feltöltés folytatva",
+		"resumeFailed": "Nem sikerült folytatni a feltöltést",
+		"cancelled": "Feltöltés megszakítva",
+		"cancelFailed": "Nem sikerült megszakítani a feltöltést",
+		"allResumed": "Összes feltöltés folytatva",
+		"resumeAllFailed": "Nem sikerült folytatni a feltöltéseket",
+		"resumeAll": "Összes Folytatása",
+		"resume": "Folytatás",
+		"cancel": "Megszakítás",
+		"status": {
+			"pending": "Függőben",
+			"uploading": "Feltöltés",
+			"paused": "Szünetel",
+			"processing": "Feldolgozás",
 			"failed": "Sikertelen"
 		}
 	},
