@@ -1,8 +1,5 @@
 export type SystemStatus = {
-	obs: boolean | null;
+	obs: boolean;
 	obsLoading: boolean;
-	rodeInterface: boolean;
-	mainDisplay: boolean;
-	secondaryDisplay: boolean;
 	youtubeLoggedIn: boolean;
 }

@@ -1,8 +1,16 @@
 mod bible;
+mod discovery_commands;
+mod discovery_server;
 mod local_server;
+mod mdns_service;
 mod video_upload;
 
 use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
+use discovery_commands::{
+    start_discovery_server, stop_discovery_server, get_discovery_server_status,
+    generate_discovery_auth_token, get_local_ip_addresses,
+    update_discovery_system_status, update_discovery_obs_status
+};
 use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
 use video_upload::{
     scan_recording_directory, get_video_file_info, init_youtube_upload,
@@ -53,7 +61,15 @@ pub fn run() {
             init_youtube_upload,
             upload_video_chunk,
             get_upload_status,
-            cancel_upload
+            cancel_upload,
+            // Discovery server commands
+            start_discovery_server,
+            stop_discovery_server,
+            get_discovery_server_status,
+            generate_discovery_auth_token,
+            get_local_ip_addresses,
+            update_discovery_system_status,
+            update_discovery_obs_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

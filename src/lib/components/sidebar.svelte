@@ -273,33 +273,6 @@
 					</div>
 
 					<div class="flex items-center justify-between py-2">
-						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.rodeInterface')}</span>
-						{#if $systemStore.rodeInterface}
-							<CheckCircle2 class="h-4 w-4 text-green-600" />
-						{:else}
-							<XCircle class="h-4 w-4 text-red-600" />
-						{/if}
-					</div>
-
-					<div class="flex items-center justify-between py-2">
-						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.mainDisplay')}</span>
-						{#if $systemStore.mainDisplay}
-							<CheckCircle2 class="h-4 w-4 text-green-600" />
-						{:else}
-							<XCircle class="h-4 w-4 text-red-600" />
-						{/if}
-					</div>
-
-					<div class="flex items-center justify-between py-2">
-						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.secondaryDisplay')}</span>
-						{#if $systemStore.secondaryDisplay}
-							<CheckCircle2 class="h-4 w-4 text-green-600" />
-						{:else}
-							<XCircle class="h-4 w-4 text-red-600" />
-						{/if}
-					</div>
-
-					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.youtubeLoggedIn')}</span>
 						{#if $systemStore.youtubeLoggedIn}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
@@ -338,7 +311,10 @@
 						<!-- Streaming Controls (only show for today's event) -->
 						{#if isToday}
 							<SidebarStreamingControls event={nextEvent} />
-							<EventSessionStatus />
+							<!-- Session status only in desktop app -->
+							{#if isTauri}
+								<EventSessionStatus />
+							{/if}
 						{/if}
 
 						<!-- Event Title -->

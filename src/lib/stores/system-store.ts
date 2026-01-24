@@ -47,9 +47,6 @@ export const systemStore = derived(
 	([$nonObs, $obsStatus]) => ({
 		obs: $obsStatus.connected,
 		obsLoading: $obsStatus.loading,
-		rodeInterface: $nonObs.rodeInterface,
-		mainDisplay: $nonObs.mainDisplay,
-		secondaryDisplay: $nonObs.secondaryDisplay,
 		youtubeLoggedIn: $nonObs.youtubeLoggedIn,
 	})
 );
@@ -65,7 +62,7 @@ export const obsStatus = derived(obsWebSocket.obsStatus, $obsStatus => ({
 
 export const isSystemReady = derived(systemStore, $system => {
 	// System is ready when critical components are working
-	return $system.obs && $system.rodeInterface && $system.mainDisplay;
+	return $system.obs; // TODO: extend
 });
 
 // Export individual update methods for non-OBS components

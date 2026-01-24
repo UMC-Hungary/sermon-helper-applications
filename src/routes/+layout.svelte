@@ -17,6 +17,10 @@
     import { sessionIntegration } from '$lib/services/session-integration';
     import UpdateChecker from '$lib/components/update-checker.svelte';
     import { browser } from '$app/environment';
+    import { isTauriApp } from '$lib/utils/storage-helpers';
+    import { discoveryServerManager, discoveryServerStatus } from '$lib/stores/discovery-server-store';
+    import { systemStore, obsStatus } from '$lib/stores/system-store';
+    import type { DiscoverySystemStatus, DiscoveryObsStatus } from '$lib/types/discovery';
 
     let { children } = $props();
 
@@ -61,8 +65,28 @@
             refreshStore.start();
             await log('info', 'Refresh store started');
 
-            await sessionIntegration.init();
-            await log('info', 'Session integration initialized');
+            // Only initialize session integration in Tauri desktop app
+            if (isTauriApp()) {
+                await sessionIntegration.init();
+                await log('info', 'Session integration initialized');
+
+                // Initialize discovery server manager
+                await discoveryServerManager.init();
+                await log('info', 'Discovery server manager initialized');
+
+                // Auto-start discovery server if enabled
+                const discoverySettings = await appSettingsStore.get('discoverySettings');
+                if (discoverySettings?.enabled && discoverySettings?.autoStart) {
+                    try {
+                        await discoveryServerManager.start(discoverySettings);
+                        await log('info', 'Discovery server auto-started');
+                    } catch (e) {
+                        await log('warn', `Failed to auto-start discovery server: ${e}`);
+                    }
+                }
+            } else {
+                await log('info', 'Session integration skipped (web mode)');
+            }
 
             await log('info', 'Layout onMount completed successfully');
         } catch (e) {
@@ -70,8 +94,50 @@
         }
     });
 
+    // Subscriptions for broadcasting status to discovery server
+    let systemUnsubscribe: (() => void) | undefined;
+    let obsUnsubscribe: (() => void) | undefined;
+
+    // Set up subscriptions after mount
+    $effect(() => {
+        if (browser && isTauriApp() && $discoveryServerStatus.running) {
+            // Subscribe to system store changes
+            systemUnsubscribe = systemStore.subscribe(($system) => {
+                const status: DiscoverySystemStatus = {
+                    obsConnected: $system.obs,
+                    obsStreaming: false, // Will be updated by OBS status
+                    obsRecording: false,
+                    rodeInterface: true,
+                    mainDisplay: true,
+                    secondaryDisplay: true,
+                    youtubeLoggedIn: $system.youtubeLoggedIn
+                };
+                discoveryServerManager.updateSystemStatus(status);
+            });
+
+            // Subscribe to OBS status changes
+            obsUnsubscribe = obsStatus.subscribe(($obs) => {
+                const status: DiscoveryObsStatus = {
+                    connected: $obs.connected,
+                    streaming: false, // TODO: Add streaming status to obsStatus
+                    recording: false, // TODO: Add recording status to obsStatus
+                    streamTimecode: null,
+                    recordTimecode: null
+                };
+                discoveryServerManager.updateObsStatus(status);
+            });
+        }
+
+        return () => {
+            systemUnsubscribe?.();
+            obsUnsubscribe?.();
+        };
+    });
+
     onDestroy(() => {
         refreshStore.stop();
+        systemUnsubscribe?.();
+        obsUnsubscribe?.();
     });
 
     let isMobileMenuOpen = $state(false);

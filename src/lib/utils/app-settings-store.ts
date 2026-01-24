@@ -7,6 +7,8 @@ import { DEFAULT_OBS_DEVICES_SETTINGS } from '$lib/types/obs-devices';
 import type { EventSession } from '$lib/types/event-session';
 import type { UploadSettings } from '$lib/types/upload-config';
 import { DEFAULT_UPLOAD_SETTINGS } from '$lib/types/upload-config';
+import type { DiscoverySettings } from '$lib/types/discovery';
+import { DEFAULT_DISCOVERY_SETTINGS } from '$lib/types/discovery';
 
 // Session storage structure
 interface SessionStorage {
@@ -31,6 +33,8 @@ export interface AppSettings {
 	eventSession: SessionStorage | null;
 	// Upload settings (multi-platform)
 	uploadSettings: UploadSettings;
+	// Discovery server settings (for mobile companion app)
+	discoverySettings: DiscoverySettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -45,6 +49,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 	pptxOutputPath: null,
 	eventSession: null,
 	uploadSettings: DEFAULT_UPLOAD_SETTINGS,
+	discoverySettings: DEFAULT_DISCOVERY_SETTINGS,
 };
 
 // Reactive store for app settings - can be subscribed to by components

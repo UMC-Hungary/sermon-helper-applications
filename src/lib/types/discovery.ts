@@ -1,0 +1,62 @@
+/**
+ * Discovery server types for mDNS/DNS-SD service discovery
+ * and mobile companion app integration.
+ */
+
+/** Discovery server info returned when starting the server */
+export interface DiscoveryServerInfo {
+	running: boolean;
+	port: number;
+	addresses: string[];
+	serviceName: string;
+	authRequired: boolean;
+}
+
+/** Full discovery server status */
+export interface DiscoveryServerStatus {
+	running: boolean;
+	port: number | null;
+	addresses: string[];
+	connectedClients: number;
+	mdnsRegistered: boolean;
+}
+
+/** System status sent to mobile clients */
+export interface DiscoverySystemStatus {
+	obsConnected: boolean;
+	obsStreaming: boolean;
+	obsRecording: boolean;
+	rodeInterface: boolean;
+	mainDisplay: boolean;
+	secondaryDisplay: boolean;
+	youtubeLoggedIn: boolean;
+}
+
+/** OBS-specific status for mobile clients */
+export interface DiscoveryObsStatus {
+	connected: boolean;
+	streaming: boolean;
+	recording: boolean;
+	streamTimecode: string | null;
+	recordTimecode: string | null;
+}
+
+/** Discovery settings stored in app settings */
+export interface DiscoverySettings {
+	enabled: boolean;
+	autoStart: boolean;
+	port: number;
+	authToken: string | null;
+	authRequired: boolean;
+	instanceName: string;
+}
+
+/** Default discovery settings */
+export const DEFAULT_DISCOVERY_SETTINGS: DiscoverySettings = {
+	enabled: false,
+	autoStart: false,
+	port: 8765,
+	authToken: null,
+	authRequired: true,
+	instanceName: 'Sermon Helper'
+};

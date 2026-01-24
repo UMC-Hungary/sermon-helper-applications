@@ -46,14 +46,6 @@
 			hasActions: true,
 		},
 		{
-			id: "rode",
-			titleKey: "errors.rodeInterface.title",
-			descriptionKey: "errors.rodeInterface.description",
-			status: "rodeInterface",
-			stepsKey: "errors.rodeInterface.steps",
-			imageUrl: "/macos-sound-settings-audio-interface.jpg",
-		},
-		{
 			id: "youtube-login",
 			titleKey: "errors.youtubeLogin.title",
 			descriptionKey: "errors.youtubeLogin.description",
