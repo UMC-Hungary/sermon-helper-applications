@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import { youtubeAuthStore, youtubeTokens, youtubeOAuthConfig } from '$lib/stores/youtube-store';
+import { youtubeAuthStatusStore } from '$lib/stores/youtube-auth-status-store';
 import {
 	YOUTUBE_AUTH_URL,
 	YOUTUBE_TOKEN_URL,
@@ -23,19 +24,28 @@ interface OAuthCallbackResult {
 	error_description: string | null;
 }
 
-// Current OAuth port (set when server starts)
-let currentOAuthPort: number | null = null;
+// Fixed port for OAuth callbacks - must match Rust backend and Google Cloud Console
+export const OAUTH_CALLBACK_PORT = 8766;
+
+// Current OAuth port (set when server starts) - now always fixed
+let currentOAuthPort: number | null = OAUTH_CALLBACK_PORT;
 
 // Get the appropriate redirect URI based on environment
-function getRedirectUri(port?: number): string {
-	if (isTauri() && port) {
-		// Use loopback address for desktop OAuth (Google requirement)
-		return `http://127.0.0.1:${port}/callback`;
-	} else if (!isTauri()) {
+function getRedirectUri(_port?: number): string {
+	if (isTauri()) {
+		// Use fixed loopback address for desktop OAuth
+		return `http://127.0.0.1:${OAUTH_CALLBACK_PORT}/callback`;
+	} else {
 		// Web mode - use current origin
 		return `${window.location.origin}/auth/callback`;
 	}
-	// Fallback (should not happen)
+}
+
+// Get the fixed OAuth redirect URI for display/configuration
+export function getFixedOAuthRedirectUri(): string {
+	if (isTauri()) {
+		return `http://127.0.0.1:${OAUTH_CALLBACK_PORT}/callback`;
+	}
 	return `${window.location.origin}/auth/callback`;
 }
 
@@ -266,9 +276,12 @@ class YouTubeApiService {
 
 		if (!response.ok) {
 			const error = await response.json();
-			// If refresh fails, clear tokens and require re-auth
+			const errorMessage = error.error_description || 'Failed to refresh token';
+			// Set reauth required status BEFORE clearing tokens
+			youtubeAuthStatusStore.setReauthRequired(errorMessage);
+			// Then clear tokens
 			await youtubeAuthStore.clearTokens();
-			throw new Error(error.error_description || 'Failed to refresh token');
+			throw new Error(errorMessage);
 		}
 
 		const data = await response.json();

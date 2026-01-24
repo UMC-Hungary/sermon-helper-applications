@@ -1,8 +1,32 @@
 import type { BibleVerse, BibleTranslation } from './bible';
+import type { UploadPlatform } from './upload-config';
 
 export type VideoUploadState = 'pending' | 'uploading' | 'completed' | 'failed';
 export type YouTubePrivacyStatus = 'public' | 'private' | 'unlisted';
 export type YouTubeLifeCycleStatus = 'created' | 'ready' | 'testing' | 'live' | 'complete';
+
+// Upload session stored within an event
+export interface EventUploadSession {
+	id: string;
+	platform: UploadPlatform;
+	filePath: string;
+	fileSize: number;
+	metadata: {
+		title: string;
+		description: string;
+		privacy: string;
+		tags?: string[];
+		thumbnailPath?: string;
+	};
+	uploadUri: string; // Platform-specific resumable upload URI
+	bytesUploaded: number;
+	startedAt: number;
+	status: 'pending' | 'uploading' | 'paused' | 'processing' | 'completed' | 'failed';
+	error?: string;
+	// Result when completed
+	videoId?: string;
+	videoUrl?: string;
+}
 
 export interface ServiceEvent {
 	id: string;
@@ -26,6 +50,9 @@ export interface ServiceEvent {
 	youtubePrivacyStatus: YouTubePrivacyStatus;
 	youtubeLifeCycleStatus?: YouTubeLifeCycleStatus;
 	videoUploadState?: VideoUploadState;
+
+	// Upload sessions for resumable uploads (stored per-event)
+	uploadSessions?: EventUploadSession[];
 
 	// PPTX generation timestamps
 	textusGeneratedAt?: string;
@@ -176,4 +203,26 @@ export function formatEventDate(date: string): string {
 export function formatEventTime(time: string): string {
 	if (!time) return '';
 	return time;
+}
+
+// Check if event has pending/paused uploads that need attention
+export function hasPendingUploads(event: ServiceEvent): boolean {
+	if (!event.uploadSessions) return false;
+	return event.uploadSessions.some(
+		(s) => s.status === 'pending' || s.status === 'paused' || s.status === 'failed'
+	);
+}
+
+// Get pending upload sessions from an event
+export function getPendingUploadSessions(event: ServiceEvent): EventUploadSession[] {
+	if (!event.uploadSessions) return [];
+	return event.uploadSessions.filter(
+		(s) => s.status === 'pending' || s.status === 'paused' || s.status === 'failed'
+	);
+}
+
+// Get active (uploading) upload sessions from an event
+export function getActiveUploadSessions(event: ServiceEvent): EventUploadSession[] {
+	if (!event.uploadSessions) return [];
+	return event.uploadSessions.filter((s) => s.status === 'uploading');
 }

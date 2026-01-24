@@ -11,7 +11,7 @@
 		discoveryServerError,
 		discoveryServerManager
 	} from '$lib/stores/discovery-server-store';
-	import type { DiscoverySettings } from '$lib/types/discovery';
+	import type { DiscoverySettings, NetworkAddresses } from '$lib/types/discovery';
 	import { DEFAULT_DISCOVERY_SETTINGS } from '$lib/types/discovery';
 	import {
 		Radio,
@@ -23,7 +23,10 @@
 		Wifi,
 		WifiOff,
 		Users,
-		Shield
+		Shield,
+		Monitor,
+		Globe,
+		Laptop
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
@@ -31,7 +34,8 @@
 	let isLoading = true;
 	let isSaving = false;
 	let tokenCopied = false;
-	let localAddresses: string[] = [];
+	let networkAddresses: NetworkAddresses = { localhost: [], lan: [], all: [] };
+	let copiedAddress: string | null = null;
 
 	onMount(async () => {
 		try {
@@ -44,8 +48,8 @@
 			// Initialize the discovery server manager
 			await discoveryServerManager.init();
 
-			// Get local addresses
-			localAddresses = await discoveryServerManager.getLocalAddresses();
+			// Get categorized network addresses
+			networkAddresses = await discoveryServerManager.getNetworkAddresses();
 		} catch (error) {
 			console.error('Failed to load discovery settings:', error);
 		} finally {
@@ -141,10 +145,20 @@
 
 	async function refreshAddresses() {
 		try {
-			localAddresses = await discoveryServerManager.getLocalAddresses();
+			networkAddresses = await discoveryServerManager.getNetworkAddresses();
 		} catch (error) {
 			console.error('Failed to refresh addresses:', error);
 		}
+	}
+
+	async function copyAddress(address: string) {
+		const port = $discoveryServerStatus.port || settings.port;
+		const url = `http://${address}:${port}`;
+		await navigator.clipboard.writeText(url);
+		copiedAddress = address;
+		setTimeout(() => {
+			copiedAddress = null;
+		}, 2000);
 	}
 </script>
 
@@ -331,23 +345,76 @@
 				{/if}
 			</div>
 
-			<!-- Local Addresses -->
-			<div class="rounded-lg bg-muted p-4 space-y-2">
+			<!-- Network Addresses -->
+			<div class="rounded-lg bg-muted p-4 space-y-4">
 				<div class="flex items-center justify-between">
-					<h4 class="font-medium text-sm">Local Network Addresses</h4>
+					<h4 class="font-medium text-sm">Network Addresses</h4>
 					<Button buttonVariant="ghost" onclick={refreshAddresses} className="h-8 w-8 p-0">
 						<RefreshCw class="h-4 w-4" />
 					</Button>
 				</div>
-				{#if localAddresses.length > 0}
-					<div class="space-y-1">
-						{#each localAddresses as address}
-							<code class="block text-xs bg-background px-2 py-1 rounded">{address}</code>
+
+				<!-- Localhost (This Computer Only) -->
+				{#if networkAddresses.localhost.length > 0}
+					<div class="space-y-2">
+						<div class="flex items-center gap-2 text-xs text-muted-foreground">
+							<Monitor class="h-3 w-3" />
+							<span>This computer only</span>
+						</div>
+						{#each networkAddresses.localhost as address}
+							{@const port = $discoveryServerStatus.port || settings.port}
+							<button
+								class="w-full flex items-center justify-between text-xs bg-background px-3 py-2 rounded hover:bg-accent transition-colors text-left"
+								onclick={() => copyAddress(address)}
+							>
+								<code>http://{address}:{port}</code>
+								{#if copiedAddress === address}
+									<Check class="h-3 w-3 text-green-600" />
+								{:else}
+									<Copy class="h-3 w-3 text-muted-foreground" />
+								{/if}
+							</button>
 						{/each}
 					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">No local addresses found</p>
 				{/if}
+
+				<!-- LAN (Same Network) -->
+				{#if networkAddresses.lan.length > 0}
+					<div class="space-y-2">
+						<div class="flex items-center gap-2 text-xs text-muted-foreground">
+							<Globe class="h-3 w-3" />
+							<span>Accessible from other devices on same network</span>
+						</div>
+						{#each networkAddresses.lan as iface}
+							{@const port = $discoveryServerStatus.port || settings.port}
+							<button
+								class="w-full flex items-center justify-between text-xs bg-background px-3 py-2 rounded hover:bg-accent transition-colors text-left"
+								onclick={() => copyAddress(iface.address)}
+							>
+								<div class="flex items-center gap-2">
+									<code>http://{iface.address}:{port}</code>
+									{#if iface.isPrimary}
+										<span class="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Primary</span>
+									{/if}
+									<span class="text-muted-foreground">({iface.name})</span>
+								</div>
+								{#if copiedAddress === iface.address}
+									<Check class="h-3 w-3 text-green-600" />
+								{:else}
+									<Copy class="h-3 w-3 text-muted-foreground" />
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
+
+				{#if networkAddresses.localhost.length === 0 && networkAddresses.lan.length === 0}
+					<p class="text-sm text-muted-foreground">No network addresses found</p>
+				{/if}
+
+				<p class="text-xs text-muted-foreground">
+					Click an address to copy. Use LAN addresses for mobile devices on the same Wi-Fi network.
+				</p>
 			</div>
 
 			<!-- Save Button -->

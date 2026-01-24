@@ -4,8 +4,9 @@
 //! and update status that gets broadcast to connected mobile clients.
 
 use crate::discovery_server::{
-    create_shared_discovery_server, generate_auth_token, get_local_addresses, DiscoveryServer,
-    DiscoveryServerInfo, DiscoveryServerStatus, ObsStatus, SharedDiscoveryServer, SystemStatus,
+    create_shared_discovery_server, generate_auth_token, get_categorized_addresses,
+    get_local_addresses, DiscoveryServer, DiscoveryServerInfo, DiscoveryServerStatus,
+    NetworkAddresses, ObsStatus, SharedDiscoveryServer, SystemStatus,
 };
 use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter};
@@ -92,10 +93,16 @@ pub fn generate_discovery_auth_token() -> String {
     generate_auth_token()
 }
 
-/// Get all local IP addresses
+/// Get all local IP addresses (flat list)
 #[tauri::command]
 pub fn get_local_ip_addresses() -> Vec<String> {
     get_local_addresses()
+}
+
+/// Get categorized network addresses
+#[tauri::command]
+pub fn get_network_addresses() -> NetworkAddresses {
+    get_categorized_addresses()
 }
 
 /// Update the system status (called by frontend when status changes)

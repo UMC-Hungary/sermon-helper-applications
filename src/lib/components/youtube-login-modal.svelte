@@ -6,11 +6,11 @@
 	import Alert from '$lib/components/ui/alert.svelte';
 	import AlertTitle from '$lib/components/ui/alert-title.svelte';
 	import AlertDescription from '$lib/components/ui/alert-description.svelte';
-	import { youtubeApi } from '$lib/utils/youtube-api';
+	import { youtubeApi, getFixedOAuthRedirectUri } from '$lib/utils/youtube-api';
 	import { youtubeAuthStore, youtubeOAuthConfig } from '$lib/stores/youtube-store';
 	import { onOAuthComplete } from '$lib/utils/oauth-handler';
 	import { toast } from '$lib/utils/toast';
-	import { LogIn, Loader2, AlertCircle, Settings, Copy } from 'lucide-svelte';
+	import { LogIn, Loader2, AlertCircle, Settings, Copy, Check } from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 
 	// Check if running in Tauri
@@ -18,16 +18,13 @@
 		return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 	}
 
-	// Get redirect URI for display
-	// For desktop apps, Google uses loopback addresses which don't need to be pre-registered
+	// Get redirect URI for display - now returns the exact URI needed in Google Console
 	function getDisplayRedirectUri(): string {
 		if (typeof window === 'undefined') return '';
-		if (isTauri()) {
-			// Desktop apps use loopback - no need to configure in Google Console
-			return 'http://127.0.0.1 (auto-configured)';
-		}
-		return `${window.location.origin}/auth/callback`;
+		return getFixedOAuthRedirectUri();
 	}
+
+	let redirectUriCopied = false;
 
 	export let open: boolean = false;
 	export let onClose: () => void = () => {};
@@ -216,9 +213,36 @@
 					/>
 				</div>
 
-				<p class="text-xs text-muted-foreground">
-					{$_('youtube.modal.redirectUri')}: <code class="bg-muted px-1 rounded">{getDisplayRedirectUri()}</code>
-				</p>
+				<!-- Redirect URI - must be registered in Google Cloud Console -->
+				<div class="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 space-y-2">
+					<p class="text-xs font-medium text-amber-700 dark:text-amber-400">
+						Add this Redirect URI to Google Cloud Console:
+					</p>
+					<div class="flex items-center gap-2">
+						<code class="flex-1 text-xs bg-background px-2 py-1.5 rounded border font-mono">
+							{getDisplayRedirectUri()}
+						</code>
+						<Button
+							buttonVariant="outline"
+							buttonSize="sm"
+							onclick={async () => {
+								await navigator.clipboard.writeText(getDisplayRedirectUri());
+								redirectUriCopied = true;
+								setTimeout(() => redirectUriCopied = false, 2000);
+							}}
+							className="px-2"
+						>
+							{#if redirectUriCopied}
+								<Check class="h-4 w-4 text-green-600" />
+							{:else}
+								<Copy class="h-4 w-4" />
+							{/if}
+						</Button>
+					</div>
+					<p class="text-[10px] text-muted-foreground">
+						Go to Google Cloud Console → APIs & Services → Credentials → Your OAuth Client → Authorized redirect URIs
+					</p>
+				</div>
 
 				<div class="flex gap-2">
 					<Button buttonVariant="outline" onclick={() => (showConfigForm = false)} className="flex-1">

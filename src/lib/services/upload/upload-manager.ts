@@ -3,7 +3,8 @@
 
 import { get } from 'svelte/store';
 import { uploadSettingsStore, uploadSettings } from '$lib/stores/upload-settings-store';
-import { appSettingsStore } from '$lib/utils/app-settings-store';
+import { eventStore, allPendingUploads, type PendingUploadWithEvent } from '$lib/stores/event-store';
+import type { EventUploadSession } from '$lib/types/event';
 import type { UploadPlatform } from '$lib/types/upload-config';
 import type {
 	IUploadService,
@@ -13,13 +14,6 @@ import type {
 	UploadResult
 } from './upload-service.interface';
 import { youtubeUploadService } from './youtube-upload.service';
-
-// Pending uploads storage key
-const PENDING_UPLOADS_KEY = 'pendingUploads';
-
-interface PendingUploadsStorage {
-	sessions: UploadSession[];
-}
 
 // Platform upload progress callback
 export type PlatformProgressCallback = (platform: UploadPlatform, progress: UploadProgress) => void;
@@ -52,6 +46,7 @@ class UploadManager {
 
 	// Upload to all enabled platforms
 	async uploadToAllPlatforms(
+		eventId: string,
 		filePath: string,
 		metadata: UploadMetadata,
 		onProgress: PlatformProgressCallback
@@ -83,6 +78,7 @@ class UploadManager {
 				continue;
 			}
 
+				let session: UploadSession | null = null;
 			try {
 				console.log(`[UploadManager] Starting upload to ${service.displayName}`);
 
@@ -93,23 +89,31 @@ class UploadManager {
 				);
 
 				// Initialize upload
-				const session = await service.initializeUpload(filePath, platformMetadata);
+				session = await service.initializeUpload(filePath, platformMetadata);
 				this.activeUploads.set(session.id, session);
-				await this.savePendingUpload(session);
+				await this.saveUploadToEvent(eventId, session);
 
 				// Upload with progress
 				const result = await service.upload(session, (progress) => {
 					onProgress(platformConfig.platform, progress);
 				});
 
-				// Clean up
+				// Clean up - update session as completed with result
 				this.activeUploads.delete(session.id);
-				await this.removePendingUpload(session.id);
+				await this.completeUploadInEvent(eventId, session.id, result);
 
 				results.set(platformConfig.platform, result);
 				console.log(`[UploadManager] Upload complete to ${service.displayName}`);
 			} catch (error) {
 				console.error(`[UploadManager] Failed to upload to ${platformConfig.platform}:`, error);
+				// Mark session as failed in the event
+				if (session) {
+					const failedSession = this.toEventUploadSession(session);
+					failedSession.status = 'failed';
+					failedSession.error = error instanceof Error ? error.message : String(error);
+					await eventStore.saveUploadSession(eventId, failedSession);
+					this.activeUploads.delete(session.id);
+				}
 				errors.push({
 					platform: platformConfig.platform,
 					error: error instanceof Error ? error : new Error(String(error))
@@ -129,6 +133,7 @@ class UploadManager {
 
 	// Upload to a specific platform
 	async uploadToPlatform(
+		eventId: string,
 		platform: UploadPlatform,
 		filePath: string,
 		metadata: UploadMetadata,
@@ -148,18 +153,19 @@ class UploadManager {
 		const session = await service.initializeUpload(filePath, platformMetadata);
 
 		this.activeUploads.set(session.id, session);
-		await this.savePendingUpload(session);
+		await this.saveUploadToEvent(eventId, session);
 
 		try {
 			const result = await service.upload(session, onProgress);
 			this.activeUploads.delete(session.id);
-			await this.removePendingUpload(session.id);
+			await this.completeUploadInEvent(eventId, session.id, result);
 			return result;
 		} catch (error) {
-			// Keep session for resume
-			session.status = 'paused';
-			session.error = error instanceof Error ? error.message : String(error);
-			await this.savePendingUpload(session);
+			// Keep session for resume - mark as paused
+			const pausedSession = this.toEventUploadSession(session);
+			pausedSession.status = 'paused';
+			pausedSession.error = error instanceof Error ? error.message : String(error);
+			await eventStore.saveUploadSession(eventId, pausedSession);
 			throw error;
 		}
 	}
@@ -185,102 +191,178 @@ class UploadManager {
 		};
 	}
 
-	// Get all pending/paused uploads
-	async getPendingUploads(): Promise<UploadSession[]> {
-		try {
-			const storage = await appSettingsStore.get(PENDING_UPLOADS_KEY as never);
-			const data = (storage as PendingUploadsStorage | null) ?? { sessions: [] };
-			return data.sessions.filter((s) => s.status === 'paused' || s.status === 'pending');
-		} catch (error) {
-			console.error('[UploadManager] Failed to get pending uploads:', error);
-			return [];
+	// Convert UploadSession to EventUploadSession format
+	private toEventUploadSession(session: UploadSession): EventUploadSession {
+		return {
+			id: session.id,
+			platform: session.platform,
+			filePath: session.filePath,
+			fileSize: session.fileSize,
+			metadata: session.metadata,
+			uploadUri: session.uploadUri,
+			bytesUploaded: session.bytesUploaded,
+			startedAt: session.startedAt,
+			status: session.status,
+			error: session.error
+		};
+	}
+
+	// Convert EventUploadSession back to UploadSession format
+	private toUploadSession(eventSession: EventUploadSession): UploadSession {
+		return {
+			id: eventSession.id,
+			platform: eventSession.platform,
+			filePath: eventSession.filePath,
+			fileSize: eventSession.fileSize,
+			metadata: eventSession.metadata,
+			uploadUri: eventSession.uploadUri,
+			bytesUploaded: eventSession.bytesUploaded,
+			startedAt: eventSession.startedAt,
+			status: eventSession.status,
+			error: eventSession.error
+		};
+	}
+
+	// Save upload session to the event
+	private async saveUploadToEvent(eventId: string, session: UploadSession): Promise<void> {
+		const eventUploadSession = this.toEventUploadSession(session);
+		await eventStore.saveUploadSession(eventId, eventUploadSession);
+	}
+
+	// Complete an upload session and store the result
+	private async completeUploadInEvent(
+		eventId: string,
+		sessionId: string,
+		result: UploadResult
+	): Promise<void> {
+		const found = eventStore.getUploadSession(sessionId);
+		if (found) {
+			const completedSession: EventUploadSession = {
+				...found.session,
+				status: 'completed',
+				videoId: result.videoId,
+				videoUrl: result.videoUrl
+			};
+			await eventStore.saveUploadSession(eventId, completedSession);
 		}
 	}
 
-	// Save a pending upload session
-	private async savePendingUpload(session: UploadSession): Promise<void> {
-		try {
-			const storage = await appSettingsStore.get(PENDING_UPLOADS_KEY as never);
-			const data = (storage as PendingUploadsStorage | null) ?? { sessions: [] };
-
-			const existingIndex = data.sessions.findIndex((s) => s.id === session.id);
-			if (existingIndex >= 0) {
-				data.sessions[existingIndex] = session;
-			} else {
-				data.sessions.push(session);
-			}
-
-			await appSettingsStore.set(PENDING_UPLOADS_KEY as never, data as never);
-		} catch (error) {
-			console.error('[UploadManager] Failed to save pending upload:', error);
-		}
-	}
-
-	// Remove a pending upload session
-	private async removePendingUpload(sessionId: string): Promise<void> {
-		try {
-			const storage = await appSettingsStore.get(PENDING_UPLOADS_KEY as never);
-			const data = (storage as PendingUploadsStorage | null) ?? { sessions: [] };
-
-			data.sessions = data.sessions.filter((s) => s.id !== sessionId);
-
-			await appSettingsStore.set(PENDING_UPLOADS_KEY as never, data as never);
-		} catch (error) {
-			console.error('[UploadManager] Failed to remove pending upload:', error);
-		}
+	// Get all pending/paused uploads (from events)
+	getPendingUploads(): PendingUploadWithEvent[] {
+		return get(allPendingUploads);
 	}
 
 	// Resume all pending uploads
 	async resumeAllPending(
 		onProgress: PlatformProgressCallback
 	): Promise<Map<UploadPlatform, UploadResult>> {
-		const pending = await this.getPendingUploads();
+		const pending = this.getPendingUploads();
 		const results = new Map<UploadPlatform, UploadResult>();
 
-		for (const session of pending) {
+		for (const { event, session } of pending) {
 			const service = this.services.get(session.platform);
 			if (!service) continue;
 
 			try {
-				console.log(`[UploadManager] Resuming upload: ${session.id}`);
+				console.log(`[UploadManager] Resuming upload: ${session.id} for event: ${event.id}`);
+
+				// Convert to UploadSession format for service
+				const uploadSession = this.toUploadSession(session);
 
 				// Resume the session
-				const resumedSession = await service.resume(session);
+				const resumedSession = await service.resume(uploadSession);
 
 				// Continue upload
 				const result = await service.upload(resumedSession, (progress) => {
 					onProgress(session.platform, progress);
 				});
 
-				await this.removePendingUpload(session.id);
+				// Mark completed in event
+				await this.completeUploadInEvent(event.id, session.id, result);
 				results.set(session.platform, result);
 			} catch (error) {
 				console.error(`[UploadManager] Failed to resume upload ${session.id}:`, error);
+				// Mark as failed
+				const failedSession: EventUploadSession = {
+					...session,
+					status: 'failed',
+					error: error instanceof Error ? error.message : String(error)
+				};
+				await eventStore.saveUploadSession(event.id, failedSession);
 			}
 		}
 
 		return results;
 	}
 
-	// Cancel an active upload
-	async cancelUpload(sessionId: string): Promise<void> {
-		const session = this.activeUploads.get(sessionId);
-		if (!session) {
-			// Try to find in pending
-			const pending = await this.getPendingUploads();
-			const pendingSession = pending.find((s) => s.id === sessionId);
-			if (pendingSession) {
-				const service = this.services.get(pendingSession.platform);
-				await service?.cancel(pendingSession);
-				await this.removePendingUpload(sessionId);
-			}
-			return;
+	// Resume a specific upload by session ID
+	async resumeUpload(
+		sessionId: string,
+		onProgress: (progress: UploadProgress) => void
+	): Promise<UploadResult> {
+		const found = eventStore.getUploadSession(sessionId);
+		if (!found) {
+			throw new Error(`Upload session not found: ${sessionId}`);
 		}
 
+		const { event, session } = found;
 		const service = this.services.get(session.platform);
-		await service?.cancel(session);
-		this.activeUploads.delete(sessionId);
-		await this.removePendingUpload(sessionId);
+		if (!service) {
+			throw new Error(`No service for platform: ${session.platform}`);
+		}
+
+		console.log(`[UploadManager] Resuming upload: ${sessionId} for event: ${event.id}`);
+
+		// Mark as uploading
+		const uploadingSession: EventUploadSession = { ...session, status: 'uploading' };
+		await eventStore.saveUploadSession(event.id, uploadingSession);
+
+		try {
+			// Convert to UploadSession format for service
+			const uploadSession = this.toUploadSession(session);
+
+			// Resume the session
+			const resumedSession = await service.resume(uploadSession);
+
+			// Continue upload
+			const result = await service.upload(resumedSession, onProgress);
+
+			// Mark completed in event
+			await this.completeUploadInEvent(event.id, sessionId, result);
+			return result;
+		} catch (error) {
+			// Mark as failed
+			const failedSession: EventUploadSession = {
+				...session,
+				status: 'failed',
+				error: error instanceof Error ? error.message : String(error)
+			};
+			await eventStore.saveUploadSession(event.id, failedSession);
+			throw error;
+		}
+	}
+
+	// Cancel an active upload
+	async cancelUpload(sessionId: string): Promise<void> {
+		// Check active uploads first
+		const activeSession = this.activeUploads.get(sessionId);
+		if (activeSession) {
+			const service = this.services.get(activeSession.platform);
+			await service?.cancel(activeSession);
+			this.activeUploads.delete(sessionId);
+		}
+
+		// Remove from event
+		const found = eventStore.getUploadSession(sessionId);
+		if (found) {
+			const { event, session } = found;
+			const service = this.services.get(session.platform);
+			if (service && !activeSession) {
+				// Cancel with service if not already cancelled
+				await service.cancel(this.toUploadSession(session));
+			}
+			await eventStore.removeUploadSession(event.id, sessionId);
+		}
 	}
 
 	// Finalize upload (publish, etc.)

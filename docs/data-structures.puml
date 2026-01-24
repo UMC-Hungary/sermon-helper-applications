@@ -1,0 +1,145 @@
+@startuml Sermon Helper - Data Structures
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+
+title Core Data Structures
+
+' ==========================================
+' MAIN ENTITIES
+' ==========================================
+
+class ServiceEvent #LightBlue {
+    **Identity**
+    id: string
+    title: string
+    date: string (YYYY-MM-DD)
+    time: string (HH:MM)
+    --
+    **Content**
+    speaker: string
+    description: string
+    textus: string
+    leckio: string
+    --
+    **YouTube Integration**
+    youtubeScheduledId?: string
+    youtubeUploadedId?: string
+    youtubePrivacyStatus: public|private|unlisted
+    --
+    **Upload Sessions**
+    ==uploadSessions?: EventUploadSession[]==
+    videoUploadState?: pending|uploading|completed|failed
+}
+
+class EventUploadSession #LightGreen {
+    **Identity**
+    id: string
+    platform: youtube|facebook|custom
+    --
+    **File Info**
+    filePath: string
+    fileSize: number
+    --
+    **Upload State**
+    uploadUri: string
+    bytesUploaded: number
+    startedAt: number
+    ==status: pending|uploading|paused|==
+    ==       processing|completed|failed==
+    error?: string
+    --
+    **Result (when completed)**
+    videoId?: string
+    videoUrl?: string
+    --
+    **Metadata**
+    metadata.title: string
+    metadata.description: string
+    metadata.privacy: string
+    metadata.tags?: string[]
+}
+
+class EventSession #LightYellow {
+    **Identity**
+    id: string
+    eventId: string → ServiceEvent
+    --
+    **State Machine**
+    ==state: IDLE|PREPARING|ACTIVE|==
+    ==       FINALIZING|COMPLETED|PAUSED==
+    --
+    **Timestamps**
+    sessionStartedAt: number
+    streamStartedAt?: number
+    streamEndedAt?: number
+    recordStartedAt?: number
+    recordEndedAt?: number
+    --
+    **Flags**
+    wasOBSConnected: boolean
+    wasStreaming: boolean
+    wasRecording: boolean
+    wasYouTubeLive: boolean
+    --
+    **Live Progress (UI display)**
+    uploadProgress: PlatformUploadProgress[]
+    --
+    **Pause/Resume**
+    pausedAt?: number
+    pauseReason?: string
+}
+
+class PendingUploadWithEvent #LightPink {
+    **Derived Type**
+    (used by UI components)
+    --
+    event: ServiceEvent
+    session: EventUploadSession
+}
+
+' ==========================================
+' RELATIONSHIPS
+' ==========================================
+
+ServiceEvent "1" *-down- "*" EventUploadSession : contains
+EventSession "1" -right-> "1" ServiceEvent : references via eventId
+PendingUploadWithEvent -up-> ServiceEvent : event
+PendingUploadWithEvent -up-> EventUploadSession : session
+
+' ==========================================
+' NOTES
+' ==========================================
+
+note bottom of ServiceEvent
+  **Primary entity** - represents a church service event
+  All upload sessions are stored within the event
+  for data locality and easier management
+end note
+
+note bottom of EventUploadSession
+  **Stored inside ServiceEvent.uploadSessions[]**
+  Contains all data needed to resume an upload:
+  - uploadUri (YouTube resumable upload URI, valid 1 week)
+  - bytesUploaded (for progress calculation)
+  - status (determines UI actions: resume/cancel)
+end note
+
+note bottom of EventSession
+  **Live session tracking** (separate from upload sessions)
+  Tracks the OBS streaming/recording session
+  References an event via eventId
+  uploadProgress[] is for live UI updates only
+end note
+
+note right of PendingUploadWithEvent
+  **Derived at query time**
+  from eventList store
+
+  Used by:
+  - pending-uploads-list.svelte
+  - pendingUploadsStore
+end note
+
+@enduml

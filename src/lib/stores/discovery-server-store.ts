@@ -15,7 +15,8 @@ import type {
 	DiscoveryServerStatus,
 	DiscoverySystemStatus,
 	DiscoveryObsStatus,
-	DiscoverySettings
+	DiscoverySettings,
+	NetworkAddresses
 } from '$lib/types/discovery';
 import { DEFAULT_DISCOVERY_SETTINGS } from '$lib/types/discovery';
 
@@ -148,9 +149,14 @@ class DiscoveryServerManager {
 		return await invoke<string>('generate_discovery_auth_token');
 	}
 
-	/** Get local IP addresses */
+	/** Get local IP addresses (flat list) */
 	async getLocalAddresses(): Promise<string[]> {
 		return await invoke<string[]>('get_local_ip_addresses');
+	}
+
+	/** Get categorized network addresses */
+	async getNetworkAddresses(): Promise<NetworkAddresses> {
+		return await invoke<NetworkAddresses>('get_network_addresses');
 	}
 
 	/** Update the system status (broadcasts to connected mobile clients) */

@@ -460,6 +460,36 @@
 			}
 		}
 	},
+	"upload": {
+		"section": {
+			"title": "Feltöltési Állapot"
+		},
+		"pending": {
+			"title": "Függőben Lévő Feltöltések",
+			"justNow": "épp most",
+			"ago": "ezelőtt",
+			"resumed": "Feltöltés folytatva",
+			"resumeFailed": "Nem sikerült folytatni a feltöltést",
+			"cancelled": "Feltöltés megszakítva",
+			"cancelFailed": "Nem sikerült megszakítani a feltöltést",
+			"allResumed": "Összes feltöltés folytatva",
+			"resumeAllFailed": "Nem sikerült folytatni a feltöltéseket",
+			"resumeAll": "Összes Folytatása"
+		},
+		"reauth": {
+			"title": "Újra Bejelentkezés Szükséges",
+			"description": "YouTube munkamenet lejárt",
+			"action": "Újra Bejelentkezés YouTube-ra"
+		},
+		"status": {
+			"pending": "Függőben",
+			"uploading": "Feltöltés",
+			"paused": "Szünetel",
+			"processing": "Feldolgozás",
+			"completed": "Kész",
+			"failed": "Sikertelen"
+		}
+	},
 	"obsDevices": {
 		"title": "OBS Eszközök",
 		"subtitle": "Kijelzők, audio eszközök és böngésző források konfigurálása az OBS-hez",

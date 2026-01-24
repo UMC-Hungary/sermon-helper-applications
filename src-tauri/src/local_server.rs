@@ -18,6 +18,9 @@ use tauri::{AppHandle, Emitter};
 use tokio::net::TcpListener;
 use tokio::sync::{oneshot, Mutex};
 
+/// Fixed port for OAuth callbacks - must match Google Cloud Console configuration
+pub const OAUTH_CALLBACK_PORT: u16 = 8766;
+
 /// Result of an OAuth callback
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OAuthCallbackResult {
@@ -52,15 +55,12 @@ struct OAuthQuery {
 /// Returns the port and a receiver for the OAuth result.
 /// The server automatically shuts down after receiving the callback.
 pub async fn start_oauth_server(app_handle: Option<AppHandle>) -> Result<(u16, oneshot::Receiver<OAuthCallbackResult>), String> {
-    // Find an available port
-    let listener = TcpListener::bind("127.0.0.1:0")
+    // Use fixed port for OAuth - this must match what's registered in Google Cloud Console
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", OAUTH_CALLBACK_PORT))
         .await
-        .map_err(|e| format!("Failed to bind to port: {}", e))?;
+        .map_err(|e| format!("Failed to bind to port {}: {}. The port may be in use.", OAUTH_CALLBACK_PORT, e))?;
 
-    let port = listener
-        .local_addr()
-        .map_err(|e| format!("Failed to get local address: {}", e))?
-        .port();
+    let port = OAUTH_CALLBACK_PORT;
 
     // Create channel for OAuth result
     let (result_tx, result_rx) = oneshot::channel();
@@ -302,8 +302,14 @@ pub async fn start_oauth_flow_with_callback(app_handle: AppHandle) -> Result<OAu
     Ok(result)
 }
 
-/// Get the OAuth redirect URI for a given port
+/// Get the OAuth redirect URI (uses fixed port)
 #[tauri::command]
-pub fn get_oauth_redirect_uri(port: u16) -> String {
-    format!("http://127.0.0.1:{}/callback", port)
+pub fn get_oauth_redirect_uri(_port: u16) -> String {
+    format!("http://127.0.0.1:{}/callback", OAUTH_CALLBACK_PORT)
+}
+
+/// Get the fixed OAuth redirect URI
+#[tauri::command]
+pub fn get_fixed_oauth_redirect_uri() -> String {
+    format!("http://127.0.0.1:{}/callback", OAUTH_CALLBACK_PORT)
 }

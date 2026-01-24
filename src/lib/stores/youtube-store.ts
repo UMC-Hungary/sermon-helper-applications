@@ -1,6 +1,7 @@
 import { derived, get } from 'svelte/store';
 import { appSettings, appSettingsStore } from '$lib/utils/app-settings-store';
 import { updateYoutubeLogin } from '$lib/stores/system-store';
+import { youtubeAuthStatusStore } from '$lib/stores/youtube-auth-status-store';
 import type { YouTubeTokens, YouTubeOAuthConfig } from '$lib/types/youtube';
 
 // Derived store for YouTube tokens
@@ -31,11 +32,14 @@ export const youtubeAuthStore = {
 	async setTokens(tokens: YouTubeTokens): Promise<void> {
 		await appSettingsStore.set('youtubeTokens', tokens);
 		updateYoutubeLogin(true);
+		youtubeAuthStatusStore.setLoggedIn();
 	},
 
 	async clearTokens(): Promise<void> {
 		await appSettingsStore.set('youtubeTokens', null);
 		updateYoutubeLogin(false);
+		// Note: Don't call setLoggedOut here - let the calling code handle
+		// reauth_required vs logged_out distinction
 	},
 
 	getTokens(): YouTubeTokens | null {

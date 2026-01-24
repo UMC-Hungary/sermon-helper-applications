@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, RefreshCw, Check, FileText, FolderOpen } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, RefreshCw, Check, FileText, FolderOpen, AlertCircle } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -16,7 +16,11 @@
 	import { toast } from '$lib/utils/toast';
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
 	import SidebarStreamingControls from '$lib/components/sidebar-streaming-controls.svelte';
-	import EventSessionStatus from '$lib/components/event-session-status.svelte';
+	import UploadStatusSection from '$lib/components/upload-status-section.svelte';
+	import Alert from '$lib/components/ui/alert.svelte';
+	import AlertTitle from '$lib/components/ui/alert-title.svelte';
+	import AlertDescription from '$lib/components/ui/alert-description.svelte';
+	import { youtubeReauthRequired, youtubeReauthError, youtubeAuthStatusStore } from '$lib/stores/youtube-auth-status-store';
 	import { requiredDeviceConfigs } from '$lib/stores/obs-devices-store';
 	import { obsDeviceStatuses, obsBrowserStatuses, isCheckingDevices } from '$lib/stores/obs-device-status-store';
 	import { browserSourceConfigs } from '$lib/stores/obs-devices-store';
@@ -296,7 +300,35 @@
 						</div>
 					{/each}
 				</div>
+
+				<!-- YouTube Re-auth Alert -->
+				{#if $youtubeReauthRequired}
+					<Alert variant="warning" className="mt-3">
+						<AlertCircle class="h-4 w-4" />
+						<AlertTitle>{$_('upload.reauth.title') || 'Re-login Required'}</AlertTitle>
+						<AlertDescription className="space-y-2">
+							<p class="text-xs">{$youtubeReauthError || $_('upload.reauth.description') || 'YouTube session expired'}</p>
+							<Button
+								buttonSize="sm"
+								buttonVariant="outline"
+								className="w-full"
+								onclick={() => {
+									youtubeAuthStatusStore.clearReauthRequired();
+									showYoutubeLoginModal = true;
+								}}
+							>
+								<LogIn class="h-3 w-3 mr-1" />
+								{$_('upload.reauth.action') || 'Re-login to YouTube'}
+							</Button>
+						</AlertDescription>
+					</Alert>
+				{/if}
 			</Card>
+
+			<!-- Upload Status Section (active session + pending uploads) -->
+			{#if isTauri}
+				<UploadStatusSection />
+			{/if}
 
 			<Card className="p-4">
 				<div class="flex items-center justify-between mb-3">
@@ -311,10 +343,6 @@
 						<!-- Streaming Controls (only show for today's event) -->
 						{#if isToday}
 							<SidebarStreamingControls event={nextEvent} />
-							<!-- Session status only in desktop app -->
-							{#if isTauri}
-								<EventSessionStatus />
-							{/if}
 						{/if}
 
 						<!-- Event Title -->

@@ -460,6 +460,36 @@
 			}
 		}
 	},
+	"upload": {
+		"section": {
+			"title": "Upload Status"
+		},
+		"pending": {
+			"title": "Pending Uploads",
+			"justNow": "just now",
+			"ago": "ago",
+			"resumed": "Upload resumed",
+			"resumeFailed": "Failed to resume upload",
+			"cancelled": "Upload cancelled",
+			"cancelFailed": "Failed to cancel upload",
+			"allResumed": "All uploads resumed",
+			"resumeAllFailed": "Failed to resume uploads",
+			"resumeAll": "Resume All"
+		},
+		"reauth": {
+			"title": "Re-login Required",
+			"description": "YouTube session expired",
+			"action": "Re-login to YouTube"
+		},
+		"status": {
+			"pending": "Pending",
+			"uploading": "Uploading",
+			"paused": "Paused",
+			"processing": "Processing",
+			"completed": "Completed",
+			"failed": "Failed"
+		}
+	},
 	"obsDevices": {
 		"title": "OBS Devices",
 		"subtitle": "Configure displays, audio devices, and browser sources for OBS",

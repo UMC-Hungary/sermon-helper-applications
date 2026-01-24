@@ -10,7 +10,7 @@
 	import { sessionIntegration } from '$lib/services/session-integration';
 	import {
 		Activity,
-		Upload,
+		RefreshCw,
 		CheckCircle2,
 		PauseCircle,
 		AlertCircle,
@@ -52,7 +52,7 @@
 			case 'ACTIVE':
 				return Activity;
 			case 'FINALIZING':
-				return Upload;
+				return RefreshCw;
 			case 'COMPLETED':
 				return CheckCircle2;
 			case 'PAUSED':

@@ -1,0 +1,95 @@
+@startuml Sermon Helper - Data Flow
+
+!theme plain
+skinparam actorStyle awesome
+
+title Upload Session Data Flow
+
+actor User
+participant "UI Components" as UI
+participant "pendingUploadsStore" as PendingStore
+participant "eventStore" as EventStore
+participant "uploadManager" as UploadMgr
+participant "youtubeUploadService" as YTService
+database "appSettingsStore\n(Tauri)" as Storage
+
+== Starting an Upload ==
+
+User -> UI : Trigger post-event automation
+UI -> UploadMgr : uploadToAllPlatforms(eventId, filePath, metadata)
+UploadMgr -> YTService : initializeUpload()
+YTService --> UploadMgr : UploadSession (with uploadUri)
+
+UploadMgr -> EventStore : saveUploadSession(eventId, session)
+EventStore -> Storage : set('eventList', [...])
+note right: Session stored\ninside the event
+
+UploadMgr -> YTService : upload(session, onProgress)
+
+loop Progress Updates
+    YTService --> UploadMgr : progress callback
+    UploadMgr --> UI : progress callback
+end
+
+alt Upload Success
+    YTService --> UploadMgr : UploadResult
+    UploadMgr -> EventStore : saveUploadSession(eventId, completedSession)
+    EventStore -> Storage : set('eventList', [...])
+else Upload Failed
+    YTService --> UploadMgr : Error
+    UploadMgr -> EventStore : saveUploadSession(eventId, failedSession)
+    note right: status = 'failed'\nerror = message
+end
+
+== Viewing Pending Uploads ==
+
+UI -> PendingStore : subscribe($pendingUploads)
+PendingStore -> EventStore : allPendingUploads (derived)
+EventStore -> Storage : eventList
+Storage --> EventStore : ServiceEvent[]
+
+note over EventStore
+  Filter events with uploadSessions
+  where status in ['pending', 'paused', 'failed']
+  Return: { event, session }[]
+end note
+
+EventStore --> PendingStore : PendingUploadWithEvent[]
+PendingStore --> UI : Reactive update
+
+== Resuming an Upload ==
+
+User -> UI : Click Resume
+UI -> PendingStore : resumeUpload(sessionId)
+PendingStore -> UploadMgr : resumeUpload(sessionId, onProgress)
+
+UploadMgr -> EventStore : getUploadSession(sessionId)
+EventStore --> UploadMgr : { event, session }
+
+UploadMgr -> EventStore : saveUploadSession(eventId, uploadingSession)
+note right: status = 'uploading'
+
+UploadMgr -> YTService : resume(session)
+YTService --> UploadMgr : resumedSession (with new uploadUri if needed)
+
+UploadMgr -> YTService : upload(resumedSession, onProgress)
+YTService --> UploadMgr : UploadResult
+
+UploadMgr -> EventStore : saveUploadSession(eventId, completedSession)
+note right: status = 'completed'\nvideoId, videoUrl set
+
+== Cancelling an Upload ==
+
+User -> UI : Click Cancel
+UI -> PendingStore : cancelUpload(sessionId)
+PendingStore -> UploadMgr : cancelUpload(sessionId)
+
+UploadMgr -> EventStore : getUploadSession(sessionId)
+EventStore --> UploadMgr : { event, session }
+
+UploadMgr -> YTService : cancel(session)
+UploadMgr -> EventStore : removeUploadSession(eventId, sessionId)
+EventStore -> Storage : set('eventList', [...])
+note right: Session removed\nfrom event
+
+@enduml

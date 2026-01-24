@@ -1,0 +1,313 @@
+@startuml Sermon Helper - Stores and Data Structure
+
+!theme plain
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+
+title Sermon Helper - Stores & Data Architecture
+
+' ==========================================
+' PERSISTENT STORAGE (Tauri Store)
+' ==========================================
+package "Persistent Storage" #LightYellow {
+    class AppSettings <<Tauri Store>> {
+        eventList: ServiceEvent[]
+        eventSession: SessionStorage
+        uploadSettings: UploadSettings
+        youtubeTokens: YouTubeTokens
+        --
+        Persisted to disk via
+        @tauri-apps/plugin-store
+    }
+}
+
+' ==========================================
+' CORE DATA TYPES
+' ==========================================
+package "Core Types" #LightBlue {
+
+    class ServiceEvent {
+        id: string
+        title: string
+        date: string
+        time: string
+        speaker: string
+        description: string
+        --
+        textus: string
+        leckio: string
+        textusVerses: BibleVerse[]
+        leckioVerses: BibleVerse[]
+        --
+        youtubeScheduledId?: string
+        youtubeUploadedId?: string
+        youtubePrivacyStatus: YouTubePrivacyStatus
+        youtubeLifeCycleStatus?: YouTubeLifeCycleStatus
+        videoUploadState?: VideoUploadState
+        --
+        **uploadSessions?: EventUploadSession[]**
+        --
+        createdAt: string
+        updatedAt: string
+    }
+
+    class EventUploadSession {
+        id: string
+        platform: UploadPlatform
+        filePath: string
+        fileSize: number
+        metadata: UploadMetadata
+        uploadUri: string
+        bytesUploaded: number
+        startedAt: number
+        status: UploadStatus
+        error?: string
+        --
+        videoId?: string
+        videoUrl?: string
+    }
+
+    class EventSession {
+        id: string
+        eventId: string
+        state: EventSessionState
+        --
+        sessionStartedAt: number
+        streamStartedAt?: number
+        streamEndedAt?: number
+        recordStartedAt?: number
+        recordEndedAt?: number
+        --
+        wasOBSConnected: boolean
+        wasStreaming: boolean
+        wasRecording: boolean
+        wasYouTubeLive: boolean
+        --
+        recordingDirectory?: string
+        recordingFilePath?: string
+        recordingSelection?: RecordingSelectionResult
+        --
+        uploadProgress: PlatformUploadProgress[]
+        --
+        pausedAt?: number
+        pauseReason?: string
+        completedAt?: number
+        completionError?: string
+    }
+
+    class PlatformUploadProgress {
+        platform: UploadPlatform
+        name: string
+        status: UploadProgressStatus
+        bytesUploaded: number
+        totalBytes: number
+        percentage: number
+        error?: string
+        videoId?: string
+        videoUrl?: string
+    }
+
+    enum UploadStatus {
+        pending
+        uploading
+        paused
+        processing
+        completed
+        failed
+    }
+
+    enum EventSessionState {
+        IDLE
+        PREPARING
+        ACTIVE
+        FINALIZING
+        COMPLETED
+        PAUSED
+    }
+
+    enum UploadPlatform {
+        youtube
+        facebook
+        custom
+    }
+}
+
+' ==========================================
+' SVELTE STORES
+' ==========================================
+package "Svelte Stores" #LightGreen {
+
+    class appSettingsStore <<writable>> {
+        + get(key): Promise<T>
+        + set(key, value): Promise<void>
+        --
+        Root store for all
+        persistent app data
+    }
+
+    class eventStore <<operations>> {
+        + addEvent(event)
+        + updateEvent(id, partial)
+        + deleteEvent(id)
+        + getEventById(id)
+        --
+        + saveUploadSession(eventId, session)
+        + removeUploadSession(eventId, sessionId)
+        + getUploadSession(sessionId)
+        + getAllPendingUploads()
+    }
+
+    class "eventList" as eventListStore <<derived>> {
+        ServiceEvent[]
+        --
+        Derived from appSettings
+    }
+
+    class "todayEvent" as todayEventStore <<derived>> {
+        ServiceEvent | null
+        --
+        Event scheduled for today
+    }
+
+    class "upcomingEvents" as upcomingEventsStore <<derived>> {
+        ServiceEvent[]
+        --
+        Future events (sorted)
+    }
+
+    class "allPendingUploads" as allPendingUploadsStore <<derived>> {
+        PendingUploadWithEvent[]
+        --
+        Flattened list of all
+        pending uploads with
+        their parent events
+    }
+
+    class PendingUploadWithEvent {
+        event: ServiceEvent
+        session: EventUploadSession
+    }
+
+    class eventSessionStore <<class>> {
+        + init()
+        + startSession(eventId)
+        + endSession()
+        + updateState(state)
+        + pause(reason)
+        + resume()
+        + updateUploadProgress(progress)
+        --
+        Manages live event session
+    }
+
+    class "currentSession" as currentSessionStore <<derived>> {
+        EventSession | null
+        --
+        Active session (if any)
+    }
+
+    class pendingUploadsStore <<operations>> {
+        + resumeUpload(sessionId)
+        + cancelUpload(sessionId)
+        + resumeAll()
+        + getAll()
+        --
+        Wraps uploadManager
+        with reactive stores
+    }
+
+    class "hasPendingUploads" as hasPendingUploadsStore <<derived>> {
+        boolean
+    }
+
+    class "pendingUploadCount" as pendingUploadCountStore <<derived>> {
+        number
+    }
+}
+
+' ==========================================
+' SERVICES
+' ==========================================
+package "Services" #LightPink {
+
+    class uploadManager <<singleton>> {
+        - services: Map<Platform, IUploadService>
+        - activeUploads: Map<string, UploadSession>
+        --
+        + uploadToAllPlatforms(eventId, filePath, metadata, onProgress)
+        + uploadToPlatform(eventId, platform, filePath, metadata, onProgress)
+        + resumeUpload(sessionId, onProgress)
+        + resumeAllPending(onProgress)
+        + cancelUpload(sessionId)
+        + getPendingUploads()
+        --
+        Saves upload sessions
+        directly to events
+    }
+
+    class postEventAutomation <<singleton>> {
+        + runWorkflow()
+        + shouldRunAutomation()
+        --
+        1. Select recording
+        2. Upload to platforms
+        3. Finalize uploads
+        4. Complete broadcast
+    }
+
+    class youtubeUploadService <<IUploadService>> {
+        + initializeUpload(filePath, metadata)
+        + upload(session, onProgress)
+        + resume(session)
+        + cancel(session)
+        + finalize(result)
+    }
+}
+
+' ==========================================
+' RELATIONSHIPS
+' ==========================================
+
+' Storage relationships
+AppSettings "1" *-- "*" ServiceEvent : eventList
+AppSettings "1" *-- "0..1" EventSession : currentSession
+ServiceEvent "1" *-- "*" EventUploadSession : uploadSessions
+
+' Store derivation
+appSettingsStore --> AppSettings : persists
+eventListStore ..> appSettingsStore : derived from
+todayEventStore ..> eventListStore : derived from
+upcomingEventsStore ..> eventListStore : derived from
+allPendingUploadsStore ..> eventListStore : derived from
+
+eventStore --> eventListStore : operates on
+eventStore --> appSettingsStore : persists via
+
+' Pending uploads derivation
+allPendingUploadsStore --> PendingUploadWithEvent : produces
+PendingUploadWithEvent --> ServiceEvent : references
+PendingUploadWithEvent --> EventUploadSession : references
+
+pendingUploadsStore ..> allPendingUploadsStore : wraps
+hasPendingUploadsStore ..> allPendingUploadsStore : derived from
+pendingUploadCountStore ..> allPendingUploadsStore : derived from
+
+' Session store
+eventSessionStore --> currentSessionStore : exposes
+eventSessionStore --> appSettingsStore : persists via
+EventSession --> PlatformUploadProgress : tracks progress
+
+' Service relationships
+uploadManager --> eventStore : saves sessions to
+uploadManager --> youtubeUploadService : uses
+pendingUploadsStore --> uploadManager : delegates to
+postEventAutomation --> uploadManager : uses
+postEventAutomation --> eventSessionStore : updates
+
+' Type relationships
+EventUploadSession --> UploadStatus : status
+EventUploadSession --> UploadPlatform : platform
+EventSession --> EventSessionState : state
+PlatformUploadProgress --> UploadPlatform : platform
+
+@enduml

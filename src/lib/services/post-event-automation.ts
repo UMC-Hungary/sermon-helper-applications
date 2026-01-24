@@ -228,6 +228,7 @@ class PostEventAutomationService {
 
 		// Upload with progress tracking
 		const results = await uploadManager.uploadToAllPlatforms(
+			event.id,
 			recordingFile.path,
 			metadata,
 			(platform, progress) => {

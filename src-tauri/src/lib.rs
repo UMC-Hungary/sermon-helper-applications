@@ -8,7 +8,7 @@ mod video_upload;
 use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
 use discovery_commands::{
     start_discovery_server, stop_discovery_server, get_discovery_server_status,
-    generate_discovery_auth_token, get_local_ip_addresses,
+    generate_discovery_auth_token, get_local_ip_addresses, get_network_addresses,
     update_discovery_system_status, update_discovery_obs_status
 };
 use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
@@ -68,6 +68,7 @@ pub fn run() {
             get_discovery_server_status,
             generate_discovery_auth_token,
             get_local_ip_addresses,
+            get_network_addresses,
             update_discovery_system_status,
             update_discovery_obs_status
         ])

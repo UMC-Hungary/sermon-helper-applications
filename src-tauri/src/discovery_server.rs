@@ -576,26 +576,110 @@ fn check_auth(headers: &HeaderMap, state: &SharedServerState) -> bool {
 // Utility Functions
 // ============================================================================
 
-/// Get all local IP addresses
+/// Categorized network addresses for discovery
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkAddresses {
+    /// Localhost addresses (127.0.0.1) - only accessible from this computer
+    pub localhost: Vec<String>,
+    /// LAN addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x) - accessible from same network
+    pub lan: Vec<NetworkInterface>,
+    /// All addresses as flat list (for backward compatibility)
+    pub all: Vec<String>,
+}
+
+/// Network interface with name and address
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkInterface {
+    pub name: String,
+    pub address: String,
+    pub is_primary: bool,
+}
+
+/// Get all local IP addresses, categorized by accessibility
 pub fn get_local_addresses() -> Vec<String> {
-    let mut addresses = Vec::new();
+    get_categorized_addresses().all
+}
+
+/// Get categorized network addresses
+pub fn get_categorized_addresses() -> NetworkAddresses {
+    let mut localhost = Vec::new();
+    let mut lan = Vec::new();
+    let mut all = Vec::new();
+
+    // Always add localhost
+    localhost.push("127.0.0.1".to_string());
+    all.push("127.0.0.1".to_string());
 
     // Get primary local IP
-    if let Ok(ip) = local_ip_address::local_ip() {
-        addresses.push(ip.to_string());
-    }
+    let primary_ip = local_ip_address::local_ip().ok().map(|ip| ip.to_string());
 
-    // Also try to get all local IPs
+    // Get all network interfaces
     if let Ok(list) = local_ip_address::list_afinet_netifas() {
-        for (_, ip) in list {
+        for (name, ip) in list {
             let ip_str = ip.to_string();
-            if !addresses.contains(&ip_str) && !ip_str.starts_with("127.") {
-                addresses.push(ip_str);
+
+            // Skip if already in the list
+            if all.contains(&ip_str) {
+                continue;
+            }
+
+            // Categorize the address
+            if ip_str.starts_with("127.") {
+                // Loopback addresses
+                if !localhost.contains(&ip_str) {
+                    localhost.push(ip_str.clone());
+                }
+            } else if is_lan_address(&ip_str) {
+                // LAN addresses
+                let is_primary = primary_ip.as_ref() == Some(&ip_str);
+                lan.push(NetworkInterface {
+                    name: name.clone(),
+                    address: ip_str.clone(),
+                    is_primary,
+                });
+            }
+
+            // Add to all list (excluding loopback)
+            if !ip_str.starts_with("127.") {
+                all.push(ip_str);
             }
         }
     }
 
-    addresses
+    // Sort LAN addresses: primary first, then by name
+    lan.sort_by(|a, b| {
+        match (a.is_primary, b.is_primary) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
+        }
+    });
+
+    NetworkAddresses { localhost, lan, all }
+}
+
+/// Check if an IP address is a LAN (private) address
+fn is_lan_address(ip: &str) -> bool {
+    // Parse IPv4 address
+    let parts: Vec<u8> = ip.split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+
+    if parts.len() != 4 {
+        // Could be IPv6, check for link-local
+        return ip.starts_with("fe80:") || ip.starts_with("fd");
+    }
+
+    // Check private IPv4 ranges (RFC 1918)
+    match parts[0] {
+        10 => true,                                    // 10.0.0.0/8
+        172 => (16..=31).contains(&parts[1]),          // 172.16.0.0/12
+        192 => parts[1] == 168,                        // 192.168.0.0/16
+        169 => parts[1] == 254,                        // 169.254.0.0/16 (link-local)
+        _ => false,
+    }
 }
 
 /// Generate a random auth token

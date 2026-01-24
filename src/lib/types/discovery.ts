@@ -41,6 +41,23 @@ export interface DiscoveryObsStatus {
 	recordTimecode: string | null;
 }
 
+/** Network interface with name and address */
+export interface NetworkInterface {
+	name: string;
+	address: string;
+	isPrimary: boolean;
+}
+
+/** Categorized network addresses */
+export interface NetworkAddresses {
+	/** Localhost addresses (127.0.0.1) - only accessible from this computer */
+	localhost: string[];
+	/** LAN addresses - accessible from devices on the same network */
+	lan: NetworkInterface[];
+	/** All addresses as flat list */
+	all: string[];
+}
+
 /** Discovery settings stored in app settings */
 export interface DiscoverySettings {
 	enabled: boolean;
