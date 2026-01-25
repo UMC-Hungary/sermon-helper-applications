@@ -5,7 +5,8 @@
 			"events": "Istentiszteleti Események",
 			"bibleEditor": "Biblia Szerkesztő",
 			"obsConfig": "OBS Konfiguráció",
-			"settings": "Beállítások"
+			"settings": "Beállítások",
+			"remoteControl": "Távvezérlő"
 		},
 		"systemStatus": {
 			"title": "Rendszer Állapot",

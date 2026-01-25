@@ -74,12 +74,17 @@
                 await discoveryServerManager.init();
                 await log('info', 'Discovery server manager initialized');
 
-                // Auto-start discovery server if enabled
+                // Auto-start discovery server if enabled and has auth token
                 const discoverySettings = await appSettingsStore.get('discoverySettings');
-                if (discoverySettings?.enabled && discoverySettings?.autoStart) {
+                if (discoverySettings?.autoStart && discoverySettings?.authToken) {
                     try {
                         await discoveryServerManager.start(discoverySettings);
                         await log('info', 'Discovery server auto-started');
+
+                        // Sync RF/IR commands to the server
+                        const { broadlinkService } = await import('$lib/utils/broadlink-service');
+                        await broadlinkService.syncCommandsToServer();
+                        await log('info', 'RF/IR commands synced to discovery server');
                     } catch (e) {
                         await log('warn', `Failed to auto-start discovery server: ${e}`);
                     }

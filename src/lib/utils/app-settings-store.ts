@@ -9,6 +9,8 @@ import type { UploadSettings } from '$lib/types/upload-config';
 import { DEFAULT_UPLOAD_SETTINGS } from '$lib/types/upload-config';
 import type { DiscoverySettings } from '$lib/types/discovery';
 import { DEFAULT_DISCOVERY_SETTINGS } from '$lib/types/discovery';
+import type { RfIrSettings } from '$lib/types/rf-ir';
+import { DEFAULT_RF_IR_SETTINGS } from '$lib/types/rf-ir';
 
 // Session storage structure
 interface SessionStorage {
@@ -35,6 +37,8 @@ export interface AppSettings {
 	uploadSettings: UploadSettings;
 	// Discovery server settings (for mobile companion app)
 	discoverySettings: DiscoverySettings;
+	// RF/IR remote control settings (Broadlink integration)
+	rfIrSettings: RfIrSettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -50,6 +54,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 	eventSession: null,
 	uploadSettings: DEFAULT_UPLOAD_SETTINGS,
 	discoverySettings: DEFAULT_DISCOVERY_SETTINGS,
+	rfIrSettings: DEFAULT_RF_IR_SETTINGS,
 };
 
 // Reactive store for app settings - can be subscribed to by components

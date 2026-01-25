@@ -99,6 +99,18 @@ impl Default for ObsStatus {
     }
 }
 
+/// RF/IR command for API responses
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RfIrCommandInfo {
+    pub id: String,
+    pub name: String,
+    pub slug: String,
+    pub category: String,
+    #[serde(rename = "type")]
+    pub signal_type: String,
+}
+
 /// WebSocket message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
@@ -108,6 +120,9 @@ pub enum WsMessage {
     ObsStatusChanged(ObsStatus),
     StreamStateChanged { streaming: bool },
     RecordStateChanged { recording: bool },
+    // RF/IR events
+    RfIrCommandExecuted { slug: String, success: bool },
+    RfIrCommandList { commands: Vec<RfIrCommandInfo> },
     Ping,
     Pong,
     Error { message: String },
@@ -139,6 +154,21 @@ impl<T: Serialize> ApiResponse<T> {
     }
 }
 
+/// Stored RF/IR command data (subset of full command for API)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredRfIrCommand {
+    pub id: String,
+    pub name: String,
+    pub slug: String,
+    pub device_host: String,
+    pub device_mac: String,
+    pub device_type: String,
+    pub code: String,
+    pub signal_type: String,
+    pub category: String,
+}
+
 /// Shared state for the discovery server
 pub struct DiscoveryServerState {
     /// Current system status (updated by frontend)
@@ -151,6 +181,8 @@ pub struct DiscoveryServerState {
     pub auth_token: Option<String>,
     /// Connected WebSocket client count
     pub connected_clients: RwLock<u32>,
+    /// RF/IR commands (synced from frontend)
+    pub rfir_commands: RwLock<Vec<StoredRfIrCommand>>,
 }
 
 impl DiscoveryServerState {
@@ -162,6 +194,7 @@ impl DiscoveryServerState {
             ws_broadcast,
             auth_token,
             connected_clients: RwLock::new(0),
+            rfir_commands: RwLock::new(Vec::new()),
         }
     }
 
@@ -332,6 +365,13 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/obs/stream/stop", post(obs_stream_stop_handler))
         .route("/api/v1/obs/record/start", post(obs_record_start_handler))
         .route("/api/v1/obs/record/stop", post(obs_record_stop_handler))
+        // RF/IR endpoints
+        .route("/api/v1/rfir/commands", get(rfir_commands_handler))
+        .route("/api/v1/rfir/commands/:slug", get(rfir_command_by_slug_handler))
+        .route("/api/v1/rfir/commands/:slug/execute", post(rfir_execute_handler))
+        // OpenAPI documentation
+        .route("/api/v1/openapi.json", get(openapi_handler))
+        .route("/api/docs", get(swagger_ui_handler))
         // WebSocket
         .route("/ws", get(ws_handler))
         .with_state(state)
@@ -697,4 +737,477 @@ pub type SharedDiscoveryServer = Arc<Mutex<Option<DiscoveryServer>>>;
 /// Create a new shared discovery server instance
 pub fn create_shared_discovery_server() -> SharedDiscoveryServer {
     Arc::new(Mutex::new(None))
+}
+
+// ============================================================================
+// RF/IR Handlers
+// ============================================================================
+
+/// Request body for updating RF/IR commands
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateRfIrCommandsRequest {
+    pub commands: Vec<StoredRfIrCommand>,
+}
+
+/// List all RF/IR commands
+async fn rfir_commands_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    let commands = state.rfir_commands.read().await;
+    let command_infos: Vec<RfIrCommandInfo> = commands
+        .iter()
+        .map(|c| RfIrCommandInfo {
+            id: c.id.clone(),
+            name: c.name.clone(),
+            slug: c.slug.clone(),
+            category: c.category.clone(),
+            signal_type: c.signal_type.clone(),
+        })
+        .collect();
+
+    Json(ApiResponse::success(command_infos)).into_response()
+}
+
+/// Get a specific RF/IR command by slug
+async fn rfir_command_by_slug_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    axum::extract::Path(slug): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    let commands = state.rfir_commands.read().await;
+    let command = commands.iter().find(|c| c.slug == slug);
+
+    match command {
+        Some(cmd) => Json(ApiResponse::success(RfIrCommandInfo {
+            id: cmd.id.clone(),
+            name: cmd.name.clone(),
+            slug: cmd.slug.clone(),
+            category: cmd.category.clone(),
+            signal_type: cmd.signal_type.clone(),
+        }))
+        .into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error(format!("Command not found: {}", slug))),
+        )
+            .into_response(),
+    }
+}
+
+/// Execute an RF/IR command by slug
+async fn rfir_execute_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    axum::extract::Path(slug): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    let commands = state.rfir_commands.read().await;
+    let command = commands.iter().find(|c| c.slug == slug).cloned();
+    drop(commands); // Release the lock before executing
+
+    match command {
+        Some(cmd) => {
+            // Execute the command using the broadlink module
+            match crate::broadlink::send_code(
+                &cmd.device_host,
+                &cmd.device_mac,
+                &cmd.device_type,
+                &cmd.code,
+            )
+            .await
+            {
+                Ok(result) => {
+                    if result.success {
+                        // Broadcast success to WebSocket clients
+                        state.broadcast(WsMessage::RfIrCommandExecuted {
+                            slug: cmd.slug.clone(),
+                            success: true,
+                        });
+
+                        Json(ApiResponse::success(serde_json::json!({
+                            "executed": true,
+                            "command": cmd.name,
+                            "slug": cmd.slug
+                        })))
+                        .into_response()
+                    } else {
+                        // Broadcast failure
+                        state.broadcast(WsMessage::RfIrCommandExecuted {
+                            slug: cmd.slug.clone(),
+                            success: false,
+                        });
+
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(ApiResponse::<()>::error(
+                                result.error.unwrap_or_else(|| "Send failed".to_string()),
+                            )),
+                        )
+                            .into_response()
+                    }
+                }
+                Err(e) => {
+                    state.broadcast(WsMessage::RfIrCommandExecuted {
+                        slug: cmd.slug.clone(),
+                        success: false,
+                    });
+
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::<()>::error(e)),
+                    )
+                        .into_response()
+                }
+            }
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error(format!("Command not found: {}", slug))),
+        )
+            .into_response(),
+    }
+}
+
+// ============================================================================
+// OpenAPI / Swagger Documentation
+// ============================================================================
+
+/// OpenAPI specification
+async fn openapi_handler() -> impl IntoResponse {
+    let spec = serde_json::json!({
+        "openapi": "3.0.3",
+        "info": {
+            "title": "Sermon Helper API",
+            "description": "REST API for controlling Sermon Helper from remote devices",
+            "version": env!("CARGO_PKG_VERSION")
+        },
+        "servers": [
+            {
+                "url": "/api/v1",
+                "description": "API v1"
+            }
+        ],
+        "security": [
+            {
+                "bearerAuth": []
+            }
+        ],
+        "paths": {
+            "/health": {
+                "get": {
+                    "summary": "Health check",
+                    "description": "Check if the server is running",
+                    "tags": ["Health"],
+                    "security": [],
+                    "responses": {
+                        "200": {
+                            "description": "Server is healthy"
+                        }
+                    }
+                }
+            },
+            "/status": {
+                "get": {
+                    "summary": "Get system status",
+                    "description": "Get the current system status",
+                    "tags": ["Status"],
+                    "responses": {
+                        "200": {
+                            "description": "System status"
+                        },
+                        "401": {
+                            "description": "Unauthorized"
+                        }
+                    }
+                }
+            },
+            "/obs/status": {
+                "get": {
+                    "summary": "Get OBS status",
+                    "description": "Get the current OBS connection and streaming status",
+                    "tags": ["OBS"],
+                    "responses": {
+                        "200": {
+                            "description": "OBS status"
+                        }
+                    }
+                }
+            },
+            "/obs/stream/start": {
+                "post": {
+                    "summary": "Start streaming",
+                    "description": "Start OBS streaming",
+                    "tags": ["OBS"],
+                    "responses": {
+                        "200": {
+                            "description": "Stream started"
+                        }
+                    }
+                }
+            },
+            "/obs/stream/stop": {
+                "post": {
+                    "summary": "Stop streaming",
+                    "description": "Stop OBS streaming",
+                    "tags": ["OBS"],
+                    "responses": {
+                        "200": {
+                            "description": "Stream stopped"
+                        }
+                    }
+                }
+            },
+            "/obs/record/start": {
+                "post": {
+                    "summary": "Start recording",
+                    "description": "Start OBS recording",
+                    "tags": ["OBS"],
+                    "responses": {
+                        "200": {
+                            "description": "Recording started"
+                        }
+                    }
+                }
+            },
+            "/obs/record/stop": {
+                "post": {
+                    "summary": "Stop recording",
+                    "description": "Stop OBS recording",
+                    "tags": ["OBS"],
+                    "responses": {
+                        "200": {
+                            "description": "Recording stopped"
+                        }
+                    }
+                }
+            },
+            "/rfir/commands": {
+                "get": {
+                    "summary": "List RF/IR commands",
+                    "description": "Get all configured RF/IR remote control commands",
+                    "tags": ["RF/IR"],
+                    "responses": {
+                        "200": {
+                            "description": "List of commands",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/RfIrCommand"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/rfir/commands/{slug}": {
+                "get": {
+                    "summary": "Get RF/IR command by slug",
+                    "description": "Get a specific RF/IR command by its URL-safe slug",
+                    "tags": ["RF/IR"],
+                    "parameters": [
+                        {
+                            "name": "slug",
+                            "in": "path",
+                            "required": true,
+                            "schema": {
+                                "type": "string"
+                            },
+                            "description": "Command slug (e.g., 'projector-power-on')"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Command details"
+                        },
+                        "404": {
+                            "description": "Command not found"
+                        }
+                    }
+                }
+            },
+            "/rfir/commands/{slug}/execute": {
+                "post": {
+                    "summary": "Execute RF/IR command",
+                    "description": "Send the IR/RF signal for the specified command",
+                    "tags": ["RF/IR"],
+                    "parameters": [
+                        {
+                            "name": "slug",
+                            "in": "path",
+                            "required": true,
+                            "schema": {
+                                "type": "string"
+                            },
+                            "description": "Command slug to execute"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Command executed successfully"
+                        },
+                        "404": {
+                            "description": "Command not found"
+                        },
+                        "500": {
+                            "description": "Failed to execute command"
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "securitySchemes": {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "description": "Bearer token authentication"
+                }
+            },
+            "schemas": {
+                "RfIrCommand": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Unique identifier"
+                        },
+                        "name": {
+                            "type": "string",
+                            "description": "Display name"
+                        },
+                        "slug": {
+                            "type": "string",
+                            "description": "URL-safe identifier for API access"
+                        },
+                        "category": {
+                            "type": "string",
+                            "description": "Command category (projector, screen, hvac, etc.)"
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["ir", "rf"],
+                            "description": "Signal type"
+                        }
+                    }
+                },
+                "SystemStatus": {
+                    "type": "object",
+                    "properties": {
+                        "obsConnected": { "type": "boolean" },
+                        "obsStreaming": { "type": "boolean" },
+                        "obsRecording": { "type": "boolean" },
+                        "rodeInterface": { "type": "boolean" },
+                        "mainDisplay": { "type": "boolean" },
+                        "secondaryDisplay": { "type": "boolean" },
+                        "youtubeLoggedIn": { "type": "boolean" }
+                    }
+                },
+                "ObsStatus": {
+                    "type": "object",
+                    "properties": {
+                        "connected": { "type": "boolean" },
+                        "streaming": { "type": "boolean" },
+                        "recording": { "type": "boolean" },
+                        "streamTimecode": { "type": "string", "nullable": true },
+                        "recordTimecode": { "type": "string", "nullable": true }
+                    }
+                }
+            }
+        }
+    });
+
+    Json(spec)
+}
+
+/// Swagger UI HTML page
+async fn swagger_ui_handler() -> impl IntoResponse {
+    let html = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sermon Helper API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        body { margin: 0; }
+        .swagger-ui .topbar { display: none; }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+        window.onload = function() {
+            SwaggerUIBundle({
+                url: "/api/v1/openapi.json",
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout",
+                persistAuthorization: true
+            });
+        };
+    </script>
+</body>
+</html>"#;
+
+    axum::response::Html(html)
+}
+
+// ============================================================================
+// RF/IR Commands Sync
+// ============================================================================
+
+impl DiscoveryServer {
+    /// Update the RF/IR commands from the frontend
+    pub async fn update_rfir_commands(&self, commands: Vec<StoredRfIrCommand>) {
+        *self.state.rfir_commands.write().await = commands.clone();
+
+        // Broadcast the updated command list
+        let command_infos: Vec<RfIrCommandInfo> = commands
+            .iter()
+            .map(|c| RfIrCommandInfo {
+                id: c.id.clone(),
+                name: c.name.clone(),
+                slug: c.slug.clone(),
+                category: c.category.clone(),
+                signal_type: c.signal_type.clone(),
+            })
+            .collect();
+
+        self.state.broadcast(WsMessage::RfIrCommandList {
+            commands: command_infos,
+        });
+    }
 }

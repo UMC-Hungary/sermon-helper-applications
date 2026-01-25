@@ -6,7 +6,7 @@
 use crate::discovery_server::{
     create_shared_discovery_server, generate_auth_token, get_categorized_addresses,
     get_local_addresses, DiscoveryServer, DiscoveryServerInfo, DiscoveryServerStatus,
-    NetworkAddresses, ObsStatus, SharedDiscoveryServer, SystemStatus,
+    NetworkAddresses, ObsStatus, SharedDiscoveryServer, StoredRfIrCommand, SystemStatus,
 };
 use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter};
@@ -130,6 +130,22 @@ pub async fn update_discovery_obs_status(status: ObsStatus) -> Result<(), String
 
     if let Some(ref server) = *server_guard {
         server.update_obs_status(status).await;
+        Ok(())
+    } else {
+        // Server not running, ignore silently
+        Ok(())
+    }
+}
+
+/// Update RF/IR commands (called by frontend when commands change)
+/// This syncs the commands to the discovery server for API access
+#[tauri::command]
+pub async fn update_discovery_rfir_commands(commands: Vec<StoredRfIrCommand>) -> Result<(), String> {
+    let server_lock = get_server();
+    let server_guard = server_lock.lock().await;
+
+    if let Some(ref server) = *server_guard {
+        server.update_rfir_commands(commands).await;
         Ok(())
     } else {
         // Server not running, ignore silently

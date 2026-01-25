@@ -5,7 +5,8 @@
 			"events": "Service Events",
 			"bibleEditor": "Bible Editor",
 			"obsConfig": "OBS Configuration",
-			"settings": "Settings"
+			"settings": "Settings",
+			"remoteControl": "Remote Control"
 		},
 		"systemStatus": {
 			"title": "System Status",

@@ -5,6 +5,7 @@
 	import ImportExportSettings from '$lib/components/import-export-settings.svelte';
 	import UpdateSettings from '$lib/components/update-settings.svelte';
 	import DiscoverySettings from '$lib/components/discovery-settings.svelte';
+	import RfIrSettings from '$lib/components/rf-ir-settings.svelte';
 </script>
 
 <div class="mt-12 lg:mt-0">
@@ -16,6 +17,7 @@
 	<div class="space-y-6">
 		<ObsConnectionSettings />
 		<DiscoverySettings />
+		<RfIrSettings />
 	</div>
 	<div class="space-y-6">
 		<ObsDeviceConfigs />

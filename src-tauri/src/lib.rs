@@ -1,4 +1,6 @@
 mod bible;
+mod broadlink;
+mod broadlink_commands;
 mod discovery_commands;
 mod discovery_server;
 mod local_server;
@@ -6,10 +8,14 @@ mod mdns_service;
 mod video_upload;
 
 use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
+use broadlink_commands::{
+    broadlink_discover, broadlink_learn, broadlink_cancel_learn,
+    broadlink_send, broadlink_test_device
+};
 use discovery_commands::{
     start_discovery_server, stop_discovery_server, get_discovery_server_status,
     generate_discovery_auth_token, get_local_ip_addresses, get_network_addresses,
-    update_discovery_system_status, update_discovery_obs_status
+    update_discovery_system_status, update_discovery_obs_status, update_discovery_rfir_commands
 };
 use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
 use video_upload::{
@@ -70,7 +76,14 @@ pub fn run() {
             get_local_ip_addresses,
             get_network_addresses,
             update_discovery_system_status,
-            update_discovery_obs_status
+            update_discovery_obs_status,
+            update_discovery_rfir_commands,
+            // Broadlink RF/IR commands
+            broadlink_discover,
+            broadlink_learn,
+            broadlink_cancel_learn,
+            broadlink_send,
+            broadlink_test_device
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

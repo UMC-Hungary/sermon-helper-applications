@@ -72,6 +72,8 @@ export async function importSettings(data: File | string): Promise<void> {
 		'youtubeOAuthConfig',
 		'obsDevicesSettings',
 		'pptxOutputPath',
+		'discoverySettings',
+		'rfIrSettings',
 	];
 
 	for (const key of validKeys) {
