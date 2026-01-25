@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, RefreshCw, Check, FileText, FolderOpen, AlertCircle, Radio } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Youtube, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, Edit, LogIn, RefreshCw, Check, FileText, FolderOpen, AlertCircle, Radio, Subtitles } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -205,6 +205,7 @@
 	const navItems = [
 		{ id: '/events', labelKey: 'sidebar.nav.events', icon: CalendarDays },
 		{ id: '/rf-ir', labelKey: 'sidebar.nav.remoteControl', icon: Radio },
+		{ id: '/obs-caption', labelKey: 'sidebar.nav.obsCaption', icon: Subtitles },
 		{ id: '/obs-config', labelKey: 'sidebar.nav.settings', icon: Settings },
 	];
 </script>

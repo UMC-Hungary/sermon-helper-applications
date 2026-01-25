@@ -6,7 +6,8 @@
 			"bibleEditor": "Biblia Szerkesztő",
 			"obsConfig": "OBS Konfiguráció",
 			"settings": "Beállítások",
-			"remoteControl": "Távvezérlő"
+			"remoteControl": "Távvezérlő",
+			"obsCaption": "OBS Felirat"
 		},
 		"systemStatus": {
 			"title": "Rendszer Állapot",

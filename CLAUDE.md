@@ -66,4 +66,4 @@ Two SystemStatus definitions exist:
 - `src/lib/types.ts` - Nested structure (outdated, to be consolidated)
 
 ## Planning Rules
-- Always name plan files with the format: PLAN-{feature-name}.md' >> ~/.claude/CLAUDE.md
+- Always name plan files with the format: PLAN-{feature-name}.md under the `plans` folder.

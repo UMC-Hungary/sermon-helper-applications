@@ -6,7 +6,8 @@
 			"bibleEditor": "Bible Editor",
 			"obsConfig": "OBS Configuration",
 			"settings": "Settings",
-			"remoteControl": "Remote Control"
+			"remoteControl": "Remote Control",
+			"obsCaption": "OBS Caption"
 		},
 		"systemStatus": {
 			"title": "System Status",

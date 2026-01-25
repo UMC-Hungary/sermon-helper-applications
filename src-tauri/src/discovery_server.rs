@@ -369,6 +369,8 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/rfir/commands", get(rfir_commands_handler))
         .route("/api/v1/rfir/commands/:slug", get(rfir_command_by_slug_handler))
         .route("/api/v1/rfir/commands/:slug/execute", post(rfir_execute_handler))
+        // OBS Caption endpoint (embeddable HTML for OBS browser source)
+        .route("/caption", get(caption_handler))
         // OpenAPI documentation
         .route("/api/v1/openapi.json", get(openapi_handler))
         .route("/api/docs", get(swagger_ui_handler))
@@ -505,6 +507,198 @@ async fn obs_record_stop_handler(
         "message": "Record stop command sent"
     })))
     .into_response()
+}
+
+// ============================================================================
+// OBS Caption Handler
+// ============================================================================
+
+/// Query parameters for caption endpoint
+#[derive(Debug, Deserialize)]
+struct CaptionQuery {
+    #[serde(rename = "type", default = "default_caption_type")]
+    caption_type: String,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    bold: String,
+    #[serde(default)]
+    light: String,
+    #[serde(default = "default_color")]
+    color: String,
+    #[serde(rename = "showLogo", default = "default_show_logo")]
+    show_logo: String,
+    #[serde(default)]
+    logo: String,
+}
+
+fn default_caption_type() -> String {
+    "caption".to_string()
+}
+
+fn default_color() -> String {
+    "black".to_string()
+}
+
+fn default_show_logo() -> String {
+    "visible".to_string()
+}
+
+/// Generate embeddable caption HTML for OBS browser source
+async fn caption_handler(
+    axum::extract::Query(params): axum::extract::Query<CaptionQuery>,
+) -> impl IntoResponse {
+    let height = if params.caption_type == "full" { "1080px" } else { "150px" };
+
+    let bg_color = match params.color.as_str() {
+        "red" => "#8B0000",
+        "blue" => "#1a365d",
+        "green" => "#1a4d1a",
+        _ => "#000000", // black default
+    };
+
+    let show_logo = params.show_logo == "visible";
+
+    // Decode the SVG logo if provided (URL-encoded)
+    let logo_svg = if show_logo && !params.logo.is_empty() {
+        urlencoding::decode(&params.logo)
+            .map(|s| s.into_owned())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let logo_html = if show_logo && !logo_svg.is_empty() {
+        format!(r#"<div class="logo">{}</div>"#, logo_svg)
+    } else {
+        String::new()
+    };
+
+    // Build content sections
+    let title_html = if !params.title.is_empty() {
+        format!(r#"<div class="title">{}</div>"#, html_escape(&params.title))
+    } else {
+        String::new()
+    };
+
+    let bold_html = if !params.bold.is_empty() {
+        format!(r#"<span class="bold">{}</span>"#, html_escape(&params.bold))
+    } else {
+        String::new()
+    };
+
+    let light_html = if !params.light.is_empty() {
+        format!(r#"<span class="light">{}</span>"#, html_escape(&params.light))
+    } else {
+        String::new()
+    };
+
+    let text_line = if !bold_html.is_empty() || !light_html.is_empty() {
+        format!(r#"<div class="text-line">{}{}{}</div>"#,
+            bold_html,
+            if !bold_html.is_empty() && !light_html.is_empty() { " " } else { "" },
+            light_html
+        )
+    } else {
+        String::new()
+    };
+
+    let html = format!(r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Caption</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        body {{
+            width: 100vw;
+            height: {height};
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }}
+
+        .caption-container {{
+            width: 100%;
+            height: 100%;
+            background-color: {bg_color};
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            gap: 30px;
+        }}
+
+        .logo {{
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+
+        .logo svg {{
+            height: 80px;
+            width: auto;
+            max-width: 120px;
+        }}
+
+        .content {{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+        }}
+
+        .title {{
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+
+        .text-line {{
+            font-size: 28px;
+            line-height: 1.3;
+        }}
+
+        .bold {{
+            font-weight: 600;
+        }}
+
+        .light {{
+            font-weight: 300;
+            opacity: 0.9;
+        }}
+    </style>
+</head>
+<body>
+    <div class="caption-container">
+        {logo_html}
+        <div class="content">
+            {title_html}
+            {text_line}
+        </div>
+    </div>
+</body>
+</html>"#);
+
+    axum::response::Html(html)
+}
+
+/// Escape HTML special characters
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 // ============================================================================
