@@ -530,6 +530,14 @@ struct CaptionQuery {
     show_logo: String,
     #[serde(default)]
     logo: String,
+    #[serde(default = "default_resolution")]
+    resolution: String,
+    /// Explicit width override (pixels)
+    #[serde(default)]
+    width: Option<u32>,
+    /// Explicit height override (pixels)
+    #[serde(default)]
+    height: Option<u32>,
 }
 
 fn default_caption_type() -> String {
@@ -544,11 +552,33 @@ fn default_show_logo() -> String {
     "visible".to_string()
 }
 
+fn default_resolution() -> String {
+    "1080p".to_string()
+}
+
 /// Generate embeddable caption HTML for OBS browser source
 async fn caption_handler(
     axum::extract::Query(params): axum::extract::Query<CaptionQuery>,
 ) -> impl IntoResponse {
-    let height = if params.caption_type == "full" { "1080px" } else { "150px" };
+    // Resolution-based dimensions
+    let (base_width, base_height) = match params.resolution.as_str() {
+        "4k" => (3840u32, 2160u32),
+        _ => (1920u32, 1080u32), // 1080p default
+    };
+
+    // Calculate dimensions
+    let (width, height) = if let (Some(w), Some(h)) = (params.width, params.height) {
+        (w, h)
+    } else if params.caption_type == "full" {
+        (base_width, base_height)
+    } else {
+        // Caption bar: ~14% of screen height
+        let caption_height = (base_height as f32 * 0.14) as u32;
+        (base_width, caption_height)
+    };
+
+    // Scale factor for 4K (font sizes, padding, etc.)
+    let scale = if params.resolution == "4k" { 2.0 } else { 1.0 };
 
     let bg_color = match params.color.as_str() {
         "red" => "#8B0000",
@@ -603,6 +633,15 @@ async fn caption_handler(
         String::new()
     };
 
+    // Scaled dimensions for CSS
+    let padding = (40.0 * scale) as u32;
+    let gap = (30.0 * scale) as u32;
+    let logo_height = (80.0 * scale) as u32;
+    let logo_max_width = (120.0 * scale) as u32;
+    let title_size = (36.0 * scale) as u32;
+    let text_size = (28.0 * scale) as u32;
+    let content_gap = (8.0 * scale) as u32;
+
     let html = format!(r#"<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -617,8 +656,8 @@ async fn caption_handler(
         }}
 
         body {{
-            width: 100vw;
-            height: {height};
+            width: {width}px;
+            height: {height}px;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
         }}
@@ -629,8 +668,8 @@ async fn caption_handler(
             background-color: {bg_color};
             display: flex;
             align-items: center;
-            padding: 0 40px;
-            gap: 30px;
+            padding: 0 {padding}px;
+            gap: {gap}px;
         }}
 
         .logo {{
@@ -641,9 +680,9 @@ async fn caption_handler(
         }}
 
         .logo svg {{
-            height: 80px;
+            height: {logo_height}px;
             width: auto;
-            max-width: 120px;
+            max-width: {logo_max_width}px;
         }}
 
         .content {{
@@ -651,12 +690,12 @@ async fn caption_handler(
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 8px;
+            gap: {content_gap}px;
             color: white;
         }}
 
         .title {{
-            font-size: 36px;
+            font-size: {title_size}px;
             font-weight: 700;
             line-height: 1.2;
             text-transform: uppercase;
@@ -664,7 +703,7 @@ async fn caption_handler(
         }}
 
         .text-line {{
-            font-size: 28px;
+            font-size: {text_size}px;
             line-height: 1.3;
         }}
 

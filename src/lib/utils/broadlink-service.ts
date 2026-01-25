@@ -277,6 +277,22 @@ export const broadlinkService = {
 	},
 
 	/**
+	 * List available network interfaces (for debugging)
+	 */
+	async listNetworkInterfaces(): Promise<Array<[string, string]>> {
+		if (!isTauri()) {
+			return [];
+		}
+
+		try {
+			return await invoke<Array<[string, string]>>('broadlink_list_interfaces');
+		} catch (error) {
+			console.error('Failed to list network interfaces:', error);
+			return [];
+		}
+	},
+
+	/**
 	 * Sync RF/IR commands to the discovery server for API access
 	 */
 	async syncCommandsToServer(): Promise<void> {

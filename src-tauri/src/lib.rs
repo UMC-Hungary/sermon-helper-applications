@@ -10,7 +10,7 @@ mod video_upload;
 use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
 use broadlink_commands::{
     broadlink_discover, broadlink_learn, broadlink_cancel_learn,
-    broadlink_send, broadlink_test_device
+    broadlink_send, broadlink_test_device, broadlink_list_interfaces
 };
 use discovery_commands::{
     start_discovery_server, stop_discovery_server, get_discovery_server_status,
@@ -83,7 +83,8 @@ pub fn run() {
             broadlink_learn,
             broadlink_cancel_learn,
             broadlink_send,
-            broadlink_test_device
+            broadlink_test_device,
+            broadlink_list_interfaces
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

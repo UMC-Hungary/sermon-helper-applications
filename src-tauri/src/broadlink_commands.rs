@@ -47,3 +47,9 @@ pub async fn broadlink_test_device(
 ) -> Result<bool, String> {
     broadlink::test_device(&host, &mac, &devtype).await
 }
+
+/// List available network interfaces (for debugging)
+#[tauri::command]
+pub async fn broadlink_list_interfaces() -> Result<Vec<(String, String)>, String> {
+    broadlink::list_network_interfaces().await
+}
