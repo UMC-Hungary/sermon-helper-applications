@@ -44,17 +44,26 @@
 			if (appSettingsValue) {
 				settings = { ...DEFAULT_DISCOVERY_SETTINGS, ...appSettingsValue };
 			}
+		} catch (error) {
+			console.error('Failed to load discovery settings:', error);
+		}
 
+		try {
 			// Initialize the discovery server manager
 			await discoveryServerManager.init();
+		} catch (error) {
+			console.error('Failed to initialize discovery server manager:', error);
+		}
 
+		try {
 			// Get categorized network addresses
 			networkAddresses = await discoveryServerManager.getNetworkAddresses();
 		} catch (error) {
-			console.error('Failed to load discovery settings:', error);
-		} finally {
-			isLoading = false;
+			console.error('Failed to get network addresses:', error);
 		}
+
+		// Always set isLoading to false even if some operations fail
+		isLoading = false;
 	});
 
 	async function handleStartServer() {

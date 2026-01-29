@@ -36,6 +36,8 @@
 	let isLoading = true;
 	let isSaving = false;
 	let isDiscovering = false;
+	let showDebug = false;
+	let networkInterfaces: Array<[string, string]> = [];
 
 	// Dialog states
 	let showLearnDialog = false;
@@ -46,6 +48,14 @@
 	let enabled = false;
 	let autoDiscovery = true;
 	let discoveryTimeout = 5;
+
+	async function loadNetworkInterfaces() {
+		try {
+			networkInterfaces = await broadlinkService.listNetworkInterfaces();
+		} catch (error) {
+			console.error('Failed to load network interfaces:', error);
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -88,13 +98,19 @@
 	async function handleDiscoverDevices() {
 		isDiscovering = true;
 		try {
+			// Also load network interfaces for debugging
+			loadNetworkInterfaces();
+
 			const result = await broadlinkService.discoverAndAddDevices(discoveryTimeout);
 			if (result.found === 0) {
 				toast({
 					title: 'No Devices Found',
-					description: 'No Broadlink devices were found on the network',
-					variant: 'warning'
+					description: 'Try adding your Broadlink device manually using its IP and MAC address (found in your router admin page)',
+					variant: 'warning',
+					duration: 8000
 				});
+				// Auto-expand debug section to help troubleshooting
+				showDebug = true;
 			} else {
 				toast({
 					title: 'Discovery Complete',
@@ -106,9 +122,13 @@
 			const message = error instanceof Error ? error.message : String(error);
 			toast({
 				title: 'Discovery Failed',
-				description: message,
-				variant: 'error'
+				description: `${message}. Try adding the device manually instead.`,
+				variant: 'error',
+				duration: 8000
 			});
+			// Auto-expand debug section to help troubleshooting
+			showDebug = true;
+			loadNetworkInterfaces();
 		} finally {
 			isDiscovering = false;
 		}
@@ -223,6 +243,31 @@
 								Discover Devices
 							{/if}
 						</Button>
+
+						<!-- Debug: Network Interfaces -->
+						<div class="pt-2 border-t">
+							<button
+								type="button"
+								class="text-xs text-muted-foreground hover:text-foreground"
+								onclick={() => { showDebug = !showDebug; if (showDebug) loadNetworkInterfaces(); }}
+							>
+								{showDebug ? '▼' : '▶'} Debug: Network Interfaces
+							</button>
+							{#if showDebug}
+								<div class="mt-2 p-2 bg-muted rounded text-xs font-mono space-y-1">
+									{#if networkInterfaces.length === 0}
+										<p class="text-muted-foreground">No interfaces found or loading...</p>
+									{:else}
+										{#each networkInterfaces as [name, ip]}
+											<div class="flex justify-between">
+												<span class="text-muted-foreground">{name}:</span>
+												<span>{ip}</span>
+											</div>
+										{/each}
+									{/if}
+								</div>
+							{/if}
+						</div>
 					</div>
 
 					<!-- Device List -->
