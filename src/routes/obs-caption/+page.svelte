@@ -35,7 +35,6 @@
 	let isSaving = false;
 	let urlCopied = false;
 	let isExporting = false;
-	let previewRef: HTMLDivElement;
 
 	onMount(async () => {
 		try {
@@ -58,14 +57,26 @@
 			case 'red': return '#8B0000';
 			case 'blue': return '#1a365d';
 			case 'green': return '#1a4d1a';
+			case 'white': return '#ffffff';
 			default: return '#000000';
 		}
+	}
+
+	// Get text color based on background
+	function getTextColor(color: string): string {
+		return color === 'white' ? '#000000' : '#ffffff';
+	}
+
+	// Get accent color (for service info)
+	function getAccentColor(color: string): string {
+		if (color === 'white' || color === 'black') return '#dc2626'; // red
+		return '#ffffff'; // white on colored backgrounds
 	}
 
 	// Get dimensions for current settings
 	$: exportDimensions = getExportDimensions(settings.resolution, settings.aspectRatio);
 	$: captionHeight = getCaptionHeight(settings.type, settings.resolution);
-	$: previewWidth = settings.type === 'full' ? exportDimensions.width : exportDimensions.width;
+	$: previewWidth = exportDimensions.width;
 	$: previewHeight = settings.type === 'full' ? exportDimensions.height : captionHeight;
 
 	// Generate the caption URL
@@ -142,7 +153,7 @@
 		await handleSave();
 	}
 
-	// Export to PNG
+	// Export to PNG using canvas
 	async function handleExport() {
 		isExporting = true;
 		try {
@@ -166,91 +177,140 @@
 
 			// Scale factor for 4K
 			const scale = settings.resolution === '4k' ? 2 : 1;
-			const padding = 40 * scale;
-			const gap = 30 * scale;
+			const paddingX = width * 0.1; // 10% horizontal padding
+			const paddingY = height * 0.05; // 5% vertical padding
 
-			let contentX = padding;
+			// For full-screen service announcement style
+			if (settings.type === 'full') {
+				let currentY = paddingY;
 
-			// Draw logo if present
-			if (settings.showLogo && settings.svgLogo) {
-				const logoHeight = 80 * scale;
-				const logoMaxWidth = 120 * scale;
-
-				// Convert SVG to image
-				const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
-				const svgUrl = URL.createObjectURL(svgBlob);
-				const logoImg = new window.Image();
-
-				await new Promise<void>((resolve, reject) => {
-					logoImg.onload = () => resolve();
-					logoImg.onerror = reject;
-					logoImg.src = svgUrl;
-				});
-
-				// Calculate logo dimensions maintaining aspect ratio
-				const logoAspect = logoImg.width / logoImg.height;
-				let drawWidth = logoHeight * logoAspect;
-				let drawHeight = logoHeight;
-
-				if (drawWidth > logoMaxWidth) {
-					drawWidth = logoMaxWidth;
-					drawHeight = logoMaxWidth / logoAspect;
-				}
-
-				const logoY = (height - drawHeight) / 2;
-				ctx.drawImage(logoImg, contentX, logoY, drawWidth, drawHeight);
-
-				URL.revokeObjectURL(svgUrl);
-				contentX += drawWidth + gap;
-			}
-
-			// Draw text
-			ctx.fillStyle = 'white';
-			const titleSize = 36 * scale;
-			const textSize = 28 * scale;
-			const contentGap = 8 * scale;
-
-			let textY = height / 2;
-
-			// Calculate total text height
-			let totalTextHeight = 0;
-			if (settings.title) totalTextHeight += titleSize;
-			if (settings.boldText || settings.lightText) {
-				if (settings.title) totalTextHeight += contentGap;
-				totalTextHeight += textSize;
-			}
-
-			textY = (height - totalTextHeight) / 2;
-
-			// Draw title
-			if (settings.title) {
-				ctx.font = `700 ${titleSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-				ctx.textBaseline = 'top';
-				ctx.fillText(settings.title.toUpperCase(), contentX, textY);
-				textY += titleSize + contentGap;
-			}
-
-			// Draw bold and light text
-			if (settings.boldText || settings.lightText) {
-				let textX = contentX;
-
-				if (settings.boldText) {
-					ctx.font = `600 ${textSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+				// Draw title (large name)
+				if (settings.title) {
+					const titleSize = Math.min(width * 0.1, height * 0.15); // Responsive size
+					ctx.font = `700 ${titleSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+					ctx.fillStyle = getTextColor(settings.color);
 					ctx.textBaseline = 'top';
-					ctx.fillText(settings.boldText, textX, textY);
-					textX += ctx.measureText(settings.boldText).width;
+					ctx.fillText(settings.title, paddingX, currentY);
+					currentY += titleSize * 1.2;
 				}
 
-				if (settings.boldText && settings.lightText) {
-					textX += ctx.measureText(' ').width;
-				}
-
-				if (settings.lightText) {
-					ctx.font = `300 ${textSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-					ctx.globalAlpha = 0.9;
+				// Draw service info (bold • light format)
+				if (settings.boldText || settings.lightText) {
+					const infoSize = Math.min(width * 0.03, height * 0.05);
+					ctx.font = `700 ${infoSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+					ctx.fillStyle = getAccentColor(settings.color);
 					ctx.textBaseline = 'top';
-					ctx.fillText(settings.lightText, textX, textY);
-					ctx.globalAlpha = 1;
+
+					let infoText = '';
+					if (settings.boldText) infoText += settings.boldText.toUpperCase();
+					if (settings.boldText && settings.lightText) infoText += '  •  ';
+					if (settings.lightText) infoText += settings.lightText.toUpperCase();
+
+					ctx.fillText(infoText, paddingX, currentY + (infoSize * 0.5));
+				}
+
+				// Draw logo at bottom
+				if (settings.showLogo && settings.svgLogo) {
+					const logoMaxWidth = width * 0.25;
+					const logoMaxHeight = height * 0.12;
+
+					const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
+					const svgUrl = URL.createObjectURL(svgBlob);
+					const logoImg = new window.Image();
+
+					await new Promise<void>((resolve, reject) => {
+						logoImg.onload = () => resolve();
+						logoImg.onerror = reject;
+						logoImg.src = svgUrl;
+					});
+
+					const logoAspect = logoImg.width / logoImg.height;
+					let drawWidth = logoMaxHeight * logoAspect;
+					let drawHeight = logoMaxHeight;
+
+					if (drawWidth > logoMaxWidth) {
+						drawWidth = logoMaxWidth;
+						drawHeight = logoMaxWidth / logoAspect;
+					}
+
+					const logoY = height - paddingY - drawHeight;
+					ctx.drawImage(logoImg, paddingX, logoY, drawWidth, drawHeight);
+					URL.revokeObjectURL(svgUrl);
+				}
+			} else {
+				// Caption bar style (original)
+				const gap = 30 * scale;
+				let contentX = paddingX;
+
+				// Draw logo if present
+				if (settings.showLogo && settings.svgLogo) {
+					const logoHeight = height * 0.55;
+					const logoMaxWidth = 120 * scale;
+
+					const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
+					const svgUrl = URL.createObjectURL(svgBlob);
+					const logoImg = new window.Image();
+
+					await new Promise<void>((resolve, reject) => {
+						logoImg.onload = () => resolve();
+						logoImg.onerror = reject;
+						logoImg.src = svgUrl;
+					});
+
+					const logoAspect = logoImg.width / logoImg.height;
+					let drawWidth = logoHeight * logoAspect;
+					let drawHeight = logoHeight;
+
+					if (drawWidth > logoMaxWidth) {
+						drawWidth = logoMaxWidth;
+						drawHeight = logoMaxWidth / logoAspect;
+					}
+
+					const logoY = (height - drawHeight) / 2;
+					ctx.drawImage(logoImg, contentX, logoY, drawWidth, drawHeight);
+					URL.revokeObjectURL(svgUrl);
+					contentX += drawWidth + gap;
+				}
+
+				// Draw text
+				ctx.fillStyle = getTextColor(settings.color);
+				const titleSize = 36 * scale;
+				const textSize = 28 * scale;
+				const contentGap = 8 * scale;
+
+				let totalTextHeight = 0;
+				if (settings.title) totalTextHeight += titleSize;
+				if (settings.boldText || settings.lightText) {
+					if (settings.title) totalTextHeight += contentGap;
+					totalTextHeight += textSize;
+				}
+
+				let textY = (height - totalTextHeight) / 2;
+
+				if (settings.title) {
+					ctx.font = `700 ${titleSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+					ctx.textBaseline = 'top';
+					ctx.fillText(settings.title.toUpperCase(), contentX, textY);
+					textY += titleSize + contentGap;
+				}
+
+				if (settings.boldText || settings.lightText) {
+					let textX = contentX;
+
+					if (settings.boldText) {
+						ctx.font = `600 ${textSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+						ctx.textBaseline = 'top';
+						ctx.fillText(settings.boldText, textX, textY);
+						textX += ctx.measureText(settings.boldText).width + ctx.measureText(' ').width;
+					}
+
+					if (settings.lightText) {
+						ctx.font = `300 ${textSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+						ctx.globalAlpha = 0.9;
+						ctx.textBaseline = 'top';
+						ctx.fillText(settings.lightText, textX, textY);
+						ctx.globalAlpha = 1;
+					}
 				}
 			}
 
@@ -262,7 +322,6 @@
 				}, 'image/png');
 			});
 
-			// Create download link
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
@@ -274,7 +333,7 @@
 
 			toast({
 				title: 'Export Complete',
-				description: `Image exported at ${width}x${height}`,
+				description: `Image exported at ${width}x${settings.type === 'full' ? exportDimensions.height : captionHeight}`,
 				variant: 'success'
 			});
 		} catch (error) {
@@ -347,40 +406,48 @@
 						</div>
 					</div>
 
-					<!-- Title -->
+					<!-- Title / Name -->
 					<div class="space-y-2">
-						<Label for="caption-title">Title</Label>
+						<Label for="caption-title">{settings.type === 'full' ? 'Name' : 'Title'}</Label>
 						<Input
 							id="caption-title"
 							type="text"
 							bind:value={settings.title}
-							placeholder="e.g., SUNDAY SERVICE"
+							placeholder={settings.type === 'full' ? 'e.g., Pásztor Balázs' : 'e.g., SUNDAY SERVICE'}
 							disabled={isLoading}
 						/>
+						<p class="text-xs text-muted-foreground">
+							{settings.type === 'full' ? 'Large display name (speaker name)' : 'Main heading displayed in uppercase'}
+						</p>
 					</div>
 
-					<!-- Bold Text -->
+					<!-- Service Info / Bold Text -->
 					<div class="space-y-2">
-						<Label for="caption-bold">Bold Text</Label>
+						<Label for="caption-bold">{settings.type === 'full' ? 'Service Type' : 'Bold Text'}</Label>
 						<Input
 							id="caption-bold"
 							type="text"
 							bind:value={settings.boldText}
-							placeholder="e.g., Pastor John Smith"
+							placeholder={settings.type === 'full' ? 'e.g., VASÁRNAPI ISTENTISZTELET' : 'e.g., Pastor John Smith'}
 							disabled={isLoading}
 						/>
 					</div>
 
-					<!-- Light Text -->
+					<!-- Secondary Info / Light Text -->
 					<div class="space-y-2">
-						<Label for="caption-light">Light Text</Label>
+						<Label for="caption-light">{settings.type === 'full' ? 'Event Type' : 'Light Text'}</Label>
 						<Input
 							id="caption-light"
 							type="text"
 							bind:value={settings.lightText}
-							placeholder="e.g., Sermon Title"
+							placeholder={settings.type === 'full' ? 'e.g., IGEHIRDETÉS' : 'e.g., Sermon Title'}
 							disabled={isLoading}
 						/>
+						{#if settings.type === 'full'}
+							<p class="text-xs text-muted-foreground">
+								Displayed as: {settings.boldText || 'SERVICE TYPE'} • {settings.lightText || 'EVENT TYPE'}
+							</p>
+						{/if}
 					</div>
 
 					<!-- Color & Logo Row -->
@@ -393,6 +460,7 @@
 								disabled={isLoading}
 								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
+								<option value="white">White</option>
 								<option value="black">Black</option>
 								<option value="red">Red</option>
 								<option value="blue">Blue</option>
@@ -434,6 +502,9 @@
 							rows={4}
 							className="font-mono text-xs"
 						/>
+						<p class="text-xs text-muted-foreground">
+							{settings.type === 'full' ? 'Logo displayed at bottom left' : 'Logo displayed on the left side'}
+						</p>
 					</div>
 
 					<!-- Action Buttons -->
@@ -478,51 +549,110 @@
 			<svelte:fragment slot="content">
 				<div class="space-y-4">
 					<!-- Preview Container -->
-					<div class="rounded-lg overflow-hidden border bg-muted/20">
-						<div
-							bind:this={previewRef}
-							class="w-full relative"
-							style="aspect-ratio: {previewWidth} / {previewHeight}; background-color: {getBgColor(settings.color)};"
-						>
-							<div class="absolute inset-0 flex items-center px-[2%] gap-[1.5%]">
-								<!-- Logo -->
-								{#if settings.showLogo && settings.svgLogo}
-									<div class="flex-shrink-0 flex items-center justify-center h-[55%]">
-										<div class="h-full w-auto [&>svg]:h-full [&>svg]:w-auto [&>svg]:max-w-[80px]">
-											{@html settings.svgLogo}
-										</div>
-									</div>
-								{/if}
+					<div class="rounded-lg overflow-hidden border shadow-lg">
+						{#if settings.type === 'full'}
+							<!-- Full Screen Service Announcement Style -->
+							<div
+								class="w-full relative"
+								style="aspect-ratio: 16 / 9; background-color: {getBgColor(settings.color)};"
+							>
+								<div
+									class="absolute inset-0 flex flex-col justify-between"
+									style="padding: 5% 10%;"
+								>
+									<!-- Content Area -->
+									<div class="flex flex-col">
+										<!-- Large Name -->
+										{#if settings.title}
+											<h1
+												class="font-bold leading-none m-0"
+												style="font-size: clamp(1.5rem, 8vw, 4rem); color: {getTextColor(settings.color)};"
+											>
+												{settings.title}
+											</h1>
+										{/if}
 
-								<!-- Content -->
-								<div class="flex-1 flex flex-col justify-center gap-[2%] text-white">
-									{#if settings.title}
-										<div
-											class="font-bold uppercase tracking-wide leading-tight"
-											style="font-size: clamp(8px, 2.5vw, {settings.type === 'full' ? '36px' : '18px'});"
-										>
-											{settings.title}
-										</div>
-									{/if}
-									{#if settings.boldText || settings.lightText}
-										<div
-											class="leading-tight"
-											style="font-size: clamp(6px, 2vw, {settings.type === 'full' ? '28px' : '14px'});"
-										>
-											{#if settings.boldText}
-												<span class="font-semibold">{settings.boldText}</span>
-											{/if}
-											{#if settings.boldText && settings.lightText}
-												{' '}
-											{/if}
-											{#if settings.lightText}
-												<span class="font-light opacity-90">{settings.lightText}</span>
-											{/if}
+										<!-- Service Info with Dot Separator -->
+										{#if settings.boldText || settings.lightText}
+											<div
+												class="font-bold flex items-center gap-2 mt-2"
+												style="font-size: clamp(0.6rem, 2.5vw, 1.2rem); color: {getAccentColor(settings.color)};"
+											>
+												{#if settings.boldText}
+													<span>{settings.boldText.toUpperCase()}</span>
+												{/if}
+												{#if settings.boldText && settings.lightText}
+													<span
+														class="inline-block rounded-full"
+														style="width: 0.4em; height: 0.4em; background-color: {getAccentColor(settings.color)};"
+													></span>
+												{/if}
+												{#if settings.lightText}
+													<span>{settings.lightText.toUpperCase()}</span>
+												{/if}
+											</div>
+										{/if}
+									</div>
+
+									<!-- Logo at Bottom -->
+									{#if settings.showLogo && settings.svgLogo}
+										<div class="mt-auto w-full max-w-[30%]">
+											<div class="[&>svg]:w-full [&>svg]:h-auto">
+												{@html settings.svgLogo}
+											</div>
 										</div>
 									{/if}
 								</div>
 							</div>
-						</div>
+						{:else}
+							<!-- Caption Bar Style -->
+							<div
+								class="w-full relative"
+								style="aspect-ratio: {previewWidth} / {previewHeight}; background-color: {getBgColor(settings.color)};"
+							>
+								<div class="absolute inset-0 flex items-center px-[2%] gap-[1.5%]">
+									<!-- Logo -->
+									{#if settings.showLogo && settings.svgLogo}
+										<div class="flex-shrink-0 flex items-center justify-center h-[55%]">
+											<div class="h-full w-auto [&>svg]:h-full [&>svg]:w-auto [&>svg]:max-w-[80px]">
+												{@html settings.svgLogo}
+											</div>
+										</div>
+									{/if}
+
+									<!-- Content -->
+									<div
+										class="flex-1 flex flex-col justify-center gap-[2%]"
+										style="color: {getTextColor(settings.color)};"
+									>
+										{#if settings.title}
+											<div
+												class="font-bold uppercase tracking-wide leading-tight"
+												style="font-size: clamp(8px, 2.5vw, 18px);"
+											>
+												{settings.title}
+											</div>
+										{/if}
+										{#if settings.boldText || settings.lightText}
+											<div
+												class="leading-tight"
+												style="font-size: clamp(6px, 2vw, 14px);"
+											>
+												{#if settings.boldText}
+													<span class="font-semibold">{settings.boldText}</span>
+												{/if}
+												{#if settings.boldText && settings.lightText}
+													{' '}
+												{/if}
+												{#if settings.lightText}
+													<span class="font-light opacity-90">{settings.lightText}</span>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<!-- Export Options -->

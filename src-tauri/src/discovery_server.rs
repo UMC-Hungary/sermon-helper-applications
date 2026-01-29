@@ -577,14 +577,13 @@ async fn caption_handler(
         (base_width, caption_height)
     };
 
-    // Scale factor for 4K (font sizes, padding, etc.)
-    let scale = if params.resolution == "4k" { 2.0 } else { 1.0 };
-
-    let bg_color = match params.color.as_str() {
-        "red" => "#8B0000",
-        "blue" => "#1a365d",
-        "green" => "#1a4d1a",
-        _ => "#000000", // black default
+    // Background and text colors
+    let (bg_color, text_color, accent_color) = match params.color.as_str() {
+        "white" => ("#ffffff", "#000000", "#dc2626"),
+        "red" => ("#8B0000", "#ffffff", "#ffffff"),
+        "blue" => ("#1a365d", "#ffffff", "#ffffff"),
+        "green" => ("#1a4d1a", "#ffffff", "#ffffff"),
+        _ => ("#000000", "#ffffff", "#dc2626"), // black default
     };
 
     let show_logo = params.show_logo == "visible";
@@ -598,51 +597,168 @@ async fn caption_handler(
         String::new()
     };
 
-    let logo_html = if show_logo && !logo_svg.is_empty() {
-        format!(r#"<div class="logo">{}</div>"#, logo_svg)
+    // Generate HTML based on caption type
+    let html = if params.caption_type == "full" {
+        // Full-screen service announcement style (v0 template design)
+        let title_html = if !params.title.is_empty() {
+            format!(r#"<h1 class="name-title">{}</h1>"#, html_escape(&params.title))
+        } else {
+            String::new()
+        };
+
+        // Service info with dot separator
+        let service_info = if !params.bold.is_empty() || !params.light.is_empty() {
+            let mut parts = Vec::new();
+            if !params.bold.is_empty() {
+                parts.push(format!("<span>{}</span>", html_escape(&params.bold).to_uppercase()));
+            }
+            if !params.bold.is_empty() && !params.light.is_empty() {
+                parts.push(r#"<span class="dot"></span>"#.to_string());
+            }
+            if !params.light.is_empty() {
+                parts.push(format!("<span>{}</span>", html_escape(&params.light).to_uppercase()));
+            }
+            format!(r#"<div class="service-info">{}</div>"#, parts.join(""))
+        } else {
+            String::new()
+        };
+
+        let logo_html = if show_logo && !logo_svg.is_empty() {
+            format!(r#"<div class="logo-container">{}</div>"#, logo_svg)
+        } else {
+            String::new()
+        };
+
+        format!(r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Caption</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        body {{
+            width: {width}px;
+            height: {height}px;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: {bg_color};
+            color: {text_color};
+        }}
+
+        .aspect-container {{
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5% 10%;
+        }}
+
+        .content {{
+            display: flex;
+            flex-direction: column;
+        }}
+
+        .name-title {{
+            font-size: clamp(48px, 10vw, 180px);
+            font-weight: 700;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
+        }}
+
+        .service-info {{
+            color: {accent_color};
+            font-size: clamp(24px, 3vw, 56px);
+            font-weight: 700;
+            margin-top: clamp(16px, 2vw, 40px);
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }}
+
+        .dot {{
+            display: inline-block;
+            width: 0.5em;
+            height: 0.5em;
+            border-radius: 50%;
+            background-color: {accent_color};
+        }}
+
+        .logo-container {{
+            width: 100%;
+            max-width: 400px;
+            margin-top: auto;
+        }}
+
+        .logo-container svg {{
+            width: 100%;
+            height: auto;
+        }}
+    </style>
+</head>
+<body>
+    <div class="aspect-container">
+        <div class="content">
+            {title_html}
+            {service_info}
+        </div>
+        {logo_html}
+    </div>
+</body>
+</html>"#)
     } else {
-        String::new()
-    };
+        // Caption bar style (original)
+        let scale = if params.resolution == "4k" { 2.0 } else { 1.0 };
+        let padding = (40.0 * scale) as u32;
+        let gap = (30.0 * scale) as u32;
+        let logo_height = (80.0 * scale) as u32;
+        let logo_max_width = (120.0 * scale) as u32;
+        let title_size = (36.0 * scale) as u32;
+        let text_size = (28.0 * scale) as u32;
+        let content_gap = (8.0 * scale) as u32;
 
-    // Build content sections
-    let title_html = if !params.title.is_empty() {
-        format!(r#"<div class="title">{}</div>"#, html_escape(&params.title))
-    } else {
-        String::new()
-    };
+        let logo_html = if show_logo && !logo_svg.is_empty() {
+            format!(r#"<div class="logo">{}</div>"#, logo_svg)
+        } else {
+            String::new()
+        };
 
-    let bold_html = if !params.bold.is_empty() {
-        format!(r#"<span class="bold">{}</span>"#, html_escape(&params.bold))
-    } else {
-        String::new()
-    };
+        let title_html = if !params.title.is_empty() {
+            format!(r#"<div class="title">{}</div>"#, html_escape(&params.title))
+        } else {
+            String::new()
+        };
 
-    let light_html = if !params.light.is_empty() {
-        format!(r#"<span class="light">{}</span>"#, html_escape(&params.light))
-    } else {
-        String::new()
-    };
+        let bold_html = if !params.bold.is_empty() {
+            format!(r#"<span class="bold">{}</span>"#, html_escape(&params.bold))
+        } else {
+            String::new()
+        };
 
-    let text_line = if !bold_html.is_empty() || !light_html.is_empty() {
-        format!(r#"<div class="text-line">{}{}{}</div>"#,
-            bold_html,
-            if !bold_html.is_empty() && !light_html.is_empty() { " " } else { "" },
-            light_html
-        )
-    } else {
-        String::new()
-    };
+        let light_html = if !params.light.is_empty() {
+            format!(r#"<span class="light">{}</span>"#, html_escape(&params.light))
+        } else {
+            String::new()
+        };
 
-    // Scaled dimensions for CSS
-    let padding = (40.0 * scale) as u32;
-    let gap = (30.0 * scale) as u32;
-    let logo_height = (80.0 * scale) as u32;
-    let logo_max_width = (120.0 * scale) as u32;
-    let title_size = (36.0 * scale) as u32;
-    let text_size = (28.0 * scale) as u32;
-    let content_gap = (8.0 * scale) as u32;
+        let text_line = if !bold_html.is_empty() || !light_html.is_empty() {
+            format!(r#"<div class="text-line">{}{}{}</div>"#,
+                bold_html,
+                if !bold_html.is_empty() && !light_html.is_empty() { " " } else { "" },
+                light_html
+            )
+        } else {
+            String::new()
+        };
 
-    let html = format!(r#"<!DOCTYPE html>
+        format!(r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -691,7 +807,7 @@ async fn caption_handler(
             flex-direction: column;
             justify-content: center;
             gap: {content_gap}px;
-            color: white;
+            color: {text_color};
         }}
 
         .title {{
@@ -726,7 +842,8 @@ async fn caption_handler(
         </div>
     </div>
 </body>
-</html>"#);
+</html>"#)
+    };
 
     axum::response::Html(html)
 }
