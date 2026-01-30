@@ -72,9 +72,12 @@
 		learnError = null;
 
 		try {
+			console.log('Starting learning for device:', selectedDeviceId, 'signal type:', signalType);
 			const code = await broadlinkService.startLearning(selectedDeviceId, signalType);
+			console.log('Learning successful, code length:', code?.length);
 			learnedCode = code;
 		} catch (error) {
+			console.error('Learning failed:', error);
 			learnError = error instanceof Error ? error.message : 'Learning failed';
 		} finally {
 			isLearning = false;
@@ -146,77 +149,7 @@
 			</p>
 		</div>
 
-		{#if !learnedCode && !isLearning}
-			<!-- Step 1: Configure -->
-			<div class="space-y-4">
-				<div class="space-y-2">
-					<Label for="learn-device">Device</Label>
-					<select
-						id="learn-device"
-						bind:value={selectedDeviceId}
-						class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-					>
-						{#each $rfIrDevices as device}
-							<option value={device.id}>
-								{device.name} ({device.model})
-							</option>
-						{/each}
-					</select>
-				</div>
-
-				<div class="space-y-2">
-					<Label>Signal Type</Label>
-					<div class="flex gap-4">
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input
-								type="radio"
-								bind:group={signalType}
-								value="ir"
-								class="h-4 w-4"
-							/>
-							<span class="text-sm">Infrared (IR)</span>
-						</label>
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input
-								type="radio"
-								bind:group={signalType}
-								value="rf"
-								class="h-4 w-4"
-							/>
-							<span class="text-sm">Radio Frequency (RF)</span>
-						</label>
-					</div>
-				</div>
-
-				<div class="space-y-2">
-					<Label for="learn-name">Command Name</Label>
-					<Input
-						id="learn-name"
-						bind:value={commandName}
-						placeholder="e.g., Projector Power On"
-					/>
-				</div>
-
-				<div class="space-y-2">
-					<Label for="learn-category">Category</Label>
-					<select
-						id="learn-category"
-						bind:value={commandCategory}
-						class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-					>
-						{#each COMMAND_CATEGORIES as category}
-							<option value={category}>
-								{category.charAt(0).toUpperCase() + category.slice(1)}
-							</option>
-						{/each}
-					</select>
-				</div>
-
-				<Button onclick={handleStartLearning} className="w-full">
-					Start Learning
-				</Button>
-			</div>
-		{:else if isLearning}
+		{#if isLearning}
 			<!-- Step 2: Learning in progress -->
 			<div class="py-8 text-center space-y-4">
 				<div class="relative mx-auto w-16 h-16">
@@ -300,6 +233,76 @@
 						Save Command
 					</Button>
 				</div>
+			</div>
+		{:else}
+			<!-- Step 1: Configure (default form) -->
+			<div class="space-y-4">
+				<div class="space-y-2">
+					<Label for="learn-device">Device</Label>
+					<select
+						id="learn-device"
+						bind:value={selectedDeviceId}
+						class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+					>
+						{#each $rfIrDevices as device}
+							<option value={device.id}>
+								{device.name} ({device.model})
+							</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="space-y-2">
+					<Label>Signal Type</Label>
+					<div class="flex gap-4">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input
+								type="radio"
+								bind:group={signalType}
+								value="ir"
+								class="h-4 w-4"
+							/>
+							<span class="text-sm">Infrared (IR)</span>
+						</label>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input
+								type="radio"
+								bind:group={signalType}
+								value="rf"
+								class="h-4 w-4"
+							/>
+							<span class="text-sm">Radio Frequency (RF)</span>
+						</label>
+					</div>
+				</div>
+
+				<div class="space-y-2">
+					<Label for="learn-name">Command Name</Label>
+					<Input
+						id="learn-name"
+						bind:value={commandName}
+						placeholder="e.g., Projector Power On"
+					/>
+				</div>
+
+				<div class="space-y-2">
+					<Label for="learn-category">Category</Label>
+					<select
+						id="learn-category"
+						bind:value={commandCategory}
+						class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+					>
+						{#each COMMAND_CATEGORIES as category}
+							<option value={category}>
+								{category.charAt(0).toUpperCase() + category.slice(1)}
+							</option>
+						{/each}
+					</select>
+				</div>
+
+				<Button onclick={handleStartLearning} className="w-full">
+					Start Learning
+				</Button>
 			</div>
 		{/if}
 
