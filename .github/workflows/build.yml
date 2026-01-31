@@ -38,8 +38,8 @@ jobs:
             bundles: dmg,app
             name: macOS-ARM64
 
-          # macOS Intel
-          - platform: macos-latest
+          # macOS Intel (use macos-13 - the last Intel-based runner)
+          - platform: macos-13
             target: x86_64-apple-darwin
             bundles: dmg,app
             name: macOS-Intel
