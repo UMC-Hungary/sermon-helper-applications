@@ -419,6 +419,12 @@
 	"settings": {
 		"title": "Settings",
 		"subtitle": "Configure application settings and manage data",
+		"tabs": {
+			"connection": "Connection",
+			"devices": "Devices",
+			"content": "Content",
+			"system": "System"
+		},
 		"importExport": {
 			"title": "Data Management",
 			"description": "Export your settings to a file or import from a backup",

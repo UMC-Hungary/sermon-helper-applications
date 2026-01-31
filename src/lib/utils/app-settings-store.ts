@@ -11,6 +11,8 @@ import type { DiscoverySettings } from '$lib/types/discovery';
 import { DEFAULT_DISCOVERY_SETTINGS } from '$lib/types/discovery';
 import type { RfIrSettings } from '$lib/types/rf-ir';
 import { DEFAULT_RF_IR_SETTINGS } from '$lib/types/rf-ir';
+import type { PptSettings } from '$lib/types/ppt';
+import { DEFAULT_PPT_SETTINGS } from '$lib/types/ppt';
 
 // Session storage structure
 interface SessionStorage {
@@ -39,6 +41,8 @@ export interface AppSettings {
 	discoverySettings: DiscoverySettings;
 	// RF/IR remote control settings (Broadlink integration)
 	rfIrSettings: RfIrSettings;
+	// PPT folder settings (for Companion integration)
+	pptSettings: PptSettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -55,6 +59,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 	uploadSettings: DEFAULT_UPLOAD_SETTINGS,
 	discoverySettings: DEFAULT_DISCOVERY_SETTINGS,
 	rfIrSettings: DEFAULT_RF_IR_SETTINGS,
+	pptSettings: DEFAULT_PPT_SETTINGS,
 };
 
 // Reactive store for app settings - can be subscribed to by components

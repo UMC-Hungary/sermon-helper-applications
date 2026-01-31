@@ -26,7 +26,8 @@ export const discoveryServerStatus = writable<DiscoveryServerStatus>({
 	port: null,
 	addresses: [],
 	connectedClients: 0,
-	mdnsRegistered: false
+	mdnsRegistered: false,
+	docsUrl: null
 });
 
 /** Whether the server is currently starting/stopping */
@@ -108,7 +109,8 @@ class DiscoveryServerManager {
 				running: true,
 				port: info.port,
 				addresses: info.addresses,
-				mdnsRegistered: true
+				mdnsRegistered: true,
+				docsUrl: info.docsUrl
 			}));
 
 			return info;

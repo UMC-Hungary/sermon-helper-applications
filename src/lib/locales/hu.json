@@ -419,6 +419,12 @@
 	"settings": {
 		"title": "Beállítások",
 		"subtitle": "Alkalmazás beállítások és adatkezelés",
+		"tabs": {
+			"connection": "Kapcsolat",
+			"devices": "Eszközök",
+			"content": "Tartalom",
+			"system": "Rendszer"
+		},
 		"importExport": {
 			"title": "Adatkezelés",
 			"description": "Exportálja beállításait fájlba vagy importáljon biztonsági mentésből",

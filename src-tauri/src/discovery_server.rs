@@ -8,8 +8,9 @@
 use crate::mdns_service::{MdnsService, SERVICE_TYPE};
 use axum::{
     extract::{
+        rejection::JsonRejection,
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        FromRequest, Request, State,
     },
     http::{header, HeaderMap, Method, StatusCode},
     response::{IntoResponse, Json},
@@ -36,6 +37,8 @@ pub struct DiscoveryServerInfo {
     pub addresses: Vec<String>,
     pub service_name: String,
     pub auth_required: bool,
+    /// URL to API documentation (Swagger UI)
+    pub docs_url: String,
 }
 
 /// Full server status including connection info
@@ -47,6 +50,8 @@ pub struct DiscoveryServerStatus {
     pub addresses: Vec<String>,
     pub connected_clients: u32,
     pub mdns_registered: bool,
+    /// URL to API documentation (Swagger UI)
+    pub docs_url: Option<String>,
 }
 
 /// System status for API responses
@@ -123,6 +128,9 @@ pub enum WsMessage {
     // RF/IR events
     RfIrCommandExecuted { slug: String, success: bool },
     RfIrCommandList { commands: Vec<RfIrCommandInfo> },
+    // PPT events
+    PptFoldersChanged { folders: Vec<PptFolder> },
+    PptFileOpened { file_name: String, file_path: String, success: bool, presenter_started: bool },
     Ping,
     Pong,
     Error { message: String },
@@ -154,6 +162,30 @@ impl<T: Serialize> ApiResponse<T> {
     }
 }
 
+/// Custom JSON extractor that returns JSON-formatted errors instead of plain text
+struct AppJson<T>(T);
+
+impl<S, T> FromRequest<S> for AppJson<T>
+where
+    axum::Json<T>: FromRequest<S, Rejection = JsonRejection>,
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, axum::Json<ApiResponse<()>>);
+
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        match axum::Json::<T>::from_request(req, state).await {
+            Ok(value) => Ok(Self(value.0)),
+            Err(rejection) => {
+                let message = rejection.body_text();
+                Err((
+                    rejection.status(),
+                    axum::Json(ApiResponse::<()>::error(message)),
+                ))
+            }
+        }
+    }
+}
+
 /// Stored RF/IR command data (subset of full command for API)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -167,6 +199,59 @@ pub struct StoredRfIrCommand {
     pub code: String,
     pub signal_type: String,
     pub category: String,
+}
+
+// ============================================================================
+// PPT Folder/File Types
+// ============================================================================
+
+/// PPT folder configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PptFolder {
+    pub id: String,
+    pub path: String,
+    pub name: String,
+}
+
+/// PPT file info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PptFile {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub folder_id: String,
+}
+
+/// PPT files response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PptFilesResponse {
+    pub files: Vec<PptFile>,
+    pub total: usize,
+    pub filter: Option<String>,
+}
+
+/// Request to add a PPT folder
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddPptFolderRequest {
+    pub path: String,
+    pub name: String,
+}
+
+/// Request to open a PPT file
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenPptRequest {
+    pub file_path: String,
+    #[serde(default = "default_start_presenter")]
+    pub start_presenter: bool,
+}
+
+fn default_start_presenter() -> bool {
+    true
 }
 
 /// Shared state for the discovery server
@@ -183,10 +268,14 @@ pub struct DiscoveryServerState {
     pub connected_clients: RwLock<u32>,
     /// RF/IR commands (synced from frontend)
     pub rfir_commands: RwLock<Vec<StoredRfIrCommand>>,
+    /// PPT folders (synced from frontend) - kept for WebSocket broadcasts
+    pub ppt_folders: RwLock<Vec<PptFolder>>,
+    /// App data directory for reading settings file directly
+    pub app_data_dir: Option<std::path::PathBuf>,
 }
 
 impl DiscoveryServerState {
-    pub fn new(auth_token: Option<String>) -> Self {
+    pub fn new(auth_token: Option<String>, app_data_dir: Option<std::path::PathBuf>) -> Self {
         let (ws_broadcast, _) = broadcast::channel(100);
         Self {
             system_status: RwLock::new(SystemStatus::default()),
@@ -195,6 +284,125 @@ impl DiscoveryServerState {
             auth_token,
             connected_clients: RwLock::new(0),
             rfir_commands: RwLock::new(Vec::new()),
+            ppt_folders: RwLock::new(Vec::new()),
+            app_data_dir,
+        }
+    }
+
+    /// Read PPT folders directly from the app settings file
+    pub fn read_ppt_folders_from_settings(&self) -> Vec<PptFolder> {
+        let Some(ref data_dir) = self.app_data_dir else {
+            return Vec::new();
+        };
+
+        let settings_path = data_dir.join("app-settings.json");
+        if !settings_path.exists() {
+            return Vec::new();
+        }
+
+        match std::fs::read_to_string(&settings_path) {
+            Ok(content) => {
+                // Parse the JSON and extract pptSettings.folders
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(folders) = json.get("pptSettings").and_then(|s| s.get("folders")) {
+                        if let Ok(folders) = serde_json::from_value::<Vec<PptFolder>>(folders.clone()) {
+                            return folders;
+                        }
+                    }
+                }
+                Vec::new()
+            }
+            Err(e) => {
+                log::warn!("Failed to read settings file: {}", e);
+                Vec::new()
+            }
+        }
+    }
+
+    /// Read RF/IR commands directly from the app settings file
+    pub fn read_rfir_commands_from_settings(&self) -> Vec<StoredRfIrCommand> {
+        let Some(ref data_dir) = self.app_data_dir else {
+            return Vec::new();
+        };
+
+        let settings_path = data_dir.join("app-settings.json");
+        if !settings_path.exists() {
+            return Vec::new();
+        }
+
+        match std::fs::read_to_string(&settings_path) {
+            Ok(content) => {
+                // Parse the JSON and extract rfIrSettings
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(rf_ir_settings) = json.get("rfIrSettings") {
+                        let devices = rf_ir_settings
+                            .get("devices")
+                            .and_then(|d| d.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+
+                        let commands = rf_ir_settings
+                            .get("commands")
+                            .and_then(|c| c.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+
+                        // Build a map of device ID -> device info
+                        let device_map: std::collections::HashMap<String, &serde_json::Value> = devices
+                            .iter()
+                            .filter_map(|d| {
+                                d.get("id").and_then(|id| id.as_str()).map(|id| (id.to_string(), d))
+                            })
+                            .collect();
+
+                        // Convert commands to StoredRfIrCommand format
+                        return commands
+                            .iter()
+                            .filter_map(|cmd| {
+                                let id = cmd.get("id")?.as_str()?;
+                                let name = cmd.get("name")?.as_str()?;
+                                let slug = cmd.get("slug")?.as_str()?;
+                                let device_id = cmd.get("deviceId")?.as_str()?;
+                                let code = cmd.get("code")?.as_str()?;
+                                let signal_type = cmd.get("type")?.as_str()?;
+                                let category = cmd.get("category")?.as_str().unwrap_or("other");
+
+                                // Get device info
+                                let device = device_map.get(device_id);
+                                let device_host = device
+                                    .and_then(|d| d.get("host"))
+                                    .and_then(|h| h.as_str())
+                                    .unwrap_or("");
+                                let device_mac = device
+                                    .and_then(|d| d.get("mac"))
+                                    .and_then(|m| m.as_str())
+                                    .unwrap_or("");
+                                let device_type = device
+                                    .and_then(|d| d.get("type"))
+                                    .and_then(|t| t.as_str())
+                                    .unwrap_or("");
+
+                                Some(StoredRfIrCommand {
+                                    id: id.to_string(),
+                                    name: name.to_string(),
+                                    slug: slug.to_string(),
+                                    device_host: device_host.to_string(),
+                                    device_mac: device_mac.to_string(),
+                                    device_type: device_type.to_string(),
+                                    code: code.to_string(),
+                                    signal_type: signal_type.to_string(),
+                                    category: category.to_string(),
+                                })
+                            })
+                            .collect();
+                    }
+                }
+                Vec::new()
+            }
+            Err(e) => {
+                log::warn!("Failed to read settings file: {}", e);
+                Vec::new()
+            }
         }
     }
 
@@ -221,6 +429,7 @@ impl DiscoveryServer {
         port: u16,
         auth_token: Option<String>,
         instance_name: &str,
+        app_data_dir: Option<std::path::PathBuf>,
     ) -> Result<Self, String> {
         // Try the specified port first, then fallback to a random port
         let listener = match TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], port))).await {
@@ -238,8 +447,8 @@ impl DiscoveryServer {
             .map_err(|e| format!("Failed to get local address: {}", e))?
             .port();
 
-        // Create shared state
-        let state = Arc::new(DiscoveryServerState::new(auth_token.clone()));
+        // Create shared state with app data directory for reading settings
+        let state = Arc::new(DiscoveryServerState::new(auth_token.clone(), app_data_dir));
 
         // Build CORS layer
         let cors = CorsLayer::new()
@@ -308,6 +517,12 @@ impl DiscoveryServer {
     /// Get server info for frontend
     pub fn get_info(&self) -> DiscoveryServerInfo {
         let addresses = get_local_addresses();
+        // Use the first LAN address if available, otherwise localhost
+        let host = get_categorized_addresses()
+            .lan
+            .first()
+            .map(|n| n.address.clone())
+            .unwrap_or_else(|| "localhost".to_string());
         DiscoveryServerInfo {
             running: true,
             port: self.port,
@@ -318,18 +533,25 @@ impl DiscoveryServer {
                 .map(|s| s.fullname().to_string())
                 .unwrap_or_else(|| SERVICE_TYPE.to_string()),
             auth_required: self.state.auth_token.is_some(),
+            docs_url: format!("http://{}:{}/api/docs", host, self.port),
         }
     }
 
     /// Get detailed server status
     pub async fn get_status(&self) -> DiscoveryServerStatus {
         let connected_clients = *self.state.connected_clients.read().await;
+        let host = get_categorized_addresses()
+            .lan
+            .first()
+            .map(|n| n.address.clone())
+            .unwrap_or_else(|| "localhost".to_string());
         DiscoveryServerStatus {
             running: true,
             port: Some(self.port),
             addresses: get_local_addresses(),
             connected_clients,
             mdns_registered: self.mdns_service.is_some(),
+            docs_url: Some(format!("http://{}:{}/api/docs", host, self.port)),
         }
     }
 
@@ -367,8 +589,13 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/obs/record/stop", post(obs_record_stop_handler))
         // RF/IR endpoints
         .route("/api/v1/rfir/commands", get(rfir_commands_handler))
-        .route("/api/v1/rfir/commands/:slug", get(rfir_command_by_slug_handler))
-        .route("/api/v1/rfir/commands/:slug/execute", post(rfir_execute_handler))
+        .route("/api/v1/rfir/commands/{slug}", get(rfir_command_by_slug_handler))
+        .route("/api/v1/rfir/commands/{slug}/execute", post(rfir_execute_handler))
+        // PPT endpoints
+        .route("/api/v1/ppt/folders", get(ppt_folders_handler).post(ppt_add_folder_handler))
+        .route("/api/v1/ppt/folders/{id}", axum::routing::delete(ppt_delete_folder_handler))
+        .route("/api/v1/ppt/files", get(ppt_files_handler))
+        .route("/api/v1/ppt/open", post(ppt_open_handler))
         // OBS Caption endpoint (embeddable HTML for OBS browser source)
         .route("/caption", get(caption_handler))
         // OpenAPI documentation
@@ -894,8 +1121,20 @@ async fn handle_websocket(mut socket: WebSocket, state: SharedServerState) {
         let _ = socket.send(Message::Text(msg.into())).await;
     }
 
+    // Create ping interval - send ping every 20 seconds to keep connection alive
+    let mut ping_interval = tokio::time::interval(tokio::time::Duration::from_secs(20));
+    ping_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
     loop {
         tokio::select! {
+            // Send periodic ping to keep connection alive
+            _ = ping_interval.tick() => {
+                if let Ok(ping_msg) = serde_json::to_string(&WsMessage::Ping) {
+                    if socket.send(Message::Text(ping_msg.into())).await.is_err() {
+                        break;
+                    }
+                }
+            }
             // Handle broadcast messages
             Ok(broadcast_msg) = rx.recv() => {
                 if let Ok(text) = serde_json::to_string(&broadcast_msg) {
@@ -916,6 +1155,9 @@ async fn handle_websocket(mut socket: WebSocket, state: SharedServerState) {
                                     if let Ok(pong) = serde_json::to_string(&WsMessage::Pong) {
                                         let _ = socket.send(Message::Text(pong.into())).await;
                                     }
+                                }
+                                WsMessage::Pong => {
+                                    // Client responded to our ping, connection is alive
                                 }
                                 _ => {
                                     // Handle other messages as needed
@@ -1113,7 +1355,8 @@ async fn rfir_commands_handler(
             .into_response();
     }
 
-    let commands = state.rfir_commands.read().await;
+    // Read directly from settings file - no sync needed
+    let commands = state.read_rfir_commands_from_settings();
     let command_infos: Vec<RfIrCommandInfo> = commands
         .iter()
         .map(|c| RfIrCommandInfo {
@@ -1142,7 +1385,8 @@ async fn rfir_command_by_slug_handler(
             .into_response();
     }
 
-    let commands = state.rfir_commands.read().await;
+    // Read directly from settings file
+    let commands = state.read_rfir_commands_from_settings();
     let command = commands.iter().find(|c| c.slug == slug);
 
     match command {
@@ -1176,9 +1420,9 @@ async fn rfir_execute_handler(
             .into_response();
     }
 
-    let commands = state.rfir_commands.read().await;
-    let command = commands.iter().find(|c| c.slug == slug).cloned();
-    drop(commands); // Release the lock before executing
+    // Read directly from settings file
+    let commands = state.read_rfir_commands_from_settings();
+    let command = commands.into_iter().find(|c| c.slug == slug);
 
     match command {
         Some(cmd) => {
@@ -1241,6 +1485,327 @@ async fn rfir_execute_handler(
         )
             .into_response(),
     }
+}
+
+// ============================================================================
+// PPT Handlers
+// ============================================================================
+
+/// List all PPT folders
+async fn ppt_folders_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    // Read directly from settings file - no sync needed
+    let folders = state.read_ppt_folders_from_settings();
+    Json(ApiResponse::success(serde_json::json!({ "folders": folders }))).into_response()
+}
+
+/// Add a new PPT folder
+async fn ppt_add_folder_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    Json(request): Json<AddPptFolderRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    // Validate the path exists and is a directory
+    let path = std::path::Path::new(&request.path);
+    if !path.exists() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("Path does not exist")),
+        )
+            .into_response();
+    }
+    if !path.is_dir() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("Path is not a directory")),
+        )
+            .into_response();
+    }
+
+    let folder = PptFolder {
+        id: uuid::Uuid::new_v4().to_string(),
+        path: request.path,
+        name: request.name,
+    };
+
+    let mut folders = state.ppt_folders.write().await;
+    folders.push(folder.clone());
+    let folders_clone = folders.clone();
+    drop(folders);
+
+    // Broadcast the change
+    state.broadcast(WsMessage::PptFoldersChanged { folders: folders_clone });
+
+    Json(ApiResponse::success(folder)).into_response()
+}
+
+/// Delete a PPT folder
+async fn ppt_delete_folder_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    let mut folders = state.ppt_folders.write().await;
+    let original_len = folders.len();
+    folders.retain(|f| f.id != id);
+
+    if folders.len() == original_len {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("Folder not found")),
+        )
+            .into_response();
+    }
+
+    let folders_clone = folders.clone();
+    drop(folders);
+
+    // Broadcast the change
+    state.broadcast(WsMessage::PptFoldersChanged { folders: folders_clone });
+
+    Json(ApiResponse::success(serde_json::json!({ "deleted": true }))).into_response()
+}
+
+/// Query parameters for PPT files endpoint
+#[derive(Debug, Deserialize)]
+struct PptFilesQuery {
+    folder_id: String,
+    #[serde(default)]
+    filter: Option<String>,
+}
+
+/// List PPT files in a folder with optional numeric filter
+async fn ppt_files_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    axum::extract::Query(query): axum::extract::Query<PptFilesQuery>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    // Read folders directly from settings file - no sync needed
+    let folders = state.read_ppt_folders_from_settings();
+    let folder = folders.into_iter().find(|f| f.id == query.folder_id);
+
+    let folder = match folder {
+        Some(f) => f,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Folder not found")),
+            )
+                .into_response();
+        }
+    };
+
+    // Scan the folder for PPT files
+    let files = match scan_ppt_folder(&folder.path, &folder.id) {
+        Ok(f) => f,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(format!("Failed to scan folder: {}", e))),
+            )
+                .into_response();
+        }
+    };
+
+    // Apply filter if provided (searches anywhere in filename)
+    let filtered_files: Vec<PptFile> = if let Some(ref filter) = query.filter {
+        files
+            .into_iter()
+            .filter(|f| f.name.contains(filter))
+            .take(5) // Only return first 5 matches
+            .collect()
+    } else {
+        files.into_iter().take(5).collect()
+    };
+
+    let total = filtered_files.len();
+
+    Json(ApiResponse::success(PptFilesResponse {
+        files: filtered_files,
+        total,
+        filter: query.filter,
+    }))
+    .into_response()
+}
+
+/// Scan a folder for PPT/PPTX/ODP files
+fn scan_ppt_folder(folder_path: &str, folder_id: &str) -> Result<Vec<PptFile>, String> {
+    let path = std::path::Path::new(folder_path);
+
+    if !path.exists() {
+        return Err("Folder does not exist".to_string());
+    }
+
+    let entries = std::fs::read_dir(path)
+        .map_err(|e| format!("Failed to read directory: {}", e))?;
+
+    let mut files: Vec<PptFile> = entries
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let path = entry.path();
+            if !path.is_file() {
+                return None;
+            }
+
+            let extension = path.extension()?.to_str()?.to_lowercase();
+            if !["ppt", "pptx", "odp"].contains(&extension.as_str()) {
+                return None;
+            }
+
+            let name = path.file_name()?.to_str()?.to_string();
+            let full_path = path.to_str()?.to_string();
+
+            Some(PptFile {
+                id: uuid::Uuid::new_v4().to_string(),
+                name,
+                path: full_path,
+                folder_id: folder_id.to_string(),
+            })
+        })
+        .collect();
+
+    // Sort alphabetically by name
+    files.sort_by(|a, b| a.name.cmp(&b.name));
+
+    Ok(files)
+}
+
+/// Open a PPT file and optionally start presenter mode
+async fn ppt_open_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    AppJson(request): AppJson<OpenPptRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    let path = std::path::Path::new(&request.file_path);
+    if !path.exists() {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("File not found")),
+        )
+            .into_response();
+    }
+
+    let file_name = path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+
+    // Open the file with the system default application
+    match open::that(&request.file_path) {
+        Ok(_) => {
+            let mut presenter_started = false;
+
+            // If requested, start presenter mode after a delay
+            if request.start_presenter {
+                // Wait for the application to open
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+
+                // Try to start presenter mode
+                presenter_started = start_presenter_mode().await;
+            }
+
+            // Broadcast the event
+            state.broadcast(WsMessage::PptFileOpened {
+                file_name: file_name.clone(),
+                file_path: request.file_path.clone(),
+                success: true,
+                presenter_started,
+            });
+
+            Json(ApiResponse::success(serde_json::json!({
+                "success": true,
+                "file_name": file_name,
+                "presenter_started": presenter_started
+            })))
+            .into_response()
+        }
+        Err(e) => {
+            state.broadcast(WsMessage::PptFileOpened {
+                file_name: file_name.clone(),
+                file_path: request.file_path.clone(),
+                success: false,
+                presenter_started: false,
+            });
+
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(format!("Failed to open file: {}", e))),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// Start presenter mode by sending F5 keypress (Windows)
+#[cfg(target_os = "windows")]
+async fn start_presenter_mode() -> bool {
+    use std::process::Command;
+
+    // Use PowerShell to send F5 key to the active window
+    let script = r#"
+        Add-Type -AssemblyName System.Windows.Forms
+        [System.Windows.Forms.SendKeys]::SendWait("{F5}")
+    "#;
+
+    match Command::new("powershell")
+        .args(["-NoProfile", "-Command", script])
+        .output()
+    {
+        Ok(output) => output.status.success(),
+        Err(e) => {
+            log::error!("Failed to send F5 key: {}", e);
+            false
+        }
+    }
+}
+
+/// Fallback for non-Windows platforms
+#[cfg(not(target_os = "windows"))]
+async fn start_presenter_mode() -> bool {
+    log::warn!("Presenter mode automation not supported on this platform");
+    false
 }
 
 // ============================================================================
@@ -1432,6 +1997,160 @@ async fn openapi_handler() -> impl IntoResponse {
                         }
                     }
                 }
+            },
+            "/ppt/folders": {
+                "get": {
+                    "summary": "List PPT folders",
+                    "description": "Get all configured PPT folders.\n\n**Example:**\n```bash\ncurl http://localhost:8765/api/v1/ppt/folders\n```",
+                    "tags": ["PPT"],
+                    "responses": {
+                        "200": {
+                            "description": "List of folders",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean" },
+                                            "data": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "folders": {
+                                                        "type": "array",
+                                                        "items": { "$ref": "#/components/schemas/PptFolder" }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "post": {
+                    "summary": "Add PPT folder",
+                    "description": "Add a new folder to scan for PPT files.\n\n**Example:**\n```bash\ncurl -X POST http://localhost:8765/api/v1/ppt/folders \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"path\": \"C:/Presentations\", \"name\": \"Main Folder\"}'\n```",
+                    "tags": ["PPT"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["path", "name"],
+                                    "properties": {
+                                        "path": { "type": "string", "description": "Folder path" },
+                                        "name": { "type": "string", "description": "Display name" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": { "description": "Folder added" },
+                        "400": { "description": "Invalid path" }
+                    }
+                }
+            },
+            "/ppt/folders/{id}": {
+                "delete": {
+                    "summary": "Delete PPT folder",
+                    "description": "Remove a folder from the list.\n\n**Example:**\n```bash\ncurl -X DELETE http://localhost:8765/api/v1/ppt/folders/FOLDER_ID\n```",
+                    "tags": ["PPT"],
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": { "type": "string" },
+                            "description": "Folder ID"
+                        }
+                    ],
+                    "responses": {
+                        "200": { "description": "Folder deleted" },
+                        "404": { "description": "Folder not found" }
+                    }
+                }
+            },
+            "/ppt/files": {
+                "get": {
+                    "summary": "List PPT files",
+                    "description": "List PowerPoint files in a folder with optional filter. Filter searches anywhere in filename.\n\n**Example:**\n```bash\ncurl 'http://localhost:8765/api/v1/ppt/files?folder_id=FOLDER_ID&filter=01'\n```\nThis would match files like D-001.pptx, D-010.pptx, sermon-01.pptx, etc.",
+                    "tags": ["PPT"],
+                    "parameters": [
+                        {
+                            "name": "folder_id",
+                            "in": "query",
+                            "required": true,
+                            "schema": { "type": "string" },
+                            "description": "The folder ID to search in"
+                        },
+                        {
+                            "name": "filter",
+                            "in": "query",
+                            "required": false,
+                            "schema": { "type": "string" },
+                            "description": "Filter string to match anywhere in filename"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "List of matching PPT files (max 5)",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/PptFilesResponse" }
+                                }
+                            }
+                        },
+                        "404": { "description": "Folder not found" }
+                    }
+                }
+            },
+            "/ppt/open": {
+                "post": {
+                    "summary": "Open PPT file",
+                    "description": "Open a PowerPoint file and optionally start presenter mode.\n\n**Example:**\n```bash\ncurl -X POST http://localhost:8765/api/v1/ppt/open \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"filePath\": \"C:/Presentations/D-001.pptx\", \"startPresenter\": true}'\n```",
+                    "tags": ["PPT"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["filePath"],
+                                    "properties": {
+                                        "filePath": { "type": "string", "description": "Full path to PPT file" },
+                                        "startPresenter": { "type": "boolean", "default": true, "description": "Auto-start presenter mode (F5)" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "File opened",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean" },
+                                            "file_name": { "type": "string" },
+                                            "presenter_started": { "type": "boolean" }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "404": { "description": "File not found" }
+                    }
+                }
+            }
+        },
+        "x-websocket": {
+            "/ws": {
+                "description": "WebSocket endpoint for real-time updates. Connect with `ws://HOST:PORT/ws`.\n\n**Connection Example (JavaScript):**\n```javascript\nconst ws = new WebSocket('ws://localhost:8765/ws');\nws.onmessage = (event) => console.log(JSON.parse(event.data));\n```\n\n**Message Types (server → client):**\n- `status_update` - System status changed\n- `obs_status_changed` - OBS connection/streaming status\n- `stream_state_changed` - Streaming started/stopped\n- `record_state_changed` - Recording started/stopped\n- `rfir_command_executed` - RF/IR command result\n- `rfir_command_list` - Updated command list\n- `ppt_folders_changed` - PPT folders updated\n- `ppt_file_opened` - PPT file opened result\n- `ping` / `pong` - Keep-alive\n\n**Example Message:**\n```json\n{\"type\": \"status_update\", \"data\": {\"obsConnected\": true, \"obsStreaming\": false}}\n```"
             }
         },
         "components": {
@@ -1489,6 +2208,35 @@ async fn openapi_handler() -> impl IntoResponse {
                         "recording": { "type": "boolean" },
                         "streamTimecode": { "type": "string", "nullable": true },
                         "recordTimecode": { "type": "string", "nullable": true }
+                    }
+                },
+                "PptFolder": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Unique folder identifier" },
+                        "path": { "type": "string", "description": "Folder path on disk" },
+                        "name": { "type": "string", "description": "Display name" }
+                    }
+                },
+                "PptFile": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Unique file identifier" },
+                        "name": { "type": "string", "description": "Filename (e.g., 'D-001.pptx')" },
+                        "path": { "type": "string", "description": "Full file path" },
+                        "folderId": { "type": "string", "description": "Parent folder ID" }
+                    }
+                },
+                "PptFilesResponse": {
+                    "type": "object",
+                    "properties": {
+                        "files": {
+                            "type": "array",
+                            "items": { "$ref": "#/components/schemas/PptFile" },
+                            "description": "Matching files (max 5)"
+                        },
+                        "total": { "type": "integer", "description": "Number of files returned" },
+                        "filter": { "type": "string", "nullable": true, "description": "The filter that was applied" }
                     }
                 }
             }
@@ -1559,5 +2307,18 @@ impl DiscoveryServer {
         self.state.broadcast(WsMessage::RfIrCommandList {
             commands: command_infos,
         });
+    }
+
+    /// Update the PPT folders from the frontend
+    pub async fn update_ppt_folders(&self, folders: Vec<PptFolder>) {
+        *self.state.ppt_folders.write().await = folders.clone();
+
+        // Broadcast the updated folder list
+        self.state.broadcast(WsMessage::PptFoldersChanged { folders });
+    }
+
+    /// Get current PPT folders
+    pub async fn get_ppt_folders(&self) -> Vec<PptFolder> {
+        self.state.ppt_folders.read().await.clone()
     }
 }

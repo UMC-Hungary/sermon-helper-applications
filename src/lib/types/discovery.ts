@@ -10,6 +10,8 @@ export interface DiscoveryServerInfo {
 	addresses: string[];
 	serviceName: string;
 	authRequired: boolean;
+	/** URL to API documentation (Swagger UI) */
+	docsUrl: string;
 }
 
 /** Full discovery server status */
@@ -19,6 +21,8 @@ export interface DiscoveryServerStatus {
 	addresses: string[];
 	connectedClients: number;
 	mdnsRegistered: boolean;
+	/** URL to API documentation (Swagger UI) */
+	docsUrl: string | null;
 }
 
 /** System status sent to mobile clients */

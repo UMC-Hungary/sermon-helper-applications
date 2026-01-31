@@ -26,7 +26,9 @@
 		Shield,
 		Monitor,
 		Globe,
-		Laptop
+		Laptop,
+		BookOpen,
+		ExternalLink
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
@@ -230,6 +232,20 @@
 							<span>mDNS service registered (discoverable)</span>
 						</div>
 					{/if}
+
+					<!-- API Documentation Link -->
+					{#if $discoveryServerStatus.docsUrl}
+						<a
+							href={$discoveryServerStatus.docsUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="flex items-center gap-2 text-sm text-primary hover:underline"
+						>
+							<BookOpen class="h-4 w-4" />
+							<span>API Documentation</span>
+							<ExternalLink class="h-3 w-3" />
+						</a>
+					{/if}
 				{/if}
 
 				{#if $discoveryServerError}
@@ -292,6 +308,26 @@
 					The name shown when discovering this device on the network.
 				</p>
 			</div>
+
+			<!-- Auto-start -->
+			<div class="flex items-center gap-3">
+				<input
+					type="checkbox"
+					id="auto-start"
+					bind:checked={settings.autoStart}
+					onchange={handleSaveSettings}
+					disabled={isLoading || !settings.authToken}
+					class="h-4 w-4 rounded border-gray-300"
+				/>
+				<Label for="auto-start" class="text-sm font-normal">
+					Auto-start server when app launches
+				</Label>
+			</div>
+			{#if !settings.authToken}
+				<p class="text-xs text-amber-600">
+					Generate an auth token first to enable auto-start.
+				</p>
+			{/if}
 
 			<!-- Authentication -->
 			<div class="rounded-lg border p-4 space-y-4">

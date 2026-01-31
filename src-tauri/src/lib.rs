@@ -1,6 +1,8 @@
 mod bible;
 mod broadlink;
 mod broadlink_commands;
+mod companion_api;
+mod companion_commands;
 mod discovery_commands;
 mod discovery_server;
 mod local_server;
@@ -12,10 +14,14 @@ use broadlink_commands::{
     broadlink_discover, broadlink_learn, broadlink_cancel_learn,
     broadlink_send, broadlink_test_device, broadlink_list_interfaces
 };
+use companion_commands::{
+    check_companion_connection, create_companion_ppt_page, get_companion_config_path
+};
 use discovery_commands::{
     start_discovery_server, stop_discovery_server, get_discovery_server_status,
     generate_discovery_auth_token, get_local_ip_addresses, get_network_addresses,
-    update_discovery_system_status, update_discovery_obs_status, update_discovery_rfir_commands
+    update_discovery_system_status, update_discovery_obs_status, update_discovery_rfir_commands,
+    update_discovery_ppt_folders, get_discovery_ppt_folders
 };
 use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
 use video_upload::{
@@ -78,13 +84,20 @@ pub fn run() {
             update_discovery_system_status,
             update_discovery_obs_status,
             update_discovery_rfir_commands,
+            // PPT folder commands
+            update_discovery_ppt_folders,
+            get_discovery_ppt_folders,
             // Broadlink RF/IR commands
             broadlink_discover,
             broadlink_learn,
             broadlink_cancel_learn,
             broadlink_send,
             broadlink_test_device,
-            broadlink_list_interfaces
+            broadlink_list_interfaces,
+            // Companion API commands
+            check_companion_connection,
+            create_companion_ppt_page,
+            get_companion_config_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

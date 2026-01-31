@@ -76,6 +76,7 @@
 
                 // Auto-start discovery server if enabled and has auth token
                 const discoverySettings = await appSettingsStore.get('discoverySettings');
+                await log('info', `Discovery settings loaded: autoStart=${discoverySettings?.autoStart}, hasToken=${!!discoverySettings?.authToken}`);
                 if (discoverySettings?.autoStart && discoverySettings?.authToken) {
                     try {
                         await discoveryServerManager.start(discoverySettings);

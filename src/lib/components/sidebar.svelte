@@ -206,8 +206,16 @@
 		{ id: '/events', labelKey: 'sidebar.nav.events', icon: CalendarDays },
 		{ id: '/rf-ir', labelKey: 'sidebar.nav.remoteControl', icon: Radio },
 		{ id: '/obs-caption', labelKey: 'sidebar.nav.obsCaption', icon: Subtitles },
-		{ id: '/obs-config', labelKey: 'sidebar.nav.settings', icon: Settings },
+		{ id: '/settings', labelKey: 'sidebar.nav.settings', icon: Settings },
 	];
+
+	function isNavActive(itemId: string): boolean {
+		const pathname = page.url.pathname;
+		if (itemId === '/settings') {
+			return pathname.startsWith('/settings');
+		}
+		return pathname === itemId;
+	}
 </script>
 
  <!-- Mobile menu button -->
@@ -249,7 +257,7 @@
 				{#each navItems as item}
 					{@const Icon = item.icon}
 					<Button
-						buttonVariant={page.url.pathname === item.id ? "secondary" : "ghost"}
+						buttonVariant={isNavActive(item.id) ? "secondary" : "ghost"}
 						className="w-full justify-start"
 						href={item.id}
 						onclick={() => {

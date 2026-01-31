@@ -6,10 +6,10 @@
 use crate::discovery_server::{
     create_shared_discovery_server, generate_auth_token, get_categorized_addresses,
     get_local_addresses, DiscoveryServer, DiscoveryServerInfo, DiscoveryServerStatus,
-    NetworkAddresses, ObsStatus, SharedDiscoveryServer, StoredRfIrCommand, SystemStatus,
+    NetworkAddresses, ObsStatus, PptFolder, SharedDiscoveryServer, StoredRfIrCommand, SystemStatus,
 };
 use std::sync::OnceLock;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Global discovery server instance
 static DISCOVERY_SERVER: OnceLock<SharedDiscoveryServer> = OnceLock::new();
@@ -38,8 +38,11 @@ pub async fn start_discovery_server(
     let port = port.unwrap_or(crate::discovery_server::DEFAULT_PORT);
     let instance_name = instance_name.unwrap_or_else(|| "Sermon Helper".to_string());
 
-    // Start the server
-    let server = DiscoveryServer::start(port, auth_token, &instance_name).await?;
+    // Get app data directory for reading settings file directly
+    let app_data_dir = app_handle.path().app_data_dir().ok();
+
+    // Start the server with app data directory
+    let server = DiscoveryServer::start(port, auth_token, &instance_name, app_data_dir).await?;
     let info = server.get_info();
 
     // Store the server instance
@@ -83,6 +86,7 @@ pub async fn get_discovery_server_status() -> Result<DiscoveryServerStatus, Stri
             addresses: get_local_addresses(),
             connected_clients: 0,
             mdns_registered: false,
+            docs_url: None,
         })
     }
 }
@@ -150,5 +154,34 @@ pub async fn update_discovery_rfir_commands(commands: Vec<StoredRfIrCommand>) ->
     } else {
         // Server not running, ignore silently
         Ok(())
+    }
+}
+
+/// Update PPT folders (called by frontend when folders change)
+/// This syncs the folders to the discovery server for API access
+#[tauri::command]
+pub async fn update_discovery_ppt_folders(folders: Vec<PptFolder>) -> Result<(), String> {
+    let server_lock = get_server();
+    let server_guard = server_lock.lock().await;
+
+    if let Some(ref server) = *server_guard {
+        server.update_ppt_folders(folders).await;
+        Ok(())
+    } else {
+        // Server not running, ignore silently
+        Ok(())
+    }
+}
+
+/// Get current PPT folders from the discovery server
+#[tauri::command]
+pub async fn get_discovery_ppt_folders() -> Result<Vec<PptFolder>, String> {
+    let server_lock = get_server();
+    let server_guard = server_lock.lock().await;
+
+    if let Some(ref server) = *server_guard {
+        Ok(server.get_ppt_folders().await)
+    } else {
+        Ok(Vec::new())
     }
 }
