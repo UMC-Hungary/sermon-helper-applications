@@ -6,6 +6,7 @@
 	import Label from '$lib/components/ui/label.svelte';
 	import Textarea from '$lib/components/ui/textarea.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
+	import Checkbox from '$lib/components/ui/checkbox.svelte';
 	import Tabs from '$lib/components/ui/tabs.svelte';
 	import TabsList from '$lib/components/ui/tabs-list.svelte';
 	import TabsTrigger from '$lib/components/ui/tabs-trigger.svelte';
@@ -16,9 +17,18 @@
 	import { bibleApi } from '$lib/utils/bible-api';
 	import { isV2Translation, type BibleTranslation, type BibleVerse, type LegacySuggestion } from '$lib/types/bible';
 	import { debounce } from '$lib/utils/debounce';
-	import { createEmptyEvent, generateCalculatedTitle, type ServiceEvent, type YouTubePrivacyStatus } from '$lib/types/event';
+	import {
+		createEmptyEvent,
+		generateCalculatedTitle,
+		getRecordingStatus,
+		getYouTubeBroadcastUrl,
+		getYouTubeVideoUrl,
+		getUploadProgress,
+		type ServiceEvent,
+		type YouTubePrivacyStatus
+	} from '$lib/types/event';
 	import { appSettingsStore } from '$lib/utils/app-settings-store';
-	import { Search, Save, X, Loader2, BookOpen, Edit2, Check, Youtube, ExternalLink } from 'lucide-svelte';
+	import { Search, Save, X, Loader2, BookOpen, Edit2, Check, Youtube, ExternalLink, Upload, Pause, Play, Video, Globe, Link, Lock } from 'lucide-svelte';
 	import { systemStore } from '$lib/stores/system-store';
 	import { youtubeApi } from '$lib/utils/youtube-api';
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
@@ -68,6 +78,10 @@
 	const calculatedTitle = $derived(generateCalculatedTitle(formData));
 	const calculatedTitleLength = $derived(calculatedTitle.length);
 	const MAX_TITLE_LENGTH = 100;
+
+	// Recording/upload status (derived from formData)
+	const recordingStatus = $derived(getRecordingStatus(formData));
+	const uploadProgress = $derived(getUploadProgress(formData));
 
 	// Debounced fetch for suggestions (legacy translations)
 	const debouncedFetchSuggestions = debounce(async (term: string, field: 'textus' | 'leckio') => {
@@ -485,6 +499,131 @@
 				{/if}
 			</svelte:fragment>
 		</Card>
+
+		<!-- Recording & Upload -->
+		<Card>
+			<svelte:fragment slot="title">
+				<Video class="h-5 w-5 mr-2 inline" />
+				{$_('events.form.recording.title')}
+			</svelte:fragment>
+			<svelte:fragment slot="content">
+				<div class="space-y-4">
+					<!-- Auto-upload toggle -->
+					<div class="flex items-center gap-3">
+						<Checkbox
+							id="auto-upload"
+							bind:checked={formData.autoUploadEnabled}
+						/>
+						<Label for="auto-upload" className="text-sm font-normal cursor-pointer">
+							{$_('events.form.recording.autoUpload')}
+						</Label>
+					</div>
+
+					<!-- Upload visibility dropdown -->
+					<div class="space-y-2">
+						<Label for="upload-privacy">{$_('events.form.recording.uploadVisibility')}</Label>
+						<select
+							id="upload-privacy"
+							bind:value={formData.uploadPrivacyStatus}
+							class="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+						>
+							<option value="public">{$_('events.form.privacyOptions.public')}</option>
+							<option value="unlisted">{$_('events.form.privacyOptions.unlisted')}</option>
+							<option value="private">{$_('events.form.privacyOptions.private')}</option>
+						</select>
+					</div>
+
+					<!-- Status section (only shown if event has broadcast or recording) -->
+					{#if formData.youtubeScheduledId || formData.youtubeUploadedId || recordingStatus !== 'none'}
+						<div class="border-t pt-4 mt-4 space-y-3">
+							<!-- Live Broadcast Status -->
+							{#if formData.youtubeScheduledId}
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<Youtube class="h-4 w-4 text-red-500" />
+										<span class="text-sm font-medium">{$_('events.form.recording.liveBroadcast')}</span>
+									</div>
+									<div class="flex items-center gap-2">
+										<Button
+											buttonVariant="outline"
+											buttonSize="sm"
+											href={getYouTubeBroadcastUrl(formData) ?? undefined}
+											target="_blank"
+										>
+											<ExternalLink class="h-3 w-3 mr-1" />
+											{$_('events.form.recording.watchBroadcast')}
+										</Button>
+										<Badge variant="secondary">
+											{#if formData.youtubePrivacyStatus === 'public'}
+												<Globe class="h-3 w-3 mr-1" />
+											{:else if formData.youtubePrivacyStatus === 'unlisted'}
+												<Link class="h-3 w-3 mr-1" />
+											{:else}
+												<Lock class="h-3 w-3 mr-1" />
+											{/if}
+											{$_(`events.form.privacyOptions.${formData.youtubePrivacyStatus}`)}
+										</Badge>
+									</div>
+								</div>
+							{/if}
+
+							<!-- Recording/Upload Status -->
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<Video class="h-4 w-4 text-muted-foreground" />
+									<span class="text-sm font-medium">{$_('events.form.recording.uploadedRecording')}</span>
+								</div>
+								<div class="flex items-center gap-2">
+									{#if recordingStatus === 'uploaded' && formData.youtubeUploadedId}
+										<Button
+											buttonVariant="outline"
+											buttonSize="sm"
+											href={getYouTubeVideoUrl(formData) ?? undefined}
+											target="_blank"
+										>
+											<ExternalLink class="h-3 w-3 mr-1" />
+											{$_('events.form.recording.watchRecording')}
+										</Button>
+									{:else if recordingStatus === 'uploading'}
+										<div class="flex items-center gap-2">
+											<div class="w-24 h-2 bg-muted rounded-full overflow-hidden">
+												<div
+													class="h-full bg-primary transition-all"
+													style="width: {uploadProgress}%"
+												></div>
+											</div>
+											<span class="text-xs text-muted-foreground">{uploadProgress}%</span>
+										</div>
+									{:else if recordingStatus === 'pending' && !formData.autoUploadEnabled}
+										<Button buttonVariant="outline" buttonSize="sm" disabled>
+											<Upload class="h-3 w-3 mr-1" />
+											{$_('events.form.recording.actions.startUpload')}
+										</Button>
+									{/if}
+									<Badge
+										variant={recordingStatus === 'uploaded' ? 'success' : recordingStatus === 'failed' ? 'destructive' : 'secondary'}
+									>
+										{$_(`events.form.recording.status.${recordingStatus}`)}
+									</Badge>
+									{#if recordingStatus === 'uploaded'}
+										<Badge variant="secondary">
+											{#if formData.uploadPrivacyStatus === 'public'}
+												<Globe class="h-3 w-3 mr-1" />
+											{:else if formData.uploadPrivacyStatus === 'unlisted'}
+												<Link class="h-3 w-3 mr-1" />
+											{:else}
+												<Lock class="h-3 w-3 mr-1" />
+											{/if}
+											{$_(`events.form.privacyOptions.${formData.uploadPrivacyStatus}`)}
+										</Badge>
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			</svelte:fragment>
+		</Card>
 	</div>
 
 	<!-- Right Column: Bible References -->
@@ -613,16 +752,21 @@
 	</div>
 </div>
 
-<!-- Actions -->
-<div class="flex justify-end gap-2 mt-6">
-	<Button buttonVariant="outline" onclick={onCancel}>
-		<X class="mr-2 h-4 w-4" />
-		{$_('events.form.cancel')}
-	</Button>
-	<Button onclick={handleSave}>
-		<Save class="mr-2 h-4 w-4" />
-		{$_('events.form.save')}
-	</Button>
+<!-- Spacer for fixed action bar -->
+<div class="h-20"></div>
+
+<!-- Actions - Fixed at bottom -->
+<div class="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t py-3 px-6 z-50">
+	<div class="flex justify-end gap-2 max-w-7xl mx-auto">
+		<Button buttonVariant="outline" onclick={onCancel}>
+			<X class="mr-2 h-4 w-4" />
+			{$_('events.form.cancel')}
+		</Button>
+		<Button onclick={handleSave}>
+			<Save class="mr-2 h-4 w-4" />
+			{$_('events.form.save')}
+		</Button>
+	</div>
 </div>
 
 <!-- YouTube Login Modal -->

@@ -280,6 +280,29 @@
 			"validation": {
 				"title": "Please enter an event title",
 				"date": "Please select a date"
+			},
+			"recording": {
+				"title": "Recording & Upload",
+				"autoUpload": "Auto-upload recording after event",
+				"uploadVisibility": "Uploaded video visibility",
+				"liveBroadcast": "Live Broadcast",
+				"uploadedRecording": "Recording",
+				"watchBroadcast": "Watch",
+				"watchRecording": "Watch Recording",
+				"studio": "Studio",
+				"status": {
+					"none": "No recording",
+					"pending": "Ready to upload",
+					"uploading": "Uploading",
+					"paused": "Paused",
+					"uploaded": "Uploaded",
+					"failed": "Upload failed"
+				},
+				"actions": {
+					"startUpload": "Start Upload",
+					"pause": "Pause",
+					"resume": "Resume"
+				}
 			}
 		},
 		"toasts": {

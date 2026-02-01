@@ -51,6 +51,10 @@ export interface ServiceEvent {
 	youtubeLifeCycleStatus?: YouTubeLifeCycleStatus;
 	videoUploadState?: VideoUploadState;
 
+	// Per-event upload settings
+	autoUploadEnabled: boolean; // Default true for new events
+	uploadPrivacyStatus: YouTubePrivacyStatus; // Privacy for uploaded recording (separate from live broadcast)
+
 	// Upload sessions for resumable uploads (stored per-event)
 	uploadSessions?: EventUploadSession[];
 
@@ -161,6 +165,8 @@ export function createEmptyEvent(): ServiceEvent {
 		textusVerses: [],
 		leckioVerses: [],
 		youtubePrivacyStatus: 'public',
+		autoUploadEnabled: true,
+		uploadPrivacyStatus: 'public',
 		createdAt: now,
 		updatedAt: now,
 	};
@@ -225,4 +231,92 @@ export function getPendingUploadSessions(event: ServiceEvent): EventUploadSessio
 export function getActiveUploadSessions(event: ServiceEvent): EventUploadSession[] {
 	if (!event.uploadSessions) return [];
 	return event.uploadSessions.filter((s) => s.status === 'uploading');
+}
+
+// Recording status type for display
+export type EventRecordingStatus = 'none' | 'pending' | 'uploading' | 'paused' | 'uploaded' | 'failed';
+
+// Get the recording/upload status for an event
+export function getRecordingStatus(event: ServiceEvent): EventRecordingStatus {
+	// If we have an uploaded video ID, it's uploaded
+	if (event.youtubeUploadedId) {
+		return 'uploaded';
+	}
+
+	// Check upload sessions
+	if (event.uploadSessions && event.uploadSessions.length > 0) {
+		// Get the most recent YouTube upload session
+		const youtubeSession = event.uploadSessions
+			.filter((s) => s.platform === 'youtube')
+			.sort((a, b) => b.startedAt - a.startedAt)[0];
+
+		if (youtubeSession) {
+			switch (youtubeSession.status) {
+				case 'uploading':
+					return 'uploading';
+				case 'paused':
+					return 'paused';
+				case 'failed':
+					return 'failed';
+				case 'pending':
+					return 'pending';
+				case 'completed':
+				case 'processing':
+					return 'uploaded';
+			}
+		}
+	}
+
+	// Check legacy videoUploadState
+	if (event.videoUploadState) {
+		switch (event.videoUploadState) {
+			case 'uploading':
+				return 'uploading';
+			case 'completed':
+				return 'uploaded';
+			case 'failed':
+				return 'failed';
+			case 'pending':
+				return 'pending';
+		}
+	}
+
+	return 'none';
+}
+
+// Check if an event has an uploaded recording
+export function hasUploadedRecording(event: ServiceEvent): boolean {
+	return !!event.youtubeUploadedId;
+}
+
+// Get the YouTube video URL for the uploaded recording
+export function getYouTubeVideoUrl(event: ServiceEvent): string | null {
+	if (!event.youtubeUploadedId) return null;
+	return `https://www.youtube.com/watch?v=${event.youtubeUploadedId}`;
+}
+
+// Get the YouTube broadcast URL (for live broadcast)
+export function getYouTubeBroadcastUrl(event: ServiceEvent): string | null {
+	if (!event.youtubeScheduledId) return null;
+	return `https://www.youtube.com/watch?v=${event.youtubeScheduledId}`;
+}
+
+// Get YouTube Studio URL for the uploaded video
+export function getYouTubeStudioUploadUrl(event: ServiceEvent): string | null {
+	if (!event.youtubeUploadedId) return null;
+	return `https://studio.youtube.com/video/${event.youtubeUploadedId}/edit`;
+}
+
+// Get the upload progress percentage for an event
+export function getUploadProgress(event: ServiceEvent): number {
+	if (!event.uploadSessions || event.uploadSessions.length === 0) return 0;
+
+	const youtubeSession = event.uploadSessions
+		.filter((s) => s.platform === 'youtube')
+		.sort((a, b) => b.startedAt - a.startedAt)[0];
+
+	if (!youtubeSession) return 0;
+
+	if (youtubeSession.fileSize === 0) return 0;
+	return Math.round((youtubeSession.bytesUploaded / youtubeSession.fileSize) * 100);
 }

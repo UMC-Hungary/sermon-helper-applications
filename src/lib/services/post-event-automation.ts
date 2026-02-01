@@ -57,9 +57,16 @@ class PostEventAutomationService {
 
 		const settings = uploadSettingsStore.getSettings();
 
-		// Check if any platform has auto-upload enabled
+		// Check if any platform has auto-upload enabled globally
 		if (!uploadSettingsStore.hasAutoUploadEnabled()) {
 			console.log('[PostEventAutomation] No platforms enabled for auto-upload');
+			return false;
+		}
+
+		// Check per-event auto-upload setting
+		const event = eventStore.getEventById(session.eventId);
+		if (event && event.autoUploadEnabled === false) {
+			console.log('[PostEventAutomation] Per-event auto-upload disabled for event:', session.eventId);
 			return false;
 		}
 
@@ -218,11 +225,11 @@ class PostEventAutomationService {
 		recordingFile: RecordingFile,
 		event: ServiceEvent
 	): Promise<Map<UploadPlatform, UploadResult>> {
-		// Prepare metadata
+		// Prepare metadata - use per-event uploadPrivacyStatus for recording uploads
 		const metadata: UploadMetadata = {
 			title: generateCalculatedTitle(event),
 			description: generateYoutubeDescription(event),
-			privacy: event.youtubePrivacyStatus || 'public',
+			privacy: event.uploadPrivacyStatus || event.youtubePrivacyStatus || 'public',
 			tags: this.generateTags(event)
 		};
 

@@ -6,8 +6,15 @@
 	import Badge from '$lib/components/ui/badge.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { eventStore, upcomingEvents, pastEvents, todayEvent } from '$lib/stores/event-store';
-	import { formatEventDate, generateCalculatedTitle, type ServiceEvent } from '$lib/types/event';
-	import { Plus, Calendar, Clock, User, BookOpen, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-svelte';
+	import {
+		formatEventDate,
+		generateCalculatedTitle,
+		getRecordingStatus,
+		getYouTubeVideoUrl,
+		type ServiceEvent,
+		type EventRecordingStatus
+	} from '$lib/types/event';
+	import { Plus, Calendar, Clock, User, BookOpen, Edit, Trash2, ChevronDown, ChevronUp, Video, CheckCircle, XCircle, Upload, Globe, Link, Lock, ExternalLink } from 'lucide-svelte';
 
 	// UI state
 	let showPastEvents = $state(false);
@@ -51,6 +58,36 @@
 			return { variant: 'default', label: $_('events.badges.upcoming') };
 		}
 		return { variant: 'secondary', label: $_('events.badges.past') };
+	}
+
+	// Get recording status badge variant
+	function getRecordingBadgeVariant(status: EventRecordingStatus): 'default' | 'secondary' | 'success' | 'destructive' {
+		switch (status) {
+			case 'uploaded':
+				return 'success';
+			case 'failed':
+				return 'destructive';
+			case 'uploading':
+			case 'paused':
+			case 'pending':
+				return 'default';
+			default:
+				return 'secondary';
+		}
+	}
+
+	// Get privacy icon component
+	function getPrivacyIcon(privacy: string): typeof Globe {
+		switch (privacy) {
+			case 'public':
+				return Globe;
+			case 'unlisted':
+				return Link;
+			case 'private':
+				return Lock;
+			default:
+				return Globe;
+		}
 	}
 </script>
 
@@ -193,13 +230,37 @@
 		{#if showPastEvents}
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each $pastEvents as event (event.id)}
-					<Card className="opacity-60">
+					{@const recordingStatus = getRecordingStatus(event)}
+					{@const videoUrl = getYouTubeVideoUrl(event)}
+					<Card className="opacity-80 hover:opacity-100 transition-opacity">
 						<svelte:fragment slot="header">
 							<div class="flex items-center justify-between w-full">
-								<Badge variant="secondary">{$_('events.badges.past')}</Badge>
-								<Button buttonVariant="ghost" buttonSize="icon" onclick={() => handleDelete(event)}>
-									<Trash2 class="h-4 w-4 text-destructive" />
-								</Button>
+								<div class="flex items-center gap-2">
+									<Badge variant="secondary">{$_('events.badges.past')}</Badge>
+									<!-- Recording status badge -->
+									{#if recordingStatus !== 'none'}
+										<Badge variant={getRecordingBadgeVariant(recordingStatus)}>
+											{#if recordingStatus === 'uploaded'}
+												<CheckCircle class="h-3 w-3 mr-1" />
+											{:else if recordingStatus === 'failed'}
+												<XCircle class="h-3 w-3 mr-1" />
+											{:else if recordingStatus === 'uploading'}
+												<Upload class="h-3 w-3 mr-1" />
+											{:else}
+												<Video class="h-3 w-3 mr-1" />
+											{/if}
+											{$_(`events.form.recording.status.${recordingStatus}`)}
+										</Badge>
+									{/if}
+								</div>
+								<div class="flex gap-1">
+									<Button buttonVariant="ghost" buttonSize="icon" onclick={() => handleEdit(event)}>
+										<Edit class="h-4 w-4" />
+									</Button>
+									<Button buttonVariant="ghost" buttonSize="icon" onclick={() => handleDelete(event)}>
+										<Trash2 class="h-4 w-4 text-destructive" />
+									</Button>
+								</div>
 							</div>
 						</svelte:fragment>
 						<svelte:fragment slot="title">
@@ -211,6 +272,31 @@
 									<div class="flex items-center gap-2">
 										<User class="h-4 w-4" />
 										<span>{event.speaker}</span>
+									</div>
+								{/if}
+								<!-- Watch Recording link for uploaded events -->
+								{#if recordingStatus === 'uploaded' && videoUrl}
+									<div class="flex items-center gap-2 pt-1">
+										<Button
+											buttonVariant="outline"
+											buttonSize="sm"
+											href={videoUrl}
+											target="_blank"
+										>
+											<ExternalLink class="h-3 w-3 mr-1" />
+											{$_('events.form.recording.watchRecording')}
+										</Button>
+										<!-- Visibility badge -->
+										<Badge variant="secondary" className="text-xs">
+											{#if event.uploadPrivacyStatus === 'public'}
+												<Globe class="h-3 w-3 mr-1" />
+											{:else if event.uploadPrivacyStatus === 'unlisted'}
+												<Link class="h-3 w-3 mr-1" />
+											{:else}
+												<Lock class="h-3 w-3 mr-1" />
+											{/if}
+											{$_(`events.form.privacyOptions.${event.uploadPrivacyStatus || 'public'}`)}
+										</Badge>
 									</div>
 								{/if}
 							</div>

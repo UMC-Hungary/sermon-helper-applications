@@ -31,7 +31,8 @@
       "WebFetch(domain:github.com)",
       "Bash(cargo check:*)",
       "Bash(pnpm check:*)",
-      "WebFetch(domain:deepwiki.com)"
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(powershell -Command:*)"
     ]
   }
 }

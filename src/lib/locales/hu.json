@@ -280,6 +280,29 @@
 			"validation": {
 				"title": "Kérjük, adjon meg egy esemény címet",
 				"date": "Kérjük, válasszon egy dátumot"
+			},
+			"recording": {
+				"title": "Felvétel és Feltöltés",
+				"autoUpload": "Felvétel automatikus feltöltése esemény után",
+				"uploadVisibility": "Feltöltött videó láthatósága",
+				"liveBroadcast": "Élő Közvetítés",
+				"uploadedRecording": "Felvétel",
+				"watchBroadcast": "Megtekintés",
+				"watchRecording": "Felvétel megtekintése",
+				"studio": "Studio",
+				"status": {
+					"none": "Nincs felvétel",
+					"pending": "Feltöltésre kész",
+					"uploading": "Feltöltés",
+					"paused": "Szünetel",
+					"uploaded": "Feltöltve",
+					"failed": "Feltöltés sikertelen"
+				},
+				"actions": {
+					"startUpload": "Feltöltés Indítása",
+					"pause": "Szünet",
+					"resume": "Folytatás"
+				}
 			}
 		},
 		"toasts": {
