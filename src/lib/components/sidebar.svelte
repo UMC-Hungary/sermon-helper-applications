@@ -7,7 +7,8 @@
 	import Separator from '$lib/components/ui/separator.svelte';
 	import { systemStore } from '$lib/stores/system-store';
 	import { upcomingEvents, eventStore } from '$lib/stores/event-store';
-	import { isEventToday, formatEventDate, generateCalculatedTitle } from '$lib/types/event';
+	import { isEventToday, formatEventDate } from '$lib/types/event';
+	import { scheduleYoutubeBroadcast } from '$lib/utils/youtube-helpers';
 	import { page } from '$app/state';
 	import { _, locale } from 'svelte-i18n';
 	import { setLocale } from '$lib/i18n';
@@ -39,9 +40,8 @@
 	$: nextEvent = $upcomingEvents.length > 0 ? $upcomingEvents[0] : null;
 	$: isToday = nextEvent ? isEventToday(nextEvent) : false;
 	$: isScheduledOnYoutube = nextEvent?.youtubeScheduledId != null;
+	$: isScheduling = nextEvent?.isBroadcastScheduling ?? false;
 
-	// State for YouTube scheduling
-	let isScheduling = false;
 	let showYoutubeLoginModal = false;
 
 	// State for PPTX generation
@@ -138,49 +138,7 @@
 	// Schedule the upcoming event on YouTube
 	async function scheduleUpcomingEvent() {
 		if (!nextEvent || nextEvent.youtubeScheduledId) return;
-
-		isScheduling = true;
-		try {
-			// Use the shared title generation function
-			const title = generateCalculatedTitle(nextEvent);
-
-			// Build description
-			const descParts: string[] = [];
-			if (nextEvent.speaker) descParts.push(`${$_('events.form.speaker')}: ${nextEvent.speaker}`);
-			if (nextEvent.textus) descParts.push(`Textus: ${nextEvent.textus}`);
-			if (nextEvent.leckio) descParts.push(`Lekció: ${nextEvent.leckio}`);
-			if (nextEvent.description) {
-				descParts.push('');
-				descParts.push(nextEvent.description);
-			}
-
-			// Build scheduled start time in ISO 8601 format
-			const scheduledStartTime = new Date(`${nextEvent.date}T${nextEvent.time || '10:00'}:00`).toISOString();
-
-			const response = await youtubeApi.createBroadcast({
-				title,
-				description: descParts.join('\n'),
-				scheduledStartTime,
-				privacyStatus: nextEvent.youtubePrivacyStatus || 'public'
-			});
-
-			// Update the event with the YouTube broadcast ID
-			await eventStore.updateEvent(nextEvent.id, { youtubeScheduledId: response.id });
-
-			toast({
-				title: $_('toasts.eventScheduled.title'),
-				description: $_('toasts.eventScheduled.description'),
-				variant: 'success'
-			});
-		} catch (error) {
-			toast({
-				title: $_('toasts.error.title'),
-				description: error instanceof Error ? error.message : 'Failed to schedule event',
-				variant: 'error'
-			});
-		} finally {
-			isScheduling = false;
-		}
+		await scheduleYoutubeBroadcast(nextEvent);
 	}
 
 	// Open YouTube Studio for the scheduled event

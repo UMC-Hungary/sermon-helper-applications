@@ -51,6 +51,9 @@ export interface ServiceEvent {
 	youtubeLifeCycleStatus?: YouTubeLifeCycleStatus;
 	videoUploadState?: VideoUploadState;
 
+	// Transient UI state (not persisted)
+	isBroadcastScheduling: boolean;
+
 	// Per-event upload settings
 	autoUploadEnabled: boolean; // Default true for new events
 	uploadPrivacyStatus: YouTubePrivacyStatus; // Privacy for uploaded recording (separate from live broadcast)
@@ -160,8 +163,8 @@ export function createEmptyEvent(): ServiceEvent {
 		description: '',
 		textus: '',
 		leckio: '',
-		textusTranslation: 'RUF_v2',
-		leckioTranslation: 'RUF_v2',
+		textusTranslation: 'UF_v2',
+		leckioTranslation: 'UF_v2',
 		textusVerses: [],
 		leckioVerses: [],
 		youtubePrivacyStatus: 'public',
@@ -169,6 +172,7 @@ export function createEmptyEvent(): ServiceEvent {
 		uploadPrivacyStatus: 'public',
 		createdAt: now,
 		updatedAt: now,
+        isBroadcastScheduling: false
 	};
 }
 

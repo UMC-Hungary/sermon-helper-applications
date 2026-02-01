@@ -1,7 +1,9 @@
 import { get } from 'svelte/store';
 import { youtubeApi } from './youtube-api';
 import { systemStore } from '$lib/stores/system-store';
+import { eventStore } from '$lib/stores/event-store';
 import { generateCalculatedTitle, type ServiceEvent } from '$lib/types/event';
+import { toast } from './toast';
 
 /**
  * Generate YouTube description from event data
@@ -19,27 +21,51 @@ export function generateYoutubeDescription(event: ServiceEvent): string {
 }
 
 /**
- * Schedule a new YouTube broadcast for an event
- * Returns the broadcast ID if successful, null if not logged in
- * Throws on API errors
+ * Schedule a new YouTube broadcast for an event.
+ * Handles loading state, API call, event update, and toast notifications.
+ * Updates the event directly in the store.
  */
-export async function scheduleYoutubeBroadcast(event: ServiceEvent): Promise<string | null> {
-	if (!get(systemStore).youtubeLoggedIn) return null;
+export async function scheduleYoutubeBroadcast(event: ServiceEvent): Promise<void> {
+	if (!get(systemStore).youtubeLoggedIn) return;
 
-	const scheduledStartTime = new Date(
-		`${event.date}T${event.time || '10:00'}:00`
-	).toISOString();
+	// Set scheduling state on the event
+	await eventStore.updateEvent(event.id, { isBroadcastScheduling: true });
 
-	const broadcast = await youtubeApi.createBroadcast({
-		title: generateCalculatedTitle(event),
-		description: generateYoutubeDescription(event),
-		scheduledStartTime,
-		privacyStatus: event.youtubePrivacyStatus || 'public',
-		enableDvr: true,
-		enableEmbed: true
-	});
+	try {
+		const scheduledStartTime = new Date(
+			`${event.date}T${event.time}:00`
+		).toISOString();
 
-	return broadcast.id;
+		const broadcast = await youtubeApi.createBroadcast({
+			title: generateCalculatedTitle(event),
+			description: generateYoutubeDescription(event),
+			scheduledStartTime,
+			privacyStatus: event.youtubePrivacyStatus,
+			enableDvr: true,
+			enableEmbed: true
+		});
+
+		// Update event with broadcast ID and clear scheduling state
+		await eventStore.updateEvent(event.id, {
+			youtubeScheduledId: broadcast.id,
+			isBroadcastScheduling: false
+		});
+
+		toast({
+			title: 'YouTube Event Scheduled',
+			description: 'The YouTube live event has been created successfully',
+			variant: 'success'
+		});
+	} catch (error) {
+		// Clear scheduling state on error
+		await eventStore.updateEvent(event.id, { isBroadcastScheduling: false });
+
+		toast({
+			title: 'Error',
+			description: error instanceof Error ? error.message : 'Failed to schedule YouTube event',
+			variant: 'error'
+		});
+	}
 }
 
 /**
@@ -58,7 +84,7 @@ export async function updateYoutubeBroadcast(event: ServiceEvent): Promise<void>
 		title: generateCalculatedTitle(event),
 		description: generateYoutubeDescription(event),
 		scheduledStartTime,
-		privacyStatus: event.youtubePrivacyStatus || 'public',
+		privacyStatus: event.youtubePrivacyStatus,
 		enableDvr: true,
 		enableEmbed: true
 	});

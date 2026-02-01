@@ -15,7 +15,7 @@
 	import BibleSuggestions from '$lib/components/bible-suggestions.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { bibleApi } from '$lib/utils/bible-api';
-	import { isV2Translation, type BibleTranslation, type BibleVerse, type LegacySuggestion } from '$lib/types/bible';
+	import { isV2Translation, type LegacySuggestion } from '$lib/types/bible';
 	import { debounce } from '$lib/utils/debounce';
 	import {
 		createEmptyEvent,
@@ -24,13 +24,14 @@
 		getYouTubeBroadcastUrl,
 		getYouTubeVideoUrl,
 		getUploadProgress,
-		type ServiceEvent,
-		type YouTubePrivacyStatus
+		type ServiceEvent
 	} from '$lib/types/event';
 	import { appSettingsStore } from '$lib/utils/app-settings-store';
-	import { Search, Save, X, Loader2, BookOpen, Edit2, Check, Youtube, ExternalLink, Upload, Pause, Play, Video, Globe, Link, Lock } from 'lucide-svelte';
+	import { Search, Save, X, Loader2, BookOpen, Edit2, Check, Youtube, ExternalLink, Upload, Video, Globe, Link, Lock } from 'lucide-svelte';
 	import { systemStore } from '$lib/stores/system-store';
+	import { eventStore } from '$lib/stores/event-store';
 	import { youtubeApi } from '$lib/utils/youtube-api';
+	import { scheduleYoutubeBroadcast } from '$lib/utils/youtube-helpers';
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
 
 	interface Props {
@@ -106,8 +107,6 @@
 	// Debounced fetch for V2 translations
 	const debouncedFetchV2 = debounce(async (term: string, translation: BibleTranslation, field: 'textus' | 'leckio') => {
 		if (term.length < 2) return;
-
-		const loadingState = field === 'textus' ? (textusLoading = true) : (leckioLoading = true);
 
 		try {
 			const result = await bibleApi.fetchVerses(term, translation);
@@ -266,9 +265,7 @@
 		}
 	}
 
-	// YouTube scheduling state
 	let showYoutubeLoginModal = $state(false);
-	let isSchedulingYoutube = $state(false);
 
 	// Schedule YouTube broadcast
 	async function handleScheduleYoutube() {
@@ -285,57 +282,13 @@
 			return;
 		}
 
-		isSchedulingYoutube = true;
-		try {
-			// Create scheduled start time in ISO format
-			const scheduledStartTime = new Date(`${formData.date}T${formData.time}:00`).toISOString();
+		await scheduleYoutubeBroadcast(formData);
 
-			const broadcast = await youtubeApi.createBroadcast({
-				title: calculatedTitle,
-				description: generateYoutubeDescription(),
-				scheduledStartTime,
-				privacyStatus: 'unlisted', // Default to unlisted for church services
-				enableDvr: true,
-				enableEmbed: true
-			});
-
-			formData.youtubeScheduledId = broadcast.id;
-
-			toast({
-				title: $_('youtube.scheduling.scheduled'),
-				description: $_('youtube.scheduling.scheduledDescription'),
-				variant: 'success'
-			});
-		} catch (error) {
-			toast({
-				title: $_('youtube.modal.error'),
-				description: error instanceof Error ? error.message : $_('youtube.scheduling.failed'),
-				variant: 'error'
-			});
-		} finally {
-			isSchedulingYoutube = false;
+		// Sync youtubeScheduledId from store since formData is a local copy
+		const updatedEvent = eventStore.getEventById(formData.id);
+		if (updatedEvent?.youtubeScheduledId) {
+			formData.youtubeScheduledId = updatedEvent.youtubeScheduledId;
 		}
-	}
-
-	// Generate description from event data
-	function generateYoutubeDescription(): string {
-		const parts: string[] = [];
-
-		if (formData.speaker) {
-			parts.push(`${$_('events.form.speaker')}: ${formData.speaker}`);
-		}
-		if (formData.textus) {
-			parts.push(`Textus: ${formData.textus}`);
-		}
-		if (formData.leckio) {
-			parts.push(`Lekció: ${formData.leckio}`);
-		}
-		if (formData.description) {
-			parts.push('');
-			parts.push(formData.description);
-		}
-
-		return parts.join('\n');
 	}
 
 	// Handle successful YouTube login - auto-schedule if triggered from form
@@ -486,8 +439,8 @@
 						<p class="text-sm text-muted-foreground">
 							{$_('youtube.scheduling.notScheduled')}
 						</p>
-						<Button onclick={handleScheduleYoutube} disabled={isSchedulingYoutube}>
-							{#if isSchedulingYoutube}
+						<Button onclick={handleScheduleYoutube} disabled={formData.isBroadcastScheduling}>
+							{#if formData.isBroadcastScheduling}
 								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 								{$_('youtube.scheduling.scheduling')}
 							{:else}

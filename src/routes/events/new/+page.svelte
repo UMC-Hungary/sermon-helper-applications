@@ -18,26 +18,13 @@
 
 	async function handleSave(event: ServiceEvent) {
 		try {
-			// Try to auto-schedule on YouTube if logged in
-			if ($systemStore.youtubeLoggedIn) {
-				try {
-					const broadcastId = await scheduleYoutubeBroadcast(event);
-					if (broadcastId) {
-						event.youtubeScheduledId = broadcastId;
-					}
-				} catch (ytError) {
-					// Log error but continue with save
-					console.error('Auto-schedule failed:', ytError);
-					toast({
-						title: $_('youtube.scheduling.failed'),
-						description: ytError instanceof Error ? ytError.message : 'Unknown error',
-						variant: 'warning'
-					});
-				}
-			}
-
-			// Save the event (with or without YouTube ID)
+			// Save the event first
 			await eventStore.addEvent(event);
+
+			// Try to auto-schedule on YouTube if logged in (this updates the event in the store)
+			if ($systemStore.youtubeLoggedIn) {
+				await scheduleYoutubeBroadcast(event);
+			}
 
 			// Clear draft and mark as saved
 			await appSettingsStore.set('draftSaved', true);
