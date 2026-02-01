@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 mod bible;
 mod broadlink;
 mod broadlink_commands;

@@ -587,7 +587,7 @@
 	<!-- Right Column: Bible References -->
 	<div class="md:col-span-1 lg:col-span-2">
 		<!-- Bible References with Tabs -->
-		<Card class="h-full">
+		<Card>
 			<svelte:fragment slot="title">
 				<BookOpen class="h-5 w-5 mr-2 inline" />
 				{$_('events.form.bibleReferences')}

@@ -74,6 +74,9 @@ export async function importSettings(data: File | string): Promise<void> {
 		'pptxOutputPath',
 		'discoverySettings',
 		'rfIrSettings',
+		'pptSettings',
+		'uploadSettings',
+		'eventSession',
 	];
 
 	for (const key of validKeys) {
