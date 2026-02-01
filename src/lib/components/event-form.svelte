@@ -44,7 +44,7 @@
 	let { event, originalEventId, onSave, onCancel }: Props = $props();
 
 	// Form state
-	let formData = $state<ServiceEvent>(event ? { ...event } : createEmptyEvent());
+	let formData = $state<ServiceEvent>(event ? { ...event, ...(event.autoUploadEnabled ? {} : { autoUploadEnabled: true }) } : createEmptyEvent());
 
 	// Debounced function to save draft
 	const debouncedSaveDraft = debounce(async (data: ServiceEvent, origId: string | null) => {
@@ -267,6 +267,9 @@
 
 	let showYoutubeLoginModal = $state(false);
 
+	// Determine if this is a stored event (vs a new draft)
+	const isStoredEvent = $derived(!!originalEventId);
+
 	// Schedule YouTube broadcast
 	async function handleScheduleYoutube() {
 		if (!$systemStore.youtubeLoggedIn) {
@@ -405,53 +408,55 @@
 			</svelte:fragment>
 		</Card>
 
-		<!-- YouTube Scheduling -->
-		<Card>
-			<svelte:fragment slot="title">
-				<Youtube class="h-5 w-5 mr-2 inline" />
-				{$_('youtube.scheduling.title')}
-			</svelte:fragment>
-			<svelte:fragment slot="content">
-				{#if formData.youtubeScheduledId}
-					<!-- Scheduled state -->
-					<div
-						class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
-					>
-						<div class="flex items-center gap-2">
-							<Check class="h-5 w-5 text-green-600 dark:text-green-400" />
-							<span class="font-medium text-green-800 dark:text-green-200"
-								>{$_('youtube.scheduling.scheduled')}</span
-							>
-						</div>
-						<Button
-							buttonVariant="outline"
-							buttonSize="sm"
-							href={youtubeApi.getYoutubeStudioUrl(formData.youtubeScheduledId)}
-							target="_blank"
+		<!-- YouTube Scheduling (only shown for stored events) -->
+		{#if isStoredEvent}
+			<Card>
+				<svelte:fragment slot="title">
+					<Youtube class="h-5 w-5 mr-2 inline" />
+					{$_('youtube.scheduling.title')}
+				</svelte:fragment>
+				<svelte:fragment slot="content">
+					{#if formData.youtubeScheduledId}
+						<!-- Scheduled state -->
+						<div
+							class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800"
 						>
-							<ExternalLink class="h-4 w-4 mr-1" />
-							{$_('youtube.scheduling.viewInStudio')}
-						</Button>
-					</div>
-				{:else}
-					<!-- Not scheduled state -->
-					<div class="space-y-3">
-						<p class="text-sm text-muted-foreground">
-							{$_('youtube.scheduling.notScheduled')}
-						</p>
-						<Button onclick={handleScheduleYoutube} disabled={formData.isBroadcastScheduling}>
-							{#if formData.isBroadcastScheduling}
-								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-								{$_('youtube.scheduling.scheduling')}
-							{:else}
-								<Youtube class="mr-2 h-4 w-4" />
-								{$_('youtube.scheduling.scheduleButton')}
-							{/if}
-						</Button>
-					</div>
-				{/if}
-			</svelte:fragment>
-		</Card>
+							<div class="flex items-center gap-2">
+								<Check class="h-5 w-5 text-green-600 dark:text-green-400" />
+								<span class="font-medium text-green-800 dark:text-green-200"
+									>{$_('youtube.scheduling.scheduled')}</span
+								>
+							</div>
+							<Button
+								buttonVariant="outline"
+								buttonSize="sm"
+								href={youtubeApi.getYoutubeStudioUrl(formData.youtubeScheduledId)}
+								target="_blank"
+							>
+								<ExternalLink class="h-4 w-4 mr-1" />
+								{$_('youtube.scheduling.viewInStudio')}
+							</Button>
+						</div>
+					{:else}
+						<!-- Not scheduled state -->
+						<div class="space-y-3">
+							<p class="text-sm text-muted-foreground">
+								{$_('youtube.scheduling.notScheduled')}
+							</p>
+							<Button onclick={handleScheduleYoutube} disabled={formData.isBroadcastScheduling}>
+								{#if formData.isBroadcastScheduling}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									{$_('youtube.scheduling.scheduling')}
+								{:else}
+									<Youtube class="mr-2 h-4 w-4" />
+									{$_('youtube.scheduling.scheduleButton')}
+								{/if}
+							</Button>
+						</div>
+					{/if}
+				</svelte:fragment>
+			</Card>
+		{/if}
 
 		<!-- Recording & Upload -->
 		<Card>
@@ -710,7 +715,7 @@
 
 <!-- Actions - Fixed at bottom -->
 <div class="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t py-3 px-6 z-50">
-	<div class="flex justify-end gap-2 max-w-7xl mx-auto">
+	<div class="flex justify-end gap-2 mx-auto">
 		<Button buttonVariant="outline" onclick={onCancel}>
 			<X class="mr-2 h-4 w-4" />
 			{$_('events.form.cancel')}
