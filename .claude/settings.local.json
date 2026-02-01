@@ -32,7 +32,8 @@
       "Bash(cargo check:*)",
       "Bash(pnpm check:*)",
       "WebFetch(domain:deepwiki.com)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(pnpm run dev:*)"
     ]
   }
 }
