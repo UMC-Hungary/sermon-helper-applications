@@ -152,8 +152,14 @@
         isMobileMenuOpen = !isMobileMenuOpen;
     }
 
-    // Event handler
-    let onRecheck: () => Promise<void> = async () => {};
+    const handleRecheck = async () => {
+        await handleReconnect();
+        console.log("Rechecking all systems...");
+    };
+
+    const handleReconnect = async () => {
+        await obsWebSocket.autoconnect();
+    };
 </script>
 
 <Toaster
@@ -174,7 +180,7 @@
 
      <main class="flex-1 overflow-y-auto">
          <div class="p-4 md:p-8 space-y-6 pt-20 md:pt-8">
-             <ErrorMessages onRecheck={onRecheck} />
+             <ErrorMessages onRecheck={handleRecheck} onReconnect={handleReconnect} />
 
              {@render children()}
          </div>
