@@ -4,7 +4,6 @@ import type { ServiceEvent } from '$lib/types/event';
 import type { YouTubeTokens, YouTubeOAuthConfig } from '$lib/types/youtube';
 import type { ObsDevicesSettings } from '$lib/types/obs-devices';
 import { DEFAULT_OBS_DEVICES_SETTINGS } from '$lib/types/obs-devices';
-import type { EventSession } from '$lib/types/event-session';
 import type { UploadSettings } from '$lib/types/upload-config';
 import { DEFAULT_UPLOAD_SETTINGS } from '$lib/types/upload-config';
 import type { DiscoverySettings } from '$lib/types/discovery';
@@ -14,18 +13,9 @@ import { DEFAULT_RF_IR_SETTINGS } from '$lib/types/rf-ir';
 import type { PptSettings } from '$lib/types/ppt';
 import { DEFAULT_PPT_SETTINGS } from '$lib/types/ppt';
 
-// Session storage structure
-interface SessionStorage {
-	currentSession: EventSession | null;
-	sessionHistory: EventSession[];
-}
-
 export interface AppSettings {
 	bibleTranslation: string;
 	eventList: ServiceEvent[];
-	draftEvent: ServiceEvent | null;
-	draftEventOriginalId: string | null; // If editing, stores the original event ID
-	draftSaved: boolean; // True if the draft was saved (form should not reopen)
 	// YouTube OAuth settings
 	youtubeTokens: YouTubeTokens | null;
 	youtubeOAuthConfig: YouTubeOAuthConfig | null;
@@ -33,8 +23,6 @@ export interface AppSettings {
 	obsDevicesSettings: ObsDevicesSettings;
 	// PPTX output folder path (Tauri only)
 	pptxOutputPath: string | null;
-	// Event session tracking (for post-event automation)
-	eventSession: SessionStorage | null;
 	// Upload settings (multi-platform)
 	uploadSettings: UploadSettings;
 	// Discovery server settings (for mobile companion app)
@@ -48,14 +36,10 @@ export interface AppSettings {
 const DEFAULT_SETTINGS: AppSettings = {
 	bibleTranslation: 'RUF_v2',
 	eventList: [],
-	draftEvent: null,
-	draftEventOriginalId: null,
-	draftSaved: false,
 	youtubeTokens: null,
 	youtubeOAuthConfig: null,
 	obsDevicesSettings: DEFAULT_OBS_DEVICES_SETTINGS,
 	pptxOutputPath: null,
-	eventSession: null,
 	uploadSettings: DEFAULT_UPLOAD_SETTINGS,
 	discoverySettings: DEFAULT_DISCOVERY_SETTINGS,
 	rfIrSettings: DEFAULT_RF_IR_SETTINGS,
