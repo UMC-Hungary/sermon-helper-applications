@@ -111,12 +111,8 @@ pub async fn scan_recording_directory(
             continue;
         }
 
-        // Get duration using ffprobe or estimation
-        let duration = get_video_duration(&path).unwrap_or_else(|| {
-            // Fallback: estimate from file size (~5MB per minute for 1080p)
-            let size = metadata.len();
-            (size as f64) / (5.0 * 1024.0 * 1024.0) * 60.0
-        });
+        // Get duration from file container (MP4 headers or ffprobe)
+        let duration = get_video_duration(&path).unwrap_or(0.0);
 
         let file_name = path
             .file_name()
@@ -145,11 +141,45 @@ pub async fn scan_recording_directory(
     Ok(recordings)
 }
 
-/// Get video duration using ffprobe if available
+/// Get video duration by parsing the file container (MP4), falling back to ffprobe
 fn get_video_duration(path: &Path) -> Option<f64> {
+    // Try reading MP4 container metadata directly
+    if let Some(duration) = get_mp4_duration(path) {
+        return Some(duration);
+    }
+
+    // Fallback: try ffprobe if available
+    get_duration_ffprobe(path)
+}
+
+/// Read duration from MP4 container headers
+fn get_mp4_duration(path: &Path) -> Option<f64> {
+    let file = std::fs::File::open(path).ok()?;
+    let size = file.metadata().ok()?.len();
+    let reader = std::io::BufReader::new(file);
+
+    match mp4::Mp4Reader::read_header(reader, size) {
+        Ok(mp4) => {
+            let duration = mp4.duration();
+            let seconds = duration.as_secs_f64();
+            if seconds > 0.0 {
+                log::debug!("MP4 header duration for {:?}: {:.1}s", path, seconds);
+                Some(seconds)
+            } else {
+                None
+            }
+        }
+        Err(e) => {
+            log::debug!("MP4 header parse failed for {:?}: {}", path, e);
+            None
+        }
+    }
+}
+
+/// Get duration using ffprobe if available
+fn get_duration_ffprobe(path: &Path) -> Option<f64> {
     let path_str = path.to_str()?;
 
-    // Try ffprobe first
     let output = Command::new("ffprobe")
         .args([
             "-v",
@@ -166,18 +196,121 @@ fn get_video_duration(path: &Path) -> Option<f64> {
         Ok(output) if output.status.success() => {
             let duration_str = String::from_utf8_lossy(&output.stdout);
             let duration: f64 = duration_str.trim().parse().ok()?;
-            log::debug!("ffprobe duration for {:?}: {}s", path, duration);
+            log::debug!("ffprobe duration for {:?}: {:.1}s", path, duration);
             Some(duration)
         }
         Ok(_) => {
-            log::debug!("ffprobe failed for {:?}, using estimation", path);
+            log::debug!("ffprobe failed for {:?}", path);
             None
         }
         Err(e) => {
-            log::debug!("ffprobe not available: {}, using estimation", e);
+            log::debug!("ffprobe not available: {}", e);
             None
         }
     }
+}
+
+/// File metadata returned to frontend (camelCase for TypeScript compatibility)
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileMetadata {
+    pub path: String,
+    pub name: String,
+    pub size: u64,
+    pub duration: f64,
+    pub created_at: u64,
+    pub modified_at: u64,
+}
+
+/// Get full file metadata for a recording file
+/// Includes retry logic for when OBS is still finalizing the file
+#[tauri::command]
+pub async fn get_file_metadata(path: String) -> Result<FileMetadata, String> {
+    let file_path = Path::new(&path);
+
+    // Retry up to 5 times with 1s delay for file to be ready
+    // OBS may still be finalizing the file when we first check
+    let max_retries = 5;
+    let mut last_metadata = None;
+
+    for attempt in 0..=max_retries {
+        if !file_path.exists() {
+            if attempt < max_retries {
+                log::debug!("File not found, retry {}/{}: {}", attempt + 1, max_retries, path);
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                continue;
+            }
+            return Err(format!("File does not exist: {}", path));
+        }
+
+        match std::fs::metadata(file_path) {
+            Ok(meta) => {
+                // If file size is 0, OBS might still be writing
+                if meta.len() == 0 && attempt < max_retries {
+                    log::debug!("File size is 0, retry {}/{}: {}", attempt + 1, max_retries, path);
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    continue;
+                }
+                last_metadata = Some(meta);
+                break;
+            }
+            Err(e) => {
+                if attempt < max_retries {
+                    log::debug!("Metadata read failed, retry {}/{}: {}", attempt + 1, max_retries, e);
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    continue;
+                }
+                return Err(format!("Failed to get file metadata: {}", e));
+            }
+        }
+    }
+
+    let metadata = last_metadata.ok_or_else(|| format!("Could not read file metadata: {}", path))?;
+
+    let name = file_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let size = metadata.len();
+
+    let modified_at = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+
+    let created_at = metadata
+        .created()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(modified_at);
+
+    // Get duration from file container (MP4 headers or ffprobe)
+    let duration = get_video_duration(file_path).unwrap_or_else(|| {
+        // Last resort fallback: estimate from created/modified timestamps
+        if modified_at > created_at {
+            (modified_at - created_at) as f64 / 1000.0
+        } else {
+            0.0
+        }
+    });
+
+    log::info!(
+        "File metadata for {}: size={}, duration={:.1}s, created={}, modified={}",
+        name, size, duration, created_at, modified_at
+    );
+
+    Ok(FileMetadata {
+        path,
+        name,
+        size,
+        duration,
+        created_at,
+        modified_at,
+    })
 }
 
 /// Get video file information
