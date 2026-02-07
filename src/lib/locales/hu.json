@@ -43,6 +43,7 @@
 				"failed": "Nem sikerült létrehozni a PPTX fájlt",
 				"changeFolder": "Kimeneti mappa módosítása"
 			},
+			"recordings": "Felvételek",
 			"browserSources": "Böngésző Források",
 			"refreshBrowserSource": "Böngésző forrás frissítése"
 		},
@@ -372,7 +373,7 @@
 			"liveSuccessDescription": "A YouTube közvetítés most élő",
 			"liveFailed": "Nem sikerült elindítani az élő adást",
 			"status": {
-				"created": "Létrehozás...",
+				"created": "Létrehozva",
 				"ready": "Kész",
 				"testing": "Tesztelés",
 				"live": "Élő",
@@ -414,6 +415,7 @@
 			"failed": "Automatikus feldolgozás sikertelen: {error}",
 			"triggerManually": "Utófeldolgozás Indítása"
 		},
+		"finishSession": "Munkamenet befejezése",
 		"connection": {
 			"lost": "Kapcsolat Elveszett",
 			"reconnecting": "Újracsatlakozás...",
@@ -422,6 +424,31 @@
 		"youtube": {
 			"notConnected": "YouTube Nincs Csatlakoztatva",
 			"connectToUpload": "Csatlakozz a YouTube-hoz a felvétel feltöltéséhez."
+		}
+	},
+	"recordings": {
+		"noRecordings": "Még nincsenek felvételek",
+		"viewOnYoutube": "Megtekintés YouTube-on",
+		"includeInUpload": "Feltöltésbe belefoglalás",
+		"customTitle": "Egyéni cím (opcionális)",
+		"noneReady": "Nincs feltöltésre kész felvétel",
+		"oneReady": "1 felvétel feltöltésre kész",
+		"multipleReady": "{count} felvétel feltöltésre kész",
+		"table": {
+			"title": "Felvételek",
+			"recording": "Felvétel",
+			"duration": "Időtartam",
+			"event": "Esemény",
+			"date": "Dátum",
+			"speaker": "Beszélő",
+			"status": "Állapot",
+			"youtube": "YouTube",
+			"actions": "Műveletek",
+			"editEvent": "Szerkesztés",
+			"upload": "Feltöltés",
+			"uploading": "Feltöltés...",
+			"uploadSuccess": "Felvétel sikeresen feltöltve",
+			"uploadFailed": "Feltöltés sikertelen"
 		}
 	},
 	"recording": {
