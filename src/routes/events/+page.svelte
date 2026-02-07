@@ -1,23 +1,167 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Card from '$lib/components/ui/card.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import { toast } from '$lib/utils/toast';
-	import { eventStore, upcomingEvents, pastEvents, todayEvent } from '$lib/stores/event-store';
+	import { eventStore, eventList, upcomingEvents, pastEvents, todayEvent } from '$lib/stores/event-store';
+	import { youtubeTokens } from '$lib/stores/youtube-store';
+	import { uploadManager } from '$lib/services/upload/upload-manager';
 	import {
 		formatEventDate,
+		formatDuration,
 		generateCalculatedTitle,
 		getRecordingStatus,
 		getYouTubeVideoUrl,
+		getLocalToday,
 		type ServiceEvent,
+		type EventRecording,
 		type EventRecordingStatus
 	} from '$lib/types/event';
-	import { Plus, Calendar, Clock, User, BookOpen, Edit, Trash2, ChevronDown, ChevronUp, Video, CheckCircle, XCircle, Upload, Globe, Link, Lock, ExternalLink } from 'lucide-svelte';
+	import { Plus, Calendar, Clock, User, BookOpen, Edit, Trash2, ChevronDown, ChevronUp, Video, CheckCircle, XCircle, Upload, Globe, Link, Lock, ExternalLink, Loader2 } from 'lucide-svelte';
 
 	// UI state
 	let showPastEvents = $state(false);
+	let showRecordings = $state(false);
+
+	// Upload state
+	let uploadingRecordingId = $state<string | null>(null);
+	let uploadProgress = $state(0);
+
+	// Flat list of all recordings across all events, sorted by most recent first
+	let allRecordings = $derived(
+		$eventList
+			.flatMap((event) =>
+				(event.recordings ?? []).map((recording) => ({ recording, event }))
+			)
+			.sort((a, b) => b.recording.file.createdAt - a.recording.file.createdAt)
+	);
+
+	// Pending recordings (not uploaded, eligible), sorted oldest first for sequential upload
+	let pendingRecordings = $derived(
+		allRecordings.filter(({ recording }) => {
+			const s = getRecordingItemStatus(recording);
+			return s === 'pending' || s === 'uploading';
+		})
+	);
+
+	// Whether YouTube is connected (check persisted tokens, survives refresh)
+	let isYouTubeConnected = $derived($youtubeTokens !== null && !!$youtubeTokens.accessToken);
+
+	// Check if a recording is the next in line to upload (first pending)
+	function isNextToUpload(recordingId: string): boolean {
+		if (pendingRecordings.length === 0) return false;
+		// Last in the list = oldest (sorted most recent first), so the next to upload is the last pending
+		return pendingRecordings[pendingRecordings.length - 1].recording.id === recordingId;
+	}
+
+	// Start a fresh upload for a recording
+	async function handleUpload(event: ServiceEvent, recording: EventRecording) {
+		if (uploadingRecordingId) return;
+
+		// If this recording has a saved session, resume instead
+		if (recording.uploadSession) {
+			return handleResumeUpload(event, recording);
+		}
+
+		uploadingRecordingId = recording.id;
+		uploadProgress = 0;
+
+		try {
+			const result = await uploadManager.uploadRecordingManual(
+				event.id,
+				recording,
+				(progress) => {
+					uploadProgress = progress.percentage;
+				}
+			);
+
+			if (result) {
+				toast({
+					title: $_('toasts.success.title'),
+					description: $_('recordings.table.uploadSuccess'),
+					variant: 'success'
+				});
+			} else {
+				await eventStore.clearRecordingUploading(event.id, recording.id);
+			}
+		} catch (error) {
+			await eventStore.clearRecordingUploading(event.id, recording.id);
+			toast({
+				title: $_('toasts.error.title'),
+				description: $_('recordings.table.uploadFailed'),
+				variant: 'error'
+			});
+		} finally {
+			uploadingRecordingId = null;
+			uploadProgress = 0;
+		}
+	}
+
+	// Resume an interrupted upload from persisted session
+	async function handleResumeUpload(event: ServiceEvent, recording: EventRecording) {
+		if (uploadingRecordingId) return;
+
+		uploadingRecordingId = recording.id;
+		// Start from last persisted progress
+		const savedSession = recording.uploadSession;
+		uploadProgress = savedSession ? (savedSession.bytesUploaded / savedSession.fileSize) * 100 : 0;
+
+		try {
+			const result = await uploadManager.resumeUploadRecording(
+				event.id,
+				recording,
+				(progress) => {
+					uploadProgress = progress.percentage;
+				}
+			);
+
+			if (result) {
+				toast({
+					title: $_('toasts.success.title'),
+					description: $_('recordings.table.uploadSuccess'),
+					variant: 'success'
+				});
+			} else {
+				await eventStore.clearRecordingUploading(event.id, recording.id);
+			}
+		} catch (error) {
+			// Resume failed — keep session data so user can retry, but clear in-progress flag
+			await eventStore.clearRecordingUploading(event.id, recording.id);
+			toast({
+				title: $_('toasts.error.title'),
+				description: $_('recordings.table.uploadFailed'),
+				variant: 'error'
+			});
+		} finally {
+			uploadingRecordingId = null;
+			uploadProgress = 0;
+		}
+	}
+
+	// On mount: auto-resume any interrupted uploads
+	onMount(() => {
+		const interruptedUpload = allRecordings.find(
+			({ recording }) => recording.uploadInProgress && recording.uploadSession && !recording.uploaded
+		);
+
+		if (interruptedUpload && isYouTubeConnected) {
+			// Auto-open the recordings section and resume
+			showRecordings = true;
+			handleResumeUpload(interruptedUpload.event, interruptedUpload.recording);
+		}
+	});
+
+	// Get recording-level status for a single recording
+	function getRecordingItemStatus(recording: EventRecording): EventRecordingStatus {
+		if (recording.uploaded) return 'uploaded';
+		if (recording.uploadInProgress) return 'uploading';
+		const meetsMinDuration = recording.file.duration >= 120; // 2 minutes
+		if (meetsMinDuration || recording.whitelisted) return 'pending';
+		return 'none';
+	}
 
 	// Navigate to new event form
 	function handleAdd() {
@@ -51,7 +195,7 @@
 
 	// Get badge variant for event
 	function getEventBadge(event: ServiceEvent): { variant: 'default' | 'secondary' | 'success'; label: string } {
-		const today = new Date().toISOString().split('T')[0];
+		const today = getLocalToday();
 		if (event.date === today) {
 			return { variant: 'success', label: $_('events.badges.today') };
 		} else if (event.date > today) {
@@ -68,7 +212,7 @@
 			case 'failed':
 				return 'destructive';
 			case 'uploading':
-			case 'paused':
+			// TODO: add case 'paused':
 			case 'pending':
 				return 'default';
 			default:
@@ -303,6 +447,115 @@
 						</svelte:fragment>
 					</Card>
 				{/each}
+			</div>
+		{/if}
+	</div>
+{/if}
+
+<!-- Recordings Table (collapsible) -->
+{#if allRecordings.length > 0}
+	<div class="space-y-4">
+		<button
+			class="flex items-center gap-2 text-xl font-semibold text-muted-foreground hover:text-foreground transition-colors"
+			onclick={() => (showRecordings = !showRecordings)}
+		>
+			{#if showRecordings}
+				<ChevronUp class="h-5 w-5" />
+			{:else}
+				<ChevronDown class="h-5 w-5" />
+			{/if}
+			{$_('recordings.table.title')} ({allRecordings.length})
+		</button>
+
+		{#if showRecordings}
+			<div class="overflow-x-auto rounded-lg border border-border">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-border bg-muted/50">
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.recording')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.duration')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.event')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.date')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.speaker')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.status')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.youtube')}</th>
+							<th class="px-4 py-3 text-left font-medium text-muted-foreground">{$_('recordings.table.actions')}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each allRecordings as { recording, event } (recording.id)}
+							{@const status = getRecordingItemStatus(recording)}
+							<tr class="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors">
+								<td class="px-4 py-3 font-medium max-w-[200px] truncate" title={recording.file.name}>
+									{recording.file.name}
+								</td>
+								<td class="px-4 py-3 text-muted-foreground whitespace-nowrap">
+									{formatDuration(recording.file.duration)}
+								</td>
+								<td class="px-4 py-3 max-w-[250px] truncate" title={generateCalculatedTitle(event)}>
+									{generateCalculatedTitle(event)}
+								</td>
+								<td class="px-4 py-3 text-muted-foreground whitespace-nowrap">
+									{formatEventDate(event.date)}
+								</td>
+								<td class="px-4 py-3 text-muted-foreground">
+									{event.speaker || '-'}
+								</td>
+								<td class="px-4 py-3">
+									<Badge variant={getRecordingBadgeVariant(status)}>
+										{#if status === 'uploaded'}
+											<CheckCircle class="h-3 w-3 mr-1" />
+										{:else if status === 'uploading'}
+											<Upload class="h-3 w-3 mr-1" />
+										{:else if status === 'pending'}
+											<Video class="h-3 w-3 mr-1" />
+										{/if}
+										{$_(`events.form.recording.status.${status}`)}
+									</Badge>
+								</td>
+								<td class="px-4 py-3">
+									{#if recording.videoUrl}
+										<a
+											href={recording.videoUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="text-primary hover:text-primary/80 transition-colors"
+											title={$_('recordings.viewOnYoutube')}
+										>
+											<ExternalLink class="h-4 w-4" />
+										</a>
+									{:else}
+										<span class="text-muted-foreground">-</span>
+									{/if}
+								</td>
+								<td class="px-4 py-3">
+									<div class="flex items-center gap-2">
+										{#if (status === 'pending' || status === 'uploading') && isYouTubeConnected}
+											<Button
+												buttonVariant={isNextToUpload(recording.id) ? 'default' : 'outline'}
+												buttonSize="sm"
+												disabled={uploadingRecordingId !== null && uploadingRecordingId !== recording.id}
+												onclick={() => handleUpload(event, recording)}
+											>
+												{#if uploadingRecordingId === recording.id}
+													<Loader2 class="h-3 w-3 mr-1 animate-spin" />
+													{uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : $_('recordings.table.uploading')}
+												{:else}
+													<Upload class="h-3 w-3 mr-1" />
+													{$_('recordings.table.upload')}
+												{/if}
+											</Button>
+										{/if}
+										<Button buttonVariant="outline" buttonSize="sm" onclick={() => handleEdit(event)}>
+											<Edit class="h-3 w-3 mr-1" />
+											{$_('recordings.table.editEvent')}
+										</Button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
 			</div>
 		{/if}
 	</div>

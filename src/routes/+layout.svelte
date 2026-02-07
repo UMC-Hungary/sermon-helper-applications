@@ -14,7 +14,9 @@
     import { youtubeAuthStore } from '$lib/stores/youtube-store';
     import { updateYoutubeLogin } from '$lib/stores/system-store';
     import { refreshStore } from '$lib/stores/refresh-store';
-    import { sessionIntegration } from '$lib/services/session-integration';
+    import { uploaderIntegration } from '$lib/services/uploader-integration';
+    import { dataSchemaCleanup } from '$lib/services/data-schema-cleanup';
+    import { initEventStore } from '$lib/stores/event-store';
     import UpdateChecker from '$lib/components/update-checker.svelte';
     import { browser } from '$app/environment';
     import { isTauriApp } from '$lib/utils/storage-helpers';
@@ -49,6 +51,13 @@
             await appSettingsStore.load();
             await log('info', 'App settings loaded');
 
+            await log('info', 'Running data schema cleanup...');
+            await dataSchemaCleanup.runCleanup();
+            await log('info', 'Data schema cleanup complete');
+
+            initEventStore();
+            await log('info', 'Event store initialized');
+
             await log('info', 'Initializing OAuth handler...');
             await initOAuthHandler();
             await log('info', 'OAuth handler initialized');
@@ -67,8 +76,8 @@
 
             // Only initialize session integration in Tauri desktop app
             if (isTauriApp()) {
-                await sessionIntegration.init();
-                await log('info', 'Session integration initialized');
+                await uploaderIntegration.init();
+                await log('info', 'Uploader integration initialized');
 
                 // Initialize discovery server manager
                 await discoveryServerManager.init();
@@ -91,7 +100,7 @@
                     }
                 }
             } else {
-                await log('info', 'Session integration skipped (web mode)');
+                await log('info', 'Uploader integration skipped (web mode)');
             }
 
             await log('info', 'Layout onMount completed successfully');
