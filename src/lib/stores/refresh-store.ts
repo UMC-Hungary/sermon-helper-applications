@@ -1,12 +1,10 @@
 import { writable, get } from 'svelte/store';
-import { eventStore, eventList } from './event-store';
+import { eventStore, eventList, uploadQueue } from './event-store';
 import { youtubeApi } from '$lib/utils/youtube-api';
 import { systemStore } from './system-store';
 import type { YouTubePrivacyStatus, YouTubeLifeCycleStatus } from '$lib/types/event';
 import { checkAllObsDevices } from '$lib/utils/obs-device-checker';
 import { obsWebSocket } from '$lib/utils/obs-websocket';
-import { eventSessionStore, currentSession } from './event-session-store';
-import { uploadManager } from '$lib/services/upload/upload-manager';
 
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
@@ -104,10 +102,8 @@ function createRefreshStore() {
 								// Update status from YouTube
 								console.log(`[RefreshStore] Broadcast ${event.youtubeScheduledId} status: ${broadcast.status.lifeCycleStatus}`);
 								await eventStore.updateEvent(event.id, {
-									youtubePrivacyStatus: broadcast.status
-										.privacyStatus as YouTubePrivacyStatus,
-									youtubeLifeCycleStatus: broadcast.status
-										.lifeCycleStatus as YouTubeLifeCycleStatus
+									youtubePrivacyStatus: broadcast.status.privacyStatus as YouTubePrivacyStatus,
+									youtubeLifeCycleStatus: broadcast.status.lifeCycleStatus as YouTubeLifeCycleStatus
 								});
 							}
 						} catch (error) {
@@ -116,23 +112,10 @@ function createRefreshStore() {
 					}
 				}
 
-				// Check for paused session and resume if OBS is connected
-				const session = get(currentSession);
-				if (session?.state === 'PAUSED' && updatedSystemStore.obs) {
-					console.log('[RefreshStore] Resuming paused session');
-					await eventSessionStore.resume();
-				}
-
-				// Check for pending uploads to resume
-				try {
-					const pendingUploads = await uploadManager.getPendingUploads();
-					if (pendingUploads.length > 0) {
-						console.log(`[RefreshStore] Found ${pendingUploads.length} pending uploads`);
-						// Don't auto-resume here - let the user decide via UI
-						// But we could notify them
-					}
-				} catch (error) {
-					console.error('[RefreshStore] Failed to check pending uploads:', error);
+					// Check for pending uploads in queue
+				const pendingQueue = get(uploadQueue);
+				if (pendingQueue.length > 0) {
+					console.log(`[RefreshStore] Found ${pendingQueue.length} items in upload queue`);
 				}
 
 				update((s) => ({ ...s, lastSync: Date.now() }));
