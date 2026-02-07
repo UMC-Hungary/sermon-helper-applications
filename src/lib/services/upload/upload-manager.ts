@@ -1,10 +1,11 @@
 // Upload Manager
-// Orchestrates uploads across all configured platforms
+// Simplified: works directly with EventRecording
 
 import { get } from 'svelte/store';
 import { uploadSettingsStore, uploadSettings } from '$lib/stores/upload-settings-store';
-import { eventStore, allPendingUploads, type PendingUploadWithEvent } from '$lib/stores/event-store';
-import type { EventUploadSession } from '$lib/types/event';
+import { eventStore, uploadQueue } from '$lib/stores/event-store';
+import type { EventRecording, ServiceEvent } from '$lib/types/event';
+import { generateCalculatedTitle } from '$lib/types/event';
 import type { UploadPlatform } from '$lib/types/upload-config';
 import type {
 	IUploadService,
@@ -14,13 +15,12 @@ import type {
 	UploadResult
 } from './upload-service.interface';
 import { youtubeUploadService } from './youtube-upload.service';
-
-// Platform upload progress callback
-export type PlatformProgressCallback = (platform: UploadPlatform, progress: UploadProgress) => void;
+import { generateYoutubeDescription } from '$lib/utils/youtube-helpers';
 
 class UploadManager {
 	private services: Map<UploadPlatform, IUploadService> = new Map();
-	private activeUploads: Map<string, UploadSession> = new Map();
+	private activeUploads: Map<string, { session: UploadSession; eventId: string; recordingId: string }> = new Map();
+	private isProcessingQueue = false;
 
 	constructor() {
 		// Register available services
@@ -44,333 +44,321 @@ class UploadManager {
 		return Array.from(this.services.values());
 	}
 
-	// Upload to all enabled platforms
-	async uploadToAllPlatforms(
+	// Upload a single recording
+	async uploadRecording(
 		eventId: string,
-		filePath: string,
-		metadata: UploadMetadata,
-		onProgress: PlatformProgressCallback
-	): Promise<Map<UploadPlatform, UploadResult>> {
+		recording: EventRecording,
+		onProgress?: (progress: UploadProgress) => void
+	): Promise<UploadResult | null> {
+		const event = eventStore.getEventById(eventId);
+		if (!event) {
+			console.error(`[UploadManager] Event not found: ${eventId}`);
+			return null;
+		}
+
 		const settings = get(uploadSettings);
-		const results = new Map<UploadPlatform, UploadResult>();
-		const errors: Array<{ platform: UploadPlatform; error: Error }> = [];
 
 		// Get enabled platforms with auto-upload
 		const enabledPlatforms = settings.platforms.filter((p) => p.enabled && p.autoUpload);
-
 		if (enabledPlatforms.length === 0) {
 			console.log('[UploadManager] No platforms enabled for auto-upload');
-			return results;
+			return null;
 		}
 
-		// Upload to each platform sequentially (to avoid bandwidth contention)
-		for (const platformConfig of enabledPlatforms) {
-			const service = this.services.get(platformConfig.platform);
-			if (!service) {
-				console.warn(`[UploadManager] No service for platform: ${platformConfig.platform}`);
-				continue;
-			}
-
-			// Check if configured
-			const isConfigured = await service.isConfigured();
-			if (!isConfigured) {
-				console.warn(`[UploadManager] Platform not configured: ${platformConfig.platform}`);
-				continue;
-			}
-
-				let session: UploadSession | null = null;
-			try {
-				console.log(`[UploadManager] Starting upload to ${service.displayName}`);
-
-				// Prepare platform-specific metadata
-				const platformMetadata = this.preparePlatformMetadata(
-					metadata,
-					platformConfig.platform
-				);
-
-				// Initialize upload
-				session = await service.initializeUpload(filePath, platformMetadata);
-				this.activeUploads.set(session.id, session);
-				await this.saveUploadToEvent(eventId, session);
-
-				// Upload with progress
-				const result = await service.upload(session, (progress) => {
-					onProgress(platformConfig.platform, progress);
-				});
-
-				// Clean up - update session as completed with result
-				this.activeUploads.delete(session.id);
-				await this.completeUploadInEvent(eventId, session.id, result);
-
-				results.set(platformConfig.platform, result);
-				console.log(`[UploadManager] Upload complete to ${service.displayName}`);
-			} catch (error) {
-				console.error(`[UploadManager] Failed to upload to ${platformConfig.platform}:`, error);
-				// Mark session as failed in the event
-				if (session) {
-					const failedSession = this.toEventUploadSession(session);
-					failedSession.status = 'failed';
-					failedSession.error = error instanceof Error ? error.message : String(error);
-					await eventStore.saveUploadSession(eventId, failedSession);
-					this.activeUploads.delete(session.id);
-				}
-				errors.push({
-					platform: platformConfig.platform,
-					error: error instanceof Error ? error : new Error(String(error))
-				});
-			}
-		}
-
-		// If all uploads failed, throw an error
-		if (errors.length > 0 && results.size === 0) {
-			throw new Error(
-				`All uploads failed: ${errors.map((e) => `${e.platform}: ${e.error.message}`).join(', ')}`
-			);
-		}
-
-		return results;
-	}
-
-	// Upload to a specific platform
-	async uploadToPlatform(
-		eventId: string,
-		platform: UploadPlatform,
-		filePath: string,
-		metadata: UploadMetadata,
-		onProgress: (progress: UploadProgress) => void
-	): Promise<UploadResult> {
-		const service = this.services.get(platform);
+		// For now, just upload to the first enabled platform (usually YouTube)
+		const platformConfig = enabledPlatforms[0];
+		const service = this.services.get(platformConfig.platform);
 		if (!service) {
-			throw new Error(`No service registered for platform: ${platform}`);
+			console.warn(`[UploadManager] No service for platform: ${platformConfig.platform}`);
+			return null;
 		}
 
+		// Check if configured
 		const isConfigured = await service.isConfigured();
 		if (!isConfigured) {
-			throw new Error(`Platform not configured: ${platform}`);
+			console.warn(`[UploadManager] Platform not configured: ${platformConfig.platform}`);
+			return null;
 		}
 
-		const platformMetadata = this.preparePlatformMetadata(metadata, platform);
-		const session = await service.initializeUpload(filePath, platformMetadata);
+		// Prepare metadata
+		const metadata = this.prepareMetadata(event, recording, platformConfig.platform);
 
-		this.activeUploads.set(session.id, session);
-		await this.saveUploadToEvent(eventId, session);
-
+		let session: UploadSession | null = null;
 		try {
-			const result = await service.upload(session, onProgress);
+			console.log(`[UploadManager] Starting upload to ${service.displayName}: ${recording.file.name}`);
+
+			// Initialize upload
+			session = await service.initializeUpload(recording.file.path, metadata);
+			this.activeUploads.set(session.id, { session, eventId, recordingId: recording.id });
+
+			// Upload with progress
+			const result = await service.upload(session, (progress) => {
+				onProgress?.(progress);
+			});
+
+			// Clean up and mark as uploaded
 			this.activeUploads.delete(session.id);
-			await this.completeUploadInEvent(eventId, session.id, result);
+			await eventStore.markRecordingUploaded(eventId, recording.id, result.videoId, result.videoUrl);
+
+			// Finalize (publish)
+			try {
+				await service.finalize(result);
+			} catch (error) {
+				console.warn(`[UploadManager] Failed to finalize upload:`, error);
+				// Don't fail the whole upload for this
+			}
+
+			console.log(`[UploadManager] Upload complete: ${result.videoUrl}`);
 			return result;
 		} catch (error) {
-			// Keep session for resume - mark as paused
-			const pausedSession = this.toEventUploadSession(session);
-			pausedSession.status = 'paused';
-			pausedSession.error = error instanceof Error ? error.message : String(error);
-			await eventStore.saveUploadSession(eventId, pausedSession);
+			console.error(`[UploadManager] Failed to upload:`, error);
+			if (session) {
+				this.activeUploads.delete(session.id);
+			}
 			throw error;
 		}
 	}
 
-	// Prepare platform-specific metadata
-	private preparePlatformMetadata(
-		metadata: UploadMetadata,
+	// Prepare upload metadata from event and recording
+	private prepareMetadata(
+		event: ServiceEvent,
+		recording: EventRecording,
 		platform: UploadPlatform
 	): UploadMetadata {
 		const config = uploadSettingsStore.getPlatformConfig(platform);
 
-		// Use platform-specific default privacy if not specified
-		let privacy = metadata.privacy;
-		if (!privacy && config) {
-			if ('defaultPrivacy' in config) {
-				privacy = config.defaultPrivacy;
-			}
-		}
+		// Use custom title if set, otherwise generate from event
+		const title = recording.customTitle || generateCalculatedTitle(event);
+
+		// Get privacy setting
+		const privacy = event.uploadPrivacyStatus || event.youtubePrivacyStatus || 'public';
 
 		return {
-			...metadata,
-			privacy: privacy || 'public'
+			title,
+			description: generateYoutubeDescription(event),
+			privacy: privacy || 'public',
+			tags: this.generateTags(event)
 		};
 	}
 
-	// Convert UploadSession to EventUploadSession format
-	private toEventUploadSession(session: UploadSession): EventUploadSession {
-		return {
-			id: session.id,
-			platform: session.platform,
-			filePath: session.filePath,
-			fileSize: session.fileSize,
-			metadata: session.metadata,
-			uploadUri: session.uploadUri,
-			bytesUploaded: session.bytesUploaded,
-			startedAt: session.startedAt,
-			status: session.status,
-			error: session.error
-		};
+	// Generate tags for the video
+	private generateTags(event: ServiceEvent): string[] {
+		const tags: string[] = [];
+
+		if (event.speaker) tags.push(event.speaker);
+		if (event.title) tags.push(event.title);
+
+		// Add some default tags
+		tags.push('sermon', 'church', 'worship');
+
+		return tags.filter(Boolean);
 	}
 
-	// Convert EventUploadSession back to UploadSession format
-	private toUploadSession(eventSession: EventUploadSession): UploadSession {
-		return {
-			id: eventSession.id,
-			platform: eventSession.platform,
-			filePath: eventSession.filePath,
-			fileSize: eventSession.fileSize,
-			metadata: eventSession.metadata,
-			uploadUri: eventSession.uploadUri,
-			bytesUploaded: eventSession.bytesUploaded,
-			startedAt: eventSession.startedAt,
-			status: eventSession.status,
-			error: eventSession.error
-		};
-	}
-
-	// Save upload session to the event
-	private async saveUploadToEvent(eventId: string, session: UploadSession): Promise<void> {
-		const eventUploadSession = this.toEventUploadSession(session);
-		await eventStore.saveUploadSession(eventId, eventUploadSession);
-	}
-
-	// Complete an upload session and store the result
-	private async completeUploadInEvent(
+	// Manually upload a single recording (bypasses autoUpload setting check)
+	async uploadRecordingManual(
 		eventId: string,
-		sessionId: string,
-		result: UploadResult
-	): Promise<void> {
-		const found = eventStore.getUploadSession(sessionId);
-		if (found) {
-			const completedSession: EventUploadSession = {
-				...found.session,
-				status: 'completed',
-				videoId: result.videoId,
-				videoUrl: result.videoUrl
-			};
-			await eventStore.saveUploadSession(eventId, completedSession);
+		recording: EventRecording,
+		onProgress?: (progress: UploadProgress) => void
+	): Promise<UploadResult | null> {
+		const event = eventStore.getEventById(eventId);
+		if (!event) {
+			console.error(`[UploadManager] Event not found: ${eventId}`);
+			return null;
 		}
-	}
 
-	// Get all pending/paused uploads (from events)
-	getPendingUploads(): PendingUploadWithEvent[] {
-		return get(allPendingUploads);
-	}
+		// Find first enabled platform (don't require autoUpload for manual trigger)
+		const settings = get(uploadSettings);
+		const enabledPlatforms = settings.platforms.filter((p) => p.enabled);
+		if (enabledPlatforms.length === 0) {
+			console.log('[UploadManager] No platforms enabled');
+			return null;
+		}
 
-	// Resume all pending uploads
-	async resumeAllPending(
-		onProgress: PlatformProgressCallback
-	): Promise<Map<UploadPlatform, UploadResult>> {
-		const pending = this.getPendingUploads();
-		const results = new Map<UploadPlatform, UploadResult>();
+		const platformConfig = enabledPlatforms[0];
+		const service = this.services.get(platformConfig.platform);
+		if (!service) {
+			console.warn(`[UploadManager] No service for platform: ${platformConfig.platform}`);
+			return null;
+		}
 
-		for (const { event, session } of pending) {
-			const service = this.services.get(session.platform);
-			if (!service) continue;
+		const isConfigured = await service.isConfigured();
+		if (!isConfigured) {
+			console.warn(`[UploadManager] Platform not configured: ${platformConfig.platform}`);
+			return null;
+		}
+
+		const metadata = this.prepareMetadata(event, recording, platformConfig.platform);
+
+		let session: UploadSession | null = null;
+		let lastPersistedBytes = 0;
+		try {
+			console.log(`[UploadManager] Manual upload to ${service.displayName}: ${recording.file.name}`);
+
+			session = await service.initializeUpload(recording.file.path, metadata);
+			this.activeUploads.set(session.id, { session, eventId, recordingId: recording.id });
+
+			// Persist upload session on the recording for resume capability
+			await eventStore.markRecordingUploading(eventId, recording.id, {
+				uploadUri: session.uploadUri,
+				fileSize: session.fileSize,
+				bytesUploaded: 0,
+				platform: session.platform,
+				startedAt: session.startedAt
+			});
+
+			const result = await service.upload(session, (progress) => {
+				onProgress?.(progress);
+				// Persist progress every 5MB to avoid excessive writes
+				if (progress.bytesUploaded - lastPersistedBytes > 5 * 1024 * 1024) {
+					lastPersistedBytes = progress.bytesUploaded;
+					eventStore.updateRecordingUploadProgress(eventId, recording.id, progress.bytesUploaded);
+				}
+			});
+
+			this.activeUploads.delete(session.id);
+			await eventStore.markRecordingUploaded(eventId, recording.id, result.videoId, result.videoUrl);
 
 			try {
-				console.log(`[UploadManager] Resuming upload: ${session.id} for event: ${event.id}`);
-
-				// Convert to UploadSession format for service
-				const uploadSession = this.toUploadSession(session);
-
-				// Resume the session
-				const resumedSession = await service.resume(uploadSession);
-
-				// Continue upload
-				const result = await service.upload(resumedSession, (progress) => {
-					onProgress(session.platform, progress);
-				});
-
-				// Mark completed in event
-				await this.completeUploadInEvent(event.id, session.id, result);
-				results.set(session.platform, result);
+				await service.finalize(result);
 			} catch (error) {
-				console.error(`[UploadManager] Failed to resume upload ${session.id}:`, error);
-				// Mark as failed
-				const failedSession: EventUploadSession = {
-					...session,
-					status: 'failed',
-					error: error instanceof Error ? error.message : String(error)
-				};
-				await eventStore.saveUploadSession(event.id, failedSession);
+				console.warn(`[UploadManager] Failed to finalize upload:`, error);
 			}
-		}
 
-		return results;
-	}
-
-	// Resume a specific upload by session ID
-	async resumeUpload(
-		sessionId: string,
-		onProgress: (progress: UploadProgress) => void
-	): Promise<UploadResult> {
-		const found = eventStore.getUploadSession(sessionId);
-		if (!found) {
-			throw new Error(`Upload session not found: ${sessionId}`);
-		}
-
-		const { event, session } = found;
-		const service = this.services.get(session.platform);
-		if (!service) {
-			throw new Error(`No service for platform: ${session.platform}`);
-		}
-
-		console.log(`[UploadManager] Resuming upload: ${sessionId} for event: ${event.id}`);
-
-		// Mark as uploading
-		const uploadingSession: EventUploadSession = { ...session, status: 'uploading' };
-		await eventStore.saveUploadSession(event.id, uploadingSession);
-
-		try {
-			// Convert to UploadSession format for service
-			const uploadSession = this.toUploadSession(session);
-
-			// Resume the session
-			const resumedSession = await service.resume(uploadSession);
-
-			// Continue upload
-			const result = await service.upload(resumedSession, onProgress);
-
-			// Mark completed in event
-			await this.completeUploadInEvent(event.id, sessionId, result);
+			console.log(`[UploadManager] Manual upload complete: ${result.videoUrl}`);
 			return result;
 		} catch (error) {
-			// Mark as failed
-			const failedSession: EventUploadSession = {
-				...session,
-				status: 'failed',
-				error: error instanceof Error ? error.message : String(error)
-			};
-			await eventStore.saveUploadSession(event.id, failedSession);
+			console.error(`[UploadManager] Manual upload failed:`, error);
+			if (session) {
+				this.activeUploads.delete(session.id);
+			}
 			throw error;
 		}
 	}
 
-	// Cancel an active upload
-	async cancelUpload(sessionId: string): Promise<void> {
-		// Check active uploads first
-		const activeSession = this.activeUploads.get(sessionId);
-		if (activeSession) {
-			const service = this.services.get(activeSession.platform);
-			await service?.cancel(activeSession);
-			this.activeUploads.delete(sessionId);
+	// Resume an interrupted upload from persisted session data
+	async resumeUploadRecording(
+		eventId: string,
+		recording: EventRecording,
+		onProgress?: (progress: UploadProgress) => void
+	): Promise<UploadResult | null> {
+		const savedSession = recording.uploadSession;
+		if (!savedSession) {
+			console.warn(`[UploadManager] No saved session for recording ${recording.id}`);
+			return null;
 		}
 
-		// Remove from event
-		const found = eventStore.getUploadSession(sessionId);
-		if (found) {
-			const { event, session } = found;
-			const service = this.services.get(session.platform);
-			if (service && !activeSession) {
-				// Cancel with service if not already cancelled
-				await service.cancel(this.toUploadSession(session));
+		const service = this.services.get(savedSession.platform as UploadPlatform);
+		if (!service) {
+			console.warn(`[UploadManager] No service for platform: ${savedSession.platform}`);
+			return null;
+		}
+
+		const isConfigured = await service.isConfigured();
+		if (!isConfigured) {
+			console.warn(`[UploadManager] Platform not configured: ${savedSession.platform}`);
+			return null;
+		}
+
+		// Reconstruct the UploadSession from persisted data
+		const session: UploadSession = {
+			id: crypto.randomUUID(),
+			platform: savedSession.platform as UploadPlatform,
+			filePath: recording.file.path,
+			fileSize: savedSession.fileSize,
+			metadata: { title: '', description: '', privacy: '' }, // Not needed for resume
+			uploadUri: savedSession.uploadUri,
+			bytesUploaded: savedSession.bytesUploaded,
+			startedAt: savedSession.startedAt,
+			status: 'uploading'
+		};
+
+		let lastPersistedBytes = savedSession.bytesUploaded;
+		try {
+			console.log(`[UploadManager] Resuming upload for recording ${recording.id} from ${savedSession.bytesUploaded} bytes`);
+
+			// Ask YouTube how much was actually uploaded
+			const resumedSession = await service.resume(session);
+			this.activeUploads.set(resumedSession.id, { session: resumedSession, eventId, recordingId: recording.id });
+
+			// Update persisted progress with actual YouTube-reported position
+			await eventStore.updateRecordingUploadProgress(eventId, recording.id, resumedSession.bytesUploaded);
+
+			const result = await service.upload(resumedSession, (progress) => {
+				onProgress?.(progress);
+				if (progress.bytesUploaded - lastPersistedBytes > 5 * 1024 * 1024) {
+					lastPersistedBytes = progress.bytesUploaded;
+					eventStore.updateRecordingUploadProgress(eventId, recording.id, progress.bytesUploaded);
+				}
+			});
+
+			this.activeUploads.delete(resumedSession.id);
+			await eventStore.markRecordingUploaded(eventId, recording.id, result.videoId, result.videoUrl);
+
+			try {
+				await service.finalize(result);
+			} catch (error) {
+				console.warn(`[UploadManager] Failed to finalize resumed upload:`, error);
 			}
-			await eventStore.removeUploadSession(event.id, sessionId);
+
+			console.log(`[UploadManager] Resumed upload complete: ${result.videoUrl}`);
+			return result;
+		} catch (error) {
+			console.error(`[UploadManager] Resume upload failed:`, error);
+			this.activeUploads.forEach((val, key) => {
+				if (val.recordingId === recording.id) this.activeUploads.delete(key);
+			});
+			throw error;
 		}
 	}
 
-	// Finalize upload (publish, etc.)
-	async finalizeUpload(platform: UploadPlatform, result: UploadResult): Promise<void> {
-		const service = this.services.get(platform);
-		if (service) {
-			await service.finalize(result);
+	// Process the upload queue (called from post-event automation)
+	async processUploadQueue(): Promise<number> {
+		if (this.isProcessingQueue) {
+			console.log('[UploadManager] Already processing queue');
+			return 0;
 		}
+
+		this.isProcessingQueue = true;
+		let uploadedCount = 0;
+
+		try {
+			const queue = get(uploadQueue);
+
+			for (const item of queue) {
+				try {
+					await this.uploadRecording(item.event.id, item.recording);
+					uploadedCount++;
+				} catch (error) {
+					console.error(`[UploadManager] Failed to upload recording ${item.recording.id}:`, error);
+					// Continue with next recording
+				}
+			}
+		} finally {
+			this.isProcessingQueue = false;
+		}
+
+		return uploadedCount;
+	}
+
+	// Cancel an active upload
+	async cancelUpload(sessionId: string): Promise<void> {
+		const active = this.activeUploads.get(sessionId);
+		if (active) {
+			const service = this.services.get(active.session.platform);
+			await service?.cancel(active.session);
+			this.activeUploads.delete(sessionId);
+		}
+	}
+
+	// Check if there's an active upload in progress
+	hasActiveUpload(): boolean {
+		return this.activeUploads.size > 0;
+	}
+
+	// Get active upload info
+	getActiveUpload(): { session: UploadSession; eventId: string; recordingId: string } | null {
+		const entries = Array.from(this.activeUploads.values());
+		return entries.length > 0 ? entries[0] : null;
 	}
 }
 
