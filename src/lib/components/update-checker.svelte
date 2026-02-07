@@ -139,7 +139,7 @@
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 	}
 
-	onMount(async () => {
+	onMount(() => {
 		log('info', 'UpdateChecker component mounted');
 		isTauri = checkIsTauri();
 		log('info', `Tauri environment detected: ${isTauri}`);
@@ -149,31 +149,37 @@
 			return;
 		}
 
-		// Skip update check in dev mode
-		if (import.meta.env.DEV) {
-			await log('info', 'Running in dev mode, skipping automatic update check');
-			return;
-		}
+		let timer: ReturnType<typeof setTimeout> | undefined;
 
-		// Skip update check for version 0.1.0 (development version)
-		try {
-			const { getVersion } = await import('@tauri-apps/api/app');
-			const version = await getVersion();
-			await log('info', `App version: ${version}`);
-			if (version === '0.1.0') {
-				await log('info', 'Version is 0.1.0 (development), skipping automatic update check');
+		(async () => {
+			// Skip update check in dev mode
+			if (import.meta.env.DEV) {
+				await log('info', 'Running in dev mode, skipping automatic update check');
 				return;
 			}
-		} catch (e) {
-			await log('warn', `Failed to get app version: ${e}`);
-		}
 
-		log('info', 'Scheduling update check in 3 seconds...');
-		const timer = setTimeout(() => {
-			checkForUpdates(false);
-		}, 3000);
+			// Skip update check for version 0.1.0 (development version)
+			try {
+				const { getVersion } = await import('@tauri-apps/api/app');
+				const version = await getVersion();
+				await log('info', `App version: ${version}`);
+				if (version === '0.1.0') {
+					await log('info', 'Version is 0.1.0 (development), skipping automatic update check');
+					return;
+				}
+			} catch (e) {
+				await log('warn', `Failed to get app version: ${e}`);
+			}
 
-		return () => clearTimeout(timer);
+			log('info', 'Scheduling update check in 3 seconds...');
+			timer = setTimeout(() => {
+				checkForUpdates(false);
+			}, 3000);
+		})();
+
+		return () => {
+			if (timer) clearTimeout(timer);
+		};
 	});
 
 	export { checkForUpdates };
