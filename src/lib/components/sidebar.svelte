@@ -17,8 +17,21 @@
 	import { youtubeReauthRequired, youtubeReauthError, youtubeAuthStatusStore } from '$lib/stores/youtube-auth-status-store';
 	import { requiredDeviceConfigs } from '$lib/stores/obs-devices-store';
 	import { obsDeviceStatuses, isCheckingDevices } from '$lib/stores/obs-device-status-store';
+	import { apsClient } from '$lib/utils/aps-api-client';
 
 	export let isMobileMenuOpen = false;
+
+	// Subscribe to APS status
+	let apsStatus = { connected: false, connecting: false };
+	const unsubscribeAps = apsClient.apsStatus.subscribe(status => {
+		apsStatus = status;
+	});
+
+	// Cleanup subscription
+	import { onDestroy } from 'svelte';
+	onDestroy(() => {
+		unsubscribeAps();
+	});
 	export let onMobileMenuToggle: () => void = () => {};
 
 	let showYoutubeLoginModal = false;
@@ -130,6 +143,18 @@
 							{/if}
 						</div>
 					{/each}
+
+					<!-- APS Status -->
+					<div class="flex items-center justify-between py-2">
+						<span class="text-sm text-muted-foreground">APS (Presentations)</span>
+						{#if apsStatus.connecting}
+							<Loader2 class="h-4 w-4 text-blue-600 animate-spin" />
+						{:else if apsStatus.connected}
+							<CheckCircle2 class="h-4 w-4 text-green-600" />
+						{:else}
+							<XCircle class="h-4 w-4 text-red-600" />
+						{/if}
+					</div>
 				</div>
 
 				<!-- YouTube Re-auth Alert -->
