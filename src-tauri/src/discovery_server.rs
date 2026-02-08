@@ -1,11 +1,9 @@
 //! Discovery server for mobile companion app integration.
 //!
 //! This module provides:
-//! - mDNS/DNS-SD service registration for network discovery
 //! - HTTP REST API for system status and control
 //! - WebSocket for real-time status updates
 
-use crate::mdns_service::{MdnsService, SERVICE_TYPE};
 use axum::{
     extract::{
         rejection::JsonRejection,
@@ -18,7 +16,6 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -50,7 +47,6 @@ pub struct DiscoveryServerStatus {
     pub port: Option<u16>,
     pub addresses: Vec<String>,
     pub connected_clients: u32,
-    pub mdns_registered: bool,
     /// URL to API documentation (Swagger UI)
     pub docs_url: Option<String>,
 }
@@ -485,7 +481,6 @@ pub type SharedServerState = Arc<DiscoveryServerState>;
 pub struct DiscoveryServer {
     pub port: u16,
     pub state: SharedServerState,
-    mdns_service: Option<MdnsService>,
     shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
@@ -494,7 +489,7 @@ impl DiscoveryServer {
     pub async fn start(
         port: u16,
         auth_token: Option<String>,
-        instance_name: &str,
+        _instance_name: &str,
         app_data_dir: Option<std::path::PathBuf>,
     ) -> Result<Self, String> {
         // Try the specified port first, then fallback to a random port
@@ -540,34 +535,9 @@ impl DiscoveryServer {
 
         log::info!("Discovery server started on port {}", actual_port);
 
-        // Register mDNS service
-        let mut properties = HashMap::new();
-        properties.insert("version".to_string(), "1".to_string());
-        properties.insert(
-            "auth".to_string(),
-            if auth_token.is_some() {
-                "required"
-            } else {
-                "none"
-            }
-            .to_string(),
-        );
-
-        let mdns_service = match MdnsService::register(instance_name, actual_port, properties) {
-            Ok(service) => {
-                log::info!("mDNS service registered successfully");
-                Some(service)
-            }
-            Err(e) => {
-                log::warn!("Failed to register mDNS service: {}. Server will still work but won't be discoverable.", e);
-                None
-            }
-        };
-
         Ok(Self {
             port: actual_port,
             state,
-            mdns_service,
             shutdown_tx: Some(shutdown_tx),
         })
     }
@@ -593,11 +563,7 @@ impl DiscoveryServer {
             running: true,
             port: self.port,
             addresses,
-            service_name: self
-                .mdns_service
-                .as_ref()
-                .map(|s| s.fullname().to_string())
-                .unwrap_or_else(|| SERVICE_TYPE.to_string()),
+            service_name: "Sermon Helper".to_string(),
             auth_required: self.state.auth_token.is_some(),
             docs_url: format!("http://{}:{}/api/docs", host, self.port),
         }
@@ -616,7 +582,6 @@ impl DiscoveryServer {
             port: Some(self.port),
             addresses: get_local_addresses(),
             connected_clients,
-            mdns_registered: self.mdns_service.is_some(),
             docs_url: Some(format!("http://{}:{}/api/docs", host, self.port)),
         }
     }

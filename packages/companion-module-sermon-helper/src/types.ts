@@ -2,7 +2,6 @@ export interface ModuleConfig {
 	host: string
 	port: number
 	authToken: string
-	useAutoDiscovery: boolean
 	pollInterval: number
 }
 
@@ -73,12 +72,6 @@ export interface PptOpenResponse {
 	success: boolean
 	fileName: string
 	presenterStarted: boolean
-}
-
-export interface DiscoveredServer {
-	host: string
-	port: number
-	name: string
 }
 
 export const CATEGORY_COLORS: Record<string, number> = {

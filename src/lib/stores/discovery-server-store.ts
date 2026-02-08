@@ -1,5 +1,5 @@
 /**
- * Discovery server store for managing mDNS/DNS-SD service state.
+ * Discovery server store for managing service state.
  *
  * This store manages:
  * - Starting/stopping the discovery server
@@ -26,7 +26,6 @@ export const discoveryServerStatus = writable<DiscoveryServerStatus>({
 	port: null,
 	addresses: [],
 	connectedClients: 0,
-	mdnsRegistered: false,
 	docsUrl: null
 });
 
@@ -56,8 +55,7 @@ class DiscoveryServerManager {
 					...status,
 					running: true,
 					port: event.payload.port,
-					addresses: event.payload.addresses,
-					mdnsRegistered: true
+					addresses: event.payload.addresses
 				}));
 				discoveryServerError.set(null);
 			}
@@ -68,8 +66,7 @@ class DiscoveryServerManager {
 				...status,
 				running: false,
 				port: null,
-				connectedClients: 0,
-				mdnsRegistered: false
+				connectedClients: 0
 			}));
 		});
 
@@ -109,7 +106,6 @@ class DiscoveryServerManager {
 				running: true,
 				port: info.port,
 				addresses: info.addresses,
-				mdnsRegistered: true,
 				docsUrl: info.docsUrl
 			}));
 
@@ -134,8 +130,7 @@ class DiscoveryServerManager {
 				...status,
 				running: false,
 				port: null,
-				connectedClients: 0,
-				mdnsRegistered: false
+				connectedClients: 0
 			}));
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);

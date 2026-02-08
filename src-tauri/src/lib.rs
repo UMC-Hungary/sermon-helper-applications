@@ -8,7 +8,7 @@ mod companion_commands;
 mod discovery_commands;
 mod discovery_server;
 mod local_server;
-mod mdns_service;
+
 mod video_upload;
 
 use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};

@@ -32,7 +32,6 @@ This will watch for changes and recompile automatically.
 - **Host**: IP address or hostname of the Sermon Helper server (default: `localhost`)
 - **Port**: Discovery Server API port (default: `8765`)
 - **Auth Token**: Optional authentication token
-- **Use Auto-Discovery**: Enable mDNS discovery for automatic server detection
 - **Poll Interval**: How often to refresh command list (default: 30 seconds)
 
 ## Actions

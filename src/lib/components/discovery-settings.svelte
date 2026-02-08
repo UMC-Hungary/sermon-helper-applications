@@ -226,13 +226,6 @@
 						</div>
 					{/if}
 
-					{#if $discoveryServerStatus.mdnsRegistered}
-						<div class="flex items-center gap-2 text-sm text-green-600">
-							<Check class="h-4 w-4" />
-							<span>mDNS service registered (discoverable)</span>
-						</div>
-					{/if}
-
 					<!-- API Documentation Link -->
 					{#if $discoveryServerStatus.docsUrl}
 						<a
