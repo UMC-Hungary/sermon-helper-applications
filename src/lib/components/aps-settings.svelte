@@ -124,7 +124,7 @@
 		toast({
 			title: "Disconnected",
 			description: "Disconnected from APS",
-			variant: "default"
+			variant: "info"
 		});
 	};
 
