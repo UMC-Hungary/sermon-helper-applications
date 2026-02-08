@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 mod bible;
 mod broadlink;
 mod broadlink_commands;
@@ -25,7 +27,7 @@ use discovery_commands::{
 };
 use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
 use video_upload::{
-    scan_recording_directory, get_video_file_info, init_youtube_upload,
+    scan_recording_directory, get_video_file_info, get_file_metadata, init_youtube_upload,
     upload_video_chunk, get_upload_status, cancel_upload
 };
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -70,6 +72,7 @@ pub fn run() {
             // Video upload commands
             scan_recording_directory,
             get_video_file_info,
+            get_file_metadata,
             init_youtube_upload,
             upload_video_chunk,
             get_upload_status,

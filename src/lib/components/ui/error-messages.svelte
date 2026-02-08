@@ -168,13 +168,13 @@
 										onclick={handleReconnect}
 										disabled={isRechecking}
 									>
-				{#if $obsStatus.loading || $obsStatus.reconnecting || isRechecking}
-					<RefreshCw class="h-4 w-4 mr-2 animate-spin" />
-					{$_('errors.connecting')}
-				{:else}
-					<Wifi class={cn("h-4 w-4 mr-2")} />
-					{$_('errors.reconnect')}
-				{/if}
+                                    {#if $obsStatus.loading || $obsStatus.reconnecting || isRechecking}
+                                        <RefreshCw class="h-4 w-4 mr-2 animate-spin" />
+                                        {$_('errors.connecting')}
+                                    {:else}
+                                        <Wifi class={cn("h-4 w-4 mr-2")} />
+                                        {$_('errors.reconnect')}
+                                    {/if}
 									</Button>
 								{/if}
 								<Button

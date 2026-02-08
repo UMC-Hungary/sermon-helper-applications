@@ -65,5 +65,6 @@ Two SystemStatus definitions exist:
 - `src/lib/stores/types.ts` - Flat structure (correct)
 - `src/lib/types.ts` - Nested structure (outdated, to be consolidated)
 
-## Planning Rules
+## Rules
+- Always fix all `pnpm check` errors before finishing, even if they are unrelated to your changes.
 - Always name plan files with the format: PLAN-{feature-name}.md under the `plans` folder.

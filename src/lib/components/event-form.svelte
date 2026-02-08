@@ -13,21 +13,18 @@
 	import TabsContent from '$lib/components/ui/tabs-content.svelte';
 	import TranslationSelector from '$lib/components/translation-selector.svelte';
 	import BibleSuggestions from '$lib/components/bible-suggestions.svelte';
+	import RecordingsStatus from '$lib/components/recordings-status.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { bibleApi } from '$lib/utils/bible-api';
-	import { isV2Translation, type LegacySuggestion } from '$lib/types/bible';
+	import { isV2Translation, type LegacySuggestion, type BibleTranslation } from '$lib/types/bible';
 	import { debounce } from '$lib/utils/debounce';
 	import {
 		createEmptyEvent,
 		generateCalculatedTitle,
-		getRecordingStatus,
 		getYouTubeBroadcastUrl,
-		getYouTubeVideoUrl,
-		getUploadProgress,
 		type ServiceEvent
 	} from '$lib/types/event';
-	import { appSettingsStore } from '$lib/utils/app-settings-store';
-	import { Search, Save, X, Loader2, BookOpen, Edit2, Check, Youtube, ExternalLink, Upload, Video, Globe, Link, Lock } from 'lucide-svelte';
+	import { Search, Save, X, Loader2, BookOpen, Edit2, Check, Youtube, ExternalLink, Video, Globe, Link, Lock } from 'lucide-svelte';
 	import { systemStore } from '$lib/stores/system-store';
 	import { eventStore } from '$lib/stores/event-store';
 	import { youtubeApi } from '$lib/utils/youtube-api';
@@ -46,24 +43,12 @@
 	// Form state
 	let formData = $state<ServiceEvent>(event ? { ...event, ...(event.autoUploadEnabled ? {} : { autoUploadEnabled: true }) } : createEmptyEvent());
 
-	// Debounced function to save draft
-	const debouncedSaveDraft = debounce(async (data: ServiceEvent, origId: string | null) => {
-		try {
-			await appSettingsStore.set('draftEvent', data);
-			await appSettingsStore.set('draftEventOriginalId', origId);
-			await appSettingsStore.set('draftSaved', false); // Mark as unsaved draft
-		} catch (error) {
-			console.error('Failed to save draft:', error);
-		}
-	}, 500);
-
-	// Auto-save draft when formData changes
+	// Sync recordings from prop (they can be added while editing)
 	$effect(() => {
-		// Create a copy to track changes
-		const data = { ...formData };
-		// Determine if this is an edit (use originalEventId or event.id)
-		const origId = originalEventId || (event?.id !== formData.id ? null : event?.id) || null;
-		debouncedSaveDraft(data, origId);
+		const recordings = event?.recordings;
+		if (recordings && recordings.length > 0) {
+			formData.recordings = recordings;
+		}
 	});
 
 	// Bible fetch state
@@ -80,9 +65,8 @@
 	const calculatedTitleLength = $derived(calculatedTitle.length);
 	const MAX_TITLE_LENGTH = 100;
 
-	// Recording/upload status (derived from formData)
-	const recordingStatus = $derived(getRecordingStatus(formData));
-	const uploadProgress = $derived(getUploadProgress(formData));
+	// Check if event has any recordings
+	const hasRecordings = $derived((event?.recordings?.length ?? 0) > 0);
 
 	// Debounced fetch for suggestions (legacy translations)
 	const debouncedFetchSuggestions = debounce(async (term: string, field: 'textus' | 'leckio') => {
@@ -267,9 +251,6 @@
 
 	let showYoutubeLoginModal = $state(false);
 
-	// Determine if this is a stored event (vs a new draft)
-	const isStoredEvent = $derived(!!originalEventId);
-
 	// Schedule YouTube broadcast
 	async function handleScheduleYoutube() {
 		if (!$systemStore.youtubeLoggedIn) {
@@ -409,7 +390,7 @@
 		</Card>
 
 		<!-- YouTube Scheduling (only shown for stored events) -->
-		{#if isStoredEvent}
+		{#if originalEventId}
 			<Card>
 				<svelte:fragment slot="title">
 					<Youtube class="h-5 w-5 mr-2 inline" />
@@ -491,92 +472,43 @@
 						</select>
 					</div>
 
-					<!-- Status section (only shown if event has broadcast or recording) -->
-					{#if formData.youtubeScheduledId || formData.youtubeUploadedId || recordingStatus !== 'none'}
-						<div class="border-t pt-4 mt-4 space-y-3">
-							<!-- Live Broadcast Status -->
-							{#if formData.youtubeScheduledId}
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-2">
-										<Youtube class="h-4 w-4 text-red-500" />
-										<span class="text-sm font-medium">{$_('events.form.recording.liveBroadcast')}</span>
-									</div>
-									<div class="flex items-center gap-2">
-										<Button
-											buttonVariant="outline"
-											buttonSize="sm"
-											href={getYouTubeBroadcastUrl(formData) ?? undefined}
-											target="_blank"
-										>
-											<ExternalLink class="h-3 w-3 mr-1" />
-											{$_('events.form.recording.watchBroadcast')}
-										</Button>
-										<Badge variant="secondary">
-											{#if formData.youtubePrivacyStatus === 'public'}
-												<Globe class="h-3 w-3 mr-1" />
-											{:else if formData.youtubePrivacyStatus === 'unlisted'}
-												<Link class="h-3 w-3 mr-1" />
-											{:else}
-												<Lock class="h-3 w-3 mr-1" />
-											{/if}
-											{$_(`events.form.privacyOptions.${formData.youtubePrivacyStatus}`)}
-										</Badge>
-									</div>
-								</div>
-							{/if}
-
-							<!-- Recording/Upload Status -->
+					<!-- Live Broadcast Status -->
+					{#if formData.youtubeScheduledId}
+						<div class="border-t pt-4 mt-4">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
-									<Video class="h-4 w-4 text-muted-foreground" />
-									<span class="text-sm font-medium">{$_('events.form.recording.uploadedRecording')}</span>
+									<Youtube class="h-4 w-4 text-red-500" />
+									<span class="text-sm font-medium">{$_('events.form.recording.liveBroadcast')}</span>
 								</div>
 								<div class="flex items-center gap-2">
-									{#if recordingStatus === 'uploaded' && formData.youtubeUploadedId}
-										<Button
-											buttonVariant="outline"
-											buttonSize="sm"
-											href={getYouTubeVideoUrl(formData) ?? undefined}
-											target="_blank"
-										>
-											<ExternalLink class="h-3 w-3 mr-1" />
-											{$_('events.form.recording.watchRecording')}
-										</Button>
-									{:else if recordingStatus === 'uploading'}
-										<div class="flex items-center gap-2">
-											<div class="w-24 h-2 bg-muted rounded-full overflow-hidden">
-												<div
-													class="h-full bg-primary transition-all"
-													style="width: {uploadProgress}%"
-												></div>
-											</div>
-											<span class="text-xs text-muted-foreground">{uploadProgress}%</span>
-										</div>
-									{:else if recordingStatus === 'pending' && !formData.autoUploadEnabled}
-										<Button buttonVariant="outline" buttonSize="sm" disabled>
-											<Upload class="h-3 w-3 mr-1" />
-											{$_('events.form.recording.actions.startUpload')}
-										</Button>
-									{/if}
-									<Badge
-										variant={recordingStatus === 'uploaded' ? 'success' : recordingStatus === 'failed' ? 'destructive' : 'secondary'}
+									<Button
+										buttonVariant="outline"
+										buttonSize="sm"
+										href={getYouTubeBroadcastUrl(formData) ?? undefined}
+										target="_blank"
 									>
-										{$_(`events.form.recording.status.${recordingStatus}`)}
+										<ExternalLink class="h-3 w-3 mr-1" />
+										{$_('events.form.recording.watchBroadcast')}
+									</Button>
+									<Badge variant="secondary">
+										{#if formData.youtubePrivacyStatus === 'public'}
+											<Globe class="h-3 w-3 mr-1" />
+										{:else if formData.youtubePrivacyStatus === 'unlisted'}
+											<Link class="h-3 w-3 mr-1" />
+										{:else}
+											<Lock class="h-3 w-3 mr-1" />
+										{/if}
+										{$_(`events.form.privacyOptions.${formData.youtubePrivacyStatus}`)}
 									</Badge>
-									{#if recordingStatus === 'uploaded'}
-										<Badge variant="secondary">
-											{#if formData.uploadPrivacyStatus === 'public'}
-												<Globe class="h-3 w-3 mr-1" />
-											{:else if formData.uploadPrivacyStatus === 'unlisted'}
-												<Link class="h-3 w-3 mr-1" />
-											{:else}
-												<Lock class="h-3 w-3 mr-1" />
-											{/if}
-											{$_(`events.form.privacyOptions.${formData.uploadPrivacyStatus}`)}
-										</Badge>
-									{/if}
 								</div>
 							</div>
+						</div>
+					{/if}
+
+					<!-- Recordings Status -->
+					{#if event && hasRecordings}
+						<div class="border-t pt-4 mt-4">
+							<RecordingsStatus event={event} />
 						</div>
 					{/if}
 				</div>
@@ -587,7 +519,7 @@
 	<!-- Right Column: Bible References -->
 	<div class="md:col-span-1 lg:col-span-2">
 		<!-- Bible References with Tabs -->
-		<Card class="h-full">
+		<Card>
 			<svelte:fragment slot="title">
 				<BookOpen class="h-5 w-5 mr-2 inline" />
 				{$_('events.form.bibleReferences')}

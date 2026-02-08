@@ -24,6 +24,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tower_http::cors::{Any, CorsLayer};
+use chrono::Utc;
 
 /// Default port for the discovery server
 pub const DEFAULT_PORT: u16 = 8765;
@@ -254,6 +255,37 @@ fn default_start_presenter() -> bool {
     true
 }
 
+// ============================================================================
+// Settings Export/Import Types
+// ============================================================================
+
+/// Query parameters for settings export endpoint
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsExportQuery {
+    /// Include sensitive data like YouTube tokens (default: false)
+    #[serde(default)]
+    pub include_sensitive: bool,
+}
+
+/// Exported settings structure (matches TypeScript ExportedSettings)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportedSettings {
+    pub schema_version: u32,
+    pub exported_at: String,
+    pub settings: serde_json::Value,
+}
+
+/// Request body for settings import
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSettingsRequest {
+    pub schema_version: u32,
+    pub exported_at: String,
+    pub settings: serde_json::Value,
+}
+
 /// Shared state for the discovery server
 pub struct DiscoveryServerState {
     /// Current system status (updated by frontend)
@@ -287,6 +319,40 @@ impl DiscoveryServerState {
             ppt_folders: RwLock::new(Vec::new()),
             app_data_dir,
         }
+    }
+
+    /// Read the entire settings file as JSON Value
+    pub fn read_all_settings(&self) -> Option<serde_json::Value> {
+        let data_dir = self.app_data_dir.as_ref()?;
+        let settings_path = data_dir.join("app-settings.json");
+
+        if !settings_path.exists() {
+            return None;
+        }
+
+        match std::fs::read_to_string(&settings_path) {
+            Ok(content) => serde_json::from_str(&content).ok(),
+            Err(e) => {
+                log::warn!("Failed to read settings file: {}", e);
+                None
+            }
+        }
+    }
+
+    /// Write settings to the app settings file
+    pub fn write_settings(&self, settings: &serde_json::Value) -> Result<(), String> {
+        let data_dir = self.app_data_dir.as_ref()
+            .ok_or_else(|| "App data directory not available".to_string())?;
+
+        let settings_path = data_dir.join("app-settings.json");
+
+        let content = serde_json::to_string_pretty(settings)
+            .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+
+        std::fs::write(&settings_path, content)
+            .map_err(|e| format!("Failed to write settings file: {}", e))?;
+
+        Ok(())
     }
 
     /// Read PPT folders directly from the app settings file
@@ -596,6 +662,9 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/ppt/folders/{id}", axum::routing::delete(ppt_delete_folder_handler))
         .route("/api/v1/ppt/files", get(ppt_files_handler))
         .route("/api/v1/ppt/open", post(ppt_open_handler))
+        // Settings export/import endpoints
+        .route("/api/v1/settings/export", get(settings_export_handler))
+        .route("/api/v1/settings/import", post(settings_import_handler))
         // OBS Caption endpoint (embeddable HTML for OBS browser source)
         .route("/caption", get(caption_handler))
         // OpenAPI documentation
@@ -1809,6 +1878,116 @@ async fn start_presenter_mode() -> bool {
 }
 
 // ============================================================================
+// Settings Export/Import Handlers
+// ============================================================================
+
+/// Sensitive settings keys to exclude from export by default
+const SENSITIVE_KEYS: &[&str] = &["youtubeTokens", "youtubeOAuthConfig"];
+
+/// Export all settings as JSON
+async fn settings_export_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    axum::extract::Query(query): axum::extract::Query<SettingsExportQuery>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    // Read all settings from the file
+    let settings = match state.read_all_settings() {
+        Some(s) => s,
+        None => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error("Failed to read settings file")),
+            )
+                .into_response();
+        }
+    };
+
+    // Optionally strip sensitive data
+    let mut exported_settings = settings;
+    if !query.include_sensitive {
+        if let Some(obj) = exported_settings.as_object_mut() {
+            for key in SENSITIVE_KEYS {
+                obj.remove(*key);
+            }
+        }
+    }
+
+    let export_data = ExportedSettings {
+        schema_version: 1,
+        exported_at: Utc::now().to_rfc3339(),
+        settings: exported_settings,
+    };
+
+    Json(ApiResponse::success(export_data)).into_response()
+}
+
+/// Import settings from JSON
+async fn settings_import_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    AppJson(request): AppJson<ImportSettingsRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    // Validate schema version
+    if request.schema_version < 1 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("Invalid schema version")),
+        )
+            .into_response();
+    }
+
+    // Validate that settings is an object
+    if !request.settings.is_object() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("Settings must be a JSON object")),
+        )
+            .into_response();
+    }
+
+    // Read existing settings to merge with imported ones
+    let mut existing_settings = state.read_all_settings().unwrap_or_else(|| serde_json::json!({}));
+
+    // Merge imported settings into existing (imported values take precedence)
+    if let (Some(existing), Some(imported)) = (existing_settings.as_object_mut(), request.settings.as_object()) {
+        for (key, value) in imported {
+            existing.insert(key.clone(), value.clone());
+        }
+    }
+
+    // Write merged settings back to file
+    if let Err(e) = state.write_settings(&existing_settings) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(format!("Failed to save settings: {}", e))),
+        )
+            .into_response();
+    }
+
+    Json(ApiResponse::success(serde_json::json!({
+        "imported": true,
+        "message": "Settings imported successfully. Restart the app to apply all changes."
+    })))
+    .into_response()
+}
+
+// ============================================================================
 // OpenAPI / Swagger Documentation
 // ============================================================================
 
@@ -2146,6 +2325,74 @@ async fn openapi_handler() -> impl IntoResponse {
                         "404": { "description": "File not found" }
                     }
                 }
+            },
+            "/settings/export": {
+                "get": {
+                    "summary": "Export settings",
+                    "description": "Export all app settings as JSON. Sensitive data (YouTube tokens) is excluded by default.\n\n**Example:**\n```bash\n# Export settings (excluding sensitive data)\ncurl http://localhost:8765/api/v1/settings/export -o settings.json\n\n# Export with sensitive data included\ncurl 'http://localhost:8765/api/v1/settings/export?includeSensitive=true' -o settings.json\n```",
+                    "tags": ["Settings"],
+                    "parameters": [
+                        {
+                            "name": "includeSensitive",
+                            "in": "query",
+                            "required": false,
+                            "schema": { "type": "boolean", "default": false },
+                            "description": "Include sensitive data like YouTube OAuth tokens"
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Exported settings",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/ExportedSettings" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized" },
+                        "500": { "description": "Failed to read settings" }
+                    }
+                }
+            },
+            "/settings/import": {
+                "post": {
+                    "summary": "Import settings",
+                    "description": "Import settings from a previously exported JSON file. Settings are merged with existing values (imported values take precedence).\n\n**Example:**\n```bash\ncurl -X POST http://localhost:8765/api/v1/settings/import \\\n  -H 'Content-Type: application/json' \\\n  -d @settings.json\n```\n\n**Note:** After importing, restart the app to apply all changes.",
+                    "tags": ["Settings"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/ExportedSettings" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Settings imported successfully",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean" },
+                                            "data": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "imported": { "type": "boolean" },
+                                                    "message": { "type": "string" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "400": { "description": "Invalid settings format" },
+                        "401": { "description": "Unauthorized" },
+                        "500": { "description": "Failed to save settings" }
+                    }
+                }
             }
         },
         "x-websocket": {
@@ -2237,6 +2484,27 @@ async fn openapi_handler() -> impl IntoResponse {
                         },
                         "total": { "type": "integer", "description": "Number of files returned" },
                         "filter": { "type": "string", "nullable": true, "description": "The filter that was applied" }
+                    }
+                },
+                "ExportedSettings": {
+                    "type": "object",
+                    "required": ["schemaVersion", "exportedAt", "settings"],
+                    "properties": {
+                        "schemaVersion": { "type": "integer", "description": "Schema version for migration support", "example": 1 },
+                        "exportedAt": { "type": "string", "format": "date-time", "description": "ISO 8601 timestamp of export" },
+                        "settings": {
+                            "type": "object",
+                            "description": "App settings object containing all configuration",
+                            "properties": {
+                                "bibleTranslation": { "type": "string" },
+                                "eventList": { "type": "array", "items": { "type": "object" } },
+                                "obsDevicesSettings": { "type": "object" },
+                                "discoverySettings": { "type": "object" },
+                                "rfIrSettings": { "type": "object" },
+                                "pptSettings": { "type": "object" },
+                                "uploadSettings": { "type": "object" }
+                            }
+                        }
                     }
                 }
             }

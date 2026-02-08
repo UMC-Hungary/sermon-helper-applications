@@ -43,6 +43,7 @@
 				"failed": "Failed to generate PPTX file",
 				"changeFolder": "Change output folder"
 			},
+			"recordings": "Recordings",
 			"browserSources": "Browser Sources",
 			"refreshBrowserSource": "Refresh browser source"
 		},
@@ -372,7 +373,7 @@
 			"liveSuccessDescription": "Your YouTube broadcast is now live",
 			"liveFailed": "Failed to go live on YouTube",
 			"status": {
-				"created": "Creating...",
+				"created": "Created",
 				"ready": "Ready",
 				"testing": "Testing",
 				"live": "Live",
@@ -414,6 +415,7 @@
 			"failed": "Automation failed: {error}",
 			"triggerManually": "Start Post-Event Processing"
 		},
+		"finishSession": "Finish Session",
 		"connection": {
 			"lost": "Connection Lost",
 			"reconnecting": "Reconnecting...",
@@ -422,6 +424,31 @@
 		"youtube": {
 			"notConnected": "YouTube Not Connected",
 			"connectToUpload": "Connect to YouTube to upload the recording."
+		}
+	},
+	"recordings": {
+		"noRecordings": "No recordings yet",
+		"viewOnYoutube": "View on YouTube",
+		"includeInUpload": "Include in upload",
+		"customTitle": "Custom title (optional)",
+		"noneReady": "No recordings ready for upload",
+		"oneReady": "1 recording ready for upload",
+		"multipleReady": "{count} recordings ready for upload",
+		"table": {
+			"title": "Recordings",
+			"recording": "Recording",
+			"duration": "Duration",
+			"event": "Event",
+			"date": "Date",
+			"speaker": "Speaker",
+			"status": "Status",
+			"youtube": "YouTube",
+			"actions": "Actions",
+			"editEvent": "Edit Event",
+			"upload": "Upload",
+			"uploading": "Uploading...",
+			"uploadSuccess": "Recording uploaded successfully",
+			"uploadFailed": "Upload failed"
 		}
 	},
 	"recording": {

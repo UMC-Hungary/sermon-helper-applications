@@ -2,7 +2,7 @@ import { get } from 'svelte/store';
 import { youtubeApi } from './youtube-api';
 import { systemStore } from '$lib/stores/system-store';
 import { eventStore } from '$lib/stores/event-store';
-import { generateCalculatedTitle, type ServiceEvent } from '$lib/types/event';
+import { generateCalculatedTitle, type ServiceEvent, type YouTubePrivacyStatus, type YouTubeLifeCycleStatus } from '$lib/types/event';
 import { toast } from './toast';
 
 /**
@@ -45,9 +45,11 @@ export async function scheduleYoutubeBroadcast(event: ServiceEvent): Promise<voi
 			enableEmbed: true
 		});
 
-		// Update event with broadcast ID and clear scheduling state
+		// Update event with broadcast ID, lifecycle status, and clear scheduling state
 		await eventStore.updateEvent(event.id, {
 			youtubeScheduledId: broadcast.id,
+			youtubeLifeCycleStatus: broadcast.status.lifeCycleStatus as YouTubeLifeCycleStatus,
+			youtubePrivacyStatus: broadcast.status.privacyStatus as YouTubePrivacyStatus,
 			isBroadcastScheduling: false
 		});
 

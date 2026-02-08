@@ -4,17 +4,9 @@
 	import EventForm from '$lib/components/event-form.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { eventStore } from '$lib/stores/event-store';
-	import { appSettings, appSettingsStore } from '$lib/utils/app-settings-store';
 	import { systemStore } from '$lib/stores/system-store';
 	import { scheduleYoutubeBroadcast } from '$lib/utils/youtube-helpers';
 	import type { ServiceEvent } from '$lib/types/event';
-
-	// Check for draft to restore
-	const draft = $appSettings.draftEvent;
-	const draftSaved = $appSettings.draftSaved;
-
-	// Only use draft if it exists and wasn't saved (and no originalId means it's a new event draft)
-	const initialEvent = (draft && !draftSaved && !$appSettings.draftEventOriginalId) ? draft : undefined;
 
 	async function handleSave(event: ServiceEvent) {
 		try {
@@ -25,11 +17,6 @@
 			if ($systemStore.youtubeLoggedIn) {
 				await scheduleYoutubeBroadcast(event);
 			}
-
-			// Clear draft and mark as saved
-			await appSettingsStore.set('draftSaved', true);
-			await appSettingsStore.set('draftEvent', null);
-			await appSettingsStore.set('draftEventOriginalId', null);
 
 			toast({
 				title: $_('events.toasts.created.title'),
@@ -48,13 +35,7 @@
 		}
 	}
 
-	async function handleCancel() {
-		// Clear draft
-		await appSettingsStore.set('draftSaved', true);
-		await appSettingsStore.set('draftEvent', null);
-		await appSettingsStore.set('draftEventOriginalId', null);
-
-		// Navigate back to list
+	function handleCancel() {
 		goto('/events');
 	}
 </script>
@@ -65,7 +46,6 @@
 	</div>
 
 	<EventForm
-		event={initialEvent}
 		onSave={handleSave}
 		onCancel={handleCancel}
 	/>

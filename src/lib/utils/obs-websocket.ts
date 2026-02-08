@@ -30,6 +30,7 @@ export class LocalOBSWebSocket {
 	private timecodeInterval: ReturnType<typeof setInterval> | null = null;
 	private streamStartTime: number | null = null;  // Timestamp when stream started
 	private recordStartTime: number | null = null;  // Timestamp when record started
+	private lastRecordedFilePath: string | null = null;  // Path from last RecordStateChanged event
 
 	private status = writable<OBSConnectionStatus>({
 		connected: false,
@@ -99,6 +100,11 @@ export class LocalOBSWebSocket {
 			this.obs.on('RecordStateChanged', (data) => {
 				console.log('Record state changed:', data);
 				const paused = 'outputPaused' in data ? (data as { outputPaused?: boolean }).outputPaused ?? false : false;
+				// Capture outputPath when recording stops (OBS includes the file path in the event)
+				const outputPath = 'outputPath' in data ? (data as { outputPath?: string }).outputPath : undefined;
+				if (outputPath) {
+					this.lastRecordedFilePath = outputPath;
+				}
 				this.handleRecordStateChange(data.outputActive, data.outputState as OBSOutputState, paused);
 			});
 
@@ -613,21 +619,10 @@ export class LocalOBSWebSocket {
 
 	/**
 	 * Get the last recorded file path from OBS (if available)
-	 * Note: This may not be available on all OBS versions
+	 * Returns the path captured from the RecordStateChanged event
 	 */
 	async getLastRecordedFilePath(): Promise<string | null> {
-		if (!this.obs || !this.isConnected()) {
-			throw new Error('OBS not connected');
-		}
-
-		try {
-			const status = await this.obs.call('GetRecordStatus');
-			// outputPath is available in some OBS WebSocket versions
-			return (status as { outputPath?: string }).outputPath || null;
-		} catch (error) {
-			console.warn('Could not get last recorded file path:', error);
-			return null;
-		}
+		return this.lastRecordedFilePath;
 	}
 }
 
