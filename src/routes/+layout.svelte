@@ -21,8 +21,9 @@
     import { browser } from '$app/environment';
     import { isTauriApp } from '$lib/utils/storage-helpers';
     import { discoveryServerManager, discoveryServerStatus } from '$lib/stores/discovery-server-store';
-    import { systemStore, obsStatus } from '$lib/stores/system-store';
-    import type { DiscoverySystemStatus, DiscoveryObsStatus } from '$lib/types/discovery';
+    import { systemStore } from '$lib/stores/system-store';
+    import { initStreamingBroadcast } from '$lib/stores/streaming-store';
+    import type { DiscoverySystemStatus } from '$lib/types/discovery';
 
     let { children } = $props();
 
@@ -83,6 +84,10 @@
                 await discoveryServerManager.init();
                 await log('info', 'Discovery server manager initialized');
 
+                // Wire OBS media status → discovery server broadcasts
+                initStreamingBroadcast();
+                await log('info', 'Streaming broadcast initialized');
+
                 // Auto-start discovery server if enabled and has auth token
                 const discoverySettings = await appSettingsStore.get('discoverySettings');
                 await log('info', `Discovery settings loaded: autoStart=${discoverySettings?.autoStart}, hasToken=${!!discoverySettings?.authToken}`);
@@ -109,50 +114,33 @@
         }
     });
 
-    // Subscriptions for broadcasting status to discovery server
+    // Subscription for broadcasting system status (YouTube login etc.) to discovery server
     let systemUnsubscribe: (() => void) | undefined;
-    let obsUnsubscribe: (() => void) | undefined;
 
-    // Set up subscriptions after mount
+    // Set up subscription after mount
     $effect(() => {
         if (browser && isTauriApp() && $discoveryServerStatus.running) {
-            // Subscribe to system store changes
+            // Subscribe to system store changes (YouTube login, OBS connection)
+            // OBS streaming/recording state is handled by initStreamingBroadcast()
             systemUnsubscribe = systemStore.subscribe(($system) => {
                 const status: DiscoverySystemStatus = {
                     obsConnected: $system.obs,
-                    obsStreaming: false, // Will be updated by OBS status
+                    obsStreaming: false,
                     obsRecording: false,
-                    rodeInterface: true,
-                    mainDisplay: true,
-                    secondaryDisplay: true,
                     youtubeLoggedIn: $system.youtubeLoggedIn
                 };
                 discoveryServerManager.updateSystemStatus(status);
-            });
-
-            // Subscribe to OBS status changes
-            obsUnsubscribe = obsStatus.subscribe(($obs) => {
-                const status: DiscoveryObsStatus = {
-                    connected: $obs.connected,
-                    streaming: false, // TODO: Add streaming status to obsStatus
-                    recording: false, // TODO: Add recording status to obsStatus
-                    streamTimecode: null,
-                    recordTimecode: null
-                };
-                discoveryServerManager.updateObsStatus(status);
             });
         }
 
         return () => {
             systemUnsubscribe?.();
-            obsUnsubscribe?.();
         };
     });
 
     onDestroy(() => {
         refreshStore.stop();
         systemUnsubscribe?.();
-        obsUnsubscribe?.();
     });
 
     let isMobileMenuOpen = $state(false);

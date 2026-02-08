@@ -60,6 +60,15 @@ export function GetVariableDefinitions(_instance: ModuleInstance): CompanionVari
 			variableId: 'ppt_last_opened',
 			name: 'PPT Last Opened File',
 		},
+		// APS Variables
+		{
+			variableId: 'aps_connected',
+			name: 'APS Connected',
+		},
+		{
+			variableId: 'aps_status',
+			name: 'APS Status',
+		},
 	]
 }
 
@@ -82,5 +91,8 @@ export function GetDefaultVariableValues(instance: ModuleInstance): Record<strin
 		ppt_slot_4_name: instance.pptSelector.getSlotDisplayName(3),
 		ppt_slot_5_name: instance.pptSelector.getSlotDisplayName(4),
 		ppt_last_opened: pptState.lastOpenedFile || '',
+		// APS Variables
+		aps_connected: instance.apsState.connected ? 'Yes' : 'No',
+		aps_status: instance.apsState.connected ? 'Connected' : (instance.apsState.error || 'Disconnected'),
 	}
 }

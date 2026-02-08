@@ -232,5 +232,144 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 				await instance.pptSelector.refreshFiles()
 			},
 		},
+
+		// APS Slide Control Actions
+		aps_next_slide: {
+			name: 'APS: Next Slide',
+			description: 'Go to the next slide in the current presentation (via APS)',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'APS: Next slide')
+				const result = await instance.api.apsNextSlide()
+				if (!result.success) {
+					instance.log('error', `APS: Failed to go to next slide: ${result.error}`)
+				}
+			},
+		},
+
+		aps_previous_slide: {
+			name: 'APS: Previous Slide',
+			description: 'Go to the previous slide in the current presentation (via APS)',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'APS: Previous slide')
+				const result = await instance.api.apsPreviousSlide()
+				if (!result.success) {
+					instance.log('error', `APS: Failed to go to previous slide: ${result.error}`)
+				}
+			},
+		},
+
+		aps_goto_slide: {
+			name: 'APS: Go to Slide',
+			description: 'Jump to a specific slide number in the current presentation (via APS)',
+			options: [
+				{
+					type: 'number',
+					id: 'slideNumber',
+					label: 'Slide Number',
+					default: 1,
+					min: 1,
+					max: 999,
+				},
+			],
+			callback: async (action: CompanionActionEvent) => {
+				const slideNumber = action.options['slideNumber'] as number
+				if (!slideNumber || slideNumber < 1) {
+					instance.log('warn', 'APS: Invalid slide number')
+					return
+				}
+
+				instance.log('info', `APS: Going to slide ${slideNumber}`)
+				const result = await instance.api.apsGoToSlide(slideNumber)
+				if (!result.success) {
+					instance.log('error', `APS: Failed to go to slide ${slideNumber}: ${result.error}`)
+				}
+			},
+		},
+
+		aps_close_presentation: {
+			name: 'APS: Close Presentation',
+			description: 'Close the current presentation (via APS)',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'APS: Closing presentation')
+				const result = await instance.api.apsClosePresentation()
+				if (!result.success) {
+					instance.log('error', `APS: Failed to close presentation: ${result.error}`)
+				}
+			},
+		},
+
+		// APS Media Control Actions
+		aps_media_play: {
+			name: 'APS: Play Media',
+			description: 'Start playback of embedded media in PowerPoint (via APS)',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'APS: Play media')
+				const result = await instance.api.apsMediaPlay()
+				if (!result.success) {
+					instance.log('error', `APS: Failed to play media: ${result.error}`)
+				}
+			},
+		},
+
+		aps_media_pause: {
+			name: 'APS: Pause Media',
+			description: 'Pause playback of embedded media in PowerPoint (via APS)',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'APS: Pause media')
+				const result = await instance.api.apsMediaPause()
+				if (!result.success) {
+					instance.log('error', `APS: Failed to pause media: ${result.error}`)
+				}
+			},
+		},
+
+		aps_media_stop: {
+			name: 'APS: Stop Media',
+			description: 'Stop playback of embedded media in PowerPoint (via APS)',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'APS: Stop media')
+				const result = await instance.api.apsMediaStop()
+				if (!result.success) {
+					instance.log('error', `APS: Failed to stop media: ${result.error}`)
+				}
+			},
+		},
+
+		// APS Connection Actions
+		aps_connect: {
+			name: 'APS: Connect',
+			description: 'Connect to the APS server',
+			options: [],
+			callback: async () => {
+				instance.log('info', 'APS: Connecting...')
+				const result = await instance.api.apsConnect()
+				if (result.success) {
+					instance.log('info', 'APS: Connected successfully')
+				} else {
+					instance.log('error', `APS: Failed to connect: ${result.error}`)
+				}
+			},
+		},
+
+		aps_disconnect: {
+			name: 'APS: Disconnect',
+			description: 'Disconnect from the APS server',
+			options: [],
+			callback: async () => {
+				instance.log('info', 'APS: Disconnecting...')
+				const result = await instance.api.apsDisconnect()
+				if (result.success) {
+					instance.log('info', 'APS: Disconnected successfully')
+				} else {
+					instance.log('error', `APS: Failed to disconnect: ${result.error}`)
+				}
+			},
+		},
 	}
 }

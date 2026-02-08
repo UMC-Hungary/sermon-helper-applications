@@ -414,6 +414,38 @@
 			{#if isLoading}
 				<div class="text-center py-8 text-muted-foreground">Loading...</div>
 			{:else}
+				<!-- APS Integration Info -->
+				<div class="rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4">
+					<div class="flex items-start gap-3">
+						<div class="rounded-full bg-blue-100 dark:bg-blue-900 p-2">
+							<svg class="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+						<div class="flex-1">
+							<h4 class="font-medium text-sm text-blue-900 dark:text-blue-100">
+								APS Integration Available
+							</h4>
+							<p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+								For professional PowerPoint control with slide navigation and media control, 
+								configure <strong>Auto Presentation Switcher (APS)</strong> in the settings.
+								APS provides advanced features like slide-by-slide navigation, media playback control, 
+								and works with PowerPoint, Keynote, and PDF files.
+							</p>
+							<div class="mt-2">
+								<Button
+									buttonVariant="outline"
+									size="sm"
+									onclick={() => window.location.href = '/settings'}
+									className="text-xs"
+								>
+									Configure APS
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+
 				<!-- Folder List -->
 				{#if settings.folders.length === 0}
 					<div class="rounded-lg border border-dashed p-8 text-center">

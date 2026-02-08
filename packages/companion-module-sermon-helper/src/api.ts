@@ -285,4 +285,176 @@ export class SermonHelperApi {
 			this.ws = null
 		}
 	}
+
+	// APS (Auto Presentation Switcher) API Methods
+
+	async apsNextSlide(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/next-slide`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsPreviousSlide(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/previous-slide`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsGoToSlide(slideNumber: number): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/goto-slide`, {
+				method: 'POST',
+				headers: this.headers,
+				body: JSON.stringify({ slideNumber }),
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsClosePresentation(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/close`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsMediaPlay(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/media/play`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsMediaPause(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/media/pause`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsMediaStop(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/media/stop`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsConnect(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/connect`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsDisconnect(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/disconnect`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			const data = (await response.json()) as { success: boolean; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
+
+	async apsGetStatus(): Promise<{ success: boolean; data?: { connected: boolean; api_version?: number }; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/aps/status`, {
+				headers: this.headers,
+				signal: AbortSignal.timeout(5000),
+			})
+			const data = (await response.json()) as { success: boolean; data?: { connected: boolean; api_version?: number }; error?: string }
+			return data
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
+		}
+	}
 }

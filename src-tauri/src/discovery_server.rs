@@ -18,13 +18,213 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, Mutex, RwLock};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tower_http::cors::{Any, CorsLayer};
 use chrono::Utc;
 
 /// Default port for the discovery server
 pub const DEFAULT_PORT: u16 = 8765;
+
+/// Default APS server configuration
+pub const DEFAULT_APS_HOST: &str = "127.0.0.1";
+pub const DEFAULT_APS_PORT: u16 = 31600;
+
+// ============================================================================
+// APS (Auto Presentation Switcher) Client
+// ============================================================================
+
+/// APS connection status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApsConnectionStatus {
+    pub connected: bool,
+    pub host: String,
+    pub port: u16,
+    pub api_version: Option<u32>,
+    pub error: Option<String>,
+    pub last_connected: Option<String>,
+}
+
+/// APS client for TCP communication
+pub struct ApsClient {
+    host: String,
+    port: u16,
+    stream: Arc<Mutex<Option<TcpStream>>>,
+    connected: Arc<RwLock<bool>>,
+}
+
+impl ApsClient {
+    pub fn new(host: String, port: u16) -> Self {
+        Self {
+            host,
+            port,
+            stream: Arc::new(Mutex::new(None)),
+            connected: Arc::new(RwLock::new(false)),
+        }
+    }
+
+    /// Get current connection status
+    pub async fn get_status(&self) -> ApsConnectionStatus {
+        let connected = *self.connected.read().await;
+        ApsConnectionStatus {
+            connected,
+            host: self.host.clone(),
+            port: self.port,
+            api_version: if connected { Some(2) } else { None },
+            error: None,
+            last_connected: if connected { Some(chrono::Utc::now().to_rfc3339()) } else { None },
+        }
+    }
+
+    /// Connect to APS server
+    pub async fn connect(&self) -> Result<(), String> {
+        let addr = format!("{}:{}", self.host, self.port);
+        
+        match TcpStream::connect(&addr).await {
+            Ok(stream) => {
+                let mut guard = self.stream.lock().await;
+                *guard = Some(stream);
+                
+                let mut connected = self.connected.write().await;
+                *connected = true;
+                
+                log::info!("Connected to APS server at {}", addr);
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("Failed to connect to APS server at {}: {}", addr, e);
+                Err(format!("Connection failed: {}", e))
+            }
+        }
+    }
+
+    /// Disconnect from APS server
+    pub async fn disconnect(&self) {
+        let mut guard = self.stream.lock().await;
+        if let Some(stream) = guard.take() {
+            drop(stream);
+        }
+        
+        let mut connected = self.connected.write().await;
+        *connected = false;
+        
+        log::info!("Disconnected from APS server");
+    }
+
+    /// Send a command to APS
+    pub async fn send_command(&self, command: &str, parameters: Option<serde_json::Value>) -> Result<(), String> {
+        let connected = *self.connected.read().await;
+        if !connected {
+            // Try to connect first
+            self.connect().await?;
+        }
+
+        let message = if let Some(params) = parameters {
+            serde_json::json!({
+                "command": command,
+                "parameters": params
+            })
+        } else {
+            serde_json::json!({
+                "command": command
+            })
+        };
+
+        let json = message.to_string();
+        let length = json.len() as u32;
+        
+        // APS API v2 uses 4-byte big-endian length prefix
+        let length_bytes = length.to_be_bytes();
+        let full_message = [length_bytes.to_vec(), json.into_bytes()].concat();
+
+        let mut guard = self.stream.lock().await;
+        if let Some(stream) = guard.as_mut() {
+            match stream.write_all(&full_message).await {
+                Ok(_) => {
+                    match stream.flush().await {
+                        Ok(_) => {
+                            log::debug!("Sent APS command: {}", command);
+                            Ok(())
+                        }
+                        Err(e) => {
+                            log::error!("Failed to flush to APS: {}", e);
+                            drop(guard);
+                            self.disconnect().await;
+                            Err(format!("Flush failed: {}", e))
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to send to APS: {}", e);
+                    drop(guard);
+                    self.disconnect().await;
+                    Err(format!("Send failed: {}", e))
+                }
+            }
+        } else {
+            Err("No active connection".to_string())
+        }
+    }
+
+    /// Open a presentation file
+    pub async fn open_presentation(&self, file_path: &str, slide_nr: u32, is_fullscreen: bool) -> Result<(), String> {
+        let params = serde_json::json!({
+            "file_path": file_path,
+            "slideNr": slide_nr,
+            "isFullscreen": is_fullscreen
+        });
+        self.send_command("OpenStart_Presentation", Some(params)).await
+    }
+
+    /// Go to next slide
+    pub async fn next_slide(&self) -> Result<(), String> {
+        self.send_command("PowerPoint_Next", None).await
+    }
+
+    /// Go to previous slide
+    pub async fn previous_slide(&self) -> Result<(), String> {
+        self.send_command("PowerPoint_Previous", None).await
+    }
+
+    /// Go to specific slide
+    pub async fn go_to_slide(&self, slide_nr: u32) -> Result<(), String> {
+        let params = serde_json::json!({
+            "slideNr": slide_nr
+        });
+        self.send_command("PowerPoint_Go", Some(params)).await
+    }
+
+    /// Close presentation (send Esc key)
+    pub async fn close_presentation(&self) -> Result<(), String> {
+        self.send_command("Key_Esc", None).await
+    }
+
+    /// Start media playback
+    pub async fn play_media(&self) -> Result<(), String> {
+        let params = serde_json::json!({
+            "action": "play"
+        });
+        self.send_command("Presentation_Media_Control", Some(params)).await
+    }
+
+    /// Pause media playback
+    pub async fn pause_media(&self) -> Result<(), String> {
+        let params = serde_json::json!({
+            "action": "pause"
+        });
+        self.send_command("Presentation_Media_Control", Some(params)).await
+    }
+
+    /// Stop media playback
+    pub async fn stop_media(&self) -> Result<(), String> {
+        let params = serde_json::json!({
+            "action": "stop"
+        });
+        self.send_command("Presentation_Media_Control", Some(params)).await
+    }
+}
 
 /// Server status information returned to frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -300,11 +500,20 @@ pub struct DiscoveryServerState {
     pub ppt_folders: RwLock<Vec<PptFolder>>,
     /// App data directory for reading settings file directly
     pub app_data_dir: Option<std::path::PathBuf>,
+    /// APS (Auto Presentation Switcher) client
+    pub aps_client: Option<Arc<ApsClient>>,
 }
 
 impl DiscoveryServerState {
     pub fn new(auth_token: Option<String>, app_data_dir: Option<std::path::PathBuf>) -> Self {
         let (ws_broadcast, _) = broadcast::channel(100);
+        
+        // Initialize APS client with default settings
+        let aps_client = Some(Arc::new(ApsClient::new(
+            DEFAULT_APS_HOST.to_string(),
+            DEFAULT_APS_PORT
+        )));
+        
         Self {
             system_status: RwLock::new(SystemStatus::default()),
             obs_status: RwLock::new(ObsStatus::default()),
@@ -314,6 +523,7 @@ impl DiscoveryServerState {
             rfir_commands: RwLock::new(Vec::new()),
             ppt_folders: RwLock::new(Vec::new()),
             app_data_dir,
+            aps_client,
         }
     }
 
@@ -627,6 +837,17 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/ppt/folders/{id}", axum::routing::delete(ppt_delete_folder_handler))
         .route("/api/v1/ppt/files", get(ppt_files_handler))
         .route("/api/v1/ppt/open", post(ppt_open_handler))
+        // APS (Auto Presentation Switcher) endpoints
+        .route("/api/v1/aps/status", get(aps_status_handler))
+        .route("/api/v1/aps/connect", post(aps_connect_handler))
+        .route("/api/v1/aps/disconnect", post(aps_disconnect_handler))
+        .route("/api/v1/aps/next-slide", post(aps_next_slide_handler))
+        .route("/api/v1/aps/previous-slide", post(aps_previous_slide_handler))
+        .route("/api/v1/aps/goto-slide", post(aps_goto_slide_handler))
+        .route("/api/v1/aps/close", post(aps_close_handler))
+        .route("/api/v1/aps/media/play", post(aps_media_play_handler))
+        .route("/api/v1/aps/media/pause", post(aps_media_pause_handler))
+        .route("/api/v1/aps/media/stop", post(aps_media_stop_handler))
         // Settings export/import endpoints
         .route("/api/v1/settings/export", get(settings_export_handler))
         .route("/api/v1/settings/import", post(settings_import_handler))
@@ -1738,7 +1959,7 @@ fn scan_ppt_folder(folder_path: &str, folder_id: &str) -> Result<Vec<PptFile>, S
     Ok(files)
 }
 
-/// Open a PPT file and optionally start presenter mode
+/// Open a PPT file using Auto Presentation Switcher (APS)
 async fn ppt_open_handler(
     headers: HeaderMap,
     State(state): State<SharedServerState>,
@@ -1766,48 +1987,101 @@ async fn ppt_open_handler(
         .unwrap_or("unknown")
         .to_string();
 
-    // Open the file with the system default application
-    match open::that(&request.file_path) {
-        Ok(_) => {
-            let mut presenter_started = false;
+    // Use APS to open and control the presentation
+    if let Some(ref aps) = state.aps_client {
+        match aps.open_presentation(&request.file_path, 1, request.start_presenter).await {
+            Ok(_) => {
+                log::info!("Opened presentation via APS: {}", file_name);
+                
+                // Broadcast the event
+                state.broadcast(WsMessage::PptFileOpened {
+                    file_name: file_name.clone(),
+                    file_path: request.file_path.clone(),
+                    success: true,
+                    presenter_started: request.start_presenter,
+                });
 
-            // If requested, start presenter mode after a delay
-            if request.start_presenter {
-                // Wait for the application to open
-                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-                // Try to start presenter mode
-                presenter_started = start_presenter_mode().await;
-            }
-
-            // Broadcast the event
-            state.broadcast(WsMessage::PptFileOpened {
-                file_name: file_name.clone(),
-                file_path: request.file_path.clone(),
-                success: true,
-                presenter_started,
-            });
-
-            Json(ApiResponse::success(serde_json::json!({
-                "success": true,
-                "file_name": file_name,
-                "presenter_started": presenter_started
-            })))
-            .into_response()
-        }
-        Err(e) => {
-            state.broadcast(WsMessage::PptFileOpened {
-                file_name: file_name.clone(),
-                file_path: request.file_path.clone(),
-                success: false,
-                presenter_started: false,
-            });
-
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error(format!("Failed to open file: {}", e))),
-            )
+                Json(ApiResponse::success(serde_json::json!({
+                    "success": true,
+                    "file_name": file_name,
+                    "presenter_started": request.start_presenter,
+                    "method": "aps"
+                })))
                 .into_response()
+            }
+            Err(e) => {
+                log::error!("Failed to open presentation via APS: {}", e);
+                
+                // Fallback to system default application
+                log::info!("Falling back to system default application for: {}", file_name);
+                match open::that(&request.file_path) {
+                    Ok(_) => {
+                        state.broadcast(WsMessage::PptFileOpened {
+                            file_name: file_name.clone(),
+                            file_path: request.file_path.clone(),
+                            success: true,
+                            presenter_started: false,
+                        });
+
+                        Json(ApiResponse::success(serde_json::json!({
+                            "success": true,
+                            "file_name": file_name,
+                            "presenter_started": false,
+                            "method": "fallback",
+                            "aps_error": e
+                        })))
+                        .into_response()
+                    }
+                    Err(e) => {
+                        state.broadcast(WsMessage::PptFileOpened {
+                            file_name: file_name.clone(),
+                            file_path: request.file_path.clone(),
+                            success: false,
+                            presenter_started: false,
+                        });
+
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(ApiResponse::<()>::error(format!("Failed to open file: {}", e))),
+                        )
+                            .into_response()
+                    }
+                }
+            }
+        }
+    } else {
+        // APS client not initialized, use fallback
+        match open::that(&request.file_path) {
+            Ok(_) => {
+                state.broadcast(WsMessage::PptFileOpened {
+                    file_name: file_name.clone(),
+                    file_path: request.file_path.clone(),
+                    success: true,
+                    presenter_started: false,
+                });
+
+                Json(ApiResponse::success(serde_json::json!({
+                    "success": true,
+                    "file_name": file_name,
+                    "presenter_started": false,
+                    "method": "fallback"
+                })))
+                .into_response()
+            }
+            Err(e) => {
+                state.broadcast(WsMessage::PptFileOpened {
+                    file_name: file_name.clone(),
+                    file_path: request.file_path.clone(),
+                    success: false,
+                    presenter_started: false,
+                });
+
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::<()>::error(format!("Failed to open file: {}", e))),
+                )
+                    .into_response()
+            }
         }
     }
 }
@@ -1840,6 +2114,328 @@ async fn start_presenter_mode() -> bool {
 async fn start_presenter_mode() -> bool {
     log::warn!("Presenter mode automation not supported on this platform");
     false
+}
+
+// ============================================================================
+// APS (Auto Presentation Switcher) Handlers
+// ============================================================================
+
+/// Get APS connection status
+async fn aps_status_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        let status = aps.get_status().await;
+        Json(ApiResponse::success(status)).into_response()
+    } else {
+        Json(ApiResponse::success(ApsConnectionStatus {
+            connected: false,
+            host: DEFAULT_APS_HOST.to_string(),
+            port: DEFAULT_APS_PORT,
+            api_version: None,
+            error: Some("APS client not initialized".to_string()),
+            last_connected: None,
+        }))
+        .into_response()
+    }
+}
+
+/// Connect to APS server
+async fn aps_connect_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.connect().await {
+            Ok(_) => {
+                let status = aps.get_status().await;
+                Json(ApiResponse::success(status)).into_response()
+            }
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to connect: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Disconnect from APS server
+async fn aps_disconnect_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        aps.disconnect().await;
+        let status = aps.get_status().await;
+        Json(ApiResponse::success(status)).into_response()
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Go to next slide
+async fn aps_next_slide_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.next_slide().await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({"success": true}))).into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to go to next slide: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Go to previous slide
+async fn aps_previous_slide_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.previous_slide().await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({"success": true}))).into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to go to previous slide: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Request to go to a specific slide
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ApsGotoSlideRequest {
+    pub slide_number: u32,
+}
+
+/// Go to specific slide
+async fn aps_goto_slide_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    AppJson(request): AppJson<ApsGotoSlideRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.go_to_slide(request.slide_number).await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({
+                "success": true,
+                "slide_number": request.slide_number
+            })))
+            .into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to go to slide {}: {}", request.slide_number, e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Close current presentation
+async fn aps_close_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.close_presentation().await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({"success": true}))).into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to close presentation: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Start media playback
+async fn aps_media_play_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.play_media().await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({"success": true}))).into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to play media: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Pause media playback
+async fn aps_media_pause_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.pause_media().await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({"success": true}))).into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to pause media: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
+}
+
+/// Stop media playback
+async fn aps_media_stop_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<()>::error("Unauthorized")),
+        )
+            .into_response();
+    }
+
+    if let Some(ref aps) = state.aps_client {
+        match aps.stop_media().await {
+            Ok(_) => Json(ApiResponse::success(serde_json::json!({"success": true}))).into_response(),
+            Err(e) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ApiResponse::<()>::error(format!("Failed to stop media: {}", e))),
+            )
+                .into_response(),
+        }
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(ApiResponse::<()>::error("APS client not initialized")),
+        )
+            .into_response()
+    }
 }
 
 // ============================================================================
