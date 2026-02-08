@@ -1,5 +1,5 @@
 import WebSocket from 'ws'
-import type { ModuleConfig, RfIrCommand, ApiHealthResponse, DiscoveredServer, PptFolder, PptFile, PptFilesResponse } from './types.js'
+import type { ModuleConfig, RfIrCommand, ApiHealthResponse, PptFolder, PptFile, PptFilesResponse } from './types.js'
 
 export class SermonHelperApi {
 	private config: ModuleConfig
@@ -283,43 +283,6 @@ export class SermonHelperApi {
 			this.ws.removeAllListeners() // Prevent reconnect
 			this.ws.close()
 			this.ws = null
-		}
-	}
-
-	static async discoverServers(timeout = 5000): Promise<DiscoveredServer[]> {
-		// mDNS discovery - requires mdns-js or similar
-		// This is a placeholder that can be enhanced with actual mDNS implementation
-		const servers: DiscoveredServer[] = []
-
-		try {
-			// Dynamic import to avoid issues if mdns-js is not available
-			const mdns = await import('mdns-js')
-
-			return new Promise((resolve) => {
-				const browser = mdns.createBrowser(mdns.tcp('sermon-helper'))
-
-				browser.on('ready', () => {
-					browser.discover()
-				})
-
-				browser.on('update', (service: { addresses?: string[]; port?: number; fullname?: string }) => {
-					if (service.addresses && service.addresses.length > 0) {
-						servers.push({
-							host: service.addresses[0],
-							port: service.port || 8765,
-							name: service.fullname || 'Sermon Helper',
-						})
-					}
-				})
-
-				setTimeout(() => {
-					browser.stop()
-					resolve(servers)
-				}, timeout)
-			})
-		} catch {
-			console.log('mDNS discovery not available')
-			return servers
 		}
 	}
 }

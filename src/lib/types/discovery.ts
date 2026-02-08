@@ -1,6 +1,5 @@
 /**
- * Discovery server types for mDNS/DNS-SD service discovery
- * and mobile companion app integration.
+ * Discovery server types for mobile companion app integration.
  */
 
 /** Discovery server info returned when starting the server */
@@ -20,7 +19,6 @@ export interface DiscoveryServerStatus {
 	port: number | null;
 	addresses: string[];
 	connectedClients: number;
-	mdnsRegistered: boolean;
 	/** URL to API documentation (Swagger UI) */
 	docsUrl: string | null;
 }

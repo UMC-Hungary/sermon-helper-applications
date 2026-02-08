@@ -21,7 +21,6 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	public pptSelector: PptSelector
 
 	private pollTimer: ReturnType<typeof setInterval> | null = null
-	private discoveryTimer: ReturnType<typeof setTimeout> | null = null
 
 	constructor(internal: unknown) {
 		super(internal as ConstructorParameters<typeof InstanceBase>[0])
@@ -83,11 +82,6 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		// Initial setup
 		this.updateStatus(InstanceStatus.Connecting)
 
-		// If auto-discovery is enabled, try to find servers
-		if (config.useAutoDiscovery) {
-			await this.runDiscovery()
-		}
-
 		// Check connection and load initial data
 		await this.checkConnection()
 		await this.refreshCommands()
@@ -108,11 +102,6 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	async destroy(): Promise<void> {
 		this.stopPolling()
 		this.api.disconnectWebSocket()
-
-		if (this.discoveryTimer) {
-			clearTimeout(this.discoveryTimer)
-			this.discoveryTimer = null
-		}
 	}
 
 	async configUpdated(config: ModuleConfig): Promise<void> {
@@ -138,28 +127,6 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 	getConfigFields(): SomeCompanionConfigField[] {
 		return GetConfigFields()
-	}
-
-	private async runDiscovery(): Promise<void> {
-		this.log('info', 'Starting mDNS discovery...')
-
-		try {
-			const servers = await SermonHelperApi.discoverServers(5000)
-
-			if (servers.length > 0) {
-				const server = servers[0]
-				this.log('info', `Discovered server: ${server.name} at ${server.host}:${server.port}`)
-
-				// Update config with discovered server
-				this.config.host = server.host
-				this.config.port = server.port
-				this.api.updateConfig(this.config)
-			} else {
-				this.log('info', 'No servers discovered via mDNS')
-			}
-		} catch (error) {
-			this.log('warn', `mDNS discovery failed: ${error}`)
-		}
 	}
 
 	private async checkConnection(): Promise<void> {

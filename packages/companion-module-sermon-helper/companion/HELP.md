@@ -16,10 +16,6 @@ Control Broadlink IR/RF devices through the Sermon Helper desktop application.
 - **Port**: The Discovery Server API port (default: `8765`)
 - **Auth Token**: Optional authentication token if configured in Sermon Helper
 
-### Auto-Discovery
-
-The module can automatically discover Sermon Helper instances on your network using mDNS (Bonjour/Avahi). Enable "Use Auto-Discovery" to scan for available servers.
-
 ## Actions
 
 ### Execute RF/IR Command
@@ -82,8 +78,3 @@ The module automatically generates preset buttons for each RF/IR command configu
 2. Click "Refresh Commands" to manually sync
 3. Check the Sermon Helper logs for any errors
 
-### mDNS discovery not working
-
-1. Ensure Sermon Helper and Companion are on the same network
-2. Check that mDNS/Bonjour is not blocked by your router
-3. Fall back to manual host configuration

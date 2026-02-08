@@ -1,6 +1,6 @@
 //! Tauri commands for the discovery server.
 //!
-//! These commands allow the frontend to control the mDNS discovery server
+//! These commands allow the frontend to control the discovery server
 //! and update status that gets broadcast to connected mobile clients.
 
 use crate::discovery_server::{
@@ -85,7 +85,6 @@ pub async fn get_discovery_server_status() -> Result<DiscoveryServerStatus, Stri
             port: None,
             addresses: get_local_addresses(),
             connected_clients: 0,
-            mdns_registered: false,
             docs_url: None,
         })
     }

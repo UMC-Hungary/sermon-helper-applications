@@ -37,14 +37,6 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			tooltip: 'Authentication token if required by the server',
 		},
 		{
-			type: 'checkbox',
-			id: 'useAutoDiscovery',
-			label: 'Use Auto-Discovery (mDNS)',
-			width: 12,
-			default: false,
-			tooltip: 'Automatically discover Sermon Helper servers on the network',
-		},
-		{
 			type: 'number',
 			id: 'pollInterval',
 			label: 'Command Poll Interval (ms)',
@@ -62,7 +54,6 @@ export function GetDefaultConfig(): ModuleConfig {
 		host: '127.0.0.1',
 		port: 8765,
 		authToken: '',
-		useAutoDiscovery: false,
 		pollInterval: 30000,
 	}
 }
