@@ -19,8 +19,10 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	public commands: RfIrCommand[] = []
 	public isConnected = false
 	public pptSelector: PptSelector
+	public apsState = { connected: false, connecting: false, error: null as string | null }
 
 	private pollTimer: ReturnType<typeof setInterval> | null = null
+	private apsPollTimer: ReturnType<typeof setInterval> | null = null
 
 	constructor(internal: unknown) {
 		super(internal as ConstructorParameters<typeof InstanceBase>[0])
@@ -95,12 +97,16 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		// Start polling for command updates
 		this.startPolling()
 
+		// Start APS status polling
+		this.startApsPolling()
+
 		// Initialize definitions
 		this.updateDefinitions()
 	}
 
 	async destroy(): Promise<void> {
 		this.stopPolling()
+		this.stopApsPolling()
 		this.api.disconnectWebSocket()
 	}
 
@@ -180,6 +186,42 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer)
 			this.pollTimer = null
+		}
+	}
+
+	// APS Status Polling
+	private startApsPolling(): void {
+		if (this.apsPollTimer) {
+			clearInterval(this.apsPollTimer)
+		}
+
+		this.apsPollTimer = setInterval(async () => {
+			await this.checkApsStatus()
+		}, 5000) // Poll every 5 seconds
+	}
+
+	private stopApsPolling(): void {
+		if (this.apsPollTimer) {
+			clearInterval(this.apsPollTimer)
+			this.apsPollTimer = null
+		}
+	}
+
+	private async checkApsStatus(): Promise<void> {
+		try {
+			const result = await this.api.apsGetStatus()
+			if (result.success && result.data) {
+				const wasConnected = this.apsState.connected
+				this.apsState.connected = result.data.connected
+				this.apsState.error = null
+
+				if (wasConnected !== result.data.connected) {
+					this.checkFeedbacks('aps_connected')
+					this.log('info', `APS connection status: ${result.data.connected ? 'Connected' : 'Disconnected'}`)
+				}
+			}
+		} catch (error) {
+			this.apsState.error = error instanceof Error ? error.message : 'Unknown error'
 		}
 	}
 }

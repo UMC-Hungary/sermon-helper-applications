@@ -87,5 +87,20 @@ export function GetFeedbacks(instance: ModuleInstance): CompanionFeedbackDefinit
 				return instance.pptSelector.getState().currentFilter.length > 0
 			},
 		},
+
+		// APS Feedbacks
+		aps_connected: {
+			type: 'boolean',
+			name: 'APS: Connected',
+			description: 'Shows whether connected to Auto Presentation Switcher',
+			defaultStyle: {
+				bgcolor: combineRgb(0, 200, 0),
+				color: combineRgb(255, 255, 255),
+			},
+			options: [],
+			callback: () => {
+				return instance.apsState.connected
+			},
+		},
 	}
 }
