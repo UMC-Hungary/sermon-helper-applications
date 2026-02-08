@@ -1,4 +1,5 @@
 import { appSettingsStore, type AppSettings } from './app-settings-store';
+import { eventStore } from '$lib/stores/event-store';
 import { isTauriApp } from './storage-helpers';
 
 const SCHEMA_VERSION = 1;
@@ -65,9 +66,6 @@ export async function importSettings(data: File | string): Promise<void> {
 	const validKeys: (keyof AppSettings)[] = [
 		'bibleTranslation',
 		'eventList',
-		'draftEvent',
-		'draftEventOriginalId',
-		'draftSaved',
 		'youtubeTokens',
 		'youtubeOAuthConfig',
 		'obsDevicesSettings',
@@ -76,7 +74,6 @@ export async function importSettings(data: File | string): Promise<void> {
 		'rfIrSettings',
 		'pptSettings',
 		'uploadSettings',
-		'eventSession',
 	];
 
 	for (const key of validKeys) {
@@ -84,6 +81,9 @@ export async function importSettings(data: File | string): Promise<void> {
 			await appSettingsStore.set(key, settings[key] as AppSettings[typeof key]);
 		}
 	}
+
+	// Sync the writable event store with the imported data
+	eventStore.reloadFromStorage();
 }
 
 /**

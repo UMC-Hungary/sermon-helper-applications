@@ -137,7 +137,8 @@ export class YouTubeUploadService implements IUploadService {
 						platform: this.platform,
 						videoId: result.video_id,
 						videoUrl: `https://www.youtube.com/watch?v=${result.video_id}`,
-						processingStatus: 'processing' // YouTube needs time to process
+						processingStatus: 'processing', // YouTube needs time to process
+						privacy: session.metadata.privacy
 					};
 				}
 			}
@@ -185,7 +186,7 @@ export class YouTubeUploadService implements IUploadService {
 		}
 	}
 
-	// Finalize - publish the video
+	// Finalize - confirm the video's privacy status after upload
 	async finalize(result: UploadResult): Promise<void> {
 		const config = uploadSettingsStore.getPlatformConfig<YouTubeUploadConfig>('youtube');
 		if (!config || !config.publishAfterUpload) {
@@ -193,10 +194,12 @@ export class YouTubeUploadService implements IUploadService {
 			return;
 		}
 
+		const privacy = result.privacy || 'public';
+
 		try {
 			const accessToken = await youtubeApi.getValidAccessToken();
 
-			// Update video to public
+			// Update video privacy status to match the intended setting
 			const response = await fetch(
 				`https://www.googleapis.com/youtube/v3/videos?part=status`,
 				{
@@ -207,19 +210,19 @@ export class YouTubeUploadService implements IUploadService {
 					},
 					body: JSON.stringify({
 						id: result.videoId,
-						status: { privacyStatus: 'public' }
+						status: { privacyStatus: privacy }
 					})
 				}
 			);
 
 			if (!response.ok) {
 				const error = await response.json();
-				throw new Error(error.error?.message || 'Failed to publish video');
+				throw new Error(error.error?.message || 'Failed to update video privacy');
 			}
 
-			console.log(`[YouTubeUpload] Video published: ${result.videoId}`);
+			console.log(`[YouTubeUpload] Video finalized as ${privacy}: ${result.videoId}`);
 		} catch (error) {
-			console.error('[YouTubeUpload] Failed to publish video:', error);
+			console.error('[YouTubeUpload] Failed to finalize video:', error);
 			throw error;
 		}
 	}

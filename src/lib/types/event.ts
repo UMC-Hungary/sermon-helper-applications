@@ -1,31 +1,63 @@
 import type { BibleVerse, BibleTranslation } from './bible';
-import type { UploadPlatform } from './upload-config';
 
 export type VideoUploadState = 'pending' | 'uploading' | 'completed' | 'failed';
 export type YouTubePrivacyStatus = 'public' | 'private' | 'unlisted';
 export type YouTubeLifeCycleStatus = 'created' | 'ready' | 'testing' | 'live' | 'complete';
 
-// Upload session stored within an event
-export interface EventUploadSession {
+// ============================================
+// Constants
+// ============================================
+
+export const MIN_RECORDING_DURATION_SECONDS = 2 * 60; // 2 minutes
+export const CURRENT_EVENT_VERSION = 'v0.6.0';
+
+// ============================================
+// Session State Types
+// ============================================
+
+// Event session lifecycle states
+export type EventSessionState =
+	| 'IDLE' // Initial state, nothing active
+	| 'PREPARING' // OBS connected, waiting for stream/record
+	| 'ACTIVE' // Streaming and/or recording in progress
+	| 'FINALIZING' // Post-event automation in progress
+	| 'COMPLETED'; // Event fully processed
+
+// Recording file information
+export interface RecordingFile {
+	path: string;
+	name: string;
+	size: number; // bytes
+	duration: number; // seconds (from file metadata)
+	createdAt: number; // timestamp
+	modifiedAt: number; // timestamp
+}
+
+// Recording entry stored within an event
+export interface EventRecording {
 	id: string;
-	platform: UploadPlatform;
-	filePath: string;
-	fileSize: number;
-	metadata: {
-		title: string;
-		description: string;
-		privacy: string;
-		tags?: string[];
-		thumbnailPath?: string;
+	file: RecordingFile;
+	detectedAt: number; // When OBS reported this recording
+
+	// User selection
+	whitelisted: boolean; // User manually selected for upload (overrides 10 min rule)
+
+	// Upload state
+	uploaded: boolean;
+	uploadInProgress?: boolean; // Persisted: survives app refresh
+	uploadSession?: {
+		uploadUri: string; // YouTube resumable upload URI
+		fileSize: number;
+		bytesUploaded: number;
+		platform: string;
+		startedAt: number;
 	};
-	uploadUri: string; // Platform-specific resumable upload URI
-	bytesUploaded: number;
-	startedAt: number;
-	status: 'pending' | 'uploading' | 'paused' | 'processing' | 'completed' | 'failed';
-	error?: string;
-	// Result when completed
-	videoId?: string;
+	uploadedAt?: number;
+	videoId?: string; // YouTube video ID after upload
 	videoUrl?: string;
+
+	// User customization (for multi-recording events)
+	customTitle?: string; // Override title for this specific recording
 }
 
 export interface ServiceEvent {
@@ -58,9 +90,6 @@ export interface ServiceEvent {
 	autoUploadEnabled: boolean; // Default true for new events
 	uploadPrivacyStatus: YouTubePrivacyStatus; // Privacy for uploaded recording (separate from live broadcast)
 
-	// Upload sessions for resumable uploads (stored per-event)
-	uploadSessions?: EventUploadSession[];
-
 	// PPTX generation timestamps
 	textusGeneratedAt?: string;
 	leckioGeneratedAt?: string;
@@ -68,6 +97,37 @@ export interface ServiceEvent {
 	// Metadata
 	createdAt: string;
 	updatedAt: string;
+
+	// Schema version
+	version: string;
+
+	// ============================================
+	// Session State Fields (live streaming/recording)
+	// ============================================
+
+	// Session state machine
+	sessionState?: EventSessionState;
+
+	// Timestamps
+	sessionStartedAt?: number;
+	streamStartedAt?: number;
+	streamEndedAt?: number;
+	recordStartedAt?: number;
+	recordEndedAt?: number;
+
+	// Peak states (were these ever active during session?)
+	wasOBSConnected?: boolean;
+	wasStreaming?: boolean;
+	wasRecording?: boolean;
+	wasYouTubeLive?: boolean;
+
+	// Recording files (new simplified structure)
+	recordings?: EventRecording[];
+	recordingDirectory?: string; // Informational only
+
+	// Completion
+	sessionCompletedAt?: number;
+	sessionCompletionError?: string;
 }
 
 // Generate a unique ID
@@ -172,20 +232,29 @@ export function createEmptyEvent(): ServiceEvent {
 		uploadPrivacyStatus: 'public',
 		createdAt: now,
 		updatedAt: now,
-        isBroadcastScheduling: false
+		isBroadcastScheduling: false,
+		version: CURRENT_EVENT_VERSION,
+		recordings: []
 	};
+}
+
+// Get today's date as YYYY-MM-DD in local timezone
+export function getLocalToday(): string {
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, '0');
+	const day = String(now.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 }
 
 // Check if an event is scheduled for today
 export function isEventToday(event: ServiceEvent): boolean {
-	const today = new Date().toISOString().split('T')[0];
-	return event.date === today;
+	return event.date === getLocalToday();
 }
 
 // Check if an event is in the future (including today)
 export function isEventUpcoming(event: ServiceEvent): boolean {
-	const today = new Date().toISOString().split('T')[0];
-	return event.date >= today;
+	return event.date >= getLocalToday();
 }
 
 // Sort events by date and time (ascending)
@@ -215,82 +284,84 @@ export function formatEventTime(time: string): string {
 	return time;
 }
 
-// Check if event has pending/paused uploads that need attention
-export function hasPendingUploads(event: ServiceEvent): boolean {
-	if (!event.uploadSessions) return false;
-	return event.uploadSessions.some(
-		(s) => s.status === 'pending' || s.status === 'paused' || s.status === 'failed'
-	);
+// ============================================
+// Upload Eligibility Helpers
+// ============================================
+
+// Check if an event is "uploadable"
+// An event is uploadable if:
+// - Has at least one recording > MIN_RECORDING_DURATION or whitelisted
+// - AND session has been manually finished or completed
+export function isEventUploadable(event: ServiceEvent): boolean {
+	const recordings = event.recordings ?? [];
+	if (recordings.length === 0) return false;
+
+	// Check if there are any uploadable recordings (not yet uploaded)
+	const uploadableRecordings = getUploadableRecordings(event);
+	if (uploadableRecordings.length === 0) return false;
+
+	return event.sessionState === 'COMPLETED';
 }
 
-// Get pending upload sessions from an event
-export function getPendingUploadSessions(event: ServiceEvent): EventUploadSession[] {
-	if (!event.uploadSessions) return [];
-	return event.uploadSessions.filter(
-		(s) => s.status === 'pending' || s.status === 'paused' || s.status === 'failed'
-	);
+// Get recordings that are eligible for upload
+// Recordings > MIN_RECORDING_DURATION OR whitelisted, not yet uploaded
+export function getUploadableRecordings(event: ServiceEvent): EventRecording[] {
+	const recordings = event.recordings ?? [];
+	return recordings.filter((rec) => {
+		if (rec.uploaded) return false;
+		const meetsMinDuration = rec.file.duration >= MIN_RECORDING_DURATION_SECONDS;
+		return meetsMinDuration || rec.whitelisted;
+	});
 }
 
-// Get active (uploading) upload sessions from an event
-export function getActiveUploadSessions(event: ServiceEvent): EventUploadSession[] {
-	if (!event.uploadSessions) return [];
-	return event.uploadSessions.filter((s) => s.status === 'uploading');
+// Check if event has multiple uploadable recordings (needs user selection)
+export function hasMultipleUploadableRecordings(event: ServiceEvent): boolean {
+	return getUploadableRecordings(event).length > 1;
+}
+
+// Check if event has an uploaded recording
+export function hasUploadedRecording(event: ServiceEvent): boolean {
+	return !!event.youtubeUploadedId;
 }
 
 // Recording status type for display
-export type EventRecordingStatus = 'none' | 'pending' | 'uploading' | 'paused' | 'uploaded' | 'failed';
+export type EventRecordingStatus = 'none' | 'pending' | 'uploading' | 'uploaded' | 'failed';
 
-// Get the recording/upload status for an event
+// Get the recording/upload status for an event (simplified)
 export function getRecordingStatus(event: ServiceEvent): EventRecordingStatus {
-	// If we have an uploaded video ID, it's uploaded
+	// Check if we have an uploaded recording
 	if (event.youtubeUploadedId) {
 		return 'uploaded';
 	}
 
-	// Check upload sessions
-	if (event.uploadSessions && event.uploadSessions.length > 0) {
-		// Get the most recent YouTube upload session
-		const youtubeSession = event.uploadSessions
-			.filter((s) => s.platform === 'youtube')
-			.sort((a, b) => b.startedAt - a.startedAt)[0];
-
-		if (youtubeSession) {
-			switch (youtubeSession.status) {
-				case 'uploading':
-					return 'uploading';
-				case 'paused':
-					return 'paused';
-				case 'failed':
-					return 'failed';
-				case 'pending':
-					return 'pending';
-				case 'completed':
-				case 'processing':
-					return 'uploaded';
-			}
-		}
+	// Check recordings array
+	const recordings = event.recordings ?? [];
+	if (recordings.length === 0) {
+		return 'none';
 	}
 
-	// Check legacy videoUploadState
-	if (event.videoUploadState) {
-		switch (event.videoUploadState) {
-			case 'uploading':
-				return 'uploading';
-			case 'completed':
-				return 'uploaded';
-			case 'failed':
-				return 'failed';
-			case 'pending':
-				return 'pending';
-		}
+	// Check if any recording is uploaded
+	const anyUploaded = recordings.some((rec) => rec.uploaded);
+	if (anyUploaded) {
+		return 'uploaded';
 	}
 
+	// Check if there are uploadable recordings
+	const uploadable = getUploadableRecordings(event);
+	if (uploadable.length > 0) {
+		return 'pending';
+	}
+
+	// Has recordings but none are uploadable
 	return 'none';
 }
 
-// Check if an event has an uploaded recording
-export function hasUploadedRecording(event: ServiceEvent): boolean {
-	return !!event.youtubeUploadedId;
+// Get upload progress percentage (simplified - returns 0 or 100)
+export function getUploadProgress(event: ServiceEvent): number {
+	if (event.youtubeUploadedId) return 100;
+	const recordings = event.recordings ?? [];
+	const anyUploaded = recordings.some((rec) => rec.uploaded);
+	return anyUploaded ? 100 : 0;
 }
 
 // Get the YouTube video URL for the uploaded recording
@@ -311,16 +382,90 @@ export function getYouTubeStudioUploadUrl(event: ServiceEvent): string | null {
 	return `https://studio.youtube.com/video/${event.youtubeUploadedId}/edit`;
 }
 
-// Get the upload progress percentage for an event
-export function getUploadProgress(event: ServiceEvent): number {
-	if (!event.uploadSessions || event.uploadSessions.length === 0) return 0;
+// ============================================
+// Session Helper Functions
+// ============================================
 
-	const youtubeSession = event.uploadSessions
-		.filter((s) => s.platform === 'youtube')
-		.sort((a, b) => b.startedAt - a.startedAt)[0];
+// Check if event has an active session
+export function isSessionActive(event: ServiceEvent): boolean {
+	return event.sessionState === 'ACTIVE' || event.sessionState === 'PREPARING';
+}
 
-	if (!youtubeSession) return 0;
+// Check if session is complete or failed
+export function isSessionFinished(event: ServiceEvent): boolean {
+	return event.sessionState === 'COMPLETED';
+}
 
-	if (youtubeSession.fileSize === 0) return 0;
-	return Math.round((youtubeSession.bytesUploaded / youtubeSession.fileSize) * 100);
+// Check if event has any session state (session was started at some point)
+export function hasSessionState(event: ServiceEvent): boolean {
+	return event.sessionState !== undefined && event.sessionState !== 'IDLE';
+}
+
+// Get session duration in milliseconds
+export function getSessionDuration(event: ServiceEvent): number {
+	const endTime = event.recordEndedAt || event.streamEndedAt || Date.now();
+	const startTime = event.recordStartedAt || event.streamStartedAt || event.sessionStartedAt;
+	if (!startTime) return 0;
+	return endTime - startTime;
+}
+
+// Check if session meets minimum duration for upload
+export function meetsMinimumDuration(event: ServiceEvent, minMinutes: number): boolean {
+	const durationMs = getSessionDuration(event);
+	const minMs = minMinutes * 60 * 1000;
+	return durationMs >= minMs;
+}
+
+// Clear session state from an event (reset to no session)
+export function clearSessionState(event: ServiceEvent): Partial<ServiceEvent> {
+	return {
+		sessionState: undefined,
+		sessionStartedAt: undefined,
+		streamStartedAt: undefined,
+		streamEndedAt: undefined,
+		recordStartedAt: undefined,
+		recordEndedAt: undefined,
+		wasOBSConnected: undefined,
+		wasStreaming: undefined,
+		wasRecording: undefined,
+		wasYouTubeLive: undefined,
+		recordingDirectory: undefined,
+		sessionCompletedAt: undefined,
+		sessionCompletionError: undefined
+	};
+}
+
+// Initialize session state on an event
+export function initSessionState(): Partial<ServiceEvent> {
+	return {
+		sessionState: 'PREPARING',
+		sessionStartedAt: Date.now(),
+		wasOBSConnected: false,
+		wasStreaming: false,
+		wasRecording: false,
+		wasYouTubeLive: false
+	};
+}
+
+// Create an EventRecording from a RecordingFile
+export function createEventRecording(file: RecordingFile): EventRecording {
+	return {
+		id: crypto.randomUUID(),
+		file,
+		detectedAt: Date.now(),
+		whitelisted: false,
+		uploaded: false
+	};
+}
+
+// Format duration in seconds to HH:MM:SS or MM:SS
+export function formatDuration(seconds: number): string {
+	const hrs = Math.floor(seconds / 3600);
+	const mins = Math.floor((seconds % 3600) / 60);
+	const secs = Math.floor(seconds % 60);
+
+	if (hrs > 0) {
+		return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+	}
+	return `${mins}:${String(secs).padStart(2, '0')}`;
 }

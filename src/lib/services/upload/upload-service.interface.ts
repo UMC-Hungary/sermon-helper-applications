@@ -38,6 +38,7 @@ export interface UploadResult {
 	videoId: string;
 	videoUrl: string;
 	processingStatus: 'processing' | 'ready' | 'failed';
+	privacy?: string; // Privacy status used during upload
 }
 
 // Common interface for all upload platforms
