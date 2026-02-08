@@ -1,53 +1,15 @@
 import { writable, derived } from 'svelte/store';
 import { obsWebSocket } from '../utils/obs-websocket';
 
-// Create writable store for non-OBS system components only
-function createNonObsSystemStore() {
-	const { subscribe, set, update } = writable({
-		rodeInterface: true,
-		mainDisplay: true,
-		secondaryDisplay: true,
-		youtubeLoggedIn: false,
-	});
-
-	return {
-		subscribe,
-		set,
-		update,
-		// Update methods for non-OBS components
-		updateRodeInterface: (status: boolean) => {
-			update(current => ({ ...current, rodeInterface: status }));
-		},
-		updateMainDisplay: (status: boolean) => {
-			update(current => ({ ...current, mainDisplay: status }));
-		},
-		updateSecondaryDisplay: (status: boolean) => {
-			update(current => ({ ...current, secondaryDisplay: status }));
-		},
-		updateYoutubeLogin: (status: boolean) => {
-			update(current => ({ ...current, youtubeLoggedIn: status }));
-		},
-		// Reset to defaults
-		reset: () => {
-			set({
-				rodeInterface: true,
-				mainDisplay: true,
-				secondaryDisplay: true,
-				youtubeLoggedIn: false,
-			});
-		}
-	};
-}
-
-const nonObsSystemStore = createNonObsSystemStore();
+const youtubeLogin = writable(false);
 
 // Main system store that derives OBS status from obsWebSocket reactive store
 export const systemStore = derived(
-	[nonObsSystemStore, obsWebSocket.obsStatus],
-	([$nonObs, $obsStatus]) => ({
+	[youtubeLogin, obsWebSocket.obsStatus],
+	([$youtubeLoggedIn, $obsStatus]) => ({
 		obs: $obsStatus.connected,
 		obsLoading: $obsStatus.loading,
-		youtubeLoggedIn: $nonObs.youtubeLoggedIn,
+		youtubeLoggedIn: $youtubeLoggedIn,
 	})
 );
 
@@ -65,11 +27,5 @@ export const isSystemReady = derived(systemStore, $system => {
 	return $system.obs; // TODO: extend
 });
 
-// Export individual update methods for non-OBS components
-export const {
-	updateRodeInterface,
-	updateMainDisplay,
-	updateSecondaryDisplay,
-	updateYoutubeLogin,
-	reset
-} = nonObsSystemStore;
+export const updateYoutubeLogin = (status: boolean) => youtubeLogin.set(status);
+export const reset = () => youtubeLogin.set(false);

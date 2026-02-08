@@ -28,9 +28,6 @@ export interface DiscoverySystemStatus {
 	obsConnected: boolean;
 	obsStreaming: boolean;
 	obsRecording: boolean;
-	rodeInterface: boolean;
-	mainDisplay: boolean;
-	secondaryDisplay: boolean;
 	youtubeLoggedIn: boolean;
 }
 

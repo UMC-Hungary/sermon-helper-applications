@@ -5,6 +5,7 @@ import { derived } from 'svelte/store';
 import { obsWebSocket } from '$lib/utils/obs-websocket';
 import { isStreamTransitioning } from '$lib/types/obs-streaming';
 import type { OBSStreamStatus, OBSRecordStatus } from '$lib/types/obs-streaming';
+import { discoveryServerManager } from '$lib/stores/discovery-server-store';
 
 /**
  * Stream status derived from OBS WebSocket media status
@@ -80,3 +81,20 @@ export const recordControls = {
 	stop: () => obsWebSocket.stopRecord(),
 	toggle: () => obsWebSocket.toggleRecord()
 };
+
+/**
+ * Initialize broadcasting of OBS streaming/recording status to the discovery server.
+ * Subscribes to media status changes and pushes updates to connected mobile clients.
+ */
+export function initStreamingBroadcast(): () => void {
+	const unsubscribe = obsWebSocket.obsMediaStatus.subscribe(($media) => {
+		discoveryServerManager.updateObsStatus({
+			connected: true,
+			streaming: $media.stream.active,
+			recording: $media.record.active,
+			streamTimecode: $media.stream.timecode,
+			recordTimecode: $media.record.timecode
+		});
+	});
+	return unsubscribe;
+}
