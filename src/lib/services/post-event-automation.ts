@@ -150,8 +150,8 @@ class PostEventAutomationService {
 		for (const recording of toUpload) {
 			try {
 				console.log(`[PostEventAutomation] Uploading recording: ${recording.file.name}`);
-				await uploadManager.uploadRecording(event.id, recording);
-				uploadedCount++;
+				const result = await uploadManager.uploadRecording(event.id, recording);
+				if (result) uploadedCount++;
 			} catch (error) {
 				console.error(`[PostEventAutomation] Failed to upload recording:`, error);
 				// Continue with next recording

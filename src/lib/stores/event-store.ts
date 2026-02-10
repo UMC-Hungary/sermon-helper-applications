@@ -241,7 +241,7 @@ export const eventStore = {
 			if (event.id !== eventId) return event;
 			const recordings = (event.recordings ?? []).map(rec =>
 				rec.id === recordingId
-					? { ...rec, uploaded: true, uploadInProgress: false, uploadSession: undefined, uploadedAt: Date.now(), videoId, videoUrl }
+					? { ...rec, uploaded: true, uploadSession: undefined, uploadedAt: Date.now(), videoId, videoUrl }
 					: rec
 			);
 			console.log(`[EventStore] Marked recording ${recordingId} as uploaded (video: ${videoId})`);
@@ -259,7 +259,7 @@ export const eventStore = {
 			if (event.id !== eventId) return event;
 			const recordings = (event.recordings ?? []).map(rec =>
 				rec.id === recordingId
-					? { ...rec, uploadInProgress: true, ...(uploadSession !== undefined ? { uploadSession } : {}) }
+					? { ...rec, ...(uploadSession !== undefined ? { uploadSession } : {}) }
 					: rec
 			);
 			console.log(`[EventStore] Marked recording ${recordingId} as uploading`);
@@ -290,7 +290,7 @@ export const eventStore = {
 			if (event.id !== eventId) return event;
 			const recordings = (event.recordings ?? []).map(rec =>
 				rec.id === recordingId
-					? { ...rec, uploadInProgress: false, uploadSession: undefined }
+					? { ...rec, uploadSession: undefined }
 					: rec
 			);
 			console.log(`[EventStore] Cleared uploading state for recording ${recordingId}`);

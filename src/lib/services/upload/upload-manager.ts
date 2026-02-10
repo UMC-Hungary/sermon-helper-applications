@@ -19,7 +19,6 @@ import { generateYoutubeDescription } from '$lib/utils/youtube-helpers';
 
 class UploadManager {
 	private services: Map<UploadPlatform, IUploadService> = new Map();
-	private activeUploads: Map<string, { session: UploadSession; eventId: string; recordingId: string }> = new Map();
 	private isProcessingQueue = false;
 
 	constructor() {
@@ -50,6 +49,12 @@ class UploadManager {
 		recording: EventRecording,
 		onProgress?: (progress: UploadProgress) => void
 	): Promise<UploadResult | null> {
+		// Prevent duplicate uploads
+		if (recording.uploadSession || recording.uploaded) {
+			console.log(`[UploadManager] Upload already in progress or completed for recording: ${recording.id}`);
+			return null;
+		}
+
 		const event = eventStore.getEventById(eventId);
 		if (!event) {
 			console.error(`[UploadManager] Event not found: ${eventId}`);
@@ -84,20 +89,33 @@ class UploadManager {
 		const metadata = this.prepareMetadata(event, recording, platformConfig.platform);
 
 		let session: UploadSession | null = null;
+		let lastPersistedBytes = 0;
 		try {
 			console.log(`[UploadManager] Starting upload to ${service.displayName}: ${recording.file.name}`);
 
 			// Initialize upload
 			session = await service.initializeUpload(recording.file.path, metadata);
-			this.activeUploads.set(session.id, { session, eventId, recordingId: recording.id });
+
+			// Persist upload session on the recording for resume capability
+			await eventStore.markRecordingUploading(eventId, recording.id, {
+				uploadUri: session.uploadUri,
+				fileSize: session.fileSize,
+				bytesUploaded: 0,
+				platform: session.platform,
+				startedAt: session.startedAt
+			});
 
 			// Upload with progress
 			const result = await service.upload(session, (progress) => {
 				onProgress?.(progress);
+				// Persist progress every 5MB to avoid excessive writes
+				if (progress.bytesUploaded - lastPersistedBytes > 5 * 1024 * 1024) {
+					lastPersistedBytes = progress.bytesUploaded;
+					eventStore.updateRecordingUploadProgress(eventId, recording.id, progress.bytesUploaded);
+				}
 			});
 
-			// Clean up and mark as uploaded
-			this.activeUploads.delete(session.id);
+			// Mark as uploaded
 			await eventStore.markRecordingUploaded(eventId, recording.id, result.videoId, result.videoUrl);
 
 			// Finalize (publish)
@@ -112,9 +130,7 @@ class UploadManager {
 			return result;
 		} catch (error) {
 			console.error(`[UploadManager] Failed to upload:`, error);
-			if (session) {
-				this.activeUploads.delete(session.id);
-			}
+			eventStore.clearRecordingUploading(eventId, recording.id);
 			throw error;
 		}
 	}
@@ -160,6 +176,12 @@ class UploadManager {
 		recording: EventRecording,
 		onProgress?: (progress: UploadProgress) => void
 	): Promise<UploadResult | null> {
+		// Prevent duplicate uploads
+		if (recording.uploadSession || recording.uploaded) {
+			console.log(`[UploadManager] Upload already in progress or completed for recording: ${recording.id}`);
+			return null;
+		}
+
 		const event = eventStore.getEventById(eventId);
 		if (!event) {
 			console.error(`[UploadManager] Event not found: ${eventId}`);
@@ -195,7 +217,6 @@ class UploadManager {
 			console.log(`[UploadManager] Manual upload to ${service.displayName}: ${recording.file.name}`);
 
 			session = await service.initializeUpload(recording.file.path, metadata);
-			this.activeUploads.set(session.id, { session, eventId, recordingId: recording.id });
 
 			// Persist upload session on the recording for resume capability
 			await eventStore.markRecordingUploading(eventId, recording.id, {
@@ -215,7 +236,6 @@ class UploadManager {
 				}
 			});
 
-			this.activeUploads.delete(session.id);
 			await eventStore.markRecordingUploaded(eventId, recording.id, result.videoId, result.videoUrl);
 
 			try {
@@ -228,9 +248,6 @@ class UploadManager {
 			return result;
 		} catch (error) {
 			console.error(`[UploadManager] Manual upload failed:`, error);
-			if (session) {
-				this.activeUploads.delete(session.id);
-			}
 			throw error;
 		}
 	}
@@ -260,12 +277,18 @@ class UploadManager {
 		}
 
 		// Reconstruct the UploadSession from persisted data
+		// Re-derive metadata from event so privacy is preserved for resumed uploads
+		const event = eventStore.getEventById(eventId);
+		const resumeMetadata = event
+			? this.prepareMetadata(event, recording, savedSession.platform as UploadPlatform)
+			: { title: '', description: '', privacy: 'unlisted', tags: [] };
+
 		const session: UploadSession = {
 			id: crypto.randomUUID(),
 			platform: savedSession.platform as UploadPlatform,
 			filePath: recording.file.path,
 			fileSize: savedSession.fileSize,
-			metadata: { title: '', description: '', privacy: '' }, // Not needed for resume
+			metadata: resumeMetadata,
 			uploadUri: savedSession.uploadUri,
 			bytesUploaded: savedSession.bytesUploaded,
 			startedAt: savedSession.startedAt,
@@ -278,7 +301,6 @@ class UploadManager {
 
 			// Ask YouTube how much was actually uploaded
 			const resumedSession = await service.resume(session);
-			this.activeUploads.set(resumedSession.id, { session: resumedSession, eventId, recordingId: recording.id });
 
 			// Update persisted progress with actual YouTube-reported position
 			await eventStore.updateRecordingUploadProgress(eventId, recording.id, resumedSession.bytesUploaded);
@@ -291,7 +313,6 @@ class UploadManager {
 				}
 			});
 
-			this.activeUploads.delete(resumedSession.id);
 			await eventStore.markRecordingUploaded(eventId, recording.id, result.videoId, result.videoUrl);
 
 			try {
@@ -304,9 +325,6 @@ class UploadManager {
 			return result;
 		} catch (error) {
 			console.error(`[UploadManager] Resume upload failed:`, error);
-			this.activeUploads.forEach((val, key) => {
-				if (val.recordingId === recording.id) this.activeUploads.delete(key);
-			});
 			throw error;
 		}
 	}
@@ -340,26 +358,6 @@ class UploadManager {
 		return uploadedCount;
 	}
 
-	// Cancel an active upload
-	async cancelUpload(sessionId: string): Promise<void> {
-		const active = this.activeUploads.get(sessionId);
-		if (active) {
-			const service = this.services.get(active.session.platform);
-			await service?.cancel(active.session);
-			this.activeUploads.delete(sessionId);
-		}
-	}
-
-	// Check if there's an active upload in progress
-	hasActiveUpload(): boolean {
-		return this.activeUploads.size > 0;
-	}
-
-	// Get active upload info
-	getActiveUpload(): { session: UploadSession; eventId: string; recordingId: string } | null {
-		const entries = Array.from(this.activeUploads.values());
-		return entries.length > 0 ? entries[0] : null;
-	}
 }
 
 // Export singleton instance

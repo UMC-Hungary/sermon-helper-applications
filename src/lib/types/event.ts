@@ -44,7 +44,6 @@ export interface EventRecording {
 
 	// Upload state
 	uploaded: boolean;
-	uploadInProgress?: boolean; // Persisted: survives app refresh
 	uploadSession?: {
 		uploadUri: string; // YouTube resumable upload URI
 		fileSize: number;

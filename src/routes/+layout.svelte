@@ -17,6 +17,7 @@
     import { uploaderIntegration } from '$lib/services/uploader-integration';
     import { dataSchemaCleanup } from '$lib/services/data-schema-cleanup';
     import { initEventStore } from '$lib/stores/event-store';
+    import { attemptAutoResume } from '$lib/services/upload/upload-auto-resume';
     import UpdateChecker from '$lib/components/update-checker.svelte';
     import { browser } from '$app/environment';
     import { isTauriApp } from '$lib/utils/storage-helpers';
@@ -65,6 +66,9 @@
 
             updateYoutubeLogin(youtubeAuthStore.isLoggedIn());
             await log('info', 'YouTube login status updated');
+
+            attemptAutoResume();
+            await log('info', 'Upload auto-resume attempted');
 
             loadSavedLocale();
             await log('info', 'Locale loaded');

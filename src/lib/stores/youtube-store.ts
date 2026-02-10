@@ -16,6 +16,12 @@ export const youtubeOAuthConfig = derived(
 	($settings) => $settings?.youtubeOAuthConfig ?? null
 );
 
+// Check if YouTube tokens are present (persisted, survives refresh)
+export const isYouTubeConnected = derived(
+	youtubeTokens,
+	($tokens) => $tokens !== null && !!$tokens.accessToken
+);
+
 // Check if tokens are valid (not expired, with 5 min buffer)
 export const isTokenValid = derived(youtubeTokens, ($tokens) => {
 	if (!$tokens) return false;

@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Card from '$lib/components/ui/card.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { eventStore, eventList, upcomingEvents, pastEvents, todayEvent } from '$lib/stores/event-store';
-	import { youtubeTokens } from '$lib/stores/youtube-store';
+	import { isYouTubeConnected } from '$lib/stores/youtube-store';
 	import { uploadManager } from '$lib/services/upload/upload-manager';
 	import {
 		formatEventDate,
@@ -47,8 +46,8 @@
 		})
 	);
 
-	// Whether YouTube is connected (check persisted tokens, survives refresh)
-	let isYouTubeConnected = $derived($youtubeTokens !== null && !!$youtubeTokens.accessToken);
+	// Whether YouTube is connected (from shared store)
+	let youtubeConnected = $derived($isYouTubeConnected);
 
 	// Check if a recording is the next in line to upload (first pending)
 	function isNextToUpload(recordingId: string): boolean {
@@ -141,23 +140,10 @@
 		}
 	}
 
-	// On mount: auto-resume any interrupted uploads
-	onMount(() => {
-		const interruptedUpload = allRecordings.find(
-			({ recording }) => recording.uploadInProgress && recording.uploadSession && !recording.uploaded
-		);
-
-		if (interruptedUpload && isYouTubeConnected) {
-			// Auto-open the recordings section and resume
-			showRecordings = true;
-			handleResumeUpload(interruptedUpload.event, interruptedUpload.recording);
-		}
-	});
-
 	// Get recording-level status for a single recording
 	function getRecordingItemStatus(recording: EventRecording): EventRecordingStatus {
 		if (recording.uploaded) return 'uploaded';
-		if (recording.uploadInProgress) return 'uploading';
+		if (recording.uploadSession) return 'uploading';
 		const meetsMinDuration = recording.file.duration >= 120; // 2 minutes
 		if (meetsMinDuration || recording.whitelisted) return 'pending';
 		return 'none';
@@ -530,7 +516,7 @@
 								</td>
 								<td class="px-4 py-3">
 									<div class="flex items-center gap-2">
-										{#if (status === 'pending' || status === 'uploading') && isYouTubeConnected}
+										{#if (status === 'pending' || status === 'uploading') && youtubeConnected}
 											<Button
 												buttonVariant={isNextToUpload(recording.id) ? 'default' : 'outline'}
 												buttonSize="sm"

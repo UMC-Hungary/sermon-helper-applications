@@ -26,7 +26,7 @@
 	// Get recording status
 	function getRecordingStatus(rec: EventRecording): 'uploaded' | 'uploading' | 'pending' | 'short' {
 		if (rec.uploaded) return 'uploaded';
-		if (rec.uploadInProgress) return 'uploading';
+		if (rec.uploadSession) return 'uploading';
 		if (rec.file.duration >= MIN_RECORDING_DURATION_SECONDS || rec.whitelisted) return 'pending';
 		return 'short';
 	}
