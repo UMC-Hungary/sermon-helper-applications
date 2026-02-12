@@ -82,19 +82,6 @@ pub struct LegacySuggestion {
     pub link: String,
 }
 
-// Bible book name mapping (Hungarian)
-fn map_bible_book(book: &str) -> String {
-    let mapped = match book {
-        "Ter" => "1Móz",
-        "Kiv" => "2Móz",
-        "Lev" => "3Móz",
-        "Szám" => "4Móz",
-        "MTörv" => "5Móz",
-        _ => book,
-    };
-    mapped.to_string()
-}
-
 fn map_suggestion_label(label: &str) -> String {
     let books = [("Ter", "1Móz"), ("Kiv", "2Móz"), ("Lev", "3Móz"), ("Szám", "4Móz"), ("MTörv", "5Móz")];
     let mut result = label.to_string();

@@ -23,7 +23,7 @@ pub mod linux_impress;
 use std::sync::Arc;
 
 pub use controller::PresentationController;
-pub use types::{PresentationApp, PresentationError, PresentationStatus};
+pub use types::PresentationStatus;
 
 /// Detect available presentation applications and return the best controller.
 ///

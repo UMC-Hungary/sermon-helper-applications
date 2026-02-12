@@ -281,7 +281,6 @@ pub struct ExportedSettings {
 #[serde(rename_all = "camelCase")]
 pub struct ImportSettingsRequest {
     pub schema_version: u32,
-    pub exported_at: String,
     pub settings: serde_json::Value,
 }
 
@@ -1387,13 +1386,6 @@ pub fn create_shared_discovery_server() -> SharedDiscoveryServer {
 // ============================================================================
 // RF/IR Handlers
 // ============================================================================
-
-/// Request body for updating RF/IR commands
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateRfIrCommandsRequest {
-    pub commands: Vec<StoredRfIrCommand>,
-}
 
 /// List all RF/IR commands
 async fn rfir_commands_handler(

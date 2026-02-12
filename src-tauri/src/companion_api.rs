@@ -3,7 +3,7 @@
 //! This module provides functionality to communicate with Bitfocus Companion's
 //! HTTP API to programmatically create buttons and pages.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// Default Companion API port
 pub const DEFAULT_COMPANION_PORT: u16 = 8000;
@@ -20,29 +20,6 @@ pub struct ButtonStyle {
     pub size: String,
     pub color: u32,
     pub bgcolor: u32,
-}
-
-/// Button configuration for Companion
-#[derive(Debug, Clone, Serialize)]
-pub struct ButtonConfig {
-    pub style: ButtonStyle,
-    pub actions: Vec<ButtonAction>,
-}
-
-/// Button action
-#[derive(Debug, Clone, Serialize)]
-pub struct ButtonAction {
-    pub action_id: String,
-    pub instance: String,
-    pub options: serde_json::Value,
-}
-
-/// Response from Companion API
-#[derive(Debug, Deserialize)]
-pub struct CompanionResponse {
-    pub success: bool,
-    #[serde(default)]
-    pub message: Option<String>,
 }
 
 impl CompanionApi {
@@ -85,24 +62,6 @@ impl CompanionApi {
         Ok(false)
     }
 
-    /// Press a button at a specific location (for testing)
-    pub async fn press_button(&self, page: u32, row: u32, column: u32) -> Result<(), String> {
-        let client = reqwest::Client::new();
-        let url = format!(
-            "{}/api/location/{}/{}/{}/press",
-            self.base_url, page, row, column
-        );
-
-        client
-            .post(&url)
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await
-            .map_err(|e| format!("Failed to press button: {}", e))?;
-
-        Ok(())
-    }
-
     /// Set button style at a specific location
     pub async fn set_button_style(
         &self,
@@ -140,15 +99,12 @@ impl CompanionApi {
 pub struct PptSelectorLayout {
     /// The page number to create buttons on
     pub page: u32,
-    /// The Companion instance label for sermon-helper
-    pub instance_label: String,
 }
 
 impl Default for PptSelectorLayout {
     fn default() -> Self {
         Self {
             page: 1,
-            instance_label: "sermon-helper".to_string(),
         }
     }
 }
@@ -291,8 +247,3 @@ pub async fn create_ppt_selector_page(
     Ok(())
 }
 
-/// Check if Companion is running at default location
-pub async fn check_companion_available(host: &str, port: u16) -> bool {
-    let api = CompanionApi::new(host, port);
-    api.check_connection().await.unwrap_or(false)
-}

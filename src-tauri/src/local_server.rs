@@ -12,7 +12,6 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::net::TcpListener;
@@ -28,12 +27,6 @@ pub struct OAuthCallbackResult {
     pub state: Option<String>,
     pub error: Option<String>,
     pub error_description: Option<String>,
-}
-
-/// Server handle that allows stopping the server and getting results
-pub struct ServerHandle {
-    pub port: u16,
-    pub shutdown_tx: oneshot::Sender<()>,
 }
 
 /// Shared state for the OAuth server
@@ -179,101 +172,6 @@ async fn health_check() -> &'static str {
 }
 
 // ============================================================================
-// Generic Local Server (for future use cases)
-// ============================================================================
-
-/// Configuration for a generic local server
-#[derive(Clone)]
-pub struct LocalServerConfig {
-    /// Optional specific port (0 for random)
-    pub port: u16,
-    /// Routes to register
-    pub routes: Vec<LocalServerRoute>,
-}
-
-/// A route definition for the local server
-#[derive(Clone)]
-pub struct LocalServerRoute {
-    pub path: String,
-    pub method: HttpMethod,
-    pub handler_type: RouteHandler,
-}
-
-#[derive(Clone)]
-pub enum HttpMethod {
-    Get,
-    Post,
-}
-
-#[derive(Clone)]
-pub enum RouteHandler {
-    /// Return a static JSON response
-    StaticJson(String),
-    /// Return static HTML
-    StaticHtml(String),
-    /// Health check
-    HealthCheck,
-}
-
-/// Start a generic local HTTP server with custom routes
-pub async fn start_local_server(config: LocalServerConfig) -> Result<ServerHandle, String> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
-
-    let listener = TcpListener::bind(addr)
-        .await
-        .map_err(|e| format!("Failed to bind to port: {}", e))?;
-
-    let port = listener
-        .local_addr()
-        .map_err(|e| format!("Failed to get local address: {}", e))?
-        .port();
-
-    // Build router with configured routes
-    let mut router = Router::new();
-
-    for route in config.routes {
-        let handler = route.handler_type.clone();
-        match (route.method, handler) {
-            (HttpMethod::Get, RouteHandler::StaticJson(json)) => {
-                router = router.route(
-                    &route.path,
-                    get(move || async move {
-                        (
-                            [(axum::http::header::CONTENT_TYPE, "application/json")],
-                            json.clone(),
-                        )
-                    }),
-                );
-            }
-            (HttpMethod::Get, RouteHandler::StaticHtml(html)) => {
-                router = router.route(&route.path, get(move || async move { Html(html.clone()) }));
-            }
-            (HttpMethod::Get, RouteHandler::HealthCheck) => {
-                router = router.route(&route.path, get(|| async { "OK" }));
-            }
-            _ => {
-                // Add more handlers as needed
-            }
-        }
-    }
-
-    // Create shutdown channel
-    let (shutdown_tx, shutdown_rx) = oneshot::channel();
-
-    // Spawn the server
-    tokio::spawn(async move {
-        axum::serve(listener, router)
-            .with_graceful_shutdown(async {
-                let _ = shutdown_rx.await;
-            })
-            .await
-            .expect("Local server error");
-    });
-
-    Ok(ServerHandle { port, shutdown_tx })
-}
-
-// ============================================================================
 // Tauri Commands
 // ============================================================================
 
@@ -288,7 +186,7 @@ pub async fn start_oauth_callback_server(app_handle: AppHandle) -> Result<u16, S
 /// Start OAuth flow and wait for the callback result (blocking version)
 #[tauri::command]
 pub async fn start_oauth_flow_with_callback(app_handle: AppHandle) -> Result<OAuthCallbackResult, String> {
-    let (port, rx) = start_oauth_server(Some(app_handle)).await?;
+    let (_, rx) = start_oauth_server(Some(app_handle)).await?;
 
     // Note: The frontend should open the browser with the OAuth URL using this port
     // This command will block until the callback is received
@@ -308,8 +206,3 @@ pub fn get_oauth_redirect_uri(_port: u16) -> String {
     format!("http://127.0.0.1:{}/callback", OAUTH_CALLBACK_PORT)
 }
 
-/// Get the fixed OAuth redirect URI
-#[tauri::command]
-pub fn get_fixed_oauth_redirect_uri() -> String {
-    format!("http://127.0.0.1:{}/callback", OAUTH_CALLBACK_PORT)
-}

@@ -26,7 +26,6 @@ const DEFAULT_IV: [u8; 16] = [
 /// Raw Broadlink device handler for direct protocol communication
 struct BroadlinkDevice {
     socket: UdpSocket,
-    device_addr: SocketAddr,
     device_mac: [u8; 6],
     device_type: u16,
     key: [u8; 16],
@@ -78,11 +77,8 @@ impl BroadlinkDevice {
         log::info!("Socket bound to {:?}, connected to {:?}",
             socket.local_addr().ok(), device_addr);
 
-        let device_addr = SocketAddr::new(device_ip.into(), 80);
-
         let mut dev = BroadlinkDevice {
             socket,
-            device_addr,
             device_mac,
             device_type,
             key: DEFAULT_KEY,
@@ -613,7 +609,7 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
                 };
 
                 // Get friendly model name
-                let (model, dtype) = get_device_model(devtype);
+                let (model, _) = get_device_model(devtype);
 
                 // Try to get device name from response (if available)
                 // Name starts at 0x40 and is null-terminated

@@ -1,8 +1,7 @@
 //! Tauri commands for Companion API integration
 
 use crate::companion_api::{
-    check_companion_available, create_ppt_selector_page, CompanionApi, PptSelectorLayout,
-    DEFAULT_COMPANION_PORT,
+    create_ppt_selector_page, CompanionApi, PptSelectorLayout, DEFAULT_COMPANION_PORT,
 };
 use serde::{Deserialize, Serialize};
 
@@ -26,8 +25,6 @@ pub struct CreatePptPageRequest {
     pub port: u16,
     #[serde(default = "default_page")]
     pub page: u32,
-    #[serde(default = "default_instance")]
-    pub instance_label: String,
 }
 
 fn default_host() -> String {
@@ -40,10 +37,6 @@ fn default_port() -> u16 {
 
 fn default_page() -> u32 {
     1
-}
-
-fn default_instance() -> String {
-    "sermon-helper".to_string()
 }
 
 /// Check if Companion is available
@@ -108,7 +101,6 @@ pub async fn create_companion_ppt_page(request: CreatePptPageRequest) -> Result<
 
     let layout = PptSelectorLayout {
         page: request.page,
-        instance_label: request.instance_label,
     };
 
     match create_ppt_selector_page(&api, &layout).await {
