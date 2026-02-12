@@ -87,5 +87,34 @@ export function GetFeedbacks(instance: ModuleInstance): CompanionFeedbackDefinit
 				return instance.pptSelector.getState().currentFilter.length > 0
 			},
 		},
+
+		// Presentation Control Feedbacks
+		slideshow_active: {
+			type: 'boolean',
+			name: 'Presentation: Slideshow Active',
+			description: 'Shows if a slideshow is currently running',
+			defaultStyle: {
+				bgcolor: combineRgb(0, 150, 0),
+				color: combineRgb(255, 255, 255),
+			},
+			options: [],
+			callback: () => {
+				return instance.presentationStatus?.slideshowActive ?? false
+			},
+		},
+
+		presentation_blanked: {
+			type: 'boolean',
+			name: 'Presentation: Screen Blanked',
+			description: 'Shows if the presentation screen is blanked (black)',
+			defaultStyle: {
+				bgcolor: combineRgb(0, 0, 0),
+				color: combineRgb(255, 255, 255),
+			},
+			options: [],
+			callback: () => {
+				return instance.presentationStatus?.blanked ?? false
+			},
+		},
 	}
 }

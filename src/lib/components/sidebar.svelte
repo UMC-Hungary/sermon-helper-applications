@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, XCircle, Menu, X, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, LogIn, AlertCircle, Radio, Subtitles } from 'lucide-svelte';
+	import { CheckCircle2, XCircle, Menu, X, Settings, Loader2, Globe, CalendarDays, Sun, Moon, Monitor, LogIn, AlertCircle, Radio, Subtitles, Presentation } from 'lucide-svelte';
 	import { cn } from '$lib/utils.js';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -110,6 +110,17 @@
 					<div class="flex items-center justify-between py-2">
 						<span class="text-sm text-muted-foreground">{$_('sidebar.systemStatus.youtubeLoggedIn')}</span>
 						{#if $systemStore.youtubeLoggedIn}
+							<CheckCircle2 class="h-4 w-4 text-green-600" />
+						{:else}
+							<XCircle class="h-4 w-4 text-red-600" />
+						{/if}
+					</div>
+
+					<div class="flex items-center justify-between py-2">
+						<span class="text-sm text-muted-foreground">
+							{$systemStore.presentationApp || 'Presentation'}
+						</span>
+						{#if $systemStore.presentationConnected}
 							<CheckCircle2 class="h-4 w-4 text-green-600" />
 						{:else}
 							<XCircle class="h-4 w-4 text-red-600" />

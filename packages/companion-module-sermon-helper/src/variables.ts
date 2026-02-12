@@ -60,6 +60,27 @@ export function GetVariableDefinitions(_instance: ModuleInstance): CompanionVari
 			variableId: 'ppt_last_opened',
 			name: 'PPT Last Opened File',
 		},
+		// Presentation Control Variables
+		{
+			variableId: 'ppt_current_slide',
+			name: 'Presentation Current Slide',
+		},
+		{
+			variableId: 'ppt_total_slides',
+			name: 'Presentation Total Slides',
+		},
+		{
+			variableId: 'ppt_slideshow_active',
+			name: 'Presentation Slideshow Active',
+		},
+		{
+			variableId: 'ppt_app',
+			name: 'Presentation App Name',
+		},
+		{
+			variableId: 'ppt_blanked',
+			name: 'Presentation Blanked',
+		},
 	]
 }
 
@@ -82,5 +103,11 @@ export function GetDefaultVariableValues(instance: ModuleInstance): Record<strin
 		ppt_slot_4_name: instance.pptSelector.getSlotDisplayName(3),
 		ppt_slot_5_name: instance.pptSelector.getSlotDisplayName(4),
 		ppt_last_opened: pptState.lastOpenedFile || '',
+		// Presentation Control Variables
+		ppt_current_slide: instance.presentationStatus?.currentSlide?.toString() ?? '-',
+		ppt_total_slides: instance.presentationStatus?.totalSlides?.toString() ?? '-',
+		ppt_slideshow_active: instance.presentationStatus?.slideshowActive ? 'ON' : 'OFF',
+		ppt_app: instance.presentationStatus?.app ?? 'None',
+		ppt_blanked: instance.presentationStatus?.blanked ? 'YES' : 'NO',
 	}
 }

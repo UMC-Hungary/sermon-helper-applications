@@ -22,6 +22,7 @@ use tokio::net::TcpListener;
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tower_http::cors::{Any, CorsLayer};
 use chrono::Utc;
+use crate::presentation::{self, PresentationController, PresentationStatus as PresentationStatusData};
 
 /// Default port for the discovery server
 pub const DEFAULT_PORT: u16 = 8765;
@@ -128,6 +129,8 @@ pub enum WsMessage {
     // PPT events
     PptFoldersChanged { folders: Vec<PptFolder> },
     PptFileOpened { file_name: String, file_path: String, success: bool, presenter_started: bool },
+    // Presentation controller events
+    PresentationStatusChanged(PresentationStatusData),
     Ping,
     Pong,
     Error { message: String },
@@ -300,6 +303,8 @@ pub struct DiscoveryServerState {
     pub ppt_folders: RwLock<Vec<PptFolder>>,
     /// App data directory for reading settings file directly
     pub app_data_dir: Option<std::path::PathBuf>,
+    /// Presentation controller for cross-platform slideshow control
+    pub presentation_controller: Arc<dyn PresentationController>,
 }
 
 impl DiscoveryServerState {
@@ -314,6 +319,7 @@ impl DiscoveryServerState {
             rfir_commands: RwLock::new(Vec::new()),
             ppt_folders: RwLock::new(Vec::new()),
             app_data_dir,
+            presentation_controller: presentation::detect_controller(),
         }
     }
 
@@ -627,6 +633,19 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/ppt/folders/{id}", axum::routing::delete(ppt_delete_folder_handler))
         .route("/api/v1/ppt/files", get(ppt_files_handler))
         .route("/api/v1/ppt/open", post(ppt_open_handler))
+        // Presentation controller endpoints
+        .route("/api/v1/presentation/open", post(presentation_open_handler))
+        .route("/api/v1/presentation/start", post(presentation_start_handler))
+        .route("/api/v1/presentation/stop", post(presentation_stop_handler))
+        .route("/api/v1/presentation/next", post(presentation_next_handler))
+        .route("/api/v1/presentation/previous", post(presentation_previous_handler))
+        .route("/api/v1/presentation/goto", post(presentation_goto_handler))
+        .route("/api/v1/presentation/first", post(presentation_first_handler))
+        .route("/api/v1/presentation/last", post(presentation_last_handler))
+        .route("/api/v1/presentation/blank", post(presentation_blank_handler))
+        .route("/api/v1/presentation/white", post(presentation_white_handler))
+        .route("/api/v1/presentation/unblank", post(presentation_unblank_handler))
+        .route("/api/v1/presentation/status", get(presentation_status_handler))
         // Settings export/import endpoints
         .route("/api/v1/settings/export", get(settings_export_handler))
         .route("/api/v1/settings/import", post(settings_import_handler))
@@ -1766,18 +1785,21 @@ async fn ppt_open_handler(
         .unwrap_or("unknown")
         .to_string();
 
-    // Open the file with the system default application
-    match open::that(&request.file_path) {
+    let controller = &state.presentation_controller;
+
+    // Use the presentation controller to open and optionally start slideshow
+    match controller.open(&request.file_path).await {
         Ok(_) => {
             let mut presenter_started = false;
 
-            // If requested, start presenter mode after a delay
             if request.start_presenter {
-                // Wait for the application to open
-                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                // Give the app a moment to open the file
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
-                // Try to start presenter mode
-                presenter_started = start_presenter_mode().await;
+                match controller.start_slideshow(None).await {
+                    Ok(_) => presenter_started = true,
+                    Err(e) => log::warn!("Failed to start slideshow: {}", e),
+                }
             }
 
             // Broadcast the event
@@ -1788,6 +1810,11 @@ async fn ppt_open_handler(
                 presenter_started,
             });
 
+            // Also broadcast updated presentation status
+            if let Ok(pres_status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(pres_status));
+            }
+
             Json(ApiResponse::success(serde_json::json!({
                 "success": true,
                 "file_name": file_name,
@@ -1796,50 +1823,357 @@ async fn ppt_open_handler(
             .into_response()
         }
         Err(e) => {
-            state.broadcast(WsMessage::PptFileOpened {
-                file_name: file_name.clone(),
-                file_path: request.file_path.clone(),
-                success: false,
-                presenter_started: false,
-            });
+            // Fallback to open::that for non-PowerPoint files or when COM fails
+            log::warn!("Presentation controller failed, falling back to open::that: {}", e);
+            match open::that(&request.file_path) {
+                Ok(_) => {
+                    state.broadcast(WsMessage::PptFileOpened {
+                        file_name: file_name.clone(),
+                        file_path: request.file_path.clone(),
+                        success: true,
+                        presenter_started: false,
+                    });
 
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error(format!("Failed to open file: {}", e))),
-            )
-                .into_response()
+                    Json(ApiResponse::success(serde_json::json!({
+                        "success": true,
+                        "file_name": file_name,
+                        "presenter_started": false
+                    })))
+                    .into_response()
+                }
+                Err(open_err) => {
+                    state.broadcast(WsMessage::PptFileOpened {
+                        file_name: file_name.clone(),
+                        file_path: request.file_path.clone(),
+                        success: false,
+                        presenter_started: false,
+                    });
+
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::<()>::error(format!("Failed to open file: {}", open_err))),
+                    )
+                        .into_response()
+                }
+            }
         }
     }
 }
 
-/// Start presenter mode by sending F5 keypress (Windows)
-#[cfg(target_os = "windows")]
-async fn start_presenter_mode() -> bool {
-    use std::process::Command;
+// ============================================================================
+// Presentation Controller Handlers
+// ============================================================================
 
-    // Use PowerShell to send F5 key to the active window
-    let script = r#"
-        Add-Type -AssemblyName System.Windows.Forms
-        [System.Windows.Forms.SendKeys]::SendWait("{F5}")
-    "#;
+/// Request body for presentation open
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PresentationOpenRequest {
+    file_path: String,
+    #[serde(default)]
+    start_presenter: bool,
+}
 
-    match Command::new("powershell")
-        .args(["-NoProfile", "-Command", script])
-        .output()
-    {
-        Ok(output) => output.status.success(),
+/// Request body for presentation start
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PresentationStartRequest {
+    from_slide: Option<u32>,
+}
+
+/// Request body for presentation goto
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PresentationGotoRequest {
+    slide_number: u32,
+}
+
+/// Open a presentation file via the presentation controller
+async fn presentation_open_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    AppJson(request): AppJson<PresentationOpenRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.open(&request.file_path).await {
+        Ok(_) => {
+            if request.start_presenter {
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                let _ = controller.start_slideshow(None).await;
+            }
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"opened": true}))).into_response()
+        }
         Err(e) => {
-            log::error!("Failed to send F5 key: {}", e);
-            false
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
         }
     }
 }
 
-/// Fallback for non-Windows platforms
-#[cfg(not(target_os = "windows"))]
-async fn start_presenter_mode() -> bool {
-    log::warn!("Presenter mode automation not supported on this platform");
-    false
+/// Start slideshow
+async fn presentation_start_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    body: Option<axum::Json<PresentationStartRequest>>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let from_slide = body.and_then(|axum::Json(r)| r.from_slide);
+    let controller = &state.presentation_controller;
+    match controller.start_slideshow(from_slide).await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"started": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Stop slideshow
+async fn presentation_stop_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.stop_slideshow().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"stopped": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Next slide
+async fn presentation_next_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.next().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"action": "next"}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Previous slide
+async fn presentation_previous_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.previous().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"action": "previous"}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Go to specific slide
+async fn presentation_goto_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+    AppJson(request): AppJson<PresentationGotoRequest>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.goto_slide(request.slide_number).await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"slide": request.slide_number}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Go to first slide
+async fn presentation_first_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.goto_slide(1).await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"slide": 1}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Go to last slide
+async fn presentation_last_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    // Get status first to find total slides
+    let total = match controller.get_status().await {
+        Ok(status) => status.total_slides.unwrap_or(1),
+        Err(e) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response();
+        }
+    };
+
+    match controller.goto_slide(total as u32).await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"slide": total}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Blank screen (black)
+async fn presentation_blank_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.blank_screen().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"blanked": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// White screen
+async fn presentation_white_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.white_screen().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"white": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Unblank screen
+async fn presentation_unblank_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.unblank().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"unblanked": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Get presentation status
+async fn presentation_status_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.get_status().await {
+        Ok(status) => {
+            Json(ApiResponse::success(status)).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
 }
 
 // ============================================================================
@@ -2291,6 +2625,143 @@ async fn openapi_handler() -> impl IntoResponse {
                     }
                 }
             },
+            "/presentation/open": {
+                "post": {
+                    "summary": "Open presentation",
+                    "description": "Open a presentation file using the native presentation controller (PowerPoint COM on Windows, AppleScript on macOS, UNO on Linux)",
+                    "tags": ["Presentation"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["filePath"],
+                                    "properties": {
+                                        "filePath": { "type": "string" },
+                                        "startPresenter": { "type": "boolean", "default": false }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": { "200": { "description": "File opened" } }
+                }
+            },
+            "/presentation/start": {
+                "post": {
+                    "summary": "Start slideshow",
+                    "description": "Start the slideshow from the beginning or a specific slide",
+                    "tags": ["Presentation"],
+                    "requestBody": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "fromSlide": { "type": "integer", "description": "Slide number to start from (1-based)" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": { "200": { "description": "Slideshow started" } }
+                }
+            },
+            "/presentation/stop": {
+                "post": {
+                    "summary": "Stop slideshow",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Slideshow stopped" } }
+                }
+            },
+            "/presentation/next": {
+                "post": {
+                    "summary": "Next slide",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Advanced to next slide" } }
+                }
+            },
+            "/presentation/previous": {
+                "post": {
+                    "summary": "Previous slide",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Went to previous slide" } }
+                }
+            },
+            "/presentation/goto": {
+                "post": {
+                    "summary": "Go to slide",
+                    "tags": ["Presentation"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["slideNumber"],
+                                    "properties": {
+                                        "slideNumber": { "type": "integer", "description": "Target slide number (1-based)" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": { "200": { "description": "Navigated to slide" } }
+                }
+            },
+            "/presentation/first": {
+                "post": {
+                    "summary": "Go to first slide",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Navigated to first slide" } }
+                }
+            },
+            "/presentation/last": {
+                "post": {
+                    "summary": "Go to last slide",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Navigated to last slide" } }
+                }
+            },
+            "/presentation/blank": {
+                "post": {
+                    "summary": "Blank screen (black)",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Screen blanked" } }
+                }
+            },
+            "/presentation/white": {
+                "post": {
+                    "summary": "White screen",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Screen whited" } }
+                }
+            },
+            "/presentation/unblank": {
+                "post": {
+                    "summary": "Unblank screen",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Screen restored" } }
+                }
+            },
+            "/presentation/status": {
+                "get": {
+                    "summary": "Get presentation status",
+                    "description": "Get current presentation application status including slide info",
+                    "tags": ["Presentation"],
+                    "responses": {
+                        "200": {
+                            "description": "Presentation status",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/PresentationStatus" }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "/settings/export": {
                 "get": {
                     "summary": "Export settings",
@@ -2362,7 +2833,7 @@ async fn openapi_handler() -> impl IntoResponse {
         },
         "x-websocket": {
             "/ws": {
-                "description": "WebSocket endpoint for real-time updates. Connect with `ws://HOST:PORT/ws`.\n\n**Connection Example (JavaScript):**\n```javascript\nconst ws = new WebSocket('ws://localhost:8765/ws');\nws.onmessage = (event) => console.log(JSON.parse(event.data));\n```\n\n**Message Types (server → client):**\n- `status_update` - System status changed\n- `obs_status_changed` - OBS connection/streaming status\n- `stream_state_changed` - Streaming started/stopped\n- `record_state_changed` - Recording started/stopped\n- `rfir_command_executed` - RF/IR command result\n- `rfir_command_list` - Updated command list\n- `ppt_folders_changed` - PPT folders updated\n- `ppt_file_opened` - PPT file opened result\n- `ping` / `pong` - Keep-alive\n\n**Example Message:**\n```json\n{\"type\": \"status_update\", \"data\": {\"obsConnected\": true, \"obsStreaming\": false}}\n```"
+                "description": "WebSocket endpoint for real-time updates. Connect with `ws://HOST:PORT/ws`.\n\n**Connection Example (JavaScript):**\n```javascript\nconst ws = new WebSocket('ws://localhost:8765/ws');\nws.onmessage = (event) => console.log(JSON.parse(event.data));\n```\n\n**Message Types (server → client):**\n- `status_update` - System status changed\n- `obs_status_changed` - OBS connection/streaming status\n- `stream_state_changed` - Streaming started/stopped\n- `record_state_changed` - Recording started/stopped\n- `rfir_command_executed` - RF/IR command result\n- `rfir_command_list` - Updated command list\n- `ppt_folders_changed` - PPT folders updated\n- `ppt_file_opened` - PPT file opened result\n- `presentation_status_changed` - Presentation slide/state changed\n- `ping` / `pong` - Keep-alive\n\n**Example Message:**\n```json\n{\"type\": \"status_update\", \"data\": {\"obsConnected\": true, \"obsStreaming\": false}}\n```"
             }
         },
         "components": {
@@ -2449,6 +2920,18 @@ async fn openapi_handler() -> impl IntoResponse {
                         },
                         "total": { "type": "integer", "description": "Number of files returned" },
                         "filter": { "type": "string", "nullable": true, "description": "The filter that was applied" }
+                    }
+                },
+                "PresentationStatus": {
+                    "type": "object",
+                    "properties": {
+                        "app": { "type": "string", "enum": ["powerPoint", "keynote", "impress"] },
+                        "appRunning": { "type": "boolean" },
+                        "slideshowActive": { "type": "boolean" },
+                        "currentSlide": { "type": "integer", "nullable": true },
+                        "totalSlides": { "type": "integer", "nullable": true },
+                        "currentSlideTitle": { "type": "string", "nullable": true },
+                        "blanked": { "type": "boolean" }
                     }
                 },
                 "ExportedSettings": {

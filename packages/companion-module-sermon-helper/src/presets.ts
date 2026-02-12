@@ -298,5 +298,355 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		feedbacks: [],
 	}
 
+	// Presentation Control Presets
+	presets['presentation_open'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Open Presentation',
+		style: {
+			text: '📂 Open',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(100, 65, 165), // Purple
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_open',
+						options: { filePath: '', startPresenter: true },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_on_off'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Presentation ON/OFF',
+		style: {
+			text: 'Presentation\\nOFF',
+			size: '14',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(100, 0, 0), // Red = OFF
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'slideshow_active',
+				options: {},
+				style: {
+					text: 'Presentation\\nON',
+					bgcolor: combineRgb(0, 150, 0), // Green = ON
+				},
+			},
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(80, 80, 80) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_start'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Start Slideshow',
+		style: {
+			text: '▶ Play',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 150, 0), // Green
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_start',
+						options: { fromSlide: 0 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_stop'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Stop Slideshow',
+		style: {
+			text: '⏹ Stop',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(153, 0, 0), // Dark Red
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_stop',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'slideshow_active',
+				options: {},
+				style: { bgcolor: combineRgb(200, 0, 0) },
+			},
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_prev'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Previous Slide',
+		style: {
+			text: '◀ Prev',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(59, 130, 246), // Blue
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_previous',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_next'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Next Slide',
+		style: {
+			text: '▶ Next',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(59, 130, 246), // Blue
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_next',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_first'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'First Slide',
+		style: {
+			text: '⏮ First',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(59, 130, 246), // Blue
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_first',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_last'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Last Slide',
+		style: {
+			text: '⏭ Last',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(59, 130, 246), // Blue
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_last',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_blank'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Toggle Blank Screen',
+		style: {
+			text: '■ Blank',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(50, 50, 50), // Dark Gray
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_blank_toggle',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'presentation_blanked',
+				options: {},
+				style: { bgcolor: combineRgb(0, 0, 0) },
+			},
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_goto'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Go to Slide',
+		style: {
+			text: 'Go To\\nSlide',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(100, 65, 165), // Purple
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_goto',
+						options: { slideNumber: 1 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	// Presentation Status Display
+	presets['presentation_status'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Slide Status',
+		style: {
+			text: '$(sermon-helper:ppt_current_slide)/$(sermon-helper:ppt_total_slides)',
+			size: '18',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(50, 50, 50),
+		},
+		steps: [
+			{
+				down: [],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'slideshow_active',
+				options: {},
+				style: { bgcolor: combineRgb(0, 100, 0) },
+			},
+		],
+	}
+
 	return presets
 }

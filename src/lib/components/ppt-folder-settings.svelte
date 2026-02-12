@@ -189,9 +189,17 @@
 							'2': createActionButton('↻', 'ppt_refresh', {}, connectionId, 7041664),
 							'3': createDisplayButton(`Filter:\\n$(${instanceLabel}:ppt_filter)`, 3289650),
 							'4': createDisplayButton(`$(${instanceLabel}:ppt_match_count)\\nfiles`, 3289650)
+						},
+						// Row 4: Presentation control buttons
+						'4': {
+							'0': createActionButton('▶ Play', 'presentation_start', {}, connectionId, 38400),
+							'1': createActionButton('⏹ Stop', 'presentation_stop', {}, connectionId, 10027008),
+							'2': createActionButton('◀ Prev', 'presentation_previous', {}, connectionId, 3900150),
+							'3': createActionButton('▶ Next', 'presentation_next', {}, connectionId, 3900150),
+							'4': createActionButton('■ Blank', 'presentation_blank_toggle', {}, connectionId, 3289650)
 						}
 					},
-					gridSize: { minColumn: 0, maxColumn: 7, minRow: 0, maxRow: 3 }
+					gridSize: { minColumn: 0, maxColumn: 7, minRow: 0, maxRow: 4 }
 				}
 			},
 			triggers: {},

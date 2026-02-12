@@ -1,5 +1,5 @@
 import WebSocket from 'ws'
-import type { ModuleConfig, RfIrCommand, ApiHealthResponse, PptFolder, PptFile, PptFilesResponse } from './types.js'
+import type { ModuleConfig, RfIrCommand, ApiHealthResponse, PptFolder, PptFile, PptFilesResponse, PresentationStatus } from './types.js'
 
 export class SermonHelperApi {
 	private config: ModuleConfig
@@ -10,6 +10,7 @@ export class SermonHelperApi {
 	private onConnectionChange?: (connected: boolean) => void
 	private onPptFoldersChanged?: (folders: PptFolder[]) => void
 	private onPptFileOpened?: (fileName: string, success: boolean, presenterStarted: boolean) => void
+	private onPresentationStatusChanged?: (status: PresentationStatus) => void
 
 	constructor(config: ModuleConfig) {
 		this.config = config
@@ -161,16 +162,170 @@ export class SermonHelperApi {
 		}
 	}
 
+	// Presentation Control API Methods
+
+	async presentationOpen(filePath: string, startPresenter = true): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/open`, {
+				method: 'POST',
+				headers: this.headers,
+				body: JSON.stringify({ filePath, startPresenter }),
+				signal: AbortSignal.timeout(15000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationStart(fromSlide?: number): Promise<{ success: boolean; error?: string }> {
+		try {
+			const body: Record<string, unknown> = {}
+			if (fromSlide !== undefined) body.fromSlide = fromSlide
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/start`, {
+				method: 'POST',
+				headers: this.headers,
+				body: JSON.stringify(body),
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationStop(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/stop`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationNext(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/next`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationPrevious(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/previous`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationGoto(slideNumber: number): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/goto`, {
+				method: 'POST',
+				headers: this.headers,
+				body: JSON.stringify({ slideNumber }),
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationFirst(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/first`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationLast(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/last`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationBlank(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/blank`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationUnblank(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/unblank`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationStatus(): Promise<PresentationStatus | null> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/status`, {
+				headers: this.headers,
+				signal: AbortSignal.timeout(5000),
+			})
+			if (!response.ok) return null
+			const data = (await response.json()) as { success: boolean; data?: PresentationStatus }
+			if (data.success && data.data) return data.data
+			return null
+		} catch {
+			return null
+		}
+	}
+
 	setCallbacks(callbacks: {
 		onCommandExecuted?: (slug: string, success: boolean) => void
 		onConnectionChange?: (connected: boolean) => void
 		onPptFoldersChanged?: (folders: PptFolder[]) => void
 		onPptFileOpened?: (fileName: string, success: boolean, presenterStarted: boolean) => void
+		onPresentationStatusChanged?: (status: PresentationStatus) => void
 	}): void {
 		this.onCommandExecuted = callbacks.onCommandExecuted
 		this.onConnectionChange = callbacks.onConnectionChange
 		this.onPptFoldersChanged = callbacks.onPptFoldersChanged
 		this.onPptFileOpened = callbacks.onPptFileOpened
+		this.onPresentationStatusChanged = callbacks.onPresentationStatusChanged
 	}
 
 	connectWebSocket(): void {
@@ -214,6 +369,14 @@ export class SermonHelperApi {
 							folders?: PptFolder[]
 							file_name?: string
 							presenter_started?: boolean
+							// Presentation status fields
+							app?: string
+							app_running?: boolean
+							slideshow_active?: boolean
+							current_slide?: number | null
+							total_slides?: number | null
+							current_slide_title?: string | null
+							blanked?: boolean
 						}
 					}
 
@@ -232,6 +395,16 @@ export class SermonHelperApi {
 							message.data.success ?? false,
 							message.data.presenter_started ?? false
 						)
+					} else if (message.type === 'presentation_status_changed' && message.data) {
+						this.onPresentationStatusChanged?.({
+							app: message.data.app ?? null,
+							appRunning: message.data.app_running ?? false,
+							slideshowActive: message.data.slideshow_active ?? false,
+							currentSlide: message.data.current_slide ?? null,
+							totalSlides: message.data.total_slides ?? null,
+							currentSlideTitle: message.data.current_slide_title ?? null,
+							blanked: message.data.blanked ?? false,
+						})
 					}
 				} catch {
 					// Ignore parse errors

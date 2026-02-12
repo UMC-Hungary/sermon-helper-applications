@@ -74,6 +74,17 @@ export interface PptOpenResponse {
 	presenterStarted: boolean
 }
 
+// Presentation Control Types
+export interface PresentationStatus {
+	app: string | null // "powerPoint" | "keynote" | "impress" | null
+	appRunning: boolean
+	slideshowActive: boolean
+	currentSlide: number | null
+	totalSlides: number | null
+	currentSlideTitle: string | null
+	blanked: boolean
+}
+
 export const CATEGORY_COLORS: Record<string, number> = {
 	projector: 0xdd614a, // Rosy Copper
 	screen: 0xf48668, // Coral Glow

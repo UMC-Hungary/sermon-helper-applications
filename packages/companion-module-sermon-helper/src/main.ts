@@ -11,7 +11,7 @@ import { GetPresets } from './presets.js'
 import { GetVariableDefinitions, GetDefaultVariableValues } from './variables.js'
 import { SermonHelperApi } from './api.js'
 import { PptSelector } from './ppt-selector.js'
-import type { ModuleConfig, RfIrCommand } from './types.js'
+import type { ModuleConfig, RfIrCommand, PresentationStatus } from './types.js'
 
 export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	public config: ModuleConfig = GetDefaultConfig()
@@ -19,8 +19,10 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	public commands: RfIrCommand[] = []
 	public isConnected = false
 	public pptSelector: PptSelector
+	public presentationStatus: PresentationStatus | null = null
 
 	private pollTimer: ReturnType<typeof setInterval> | null = null
+	private presentationPollTimer: ReturnType<typeof setInterval> | null = null
 
 	constructor(internal: unknown) {
 		super(internal as ConstructorParameters<typeof InstanceBase>[0])
@@ -77,6 +79,18 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 					this.setVariableValues({ ppt_last_opened: fileName })
 				}
 			},
+			onPresentationStatusChanged: (status) => {
+				this.log('debug', `Presentation status: ${status.app} slideshow=${status.slideshowActive} slide=${status.currentSlide}/${status.totalSlides}`)
+				this.presentationStatus = status
+				this.setVariableValues({
+					ppt_current_slide: status.currentSlide?.toString() ?? '-',
+					ppt_total_slides: status.totalSlides?.toString() ?? '-',
+					ppt_slideshow_active: status.slideshowActive ? 'ON' : 'OFF',
+					ppt_app: status.app ?? 'None',
+					ppt_blanked: status.blanked ? 'YES' : 'NO',
+				})
+				this.checkFeedbacks('slideshow_active', 'presentation_blanked')
+			},
 		})
 
 		// Initial setup
@@ -92,8 +106,12 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		// Connect WebSocket for real-time updates
 		this.api.connectWebSocket()
 
-		// Start polling for command updates
+		// Fetch initial presentation status
+		await this.refreshPresentationStatus()
+
+		// Start polling for command updates and presentation status
 		this.startPolling()
+		this.startPresentationPolling()
 
 		// Initialize definitions
 		this.updateDefinitions()
@@ -101,6 +119,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 	async destroy(): Promise<void> {
 		this.stopPolling()
+		this.stopPresentationPolling()
 		this.api.disconnectWebSocket()
 	}
 
@@ -116,11 +135,14 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			await this.refreshCommands()
 			await this.pptSelector.refreshFolders()
 			this.api.connectWebSocket()
+			await this.refreshPresentationStatus()
 		}
 
 		// Restart polling with new interval
 		this.stopPolling()
+		this.stopPresentationPolling()
 		this.startPolling()
+		this.startPresentationPolling()
 
 		this.updateDefinitions()
 	}
@@ -180,6 +202,40 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer)
 			this.pollTimer = null
+		}
+	}
+
+	public async refreshPresentationStatus(): Promise<void> {
+		const status = await this.api.presentationStatus()
+		if (status) {
+			this.presentationStatus = status
+			this.setVariableValues({
+				ppt_current_slide: status.currentSlide?.toString() ?? '-',
+				ppt_total_slides: status.totalSlides?.toString() ?? '-',
+				ppt_slideshow_active: status.slideshowActive ? 'ON' : 'OFF',
+				ppt_app: status.app ?? 'None',
+				ppt_blanked: status.blanked ? 'YES' : 'NO',
+			})
+			this.checkFeedbacks('slideshow_active', 'presentation_blanked')
+		}
+	}
+
+	private startPresentationPolling(): void {
+		if (this.presentationPollTimer) {
+			clearInterval(this.presentationPollTimer)
+		}
+		// Poll presentation status every 2 seconds for responsive slide tracking
+		this.presentationPollTimer = setInterval(async () => {
+			if (this.isConnected) {
+				await this.refreshPresentationStatus()
+			}
+		}, 2000)
+	}
+
+	private stopPresentationPolling(): void {
+		if (this.presentationPollTimer) {
+			clearInterval(this.presentationPollTimer)
+			this.presentationPollTimer = null
 		}
 	}
 }

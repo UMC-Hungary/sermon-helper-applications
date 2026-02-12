@@ -232,5 +232,170 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 				await instance.pptSelector.refreshFiles()
 			},
 		},
+
+		// Presentation Control Actions
+		presentation_open: {
+			name: 'Presentation: Open File',
+			description: 'Open a presentation file by path',
+			options: [
+				{
+					type: 'textinput',
+					id: 'filePath',
+					label: 'File Path',
+					default: '',
+					tooltip: 'Full path to the presentation file (e.g. C:\\Presentations\\sermon.pptx)',
+				},
+				{
+					type: 'checkbox',
+					id: 'startPresenter',
+					label: 'Start Presenter Mode',
+					default: true,
+				},
+			],
+			callback: async (action: CompanionActionEvent) => {
+				const filePath = action.options['filePath'] as string
+				const startPresenter = action.options['startPresenter'] as boolean
+				if (!filePath) {
+					instance.log('warn', 'Presentation: No file path specified')
+					return
+				}
+				instance.log('info', `Presentation: Opening ${filePath}`)
+				const result = await instance.api.presentationOpen(filePath, startPresenter)
+				if (!result.success) {
+					instance.log('error', `Presentation open failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_start: {
+			name: 'Presentation: Start Slideshow',
+			description: 'Start the slideshow from the beginning or a specific slide',
+			options: [
+				{
+					type: 'number',
+					id: 'fromSlide',
+					label: 'From Slide (0 = beginning)',
+					default: 0,
+					min: 0,
+					max: 999,
+				},
+			],
+			callback: async (action: CompanionActionEvent) => {
+				const fromSlide = action.options['fromSlide'] as number
+				instance.log('debug', `Presentation: Start slideshow${fromSlide ? ` from slide ${fromSlide}` : ''}`)
+				const result = await instance.api.presentationStart(fromSlide || undefined)
+				if (!result.success) {
+					instance.log('error', `Presentation start failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_stop: {
+			name: 'Presentation: Stop Slideshow',
+			description: 'Stop the currently running slideshow',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Stop slideshow')
+				const result = await instance.api.presentationStop()
+				if (!result.success) {
+					instance.log('error', `Presentation stop failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_next: {
+			name: 'Presentation: Next Slide',
+			description: 'Go to the next slide or animation step',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Next slide')
+				const result = await instance.api.presentationNext()
+				if (!result.success) {
+					instance.log('error', `Presentation next failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_previous: {
+			name: 'Presentation: Previous Slide',
+			description: 'Go to the previous slide',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Previous slide')
+				const result = await instance.api.presentationPrevious()
+				if (!result.success) {
+					instance.log('error', `Presentation previous failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_goto: {
+			name: 'Presentation: Go to Slide',
+			description: 'Jump to a specific slide number',
+			options: [
+				{
+					type: 'number',
+					id: 'slideNumber',
+					label: 'Slide Number',
+					default: 1,
+					min: 1,
+					max: 999,
+				},
+			],
+			callback: async (action: CompanionActionEvent) => {
+				const slideNumber = action.options['slideNumber'] as number
+				instance.log('debug', `Presentation: Go to slide ${slideNumber}`)
+				const result = await instance.api.presentationGoto(slideNumber)
+				if (!result.success) {
+					instance.log('error', `Presentation goto failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_first: {
+			name: 'Presentation: First Slide',
+			description: 'Go to the first slide',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: First slide')
+				const result = await instance.api.presentationFirst()
+				if (!result.success) {
+					instance.log('error', `Presentation first failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_last: {
+			name: 'Presentation: Last Slide',
+			description: 'Go to the last slide',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Last slide')
+				const result = await instance.api.presentationLast()
+				if (!result.success) {
+					instance.log('error', `Presentation last failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_blank_toggle: {
+			name: 'Presentation: Toggle Blank Screen',
+			description: 'Toggle black screen on/off during slideshow',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Toggle blank')
+				if (instance.presentationStatus?.blanked) {
+					const result = await instance.api.presentationUnblank()
+					if (!result.success) {
+						instance.log('error', `Presentation unblank failed: ${result.error}`)
+					}
+				} else {
+					const result = await instance.api.presentationBlank()
+					if (!result.success) {
+						instance.log('error', `Presentation blank failed: ${result.error}`)
+					}
+				}
+			},
+		},
 	}
 }

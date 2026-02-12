@@ -8,6 +8,7 @@ mod companion_commands;
 mod discovery_commands;
 mod discovery_server;
 mod local_server;
+mod presentation;
 
 mod video_upload;
 

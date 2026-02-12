@@ -49,3 +49,12 @@ open = "5"
 dirs = "5"
 chrono = "0.4"
 mp4 = "0.14"
+async-trait = "0.1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_System_Com",
+    "Win32_System_Ole",
+    "Win32_Foundation",
+    "Win32_System_Variant",
+] }
