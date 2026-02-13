@@ -207,6 +207,32 @@ export class SermonHelperApi {
 		}
 	}
 
+	async presentationClose(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/close`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
+	async presentationCloseLatest(): Promise<{ success: boolean; error?: string }> {
+		try {
+			const response = await fetch(`${this.baseUrl}/api/v1/presentation/close-latest`, {
+				method: 'POST',
+				headers: this.headers,
+				signal: AbortSignal.timeout(10000),
+			})
+			return (await response.json()) as { success: boolean; error?: string }
+		} catch (error) {
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+
 	async presentationNext(): Promise<{ success: boolean; error?: string }> {
 		try {
 			const response = await fetch(`${this.baseUrl}/api/v1/presentation/next`, {

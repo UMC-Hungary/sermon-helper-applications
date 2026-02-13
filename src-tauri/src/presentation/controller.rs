@@ -38,6 +38,12 @@ pub trait PresentationController: Send + Sync {
     /// Restore from blank/white
     async fn unblank(&self) -> Result<(), PresentationError>;
 
+    /// Close all open presentations/documents
+    async fn close_all(&self) -> Result<(), PresentationError>;
+
+    /// Close the most recently opened presentation/document
+    async fn close_latest(&self) -> Result<(), PresentationError>;
+
     /// Get current status (slide number, total slides, slideshow running, etc.)
     async fn get_status(&self) -> Result<PresentationStatus, PresentationError>;
 }

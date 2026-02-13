@@ -31,6 +31,7 @@ use video_upload::{
     scan_recording_directory, get_video_file_info, get_file_metadata, init_youtube_upload,
     upload_video_chunk, get_upload_status, cancel_upload
 };
+#[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
 use tauri_plugin_deep_link::DeepLinkExt;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -51,12 +52,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_log::Builder::new().build())
-        .setup(|app| {
+        .setup(|_app| {
             // Register the deep link scheme on Linux/Windows (macOS uses Info.plist)
             // In dev mode, this may fail if the app isn't installed - that's OK
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
             {
-                if let Err(e) = app.deep_link().register("sermon-helper") {
+                if let Err(e) = _app.deep_link().register("sermon-helper") {
                     eprintln!("Warning: Failed to register deep link scheme: {}. Deep links may not work in dev mode.", e);
                 }
             }

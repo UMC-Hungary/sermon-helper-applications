@@ -28,6 +28,8 @@ enum SidecarCommand {
     BlankScreen,
     WhiteScreen,
     Unblank,
+    CloseAll,
+    CloseLatest,
     GetStatus,
     Quit,
 }
@@ -272,6 +274,16 @@ impl PresentationController for LinuxImpressController {
 
     async fn unblank(&self) -> Result<(), PresentationError> {
         self.send_command(SidecarCommand::Unblank).await?;
+        Ok(())
+    }
+
+    async fn close_all(&self) -> Result<(), PresentationError> {
+        self.send_command(SidecarCommand::CloseAll).await?;
+        Ok(())
+    }
+
+    async fn close_latest(&self) -> Result<(), PresentationError> {
+        self.send_command(SidecarCommand::CloseLatest).await?;
         Ok(())
     }
 

@@ -431,6 +431,68 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		],
 	}
 
+	presets['presentation_close'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Close All Presentations',
+		style: {
+			text: '✕ Close\\nAll',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(130, 0, 0), // Dark Red
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_close',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_close_latest'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Close Latest Presentation',
+		style: {
+			text: '✕ Close',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(153, 0, 0), // Dark Red
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: 'presentation_close_latest',
+						options: {},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
 	presets['presentation_prev'] = {
 		type: 'button',
 		category: 'Presentation Control',

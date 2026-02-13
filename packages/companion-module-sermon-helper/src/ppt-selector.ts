@@ -152,8 +152,11 @@ export class PptSelector {
 
 		if (result.success) {
 			this.state.lastOpenedFile = file.name
-			this.notifyChange()
 		}
+
+		// Always reset filter after a selection attempt — the user made their choice
+		this.state.currentFilter = ''
+		await this.refreshFiles()
 
 		return result
 	}

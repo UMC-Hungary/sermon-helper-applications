@@ -135,6 +135,18 @@ end tell"#,
         Ok(())
     }
 
+    async fn close_all(&self) -> Result<(), PresentationError> {
+        let script = r#"tell application "Microsoft PowerPoint" to close every presentation saving no"#;
+        Self::run_applescript(script)?;
+        Ok(())
+    }
+
+    async fn close_latest(&self) -> Result<(), PresentationError> {
+        let script = r#"tell application "Microsoft PowerPoint" to close active presentation saving no"#;
+        Self::run_applescript(script)?;
+        Ok(())
+    }
+
     async fn get_status(&self) -> Result<PresentationStatus, PresentationError> {
         if !Self::is_app_running() {
             return Ok(PresentationStatus {

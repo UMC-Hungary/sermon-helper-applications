@@ -303,6 +303,32 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 			},
 		},
 
+		presentation_close: {
+			name: 'Presentation: Close All',
+			description: 'Close all open presentation files',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Close all')
+				const result = await instance.api.presentationClose()
+				if (!result.success) {
+					instance.log('error', `Presentation close failed: ${result.error}`)
+				}
+			},
+		},
+
+		presentation_close_latest: {
+			name: 'Presentation: Close Latest',
+			description: 'Close the most recently opened presentation file',
+			options: [],
+			callback: async () => {
+				instance.log('debug', 'Presentation: Close latest')
+				const result = await instance.api.presentationCloseLatest()
+				if (!result.success) {
+					instance.log('error', `Presentation close latest failed: ${result.error}`)
+				}
+			},
+		},
+
 		presentation_next: {
 			name: 'Presentation: Next Slide',
 			description: 'Go to the next slide or animation step',

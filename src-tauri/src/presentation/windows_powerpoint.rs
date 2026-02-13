@@ -6,6 +6,7 @@
 //! - .SlideShowWindows(1).View → .Next(), .Previous(), .GotoSlide(n)
 
 use async_trait::async_trait;
+use std::os::windows::process::CommandExt;
 use std::sync::Mutex;
 use windows::core::{Interface, BSTR, PCWSTR, VARIANT};
 use windows::Win32::System::Com::{
@@ -220,6 +221,104 @@ impl PresentationController for WindowsPowerPointController {
         let view = self.get_slideshow_view(&app)?;
         dispatch_put(&view, "State", &[VARIANT::from(PP_SLIDESHOW_RUNNING)])?;
         Ok(())
+    }
+
+    async fn close_all(&self) -> Result<(), PresentationError> {
+        let app = self.get_or_connect_app()?;
+
+        // Close regular presentations (last to first to avoid index shifting)
+        let presentations = dispatch_get_dispatch(&app, "Presentations")?;
+        let count = dispatch_get_i4(&presentations, "Count")?;
+        for i in (1..=count).rev() {
+            let pres = dispatch_call_with_args(&presentations, "Item", &mut [VARIANT::from(i)])?;
+            let pres_dispatch = IDispatch::try_from(&pres).map_err(|_| {
+                PresentationError::AutomationError("Presentations.Item did not return IDispatch".to_string())
+            })?;
+            // Mark as saved to suppress "Save changes?" dialog
+            let _ = dispatch_put(&pres_dispatch, "Saved", &[VARIANT::from(true)]);
+            dispatch_call(&pres_dispatch, "Close")?;
+        }
+
+        // Close Protected View windows (files opened from untrusted locations)
+        if let Ok(pv_windows) = dispatch_get_dispatch(&app, "ProtectedViewWindows") {
+            if let Ok(pv_count) = dispatch_get_i4(&pv_windows, "Count") {
+                for i in (1..=pv_count).rev() {
+                    if let Ok(pv) = dispatch_call_with_args(&pv_windows, "Item", &mut [VARIANT::from(i)]) {
+                        if let Ok(pv_dispatch) = IDispatch::try_from(&pv) {
+                            let _ = dispatch_call(&pv_dispatch, "Close");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Drop COM references before killing the process
+        drop(presentations);
+        drop(app);
+
+        // Clear cached app connection
+        let mut app_guard = self.app.lock().map_err(|e| {
+            PresentationError::AutomationError(format!("Failed to lock mutex: {}", e))
+        })?;
+        *app_guard = None;
+        drop(app_guard);
+
+        // Kill PowerPoint process so the next open creates a truly fresh COM instance
+        // (Quit() is unreliable — the process lingers and poisons subsequent CoCreateInstance calls)
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/IM", "POWERPNT.EXE"])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .output();
+
+        // Wait for the process to fully exit
+        for _ in 0..15 {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            let output = std::process::Command::new("tasklist")
+                .args(["/FI", "IMAGENAME eq POWERPNT.EXE", "/NH"])
+                .creation_flags(0x08000000)
+                .output();
+            if let Ok(out) = output {
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                if !stdout.contains("POWERPNT.EXE") {
+                    break;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn close_latest(&self) -> Result<(), PresentationError> {
+        let app = self.get_or_connect_app()?;
+
+        // Close the last Protected View window first (most common on unlicensed PP)
+        if let Ok(pv_windows) = dispatch_get_dispatch(&app, "ProtectedViewWindows") {
+            if let Ok(pv_count) = dispatch_get_i4(&pv_windows, "Count") {
+                if pv_count > 0 {
+                    if let Ok(pv) = dispatch_call_with_args(&pv_windows, "Item", &mut [VARIANT::from(pv_count)]) {
+                        if let Ok(pv_dispatch) = IDispatch::try_from(&pv) {
+                            let _ = dispatch_call(&pv_dispatch, "Close");
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Otherwise close the last regular presentation
+        let presentations = dispatch_get_dispatch(&app, "Presentations")?;
+        let count = dispatch_get_i4(&presentations, "Count")?;
+        if count > 0 {
+            let pres = dispatch_call_with_args(&presentations, "Item", &mut [VARIANT::from(count)])?;
+            let pres_dispatch = IDispatch::try_from(&pres).map_err(|_| {
+                PresentationError::AutomationError("Presentations.Item did not return IDispatch".to_string())
+            })?;
+            let _ = dispatch_put(&pres_dispatch, "Saved", &[VARIANT::from(true)]);
+            dispatch_call(&pres_dispatch, "Close")?;
+            return Ok(());
+        }
+
+        Err(PresentationError::NoPresentationOpen)
     }
 
     async fn get_status(&self) -> Result<PresentationStatus, PresentationError> {

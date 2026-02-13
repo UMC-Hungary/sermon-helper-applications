@@ -636,6 +636,8 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/presentation/open", post(presentation_open_handler))
         .route("/api/v1/presentation/start", post(presentation_start_handler))
         .route("/api/v1/presentation/stop", post(presentation_stop_handler))
+        .route("/api/v1/presentation/close", post(presentation_close_handler))
+        .route("/api/v1/presentation/close-latest", post(presentation_close_latest_handler))
         .route("/api/v1/presentation/next", post(presentation_next_handler))
         .route("/api/v1/presentation/previous", post(presentation_previous_handler))
         .route("/api/v1/presentation/goto", post(presentation_goto_handler))
@@ -1955,6 +1957,52 @@ async fn presentation_stop_handler(
     }
 }
 
+/// Close all open presentations
+async fn presentation_close_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.close_all().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"closed": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
+/// Close the most recently opened presentation
+async fn presentation_close_latest_handler(
+    headers: HeaderMap,
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &state) {
+        return (StatusCode::UNAUTHORIZED, Json(ApiResponse::<()>::error("Unauthorized"))).into_response();
+    }
+
+    let controller = &state.presentation_controller;
+    match controller.close_latest().await {
+        Ok(_) => {
+            if let Ok(status) = controller.get_status().await {
+                state.broadcast(WsMessage::PresentationStatusChanged(status));
+            }
+            Json(ApiResponse::success(serde_json::json!({"closed": true}))).into_response()
+        }
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ApiResponse::<()>::error(e.to_string()))).into_response()
+        }
+    }
+}
+
 /// Next slide
 async fn presentation_next_handler(
     headers: HeaderMap,
@@ -2665,6 +2713,20 @@ async fn openapi_handler() -> impl IntoResponse {
                     "summary": "Stop slideshow",
                     "tags": ["Presentation"],
                     "responses": { "200": { "description": "Slideshow stopped" } }
+                }
+            },
+            "/presentation/close": {
+                "post": {
+                    "summary": "Close all presentations",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "All presentations closed" } }
+                }
+            },
+            "/presentation/close-latest": {
+                "post": {
+                    "summary": "Close the most recently opened presentation",
+                    "tags": ["Presentation"],
+                    "responses": { "200": { "description": "Latest presentation closed" } }
                 }
             },
             "/presentation/next": {

@@ -25,6 +25,9 @@ use std::sync::Arc;
 pub use controller::PresentationController;
 pub use types::PresentationStatus;
 
+#[cfg(target_os = "macos")]
+use types::PresentationApp;
+
 /// Detect available presentation applications and return the best controller.
 ///
 /// Priority:
