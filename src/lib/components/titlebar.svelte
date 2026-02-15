@@ -18,16 +18,30 @@
 		const { getCurrentWindow } = await import('@tauri-apps/api/window');
 		getCurrentWindow().close();
 	}
+
+	async function handleMouseDown(e: MouseEvent) {
+		// Only handle left mouse button on the drag region itself (not child buttons)
+		if (e.buttons === 1 && e.target === e.currentTarget) {
+			if (e.detail === 2) {
+				await toggleMaximize();
+			} else {
+				const { getCurrentWindow } = await import('@tauri-apps/api/window');
+				getCurrentWindow().startDragging();
+			}
+		}
+	}
 </script>
 
 <div
 	data-tauri-drag-region
-	class="fixed top-0 left-0 right-0 z-[100] h-8 flex items-center select-none"
+	class="fixed top-0 left-0 right-0 z-[9999] h-14 flex items-center select-none"
 	class:justify-end={!isMac}
 	class:pl-[70px]={isMac}
+	role="toolbar"
+	onmousedown={handleMouseDown}
 >
 	{#if !isMac}
-		<div class="flex h-full">
+		<div class="flex h-full" style="-webkit-app-region: no-drag">
 			<button
 				class="inline-flex items-center justify-center w-12 h-full hover:bg-muted-foreground/10 transition-colors"
 				onclick={minimize}

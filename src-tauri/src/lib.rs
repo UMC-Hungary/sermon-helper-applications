@@ -33,7 +33,7 @@ use video_upload::{
 };
 #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
 use tauri_plugin_deep_link::DeepLinkExt;
-#[cfg(target_os = "macos")]
+#[cfg(not(target_os = "macos"))]
 use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -64,12 +64,12 @@ pub fn run() {
                 }
             }
 
-            // macOS: show native traffic lights without a title bar
-            #[cfg(target_os = "macos")]
+            // Non-macOS: remove decorations for custom titlebar
+            // macOS uses titleBarStyle=overlay from config to keep traffic lights
+            #[cfg(not(target_os = "macos"))]
             {
-                use tauri::TitleBarStyle;
                 let window = _app.get_webview_window("main").unwrap();
-                window.set_title_bar_style(TitleBarStyle::Overlay)?;
+                window.set_decorations(false)?;
             }
 
             Ok(())
