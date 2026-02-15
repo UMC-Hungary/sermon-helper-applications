@@ -386,6 +386,24 @@ impl DiscoveryServerState {
         }
     }
 
+    /// Read the caption settings file (caption-settings.json) as JSON Value
+    pub fn read_caption_settings(&self) -> Option<serde_json::Value> {
+        let data_dir = self.app_data_dir.as_ref()?;
+        let settings_path = data_dir.join("caption-settings.json");
+
+        if !settings_path.exists() {
+            return None;
+        }
+
+        match std::fs::read_to_string(&settings_path) {
+            Ok(content) => serde_json::from_str(&content).ok(),
+            Err(e) => {
+                log::warn!("Failed to read caption settings file: {}", e);
+                None
+            }
+        }
+    }
+
     /// Read RF/IR commands directly from the app settings file
     pub fn read_rfir_commands_from_settings(&self) -> Vec<StoredRfIrCommand> {
         let Some(ref data_dir) = self.app_data_dir else {
@@ -652,6 +670,7 @@ fn build_router(state: SharedServerState) -> Router {
         .route("/api/v1/settings/import", post(settings_import_handler))
         // OBS Caption endpoint (embeddable HTML for OBS browser source)
         .route("/caption", get(caption_handler))
+        .route("/caption/logo", get(caption_logo_handler))
         // OpenAPI documentation
         .route("/api/v1/openapi.json", get(openapi_handler))
         .route("/api/docs", get(swagger_ui_handler))
@@ -809,8 +828,6 @@ struct CaptionQuery {
     color: String,
     #[serde(rename = "showLogo", default = "default_show_logo")]
     show_logo: String,
-    #[serde(default)]
-    logo: String,
     #[serde(default = "default_resolution")]
     resolution: String,
     /// Explicit width override (pixels)
@@ -850,65 +867,60 @@ async fn caption_handler(
     // Calculate dimensions
     let (width, height) = if let (Some(w), Some(h)) = (params.width, params.height) {
         (w, h)
-    } else if params.caption_type == "full" {
+    } else if params.caption_type == "full" || params.caption_type == "preview" {
         (base_width, base_height)
     } else {
-        // Caption bar: ~14% of screen height
-        let caption_height = (base_height as f32 * 0.14) as u32;
+        // Caption bar: 150px at 1080p, 300px at 4K (matching reference)
+        let caption_height = if params.resolution == "4k" { 300u32 } else { 150u32 };
         (base_width, caption_height)
     };
 
-    // Background and text colors
-    let (bg_color, text_color, accent_color) = match params.color.as_str() {
-        "white" => ("#ffffff", "#000000", "#dc2626"),
-        "red" => ("#8B0000", "#ffffff", "#ffffff"),
-        "blue" => ("#1a365d", "#ffffff", "#ffffff"),
-        "green" => ("#1a4d1a", "#ffffff", "#ffffff"),
-        _ => ("#000000", "#ffffff", "#dc2626"), // black default
+    // Text color (background is always white, matching reference)
+    let text_color = match params.color.as_str() {
+        "red" => "#EA0029",
+        _ => "#000000", // black default
     };
 
-    let show_logo = params.show_logo == "visible";
+    let show_logo = params.show_logo == "visible" || params.show_logo == "true";
 
-    // Decode the SVG logo if provided (URL-encoded)
-    let logo_svg = if show_logo && !params.logo.is_empty() {
-        urlencoding::decode(&params.logo)
-            .map(|s| s.into_owned())
-            .unwrap_or_default()
-    } else {
-        String::new()
-    };
+    // Scale factor: 1 for 1080p, 2 for 4K
+    let scale: u32 = if params.resolution == "4k" { 2 } else { 1 };
 
     // Generate HTML based on caption type
-    let html = if params.caption_type == "full" {
-        // Full-screen service announcement style (v0 template design)
+    let html = if params.caption_type == "full" || params.caption_type == "preview" {
+        // Preview/full-screen style (matching reference body.preview)
         let title_html = if !params.title.is_empty() {
-            format!(r#"<h1 class="name-title">{}</h1>"#, html_escape(&params.title))
+            format!(r#"<h1 class="title" id="title">{}</h1>"#, html_escape(&params.title))
         } else {
             String::new()
         };
 
-        // Service info with dot separator
-        let service_info = if !params.bold.is_empty() || !params.light.is_empty() {
+        // Caption text with dot separator
+        let service_info = {
             let mut parts = Vec::new();
             if !params.bold.is_empty() {
-                parts.push(format!("<span>{}</span>", html_escape(&params.bold).to_uppercase()));
+                parts.push(format!(r#"<span class="caption" id="text-bold">{}</span>"#, html_escape(&params.bold)));
             }
             if !params.bold.is_empty() && !params.light.is_empty() {
-                parts.push(r#"<span class="dot"></span>"#.to_string());
+                parts.push(r#"<span class="caption" id="text-divider"></span>"#.to_string());
             }
             if !params.light.is_empty() {
-                parts.push(format!("<span>{}</span>", html_escape(&params.light).to_uppercase()));
+                parts.push(format!(r#"<span class="caption" id="text-light">{}</span>"#, html_escape(&params.light)));
             }
-            format!(r#"<div class="service-info">{}</div>"#, parts.join(""))
+            parts.join("")
+        };
+
+        let logo_html = if show_logo {
+            r#"<div class="logo"><img src="/caption/logo" alt="Logo"></div>"#.to_string()
         } else {
             String::new()
         };
 
-        let logo_html = if show_logo && !logo_svg.is_empty() {
-            format!(r#"<div class="logo-container">{}</div>"#, logo_svg)
-        } else {
-            String::new()
-        };
+        let title_size = 200 * scale;
+        let title_margin = 50 * scale;
+        let dot_size = 15 * scale;
+        let dot_margin = 16 * scale;
+        let logo_width = 300 * scale;
 
         format!(r#"<!DOCTYPE html>
 <html lang="en">
@@ -916,128 +928,119 @@ async fn caption_handler(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OBS Caption</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;600&display=swap" rel="stylesheet">
     <style>
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {{
+            --text-color: {text_color};
+        }}
+
+        html, body {{
+            height: 100%;
         }}
 
         body {{
+            font-family: 'Oswald', sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding-left: 8%;
+            padding-bottom: 15%;
+            align-items: center;
+            box-sizing: border-box;
             width: {width}px;
             height: {height}px;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: {bg_color};
-            color: {text_color};
         }}
 
-        .aspect-container {{
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 5% 10%;
+        .title {{
+            font-weight: 600;
+            font-size: {title_size}px;
+            line-height: 1.2;
+            margin: 0 0 {title_margin}px;
+            flex: 0 0 100%;
+            max-width: 100%;
+            color: var(--text-color);
         }}
 
-        .content {{
-            display: flex;
-            flex-direction: column;
-        }}
-
-        .name-title {{
-            font-size: clamp(48px, 10vw, 180px);
-            font-weight: 700;
-            line-height: 1;
-            margin: 0;
-            padding: 0;
-        }}
-
-        .service-info {{
-            color: {accent_color};
-            font-size: clamp(24px, 3vw, 56px);
-            font-weight: 700;
-            margin-top: clamp(16px, 2vw, 40px);
+        .text {{
             display: flex;
             align-items: center;
-            gap: 0.5em;
+            flex: 0 0 100%;
+            max-width: 100%;
+            flex-wrap: wrap;
         }}
 
-        .dot {{
+        .caption {{
+            font-size: 26.667vh;
+            text-transform: uppercase;
+            color: var(--text-color);
+        }}
+
+        #text-divider {{
             display: inline-block;
-            width: 0.5em;
-            height: 0.5em;
-            border-radius: 50%;
-            background-color: {accent_color};
+            width: {dot_size}px;
+            height: {dot_size}px;
+            margin: 0 {dot_margin}px;
+            background-color: var(--text-color);
+            border-radius: {dot_size}px;
         }}
 
-        .logo-container {{
-            width: 100%;
-            max-width: 400px;
-            margin-top: auto;
+        #text-bold {{
+            font-weight: 600;
         }}
 
-        .logo-container svg {{
+        #text-light {{
+            font-weight: 300;
+        }}
+
+        .logo {{
+            position: absolute;
+            left: 8%;
+            bottom: 5%;
+            width: {logo_width}px;
+        }}
+
+        .logo img {{
             width: 100%;
             height: auto;
         }}
     </style>
 </head>
 <body>
-    <div class="aspect-container">
-        <div class="content">
-            {title_html}
-            {service_info}
-        </div>
-        {logo_html}
+    {title_html}
+    <div class="text">
+        {service_info}
     </div>
+    {logo_html}
 </body>
 </html>"#)
     } else {
-        // Caption bar style (original)
-        let scale = if params.resolution == "4k" { 2.0 } else { 1.0 };
-        let padding = (40.0 * scale) as u32;
-        let gap = (30.0 * scale) as u32;
-        let logo_height = (80.0 * scale) as u32;
-        let logo_max_width = (120.0 * scale) as u32;
-        let title_size = (36.0 * scale) as u32;
-        let text_size = (28.0 * scale) as u32;
-        let content_gap = (8.0 * scale) as u32;
-
-        let logo_html = if show_logo && !logo_svg.is_empty() {
-            format!(r#"<div class="logo">{}</div>"#, logo_svg)
-        } else {
-            String::new()
-        };
-
-        let title_html = if !params.title.is_empty() {
-            format!(r#"<div class="title">{}</div>"#, html_escape(&params.title))
-        } else {
-            String::new()
-        };
+        // Caption bar style (matching reference obs-caption.html exactly)
+        let logo_visibility_class = if show_logo { "logo-visibility--visible" } else { "logo-visibility--hidden" };
 
         let bold_html = if !params.bold.is_empty() {
-            format!(r#"<span class="bold">{}</span>"#, html_escape(&params.bold))
+            format!(r#"<span class="caption" id="text-bold">{}</span>"#, html_escape(&params.bold))
+        } else {
+            String::new()
+        };
+
+        let divider_html = if !params.bold.is_empty() && !params.light.is_empty() {
+            r#"<span class="caption" id="text-divider"></span>"#.to_string()
         } else {
             String::new()
         };
 
         let light_html = if !params.light.is_empty() {
-            format!(r#"<span class="light">{}</span>"#, html_escape(&params.light))
+            format!(r#"<span class="caption" id="text-light">{}</span>"#, html_escape(&params.light))
         } else {
             String::new()
         };
 
-        let text_line = if !bold_html.is_empty() || !light_html.is_empty() {
-            format!(r#"<div class="text-line">{}{}{}</div>"#,
-                bold_html,
-                if !bold_html.is_empty() && !light_html.is_empty() { " " } else { "" },
-                light_html
-            )
-        } else {
-            String::new()
-        };
+        let padding_y = 2 * scale; // rem
+        let padding_x = 3 * scale; // rem
+        let divider_border = 5 * scale;
+        let bar_dot_size = 15 * scale;
+        let bar_dot_margin = 16 * scale;
 
         format!(r#"<!DOCTYPE html>
 <html lang="en">
@@ -1045,88 +1048,114 @@ async fn caption_handler(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OBS Caption</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;600&display=swap" rel="stylesheet">
     <style>
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {{
+            --text-color: {text_color};
+        }}
+
+        html, body {{
+            height: 100%;
         }}
 
         body {{
+            font-family: 'Oswald', sans-serif;
+            display: flex;
+            margin: 0;
+            padding: {padding_y}rem {padding_x}rem;
+            align-items: center;
+            box-sizing: border-box;
             width: {width}px;
             height: {height}px;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
         }}
 
-        .caption-container {{
-            width: 100%;
+        #logo {{
+            flex: 0 0 133.3334vh;
             height: 100%;
-            background-color: {bg_color};
+            object-fit: contain;
+        }}
+
+        .divider {{
+            height: 50vh;
+            border-right: {divider_border}px solid var(--text-color);
+            margin: 0 21.3334vh;
+        }}
+
+        .text {{
             display: flex;
             align-items: center;
-            padding: 0 {padding}px;
-            gap: {gap}px;
+            flex-grow: 1;
         }}
 
-        .logo {{
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }}
-
-        .logo svg {{
-            height: {logo_height}px;
-            width: auto;
-            max-width: {logo_max_width}px;
-        }}
-
-        .content {{
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: {content_gap}px;
-            color: {text_color};
-        }}
-
-        .title {{
-            font-size: {title_size}px;
-            font-weight: 700;
-            line-height: 1.2;
+        .caption {{
+            font-size: 26.667vh;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            color: var(--text-color);
         }}
 
-        .text-line {{
-            font-size: {text_size}px;
-            line-height: 1.3;
+        #text-divider {{
+            display: inline-block;
+            width: {bar_dot_size}px;
+            height: {bar_dot_size}px;
+            margin: 0 {bar_dot_margin}px;
+            background-color: var(--text-color);
+            border-radius: {bar_dot_size}px;
         }}
 
-        .bold {{
+        #text-bold {{
             font-weight: 600;
         }}
 
-        .light {{
+        #text-light {{
             font-weight: 300;
-            opacity: 0.9;
+        }}
+
+        body.logo-visibility--hidden #logo,
+        body.logo-visibility--hidden .divider {{
+            display: none;
         }}
     </style>
 </head>
-<body>
-    <div class="caption-container">
-        {logo_html}
-        <div class="content">
-            {title_html}
-            {text_line}
-        </div>
+<body class="caption {logo_visibility_class}">
+    <img id="logo" src="/caption/logo" alt="Logo">
+
+    <div class="divider"></div>
+
+    <div class="text">
+        {bold_html}
+        {divider_html}
+        {light_html}
     </div>
 </body>
 </html>"#)
     };
 
     axum::response::Html(html)
+}
+
+/// Serve the SVG logo from caption settings as raw SVG
+async fn caption_logo_handler(
+    State(state): State<SharedServerState>,
+) -> impl IntoResponse {
+    let svg = state
+        .read_caption_settings()
+        .and_then(|settings| settings.get("svgLogo").and_then(|v| v.as_str().map(String::from)))
+        .unwrap_or_default();
+
+    if svg.is_empty() {
+        return (
+            StatusCode::NOT_FOUND,
+            [(header::CONTENT_TYPE, "text/plain")],
+            "No logo configured".to_string(),
+        );
+    }
+
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "image/svg+xml")],
+        svg,
+    )
 }
 
 /// Escape HTML special characters

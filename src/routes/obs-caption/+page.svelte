@@ -51,62 +51,38 @@
 		}
 	});
 
-	// Get background color
-	function getBgColor(color: string): string {
-		switch (color) {
-			case 'red': return '#8B0000';
-			case 'blue': return '#1a365d';
-			case 'green': return '#1a4d1a';
-			case 'white': return '#ffffff';
-			default: return '#000000';
-		}
-	}
-
-	// Get text color based on background
+	// Get text color based on color setting (matching reference: color changes text, bg is always white)
 	function getTextColor(color: string): string {
-		return color === 'white' ? '#000000' : '#ffffff';
-	}
-
-	// Get accent color (for service info)
-	function getAccentColor(color: string): string {
-		if (color === 'white' || color === 'black') return '#dc2626'; // red
-		return '#ffffff'; // white on colored backgrounds
+		return color === 'red' ? '#EA0029' : '#000000';
 	}
 
 	// Get dimensions for current settings
 	$: exportDimensions = getExportDimensions(settings.resolution, settings.aspectRatio);
 	$: captionHeight = getCaptionHeight(settings.type, settings.resolution);
 	$: previewWidth = exportDimensions.width;
-	$: previewHeight = settings.type === 'full' ? exportDimensions.height : captionHeight;
+	$: previewHeight = settings.type === 'preview' ? exportDimensions.height : captionHeight;
 
-	// Generate the caption URL
-	function getCaptionUrl(): string {
-		if (!$discoveryServerStatus.running) {
-			return 'Start discovery server to generate URL';
-		}
+	// Reactive caption URL — depends on all settings fields so iframe updates live
+	$: captionUrl = $discoveryServerStatus.running
+		? (() => {
+				const baseUrl = $discoveryServerStatus.addresses.length > 0
+					? `http://${$discoveryServerStatus.addresses[0]}:${$discoveryServerStatus.port}`
+					: `http://localhost:${$discoveryServerStatus.port}`;
+				const params = new URLSearchParams();
+				params.set('type', settings.type);
+				params.set('resolution', settings.resolution);
+				if (settings.title) params.set('title', settings.title);
+				if (settings.boldText) params.set('bold', settings.boldText);
+				if (settings.lightText) params.set('light', settings.lightText);
+				params.set('color', settings.color);
+				params.set('showLogo', settings.showLogo ? 'true' : 'false');
+				return `${baseUrl}/caption?${params.toString()}`;
+			})()
+		: '';
 
-		const baseUrl = $discoveryServerStatus.addresses.length > 0
-			? `http://${$discoveryServerStatus.addresses[0]}:${$discoveryServerStatus.port}`
-			: `http://localhost:${$discoveryServerStatus.port}`;
-
-		const params = new URLSearchParams();
-		params.set('type', settings.type);
-		params.set('resolution', settings.resolution);
-		if (settings.title) params.set('title', settings.title);
-		if (settings.boldText) params.set('bold', settings.boldText);
-		if (settings.lightText) params.set('light', settings.lightText);
-		params.set('color', settings.color);
-		params.set('showLogo', settings.showLogo ? 'visible' : 'hidden');
-		if (settings.svgLogo) {
-			params.set('logo', encodeURIComponent(settings.svgLogo));
-		}
-
-		return `${baseUrl}/caption?${params.toString()}`;
-	}
 
 	async function handleCopyUrl() {
-		const url = getCaptionUrl();
-		if (!$discoveryServerStatus.running) {
+		if (!captionUrl) {
 			toast({
 				title: 'Server Not Running',
 				description: 'Start the discovery server first',
@@ -115,7 +91,7 @@
 			return;
 		}
 
-		await navigator.clipboard.writeText(url);
+		await navigator.clipboard.writeText(captionUrl);
 		urlCopied = true;
 		toast({
 			title: 'URL Copied',
@@ -153,15 +129,14 @@
 		await handleSave();
 	}
 
-	// Export to PNG using canvas
+	// Export to PNG using canvas (Oswald font, white bg, matching reference)
 	async function handleExport() {
 		isExporting = true;
 		try {
-			const { width, height } = settings.type === 'full'
+			const { width, height } = settings.type === 'preview'
 				? exportDimensions
 				: { width: exportDimensions.width, height: captionHeight };
 
-			// Create canvas
 			const canvas = document.createElement('canvas');
 			canvas.width = width;
 			canvas.height = height;
@@ -171,47 +146,63 @@
 				throw new Error('Could not get canvas context');
 			}
 
-			// Draw background
-			ctx.fillStyle = getBgColor(settings.color);
+			// White background (always, matching reference)
+			ctx.fillStyle = '#ffffff';
 			ctx.fillRect(0, 0, width, height);
 
-			// Scale factor for 4K
+			const textColor = getTextColor(settings.color);
 			const scale = settings.resolution === '4k' ? 2 : 1;
-			const paddingX = width * 0.1; // 10% horizontal padding
-			const paddingY = height * 0.05; // 5% vertical padding
 
-			// For full-screen service announcement style
-			if (settings.type === 'full') {
-				let currentY = paddingY;
+			if (settings.type === 'preview') {
+				// Preview/full-screen style
+				const paddingX = width * 0.08;
+				const paddingBottom = height * 0.15;
 
-				// Draw title (large name)
+				// Draw title
 				if (settings.title) {
-					const titleSize = Math.min(width * 0.1, height * 0.15); // Responsive size
-					ctx.font = `700 ${titleSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-					ctx.fillStyle = getTextColor(settings.color);
+					const titleSize = 200 * scale;
+					ctx.font = `600 ${titleSize}px Oswald, sans-serif`;
+					ctx.fillStyle = textColor;
 					ctx.textBaseline = 'top';
-					ctx.fillText(settings.title, paddingX, currentY);
-					currentY += titleSize * 1.2;
+					ctx.fillText(settings.title, paddingX, height * 0.05);
 				}
 
-				// Draw service info (bold • light format)
+				// Draw caption text (bold + dot + light)
 				if (settings.boldText || settings.lightText) {
-					const infoSize = Math.min(width * 0.03, height * 0.05);
-					ctx.font = `700 ${infoSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-					ctx.fillStyle = getAccentColor(settings.color);
-					ctx.textBaseline = 'top';
+					const captionSize = height * 0.267; // 26.667vh
+					ctx.textBaseline = 'middle';
+					const textY = height * 0.55;
+					let textX = paddingX;
 
-					let infoText = '';
-					if (settings.boldText) infoText += settings.boldText.toUpperCase();
-					if (settings.boldText && settings.lightText) infoText += '  •  ';
-					if (settings.lightText) infoText += settings.lightText.toUpperCase();
+					if (settings.boldText) {
+						ctx.font = `600 ${captionSize}px Oswald, sans-serif`;
+						ctx.fillStyle = textColor;
+						ctx.fillText(settings.boldText.toUpperCase(), textX, textY);
+						textX += ctx.measureText(settings.boldText.toUpperCase()).width;
+					}
 
-					ctx.fillText(infoText, paddingX, currentY + (infoSize * 0.5));
+					if (settings.boldText && settings.lightText) {
+						// Dot separator
+						const dotSize = 15 * scale;
+						const dotMargin = 16 * scale;
+						textX += dotMargin;
+						ctx.beginPath();
+						ctx.arc(textX + dotSize / 2, textY, dotSize / 2, 0, Math.PI * 2);
+						ctx.fillStyle = textColor;
+						ctx.fill();
+						textX += dotSize + dotMargin;
+					}
+
+					if (settings.lightText) {
+						ctx.font = `300 ${captionSize}px Oswald, sans-serif`;
+						ctx.fillStyle = textColor;
+						ctx.fillText(settings.lightText.toUpperCase(), textX, textY);
+					}
 				}
 
 				// Draw logo at bottom
 				if (settings.showLogo && settings.svgLogo) {
-					const logoMaxWidth = width * 0.25;
+					const logoMaxWidth = 300 * scale;
 					const logoMaxHeight = height * 0.12;
 
 					const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
@@ -233,19 +224,20 @@
 						drawHeight = logoMaxWidth / logoAspect;
 					}
 
-					const logoY = height - paddingY - drawHeight;
+					const logoY = height - paddingBottom;
 					ctx.drawImage(logoImg, paddingX, logoY, drawWidth, drawHeight);
 					URL.revokeObjectURL(svgUrl);
 				}
 			} else {
-				// Caption bar style (original)
-				const gap = 30 * scale;
-				let contentX = paddingX;
+				// Caption bar style (matching reference exactly)
+				const padding = 48 * scale; // 3rem
+				const paddingY = 32 * scale; // 2rem
+				let contentX = padding;
 
 				// Draw logo if present
 				if (settings.showLogo && settings.svgLogo) {
-					const logoHeight = height * 0.55;
-					const logoMaxWidth = 120 * scale;
+					// Logo takes flex: 0 0 133.3334vh equivalent
+					const logoWidth = height * 1.333334;
 
 					const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
 					const svgUrl = URL.createObjectURL(svgBlob);
@@ -258,59 +250,59 @@
 					});
 
 					const logoAspect = logoImg.width / logoImg.height;
-					let drawWidth = logoHeight * logoAspect;
-					let drawHeight = logoHeight;
-
-					if (drawWidth > logoMaxWidth) {
-						drawWidth = logoMaxWidth;
-						drawHeight = logoMaxWidth / logoAspect;
+					const drawHeight = height - paddingY * 2;
+					let drawWidth = drawHeight * logoAspect;
+					if (drawWidth > logoWidth) {
+						drawWidth = logoWidth;
 					}
 
 					const logoY = (height - drawHeight) / 2;
 					ctx.drawImage(logoImg, contentX, logoY, drawWidth, drawHeight);
-					URL.revokeObjectURL(svgUrl);
-					contentX += drawWidth + gap;
+					contentX += drawWidth;
+
+					// Draw vertical divider
+					const dividerMargin = height * 0.213334; // 21.3334vh
+					const dividerHeight = height * 0.5; // 50vh
+					const dividerX = contentX + dividerMargin;
+					const dividerY = (height - dividerHeight) / 2;
+					ctx.strokeStyle = textColor;
+					ctx.lineWidth = 5 * scale;
+					ctx.beginPath();
+					ctx.moveTo(dividerX, dividerY);
+					ctx.lineTo(dividerX, dividerY + dividerHeight);
+					ctx.stroke();
+					contentX = dividerX + dividerMargin;
 				}
 
-				// Draw text
-				ctx.fillStyle = getTextColor(settings.color);
-				const titleSize = 36 * scale;
-				const textSize = 28 * scale;
-				const contentGap = 8 * scale;
+				// Draw caption text
+				const captionSize = height * 0.26667; // 26.667vh
+				ctx.textBaseline = 'middle';
+				const textY = height / 2;
+				let textX = contentX;
 
-				let totalTextHeight = 0;
-				if (settings.title) totalTextHeight += titleSize;
-				if (settings.boldText || settings.lightText) {
-					if (settings.title) totalTextHeight += contentGap;
-					totalTextHeight += textSize;
+				if (settings.boldText) {
+					ctx.font = `600 ${captionSize}px Oswald, sans-serif`;
+					ctx.fillStyle = textColor;
+					ctx.fillText(settings.boldText.toUpperCase(), textX, textY);
+					textX += ctx.measureText(settings.boldText.toUpperCase()).width;
 				}
 
-				let textY = (height - totalTextHeight) / 2;
-
-				if (settings.title) {
-					ctx.font = `700 ${titleSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-					ctx.textBaseline = 'top';
-					ctx.fillText(settings.title.toUpperCase(), contentX, textY);
-					textY += titleSize + contentGap;
+				if (settings.boldText && settings.lightText) {
+					// Dot separator
+					const dotSize = 15 * scale;
+					const dotMargin = 16 * scale;
+					textX += dotMargin;
+					ctx.beginPath();
+					ctx.arc(textX + dotSize / 2, textY, dotSize / 2, 0, Math.PI * 2);
+					ctx.fillStyle = textColor;
+					ctx.fill();
+					textX += dotSize + dotMargin;
 				}
 
-				if (settings.boldText || settings.lightText) {
-					let textX = contentX;
-
-					if (settings.boldText) {
-						ctx.font = `600 ${textSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-						ctx.textBaseline = 'top';
-						ctx.fillText(settings.boldText, textX, textY);
-						textX += ctx.measureText(settings.boldText).width + ctx.measureText(' ').width;
-					}
-
-					if (settings.lightText) {
-						ctx.font = `300 ${textSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-						ctx.globalAlpha = 0.9;
-						ctx.textBaseline = 'top';
-						ctx.fillText(settings.lightText, textX, textY);
-						ctx.globalAlpha = 1;
-					}
+				if (settings.lightText) {
+					ctx.font = `300 ${captionSize}px Oswald, sans-serif`;
+					ctx.fillStyle = textColor;
+					ctx.fillText(settings.lightText.toUpperCase(), textX, textY);
 				}
 			}
 
@@ -333,7 +325,7 @@
 
 			toast({
 				title: 'Export Complete',
-				description: `Image exported at ${width}x${settings.type === 'full' ? exportDimensions.height : captionHeight}`,
+				description: `Image exported at ${width}x${settings.type === 'preview' ? exportDimensions.height : captionHeight}`,
 				variant: 'success'
 			});
 		} catch (error) {
@@ -350,12 +342,16 @@
 
 	function getOBSDimensions(): { width: number; height: number } {
 		const base = RESOLUTION_DIMENSIONS[settings.resolution];
-		if (settings.type === 'full') {
+		if (settings.type === 'preview') {
 			return base;
 		}
 		return { width: base.width, height: captionHeight };
 	}
 </script>
+
+<svelte:head>
+	<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;600&display=swap" rel="stylesheet" />
+</svelte:head>
 
 <div class="mt-12 lg:mt-0">
 	<h2 class="text-3xl font-bold tracking-tight">OBS Caption</h2>
@@ -401,70 +397,67 @@
 								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								<option value="caption">Caption Bar</option>
-								<option value="full">Full Screen</option>
+								<option value="preview">Preview (Full Screen)</option>
 							</select>
 						</div>
 					</div>
 
-					<!-- Title / Name -->
-					<div class="space-y-2">
-						<Label for="caption-title">{settings.type === 'full' ? 'Name' : 'Title'}</Label>
-						<Input
-							id="caption-title"
-							type="text"
-							bind:value={settings.title}
-							placeholder={settings.type === 'full' ? 'e.g., Pásztor Balázs' : 'e.g., SUNDAY SERVICE'}
-							disabled={isLoading}
-						/>
-						<p class="text-xs text-muted-foreground">
-							{settings.type === 'full' ? 'Large display name (speaker name)' : 'Main heading displayed in uppercase'}
-						</p>
-					</div>
+					<!-- Title (only shown in preview mode, hidden in caption per reference) -->
+					{#if settings.type === 'preview'}
+						<div class="space-y-2">
+							<Label for="caption-title">Title</Label>
+							<Input
+								id="caption-title"
+								type="text"
+								bind:value={settings.title}
+								placeholder="e.g., Pásztor Balázs"
+								disabled={isLoading}
+							/>
+							<p class="text-xs text-muted-foreground">
+								Large display name (shown at top)
+							</p>
+						</div>
+					{/if}
 
-					<!-- Service Info / Bold Text -->
+					<!-- Bold Text -->
 					<div class="space-y-2">
-						<Label for="caption-bold">{settings.type === 'full' ? 'Service Type' : 'Bold Text'}</Label>
+						<Label for="caption-bold">Bold text</Label>
 						<Input
 							id="caption-bold"
 							type="text"
 							bind:value={settings.boldText}
-							placeholder={settings.type === 'full' ? 'e.g., VASÁRNAPI ISTENTISZTELET' : 'e.g., Pastor John Smith'}
+							placeholder="e.g., VASÁRNAPI ISTENTISZTELET"
 							disabled={isLoading}
 						/>
 					</div>
 
-					<!-- Secondary Info / Light Text -->
+					<!-- Light Text -->
 					<div class="space-y-2">
-						<Label for="caption-light">{settings.type === 'full' ? 'Event Type' : 'Light Text'}</Label>
+						<Label for="caption-light">Light text</Label>
 						<Input
 							id="caption-light"
 							type="text"
 							bind:value={settings.lightText}
-							placeholder={settings.type === 'full' ? 'e.g., IGEHIRDETÉS' : 'e.g., Sermon Title'}
+							placeholder="e.g., IGEHIRDETÉS"
 							disabled={isLoading}
 						/>
-						{#if settings.type === 'full'}
-							<p class="text-xs text-muted-foreground">
-								Displayed as: {settings.boldText || 'SERVICE TYPE'} • {settings.lightText || 'EVENT TYPE'}
-							</p>
-						{/if}
+						<p class="text-xs text-muted-foreground">
+							Displayed as: {settings.boldText || 'BOLD'} <span class="inline-block w-1.5 h-1.5 rounded-full bg-current align-middle mx-1"></span> {settings.lightText || 'LIGHT'} (uppercase)
+						</p>
 					</div>
 
 					<!-- Color & Logo Row -->
 					<div class="grid grid-cols-2 gap-4">
 						<div class="space-y-2">
-							<Label for="caption-color">Background</Label>
+							<Label for="caption-color">Text Color</Label>
 							<select
 								id="caption-color"
 								bind:value={settings.color}
 								disabled={isLoading}
 								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
-								<option value="white">White</option>
 								<option value="black">Black</option>
 								<option value="red">Red</option>
-								<option value="blue">Blue</option>
-								<option value="green">Green</option>
 							</select>
 						</div>
 
@@ -503,7 +496,7 @@
 							className="font-mono text-xs"
 						/>
 						<p class="text-xs text-muted-foreground">
-							{settings.type === 'full' ? 'Logo displayed at bottom left' : 'Logo displayed on the left side'}
+							{settings.type === 'preview' ? 'Logo displayed at bottom left' : 'Logo displayed on the left side with vertical divider'}
 						</p>
 					</div>
 
@@ -548,112 +541,30 @@
 
 			<svelte:fragment slot="content">
 				<div class="space-y-4">
-					<!-- Preview Container -->
-					<div class="rounded-lg overflow-hidden border shadow-lg">
-						{#if settings.type === 'full'}
-							<!-- Full Screen Service Announcement Style -->
-							<div
-								class="w-full relative"
-								style="aspect-ratio: 16 / 9; background-color: {getBgColor(settings.color)};"
-							>
-								<div
-									class="absolute inset-0 flex flex-col justify-between"
-									style="padding: 5% 10%;"
-								>
-									<!-- Content Area -->
-									<div class="flex flex-col">
-										<!-- Large Name -->
-										{#if settings.title}
-											<h1
-												class="font-bold leading-none m-0"
-												style="font-size: clamp(1.5rem, 8vw, 4rem); color: {getTextColor(settings.color)};"
-											>
-												{settings.title}
-											</h1>
-										{/if}
-
-										<!-- Service Info with Dot Separator -->
-										{#if settings.boldText || settings.lightText}
-											<div
-												class="font-bold flex items-center gap-2 mt-2"
-												style="font-size: clamp(0.6rem, 2.5vw, 1.2rem); color: {getAccentColor(settings.color)};"
-											>
-												{#if settings.boldText}
-													<span>{settings.boldText.toUpperCase()}</span>
-												{/if}
-												{#if settings.boldText && settings.lightText}
-													<span
-														class="inline-block rounded-full"
-														style="width: 0.4em; height: 0.4em; background-color: {getAccentColor(settings.color)};"
-													></span>
-												{/if}
-												{#if settings.lightText}
-													<span>{settings.lightText.toUpperCase()}</span>
-												{/if}
-											</div>
-										{/if}
-									</div>
-
-									<!-- Logo at Bottom -->
-									{#if settings.showLogo && settings.svgLogo}
-										<div class="mt-auto w-full max-w-[30%]">
-											<div class="[&>svg]:w-full [&>svg]:h-auto">
-												{@html settings.svgLogo}
-											</div>
-										</div>
-									{/if}
-								</div>
-							</div>
-						{:else}
-							<!-- Caption Bar Style -->
-							<div
-								class="w-full relative"
-								style="aspect-ratio: {previewWidth} / {previewHeight}; background-color: {getBgColor(settings.color)};"
-							>
-								<div class="absolute inset-0 flex items-center px-[2%] gap-[1.5%]">
-									<!-- Logo -->
-									{#if settings.showLogo && settings.svgLogo}
-										<div class="flex-shrink-0 flex items-center justify-center h-[55%]">
-											<div class="h-full w-auto [&>svg]:h-full [&>svg]:w-auto [&>svg]:max-w-[80px]">
-												{@html settings.svgLogo}
-											</div>
-										</div>
-									{/if}
-
-									<!-- Content -->
-									<div
-										class="flex-1 flex flex-col justify-center gap-[2%]"
-										style="color: {getTextColor(settings.color)};"
-									>
-										{#if settings.title}
-											<div
-												class="font-bold uppercase tracking-wide leading-tight"
-												style="font-size: clamp(8px, 2.5vw, 18px);"
-											>
-												{settings.title}
-											</div>
-										{/if}
-										{#if settings.boldText || settings.lightText}
-											<div
-												class="leading-tight"
-												style="font-size: clamp(6px, 2vw, 14px);"
-											>
-												{#if settings.boldText}
-													<span class="font-semibold">{settings.boldText}</span>
-												{/if}
-												{#if settings.boldText && settings.lightText}
-													{' '}
-												{/if}
-												{#if settings.lightText}
-													<span class="font-light opacity-90">{settings.lightText}</span>
-												{/if}
-											</div>
-										{/if}
-									</div>
-								</div>
-							</div>
-						{/if}
-					</div>
+					<!-- Preview Container (iframe showing actual served caption) -->
+					{#if captionUrl}
+						{@const obsDims = getOBSDimensions()}
+						{@const previewScale = Math.min(1, 500 / obsDims.width)}
+						{@const scaledHeight = obsDims.height * previewScale}
+						<div
+							class="rounded-lg overflow-hidden border shadow-lg"
+							style="width: 100%; height: {scaledHeight}px;"
+						>
+							{#key captionUrl}
+								<iframe
+									title="Caption Preview"
+									src={captionUrl}
+									width={obsDims.width}
+									height={obsDims.height}
+									style="transform: scale({previewScale}); transform-origin: 0 0; border: none;"
+								></iframe>
+							{/key}
+						</div>
+					{:else}
+						<div class="rounded-lg border p-8 text-center text-muted-foreground">
+							Start the discovery server to see a live preview
+						</div>
+					{/if}
 
 					<!-- Export Options -->
 					<div class="rounded-lg bg-muted p-4 space-y-4">
@@ -677,7 +588,7 @@
 						</div>
 
 						<div class="text-xs text-muted-foreground">
-							Export size: {exportDimensions.width} × {settings.type === 'full' ? exportDimensions.height : captionHeight} pixels
+							Export size: {exportDimensions.width} × {settings.type === 'preview' ? exportDimensions.height : captionHeight} pixels
 						</div>
 
 						<Button
@@ -718,7 +629,7 @@
 						</div>
 					{:else}
 						<div class="rounded-lg bg-muted p-3">
-							<code class="text-xs break-all">{getCaptionUrl()}</code>
+							<code class="text-xs break-all">{captionUrl}</code>
 						</div>
 					{/if}
 
