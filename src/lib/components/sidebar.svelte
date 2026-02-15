@@ -66,7 +66,7 @@
  		isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
  	)}
  >
-	<div class="flex h-full flex-col bg-sidebar">
+	<div class="flex h-full flex-col bg-sidebar pt-8">
  		<div class="flex items-center justify-between">
  			<Button buttonVariant="ghost" buttonSize="icon" className="md:hidden" onclick={onMobileMenuToggle}>
  				<X class="h-5 w-5" />

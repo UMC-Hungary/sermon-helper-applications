@@ -61,6 +61,15 @@ pub fn run() {
                     eprintln!("Warning: Failed to register deep link scheme: {}. Deep links may not work in dev mode.", e);
                 }
             }
+
+            // macOS: show native traffic lights without a title bar
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::TitleBarStyle;
+                let window = _app.get_webview_window("main").unwrap();
+                window.set_title_bar_style(TitleBarStyle::Overlay)?;
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

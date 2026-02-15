@@ -19,6 +19,7 @@
     import { initEventStore } from '$lib/stores/event-store';
     import { attemptAutoResume } from '$lib/services/upload/upload-auto-resume';
     import UpdateChecker from '$lib/components/update-checker.svelte';
+    import Titlebar from '$lib/components/titlebar.svelte';
     import { browser } from '$app/environment';
     import { isTauriApp } from '$lib/utils/storage-helpers';
     import { discoveryServerManager, discoveryServerStatus } from '$lib/stores/discovery-server-store';
@@ -173,6 +174,7 @@
     <div class="animate-pulse text-muted-foreground">Loading...</div>
 </div>
 {:else}
+<Titlebar />
 <div class="flex h-screen overflow-hidden bg-background">
     <Sidebar
             isMobileMenuOpen={isMobileMenuOpen}
