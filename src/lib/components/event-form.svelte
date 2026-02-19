@@ -14,6 +14,7 @@
 	import TranslationSelector from '$lib/components/translation-selector.svelte';
 	import BibleSuggestions from '$lib/components/bible-suggestions.svelte';
 	import RecordingsStatus from '$lib/components/recordings-status.svelte';
+	import EventSessionActivity from '$lib/components/event-session-activity.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { bibleApi } from '$lib/utils/bible-api';
 	import { isV2Translation, type LegacySuggestion, type BibleTranslation } from '$lib/types/bible';
@@ -40,8 +41,14 @@
 
 	let { event, originalEventId, onSave, onCancel }: Props = $props();
 
+	// Build initial form data from event prop (intentionally captures initial value only)
+	function buildInitialFormData(): ServiceEvent {
+		if (!event) return createEmptyEvent();
+		return { ...event, ...(event.autoUploadEnabled ? {} : { autoUploadEnabled: true }) };
+	}
+
 	// Form state
-	let formData = $state<ServiceEvent>(event ? { ...event, ...(event.autoUploadEnabled ? {} : { autoUploadEnabled: true }) } : createEmptyEvent());
+	let formData = $state<ServiceEvent>(buildInitialFormData());
 
 	// Sync recordings from prop (they can be added while editing)
 	$effect(() => {
@@ -54,8 +61,8 @@
 	// Bible fetch state
 	let textusLoading = $state(false);
 	let leckioLoading = $state(false);
-	let textusQuery = $state(event?.textus || '');
-	let leckioQuery = $state(event?.leckio || '');
+	let textusQuery = $state(formData.textus || '');
+	let leckioQuery = $state(formData.leckio || '');
 	let suggestions = $state<LegacySuggestion[]>([]);
 	let showSuggestions = $state(false);
 	let activeSuggestionField = $state<'textus' | 'leckio' | null>(null);
@@ -325,6 +332,12 @@
 		{calculatedTitle || $_('events.form.calculatedTitleEmpty')}
 	</div>
 </div>
+
+{#if originalEventId && event?.activities?.length}
+	<div class="mt-4">
+		<EventSessionActivity activities={event.activities} />
+	</div>
+{/if}
 
 <div class="grid gap-6 lg:grid-cols-3 min-h-screen mt-6">
 	<!-- Left Column: Main Edit Block and YouTube Scheduling -->

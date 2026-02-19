@@ -5,7 +5,6 @@
 	import Badge from '$lib/components/ui/badge.svelte';
 	import { upcomingEvents, eventStore } from '$lib/stores/event-store';
     import {isEventToday, formatEventDate, generateCalculatedTitle} from '$lib/types/event';
-	import YoutubeStatus from '$lib/components/youtube-status.svelte';
 	import { _ } from 'svelte-i18n';
 	import { toast } from '$lib/utils/toast';
 	import SidebarStreamingControls from '$lib/components/sidebar-streaming-controls.svelte';
@@ -14,12 +13,11 @@
 	import { obsBrowserStatuses } from '$lib/stores/obs-device-status-store';
 	import { manualRefreshBrowserSource } from '$lib/utils/obs-device-checker';
 	import { generatePptx } from '$lib/utils/pptx-generator';
-	import { savePptxFile, pickOutputFolder, openFolder } from '$lib/utils/file-saver';
+	import { saveFile, pickOutputFolder, openFolder } from '$lib/utils/file-saver';
 	import { appSettings, appSettingsStore } from '$lib/utils/app-settings-store';
 	import { isTauriApp } from '$lib/utils/storage-helpers';
 
 	export let onMobileMenuClose: () => void = () => {};
-	export let onLoginRequired: () => void = () => {};
 
 	// Reactive: get the soonest upcoming event (first in sorted list)
 	$: nextEvent = $upcomingEvents.length > 0 ? $upcomingEvents[0] : null;
@@ -74,7 +72,7 @@
 			const filename = `${type === 'textus' ? 'textus' : 'lekcio'}.pptx`;
 
 			// Save or download
-			const result = await savePptxFile(blob, filename, $appSettings.pptxOutputPath);
+			const result = await saveFile(blob, filename, $appSettings.pptxOutputPath);
 
 			if (result.success) {
 				// Update event with generation timestamp

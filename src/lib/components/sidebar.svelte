@@ -5,7 +5,7 @@
 	import Card from '$lib/components/ui/card.svelte';
 	import Separator from '$lib/components/ui/separator.svelte';
 	import { systemStore } from '$lib/stores/system-store';
-	import { page } from '$app/state';
+	import { page } from '$app/stores';
 	import { _, locale } from 'svelte-i18n';
 	import { setLocale } from '$lib/i18n';
 	import { theme, setTheme } from '$lib/stores/theme-store';
@@ -30,12 +30,13 @@
 		{ id: '/settings', labelKey: 'sidebar.nav.settings', icon: Settings },
 	];
 
-	function isNavActive(itemId: string): boolean {
-		const pathname = page.url.pathname;
+	$: pathname = $page.url.pathname;
+
+	function isNavActive(itemId: string, currentPath: string): boolean {
 		if (itemId === '/settings') {
-			return pathname.startsWith('/settings');
+			return currentPath.startsWith('/settings');
 		}
-		return pathname === itemId;
+		return currentPath === itemId || currentPath.startsWith(itemId + '/');
 	}
 </script>
 
@@ -78,7 +79,7 @@
 				{#each navItems as item}
 					{@const Icon = item.icon}
 					<Button
-						buttonVariant={isNavActive(item.id) ? "secondary" : "ghost"}
+						buttonVariant={isNavActive(item.id, pathname) ? "secondary" : "ghost"}
 						className="w-full justify-start"
 						href={item.id}
 						onclick={() => {
@@ -169,7 +170,6 @@
 
 			<SidebarUpcomingEvent
 				onMobileMenuClose={() => { if (isMobileMenuOpen) onMobileMenuToggle(); }}
-				onLoginRequired={() => showYoutubeLoginModal = true}
 			/>
 
 			<Separator />

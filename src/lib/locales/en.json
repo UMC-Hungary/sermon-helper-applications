@@ -344,7 +344,8 @@
 			"configSavedDescription": "YouTube API credentials have been saved",
 			"error": "Error",
 			"enterBoth": "Please enter both Client ID and Client Secret",
-			"loginFailed": "Failed to start login"
+			"loginFailed": "Failed to start login",
+			"loginSuccess": "Login successful"
 		},
 		"scheduling": {
 			"title": "YouTube Scheduling",
@@ -416,6 +417,21 @@
 			"triggerManually": "Start Post-Event Processing"
 		},
 		"finishSession": "Finish Session",
+		"activity": {
+			"title": "Session Activity",
+			"SESSION_STARTED": "Session started",
+			"OBS_CONNECTED": "OBS connected",
+			"OBS_DISCONNECTED": "OBS disconnected",
+			"STREAM_STARTED": "Stream started",
+			"STREAM_STOPPED": "Stream stopped",
+			"RECORD_STARTED": "Recording started",
+			"RECORD_STOPPED": "Recording stopped",
+			"YOUTUBE_LIVE": "YouTube went live",
+			"SESSION_FINALIZING": "Post-event processing",
+			"SESSION_COMPLETED": "Session completed",
+			"SESSION_ERROR": "Error",
+			"SESSION_ENDED": "Session ended"
+		},
 		"connection": {
 			"lost": "Connection Lost",
 			"reconnecting": "Reconnecting...",

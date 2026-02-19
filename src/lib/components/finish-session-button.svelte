@@ -5,7 +5,7 @@
 	import { isStreaming, isRecording } from '$lib/stores/streaming-store';
 	import { uploaderIntegration } from '$lib/services/uploader-integration';
 	import { toast } from '$lib/utils/toast';
-	import type { ServiceEvent } from '$lib/types/event';
+	import { deriveSessionState, type ServiceEvent } from '$lib/types/event';
 
 	// Props
 	export let event: ServiceEvent;
@@ -14,7 +14,8 @@
 	let isFinishing = false;
 
 	// Visible when session is ACTIVE and not streaming/recording
-	$: canFinishSession = event.sessionState === 'ACTIVE' && !$isStreaming && !$isRecording;
+	$: sessionState = deriveSessionState(event.activities);
+	$: canFinishSession = sessionState === 'ACTIVE' && !$isStreaming && !$isRecording;
 
 	async function handleFinishSession() {
 		if (isFinishing) return;
@@ -33,7 +34,7 @@
 	}
 </script>
 
-<pre>{event.sessionState} - {!$isStreaming} - {!$isRecording}</pre>
+<pre>{sessionState} - {!$isStreaming} - {!$isRecording}</pre>
 {#if canFinishSession}
 	<div class="pt-2 border-t border-border">
 		<Button

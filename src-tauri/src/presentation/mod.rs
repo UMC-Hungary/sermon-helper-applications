@@ -2,7 +2,7 @@
 //!
 //! Provides cross-platform control of presentation applications:
 //! - Windows: PowerPoint via COM automation
-//! - macOS: Keynote and PowerPoint via AppleScript
+//! - macOS: Keynote via AppleScript
 //! - Linux: LibreOffice Impress via Python-UNO sidecar
 
 pub mod controller;
@@ -14,9 +14,6 @@ pub mod windows_powerpoint;
 #[cfg(target_os = "macos")]
 pub mod macos_keynote;
 
-#[cfg(target_os = "macos")]
-pub mod macos_powerpoint;
-
 #[cfg(target_os = "linux")]
 pub mod linux_impress;
 
@@ -25,14 +22,11 @@ use std::sync::Arc;
 pub use controller::PresentationController;
 pub use types::PresentationStatus;
 
-#[cfg(target_os = "macos")]
-use types::PresentationApp;
-
 /// Detect available presentation applications and return the best controller.
 ///
 /// Priority:
 /// - Windows: PowerPoint (only option)
-/// - macOS: Keynote (preferred), then PowerPoint for Mac
+/// - macOS: Keynote (preferred)
 /// - Linux: LibreOffice Impress (only option)
 pub fn detect_controller() -> Arc<dyn PresentationController> {
     #[cfg(target_os = "windows")]
@@ -42,9 +36,6 @@ pub fn detect_controller() -> Arc<dyn PresentationController> {
 
     #[cfg(target_os = "macos")]
     {
-        // Check if Keynote is available (preferred on macOS)
-        // Default to Keynote since it's the native macOS app
-        // The user can configure this later if needed
         Arc::new(macos_keynote::MacosKeynoteController::new())
     }
 
@@ -59,21 +50,6 @@ pub fn detect_controller() -> Arc<dyn PresentationController> {
     }
 }
 
-/// Detect all available controllers on macOS where multiple apps may be present
-#[cfg(target_os = "macos")]
-pub fn detect_all_controllers() -> Vec<(PresentationApp, Arc<dyn PresentationController>)> {
-    vec![
-        (
-            PresentationApp::Keynote,
-            Arc::new(macos_keynote::MacosKeynoteController::new()),
-        ),
-        (
-            PresentationApp::PowerPoint,
-            Arc::new(macos_powerpoint::MacosPowerPointController::new()),
-        ),
-    ]
-}
-
 /// A no-op controller for unsupported platforms
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 struct NullController;
@@ -81,9 +57,6 @@ struct NullController;
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 #[async_trait::async_trait]
 impl PresentationController for NullController {
-    async fn is_running(&self) -> bool {
-        false
-    }
     async fn open(&self, _file_path: &str) -> Result<(), PresentationError> {
         Err(PresentationError::PlatformNotSupported(
             "No presentation app supported on this platform".to_string(),
@@ -125,6 +98,16 @@ impl PresentationController for NullController {
         ))
     }
     async fn unblank(&self) -> Result<(), PresentationError> {
+        Err(PresentationError::PlatformNotSupported(
+            "No presentation app supported on this platform".to_string(),
+        ))
+    }
+    async fn close_all(&self) -> Result<(), PresentationError> {
+        Err(PresentationError::PlatformNotSupported(
+            "No presentation app supported on this platform".to_string(),
+        ))
+    }
+    async fn close_latest(&self) -> Result<(), PresentationError> {
         Err(PresentationError::PlatformNotSupported(
             "No presentation app supported on this platform".to_string(),
         ))

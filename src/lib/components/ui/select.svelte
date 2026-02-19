@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
+	import { untrack } from 'svelte';
 
 	interface SelectProps {
 		value?: string;
@@ -13,7 +14,7 @@
 	let { value = '', disabled = false, class: className, children, id, onValueChange }: SelectProps = $props();
 
 	let isOpen = $state(false);
-	let selectedValue = $state(value);
+	let selectedValue = $state(untrack(() => value));
 
 	function toggle() {
 		if (disabled) return;

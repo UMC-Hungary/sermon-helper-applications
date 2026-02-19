@@ -1,40 +1,14 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
 	import { cn } from "$lib/utils";
-	import type { HTMLAttributes } from "svelte/elements";
-
-	type CardProps = HTMLAttributes<HTMLDivElement> & {
-		clickable?: boolean;
-		href?: string;
-	};
 
 	export let className: string = "";
-	export let clickable: boolean = false;
-	export let href: string | undefined = undefined;
 
 	const baseClasses = "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm";
-	const clickableClasses = clickable ? "cursor-pointer hover:bg-accent/50 transition-colors" : "";
-
-	const handleClick = () => {
-		if (href && clickable) {
-			goto(href);
-		}
-	};
-
-	const handleKeydown = (e: KeyboardEvent) => {
-		if (href && clickable && e.key === 'Enter') {
-			goto(href);
-		}
-	};
 </script>
 
 <div
 	data-slot="card"
-	class={cn(baseClasses, clickableClasses, className)}
-	onclick={handleClick}
-	onkeydown={handleKeydown}
-	role={clickable && href ? "button" : undefined}
-	tabindex={clickable && href ? 0 : undefined}
+	class={cn(baseClasses, className)}
 	{...$$restProps}
 >
 	<!-- Header Slot: Contains title, description, and optional action -->

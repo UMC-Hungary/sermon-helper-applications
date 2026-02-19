@@ -9,7 +9,7 @@
 	import ScrollArea from "./scroll-area.svelte";
 	import { AlertCircle, AlertTriangle, Info, RefreshCw, Settings, Wifi, Plus, LogIn, Cpu } from "lucide-svelte";
 	import YouTubeLoginModal from '$lib/components/youtube-login-modal.svelte';
-	import { page } from '$app/state';
+	import { page } from '$app/stores';
 	import { systemStore, obsStatus } from '$lib/stores/system-store';
 	import { todayEvent } from '$lib/stores/event-store';
 	import { appSettingsLoaded } from '$lib/utils/app-settings-store';
@@ -60,7 +60,8 @@
 	$: hasNoEventToday = $appSettingsLoaded && !$todayEvent;
 
 	// Check if we should show the no-event warning (not on events pages)
-	$: showNoEventWarning = hasNoEventToday && !page.url.pathname.startsWith('/events');
+	$: currentPathname = $page.url.pathname;
+	$: showNoEventWarning = hasNoEventToday && !currentPathname.startsWith('/events');
 
 	// Total issues count (system errors + no event today warning + failing OBS devices)
 	$: totalIssues = activeErrors.length + (showNoEventWarning ? 1 : 0) + $failingRequiredDevices.length;
@@ -150,7 +151,7 @@
 						<span>{$_(error.descriptionKey)}</span>
 						{#if error.hasActions}
 							<div class="flex gap-2">
-								{#if page.url.pathname !== '/obs-config'}
+								{#if $page.url.pathname !== '/obs-config'}
 								<Button
 									buttonVariant="outline"
 									buttonSize="sm"
@@ -245,7 +246,7 @@
 								<RefreshCw class="h-4 w-4 mr-2" />
 								{$_('errors.recheck')}
 							</Button>
-							{#if page.url.pathname !== '/obs-config'}
+							{#if $page.url.pathname !== '/obs-config'}
 								<Button
 									buttonVariant="outline"
 									buttonSize="sm"

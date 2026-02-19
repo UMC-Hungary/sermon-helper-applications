@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { page } from '$app/stores';
 	import { _ } from 'svelte-i18n';
 	import { cn } from '$lib/utils.js';
 	import { Wifi, Cpu, FileText, Settings } from 'lucide-svelte';
@@ -11,8 +11,10 @@
 		{ id: '/settings/system', labelKey: 'settings.tabs.system', icon: Settings },
 	];
 
-	function isActive(tabId: string): boolean {
-		return page.url.pathname === tabId || page.url.pathname.startsWith(tabId + '/');
+	$: currentPath = $page.url.pathname;
+
+	function isActive(tabId: string, path: string): boolean {
+		return path === tabId || path.startsWith(tabId + '/');
 	}
 </script>
 
@@ -20,7 +22,7 @@
 	<div class="flex overflow-x-auto scrollbar-hide -mb-px">
 		{#each tabs as tab}
 			{@const Icon = tab.icon}
-			{@const active = isActive(tab.id)}
+			{@const active = isActive(tab.id, currentPath)}
 			<a
 				href={tab.id}
 				class={cn(

@@ -7,24 +7,21 @@ export interface SaveResult {
 }
 
 /**
- * Save a PPTX file to the file system (Tauri) or trigger download (browser)
+ * Save a file to the file system (Tauri) or trigger browser download
  */
-export async function savePptxFile(
+export async function saveFile(
 	blob: Blob,
 	filename: string,
 	outputPath: string | null
 ): Promise<SaveResult> {
 	if (isTauriApp()) {
-		return savePptxFileTauri(blob, filename, outputPath);
+		return saveFileTauri(blob, filename, outputPath);
 	} else {
-		return downloadPptxFile(blob, filename);
+		return downloadFile(blob, filename);
 	}
 }
 
-/**
- * Save file using Tauri file system plugin
- */
-async function savePptxFileTauri(
+async function saveFileTauri(
 	blob: Blob,
 	filename: string,
 	outputPath: string | null
@@ -37,28 +34,22 @@ async function savePptxFileTauri(
 		const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
 		const { join } = await import('@tauri-apps/api/path');
 
-		// Ensure directory exists
 		const dirExists = await exists(outputPath);
 		if (!dirExists) {
 			await mkdir(outputPath, { recursive: true });
 		}
 
-		// Convert blob to Uint8Array
 		const arrayBuffer = await blob.arrayBuffer();
 		const contents = new Uint8Array(arrayBuffer);
-
-		// Build full path
 		const fullPath = await join(outputPath, filename);
 
-		// Write file
 		await writeFile(fullPath, contents);
 
 		return { success: true, path: fullPath };
 	} catch (error) {
-		console.error('Failed to save PPTX file:', error);
+		console.error('Failed to save file:', error);
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		// Check for Tauri permission errors
 		if (errorMessage.includes('not allowed') || errorMessage.includes('Permissions')) {
 			return {
 				success: false,
@@ -73,10 +64,7 @@ async function savePptxFileTauri(
 	}
 }
 
-/**
- * Download file in browser mode
- */
-async function downloadPptxFile(blob: Blob, filename: string): Promise<SaveResult> {
+async function downloadFile(blob: Blob, filename: string): Promise<SaveResult> {
 	try {
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
@@ -89,7 +77,7 @@ async function downloadPptxFile(blob: Blob, filename: string): Promise<SaveResul
 
 		return { success: true, path: filename };
 	} catch (error) {
-		console.error('Failed to download PPTX file:', error);
+		console.error('Failed to download file:', error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : 'Failed to download file',
@@ -100,7 +88,7 @@ async function downloadPptxFile(blob: Blob, filename: string): Promise<SaveResul
 /**
  * Open folder picker dialog (Tauri only)
  */
-export async function pickOutputFolder(): Promise<string | null> {
+export async function pickOutputFolder(title = 'Select Output Folder'): Promise<string | null> {
 	if (!isTauriApp()) {
 		return null;
 	}
@@ -110,7 +98,7 @@ export async function pickOutputFolder(): Promise<string | null> {
 		const selected = await open({
 			directory: true,
 			multiple: false,
-			title: 'Select PPTX Output Folder',
+			title,
 		});
 
 		return selected as string | null;

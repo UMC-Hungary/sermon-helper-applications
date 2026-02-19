@@ -1,6 +1,6 @@
 import { createStorageBackend, type StorageBackend } from './storage-helpers';
 
-export type CaptionType = 'caption' | 'full';
+export type CaptionType = 'caption' | 'preview';
 export type Resolution = '1080p' | '4k';
 export type AspectRatio = '16:9' | '4:3' | '1:1' | '9:16';
 
@@ -46,8 +46,8 @@ export function getExportDimensions(resolution: Resolution, aspectRatio: AspectR
 export function getCaptionHeight(type: CaptionType, resolution: Resolution): number {
 	const base = RESOLUTION_DIMENSIONS[resolution];
 	if (type === 'caption') {
-		// Caption bar is ~14% of screen height
-		return Math.round(base.height * 0.14);
+		// Caption bar: 150px at 1080p, 300px at 4K (matching reference)
+		return resolution === '4k' ? 300 : 150;
 	}
 	return base.height;
 }
