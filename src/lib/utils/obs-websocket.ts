@@ -518,10 +518,26 @@ export class LocalOBSWebSocket {
 
 		try {
 			await this.obs.call('StartStream');
-			console.log('Stream started');
+			console.log('Stream start requested');
 		} catch (error) {
 			console.error('Failed to start stream:', error);
 			throw error;
+		}
+
+		// Give OBS time to connect, then verify it actually started
+		await new Promise((r) => setTimeout(r, 5000));
+		try {
+			const status = await this.obs?.call('GetStreamStatus');
+			if (status && !status.outputActive) {
+				// OBS failed to start — force reset UI state if still transitioning
+				this.handleStreamStateChange(false, 'OBS_WEBSOCKET_OUTPUT_STOPPED');
+				throw new Error('Stream failed to start — check OBS for details');
+			}
+		} catch (error) {
+			if (error instanceof Error && error.message.includes('Stream failed')) {
+				throw error;
+			}
+			// GetStreamStatus call failed (connection lost etc.) — ignore
 		}
 	}
 
@@ -535,7 +551,7 @@ export class LocalOBSWebSocket {
 
 		try {
 			await this.obs.call('StopStream');
-			console.log('Stream stopped');
+			console.log('Stream stop requested');
 		} catch (error) {
 			console.error('Failed to stop stream:', error);
 			throw error;

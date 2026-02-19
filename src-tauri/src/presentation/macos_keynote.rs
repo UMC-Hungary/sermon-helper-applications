@@ -41,10 +41,6 @@ impl MacosKeynoteController {
 
 #[async_trait]
 impl PresentationController for MacosKeynoteController {
-    async fn is_running(&self) -> bool {
-        Self::is_app_running()
-    }
-
     async fn open(&self, file_path: &str) -> Result<(), PresentationError> {
         if !std::path::Path::new(file_path).exists() {
             return Err(PresentationError::FileNotFound(file_path.to_string()));

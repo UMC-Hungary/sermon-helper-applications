@@ -9,7 +9,7 @@ export type YouTubeLifeCycleStatus = 'created' | 'ready' | 'testing' | 'live' | 
 // ============================================
 
 export const MIN_RECORDING_DURATION_SECONDS = 2 * 60; // 2 minutes
-export const CURRENT_EVENT_VERSION = 'v0.6.0';
+export const CURRENT_EVENT_VERSION = 'v0.7.0';
 
 // ============================================
 // Session State Types
@@ -22,6 +22,27 @@ export type EventSessionState =
 	| 'ACTIVE' // Streaming and/or recording in progress
 	| 'FINALIZING' // Post-event automation in progress
 	| 'COMPLETED'; // Event fully processed
+
+// Session activity types — append-only log entries
+export type SessionActivityType =
+	| 'SESSION_STARTED'
+	| 'OBS_CONNECTED'
+	| 'OBS_DISCONNECTED'
+	| 'STREAM_STARTED'
+	| 'STREAM_STOPPED'
+	| 'RECORD_STARTED'
+	| 'RECORD_STOPPED'
+	| 'YOUTUBE_LIVE'
+	| 'SESSION_FINALIZING'
+	| 'SESSION_COMPLETED'
+	| 'SESSION_ERROR'
+	| 'SESSION_ENDED';
+
+export interface SessionActivity {
+	type: SessionActivityType;
+	timestamp: number;
+	message?: string;
+}
 
 // Recording file information
 export interface RecordingFile {
@@ -100,33 +121,12 @@ export interface ServiceEvent {
 	// Schema version
 	version: string;
 
-	// ============================================
-	// Session State Fields (live streaming/recording)
-	// ============================================
+	// Session activity log (append-only)
+	activities?: SessionActivity[];
 
-	// Session state machine
-	sessionState?: EventSessionState;
-
-	// Timestamps
-	sessionStartedAt?: number;
-	streamStartedAt?: number;
-	streamEndedAt?: number;
-	recordStartedAt?: number;
-	recordEndedAt?: number;
-
-	// Peak states (were these ever active during session?)
-	wasOBSConnected?: boolean;
-	wasStreaming?: boolean;
-	wasRecording?: boolean;
-	wasYouTubeLive?: boolean;
-
-	// Recording files (new simplified structure)
+	// Recording files
 	recordings?: EventRecording[];
 	recordingDirectory?: string; // Informational only
-
-	// Completion
-	sessionCompletedAt?: number;
-	sessionCompletionError?: string;
 }
 
 // Generate a unique ID
@@ -299,7 +299,7 @@ export function isEventUploadable(event: ServiceEvent): boolean {
 	const uploadableRecordings = getUploadableRecordings(event);
 	if (uploadableRecordings.length === 0) return false;
 
-	return event.sessionState === 'COMPLETED';
+	return deriveSessionState(event.activities) === 'COMPLETED';
 }
 
 // Get recordings that are eligible for upload
@@ -382,30 +382,87 @@ export function getYouTubeStudioUploadUrl(event: ServiceEvent): string | null {
 }
 
 // ============================================
-// Session Helper Functions
+// Session Activity Helpers
 // ============================================
+
+// Push a new activity to the log
+export function pushActivity(
+	activities: SessionActivity[],
+	type: SessionActivityType,
+	message?: string
+): SessionActivity[] {
+	return [...activities, { type, timestamp: Date.now(), message }];
+}
+
+// Map activity types to the session state they produce
+const STATE_PRODUCING_ACTIVITIES: Record<string, EventSessionState> = {
+	SESSION_ENDED: 'IDLE',
+	SESSION_COMPLETED: 'COMPLETED',
+	SESSION_FINALIZING: 'FINALIZING',
+	STREAM_STARTED: 'ACTIVE',
+	RECORD_STARTED: 'ACTIVE',
+	SESSION_ERROR: 'ACTIVE',
+	SESSION_STARTED: 'PREPARING'
+};
+
+// Derive current session state from activities
+export function deriveSessionState(activities?: SessionActivity[]): EventSessionState {
+	if (!activities?.length) return 'IDLE';
+	const lastStateActivity = activities.findLast((a) => a.type in STATE_PRODUCING_ACTIVITIES);
+	return lastStateActivity ? STATE_PRODUCING_ACTIVITIES[lastStateActivity.type] : 'IDLE';
+}
 
 // Check if event has an active session
 export function isSessionActive(event: ServiceEvent): boolean {
-	return event.sessionState === 'ACTIVE' || event.sessionState === 'PREPARING';
+	const state = deriveSessionState(event.activities);
+	return state === 'ACTIVE' || state === 'PREPARING';
 }
 
-// Check if session is complete or failed
+// Check if session is complete
 export function isSessionFinished(event: ServiceEvent): boolean {
-	return event.sessionState === 'COMPLETED';
+	return deriveSessionState(event.activities) === 'COMPLETED';
 }
 
 // Check if event has any session state (session was started at some point)
 export function hasSessionState(event: ServiceEvent): boolean {
-	return event.sessionState !== undefined && event.sessionState !== 'IDLE';
+	return deriveSessionState(event.activities) !== 'IDLE';
 }
 
-// Get session duration in milliseconds
+// Find last activity of a given type
+export function getLastActivity(
+	activities: SessionActivity[] | undefined,
+	type: SessionActivityType
+): SessionActivity | undefined {
+	return activities?.findLast((a) => a.type === type);
+}
+
+// Check if any activity of a given type exists
+export function hasActivity(
+	activities: SessionActivity[] | undefined,
+	type: SessionActivityType
+): boolean {
+	return activities?.some((a) => a.type === type) ?? false;
+}
+
+// Get last SESSION_ERROR message
+export function getSessionError(activities?: SessionActivity[]): string | undefined {
+	return getLastActivity(activities, 'SESSION_ERROR')?.message;
+}
+
+// Get session duration in milliseconds (from first stream/record start to last stop)
 export function getSessionDuration(event: ServiceEvent): number {
-	const endTime = event.recordEndedAt || event.streamEndedAt || Date.now();
-	const startTime = event.recordStartedAt || event.streamStartedAt || event.sessionStartedAt;
-	if (!startTime) return 0;
-	return endTime - startTime;
+	const activities = event.activities;
+	if (!activities?.length) return 0;
+
+	const startTypes: SessionActivityType[] = ['RECORD_STARTED', 'STREAM_STARTED'];
+	const stopTypes: SessionActivityType[] = ['RECORD_STOPPED', 'STREAM_STOPPED'];
+
+	const firstStart = activities.find((a) => startTypes.includes(a.type));
+	const lastStop = activities.findLast((a) => stopTypes.includes(a.type));
+
+	if (!firstStart) return 0;
+	const endTime = lastStop?.timestamp ?? Date.now();
+	return endTime - firstStart.timestamp;
 }
 
 // Check if session meets minimum duration for upload
@@ -413,37 +470,6 @@ export function meetsMinimumDuration(event: ServiceEvent, minMinutes: number): b
 	const durationMs = getSessionDuration(event);
 	const minMs = minMinutes * 60 * 1000;
 	return durationMs >= minMs;
-}
-
-// Clear session state from an event (reset to no session)
-export function clearSessionState(event: ServiceEvent): Partial<ServiceEvent> {
-	return {
-		sessionState: undefined,
-		sessionStartedAt: undefined,
-		streamStartedAt: undefined,
-		streamEndedAt: undefined,
-		recordStartedAt: undefined,
-		recordEndedAt: undefined,
-		wasOBSConnected: undefined,
-		wasStreaming: undefined,
-		wasRecording: undefined,
-		wasYouTubeLive: undefined,
-		recordingDirectory: undefined,
-		sessionCompletedAt: undefined,
-		sessionCompletionError: undefined
-	};
-}
-
-// Initialize session state on an event
-export function initSessionState(): Partial<ServiceEvent> {
-	return {
-		sessionState: 'PREPARING',
-		sessionStartedAt: Date.now(),
-		wasOBSConnected: false,
-		wasStreaming: false,
-		wasRecording: false,
-		wasYouTubeLive: false
-	};
 }
 
 // Create an EventRecording from a RecordingFile

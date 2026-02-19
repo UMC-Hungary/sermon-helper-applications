@@ -38,6 +38,7 @@
 	class:justify-end={!isMac}
 	class:pl-[70px]={isMac}
 	role="toolbar"
+	tabindex={-1}
 	onmousedown={handleMouseDown}
 >
 	{#if !isMac}

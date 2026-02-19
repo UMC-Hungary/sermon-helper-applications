@@ -120,9 +120,8 @@ impl WindowsPowerPointController {
     }
 }
 
-#[async_trait]
-impl PresentationController for WindowsPowerPointController {
-    async fn is_running(&self) -> bool {
+impl WindowsPowerPointController {
+    fn is_running(&self) -> bool {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
         }
@@ -138,7 +137,10 @@ impl PresentationController for WindowsPowerPointController {
             GetActiveObject(&clsid, None, &mut punk).is_ok() && punk.is_some()
         }
     }
+}
 
+#[async_trait]
+impl PresentationController for WindowsPowerPointController {
     async fn open(&self, file_path: &str) -> Result<(), PresentationError> {
         if !std::path::Path::new(file_path).exists() {
             return Err(PresentationError::FileNotFound(file_path.to_string()));
@@ -322,7 +324,7 @@ impl PresentationController for WindowsPowerPointController {
     }
 
     async fn get_status(&self) -> Result<PresentationStatus, PresentationError> {
-        let running = self.is_running().await;
+        let running = self.is_running();
         if !running {
             return Ok(PresentationStatus {
                 app: PresentationApp::PowerPoint,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
+	import { page } from '$app/stores';
 	import EventForm from '$lib/components/event-form.svelte';
 	import { toast } from '$lib/utils/toast';
 	import { eventStore, upcomingEvents, pastEvents } from '$lib/stores/event-store';
@@ -10,7 +10,7 @@
 	import type { ServiceEvent } from '$lib/types/event';
 
 	// Get event ID from URL
-	const eventId = page.params.id;
+	$: eventId = $page.params.id;
 
 	// Find the event to edit (reactive - using Svelte 4 syntax that works)
 	$: allEvents = [...$upcomingEvents, ...$pastEvents];

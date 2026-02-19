@@ -1,8 +1,12 @@
 // Data Schema Cleanup Service
 // Removes outdated data on startup to ensure clean schema
-// Future: can add more cleanup tasks as schema evolves
 
-import { CURRENT_EVENT_VERSION, type ServiceEvent } from '$lib/types/event';
+import {
+	CURRENT_EVENT_VERSION,
+	deriveSessionState,
+	pushActivity,
+	type ServiceEvent
+} from '$lib/types/event';
 import { appSettingsStore } from '$lib/utils/app-settings-store';
 
 class DataSchemaCleanupService {
@@ -29,14 +33,15 @@ class DataSchemaCleanupService {
 
 		let modified = false;
 		const recovered = events.map((event) => {
-			if (event.sessionState === 'FINALIZING') {
+			if (deriveSessionState(event.activities) === 'FINALIZING') {
 				console.log(`[DataSchemaCleanup] Recovering stuck FINALIZING session for event: ${event.id}`);
 				modified = true;
-				return {
-					...event,
-					sessionState: 'ACTIVE' as const,
-					sessionCompletionError: 'Session interrupted — automation was reset on restart'
-				};
+				const activities = pushActivity(
+					event.activities ?? [],
+					'SESSION_ERROR',
+					'Session interrupted — automation was reset on restart'
+				);
+				return { ...event, activities };
 			}
 			return event;
 		});

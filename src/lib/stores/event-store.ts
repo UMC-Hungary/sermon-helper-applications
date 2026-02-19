@@ -3,7 +3,7 @@ import { appSettings, appSettingsStore } from '$lib/utils/app-settings-store';
 import type {
 	ServiceEvent,
 	EventRecording,
-	EventSessionState
+	SessionActivityType
 } from '$lib/types/event';
 import {
 	isEventToday,
@@ -11,8 +11,8 @@ import {
 	sortEventsByDate,
 	isSessionActive,
 	getSessionDuration,
-	initSessionState,
-	clearSessionState,
+	deriveSessionState,
+	pushActivity,
 	isEventUploadable,
 	getUploadableRecordings,
 	getLocalToday,
@@ -37,13 +37,13 @@ export const todayEvent = derived(eventList, ($eventList) => {
 	const list = $eventList ?? [];
 	const todayEvents = sortEventsByDate(list.filter(isEventToday));
 	// Pick the first event by time that hasn't completed yet
-	return todayEvents.find((e) => e.sessionState !== 'COMPLETED') ?? null;
+	return todayEvents.find((e) => deriveSessionState(e.activities) !== 'COMPLETED') ?? null;
 });
 
 // Derived store for upcoming events (sorted, excludes completed events)
 export const upcomingEvents = derived(eventList, ($eventList) => {
 	const list = $eventList ?? [];
-	return sortEventsByDate(list.filter((e) => isEventUpcoming(e) && e.sessionState !== 'COMPLETED'));
+	return sortEventsByDate(list.filter((e) => isEventUpcoming(e) && deriveSessionState(e.activities) !== 'COMPLETED'));
 });
 
 // Derived store for past events (sorted, most recent first)
@@ -51,7 +51,7 @@ export const upcomingEvents = derived(eventList, ($eventList) => {
 export const pastEvents = derived(eventList, ($eventList) => {
 	const list = $eventList ?? [];
 	const today = getLocalToday();
-	return sortEventsByDate(list.filter((e) => e.date < today || e.sessionState === 'COMPLETED')).reverse();
+	return sortEventsByDate(list.filter((e) => e.date < today || deriveSessionState(e.activities) === 'COMPLETED')).reverse();
 });
 
 // ============================================
@@ -67,19 +67,22 @@ export const currentEvent = derived(eventList, ($eventList) => {
 	if (activeSessionEvent) return activeSessionEvent;
 
 	// Then check for a finalizing session
-	const finalizingEvent = list.find((e) => e.sessionState === 'FINALIZING');
+	const finalizingEvent = list.find((e) => deriveSessionState(e.activities) === 'FINALIZING');
 	if (finalizingEvent) return finalizingEvent;
 
 	// Fall back to today's first non-completed event (by time) if it has a session state
 	const todayEvents = sortEventsByDate(list.filter(isEventToday));
-	const today = todayEvents.find((e) => e.sessionState && e.sessionState !== 'COMPLETED');
+	const today = todayEvents.find((e) => {
+		const state = deriveSessionState(e.activities);
+		return state !== 'IDLE' && state !== 'COMPLETED';
+	});
 	if (today) return today;
 
 	return null;
 });
 
 // Current session state (derived from currentEvent)
-export const sessionState = derived(currentEvent, ($event) => $event?.sessionState ?? 'IDLE');
+export const sessionState = derived(currentEvent, ($event) => deriveSessionState($event?.activities));
 
 // Is there an active session in progress?
 export const isSessionInProgress = derived(currentEvent, ($event) =>
@@ -336,6 +339,18 @@ export const eventStore = {
 	// Session State Operations
 	// ----------------------------------------
 
+	// Push a session activity to an event's activity log
+	pushSessionActivity(eventId: string, type: SessionActivityType, message?: string): void {
+		const event = this.getEventById(eventId);
+		if (!event) {
+			console.error(`[EventStore] Cannot push activity: event ${eventId} not found`);
+			return;
+		}
+		const activities = pushActivity(event.activities ?? [], type, message);
+		this.updateEvent(eventId, { activities });
+		console.log(`[EventStore] Activity ${type} pushed for event ${eventId}${message ? `: ${message}` : ''}`);
+	},
+
 	// Start a new session for an event
 	startSession(eventId: string): ServiceEvent | null {
 		const event = this.getEventById(eventId);
@@ -351,9 +366,7 @@ export const eventStore = {
 			return null;
 		}
 
-		const sessionFields = initSessionState();
-		this.updateEvent(eventId, sessionFields);
-
+		this.pushSessionActivity(eventId, 'SESSION_STARTED');
 		console.log(`[EventStore] Started session for event ${eventId}`);
 		return this.getEventById(eventId) ?? null;
 	},
@@ -363,81 +376,62 @@ export const eventStore = {
 		const event = this.getEventById(eventId);
 		if (!event) return;
 
-		const clearedFields = clearSessionState(event);
-		this.updateEvent(eventId, clearedFields);
-
+		this.pushSessionActivity(eventId, 'SESSION_ENDED');
+		this.updateEvent(eventId, { recordingDirectory: undefined });
 		console.log(`[EventStore] Session ended for event ${eventId}`);
-	},
-
-	// Update session state
-	updateSessionState(eventId: string, state: EventSessionState): void {
-		const updates: Partial<ServiceEvent> = { sessionState: state };
-
-		if (state === 'COMPLETED') {
-			updates.sessionCompletedAt = Date.now();
-		}
-
-		this.updateEvent(eventId, updates);
-		console.log(`[EventStore] Session state changed to: ${state} for event ${eventId}`);
 	},
 
 	// Called when OBS connects
 	onOBSConnected(eventId: string): void {
-		this.updateEvent(eventId, { wasOBSConnected: true });
+		this.pushSessionActivity(eventId, 'OBS_CONNECTED');
 	},
 
 	// Called when OBS disconnects
-	onOBSDisconnected(_eventId: string): void {
-		// No-op: OBS disconnect no longer pauses the session
+	onOBSDisconnected(eventId: string): void {
+		this.pushSessionActivity(eventId, 'OBS_DISCONNECTED');
 	},
 
 	// Called when streaming starts
 	onStreamStarted(eventId: string): void {
-		const event = this.getEventById(eventId);
-		this.updateEvent(eventId, {
-			wasStreaming: true,
-			streamStartedAt: event?.streamStartedAt ?? Date.now(),
-			sessionState: 'ACTIVE'
-		});
-		console.log(`[EventStore] Stream started for event ${eventId}`);
+		this.pushSessionActivity(eventId, 'STREAM_STARTED');
 	},
 
 	// Called when streaming stops
 	onStreamStopped(eventId: string): void {
-		this.updateEvent(eventId, { streamEndedAt: Date.now() });
-		console.log(`[EventStore] Stream stopped for event ${eventId}`);
+		this.pushSessionActivity(eventId, 'STREAM_STOPPED');
 	},
 
 	// Called when recording starts
 	onRecordStarted(eventId: string): void {
-		const event = this.getEventById(eventId);
-		this.updateEvent(eventId, {
-			wasRecording: true,
-			recordStartedAt: event?.recordStartedAt ?? Date.now(),
-			sessionState: 'ACTIVE'
-		});
-		console.log(`[EventStore] Recording started for event ${eventId}`);
+		this.pushSessionActivity(eventId, 'RECORD_STARTED');
 	},
 
 	// Called when recording stops
 	onRecordStopped(eventId: string, recordingDirectory?: string): void {
-		const event = this.getEventById(eventId);
-		this.updateEvent(eventId, {
-			recordEndedAt: Date.now(),
-			recordingDirectory: recordingDirectory ?? event?.recordingDirectory
-		});
-		console.log(`[EventStore] Recording stopped for event ${eventId}`);
+		this.pushSessionActivity(eventId, 'RECORD_STOPPED', recordingDirectory);
+		if (recordingDirectory) {
+			this.updateEvent(eventId, { recordingDirectory });
+		}
 	},
 
 	// Called when YouTube goes live
 	onYouTubeLive(eventId: string): void {
-		this.updateEvent(eventId, { wasYouTubeLive: true });
-		console.log(`[EventStore] YouTube went live for event ${eventId}`);
+		this.pushSessionActivity(eventId, 'YOUTUBE_LIVE');
 	},
 
 	// Set error on session
 	setSessionError(eventId: string, error: string): void {
-		this.updateEvent(eventId, { sessionCompletionError: error });
+		this.pushSessionActivity(eventId, 'SESSION_ERROR', error);
+	},
+
+	// Transition to FINALIZING state
+	setSessionFinalizing(eventId: string): void {
+		this.pushSessionActivity(eventId, 'SESSION_FINALIZING');
+	},
+
+	// Transition to COMPLETED state
+	setSessionCompleted(eventId: string): void {
+		this.pushSessionActivity(eventId, 'SESSION_COMPLETED');
 	},
 
 	// Get current event with session

@@ -65,7 +65,7 @@ class PostEventAutomationService {
 
 		try {
 			// Update event session to FINALIZING
-			await eventStore.updateSessionState(event.id, 'FINALIZING');
+			await eventStore.setSessionFinalizing(event.id);
 
 			// Step 1: Process upload queue (only if auto-upload is enabled)
 			let uploadedCount = 0;
@@ -80,7 +80,7 @@ class PostEventAutomationService {
 
 			// Step 3: Mark session as completed
 			this.state.currentStep = 'completed';
-			await eventStore.updateSessionState(event.id, 'COMPLETED');
+			await eventStore.setSessionCompleted(event.id);
 
 			console.log('[PostEventAutomation] Workflow completed successfully');
 			if (uploadedCount > 0) {
@@ -97,9 +97,8 @@ class PostEventAutomationService {
 
 			const currentEventNow = get(currentEvent);
 			if (currentEventNow) {
+				// SESSION_ERROR activity also reverts state to ACTIVE
 				await eventStore.setSessionError(currentEventNow.id, message);
-				// Revert to ACTIVE so user can retry or continue working
-				await eventStore.updateSessionState(currentEventNow.id, 'ACTIVE');
 			}
 
 			toast({

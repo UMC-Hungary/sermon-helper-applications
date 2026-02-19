@@ -212,9 +212,8 @@ impl LinuxImpressController {
     }
 }
 
-#[async_trait]
-impl PresentationController for LinuxImpressController {
-    async fn is_running(&self) -> bool {
+impl LinuxImpressController {
+    fn is_running(&self) -> bool {
         // Check if soffice process is running
         std::process::Command::new("pgrep")
             .args(["-x", "soffice.bin"])
@@ -222,7 +221,10 @@ impl PresentationController for LinuxImpressController {
             .map(|o| o.status.success())
             .unwrap_or(false)
     }
+}
 
+#[async_trait]
+impl PresentationController for LinuxImpressController {
     async fn open(&self, file_path: &str) -> Result<(), PresentationError> {
         if !std::path::Path::new(file_path).exists() {
             return Err(PresentationError::FileNotFound(file_path.to_string()));
@@ -288,7 +290,7 @@ impl PresentationController for LinuxImpressController {
     }
 
     async fn get_status(&self) -> Result<PresentationStatus, PresentationError> {
-        let is_running = self.is_running().await;
+        let is_running = self.is_running();
         if !is_running {
             return Ok(PresentationStatus {
                 app: PresentationApp::Impress,

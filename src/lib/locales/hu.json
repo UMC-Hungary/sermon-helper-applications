@@ -344,7 +344,8 @@
 			"configSavedDescription": "YouTube API hitelesítő adatok mentve",
 			"error": "Hiba",
 			"enterBoth": "Kérjük, adja meg a Client ID-t és a Client Secret-et is",
-			"loginFailed": "Nem sikerült elindítani a bejelentkezést"
+			"loginFailed": "Nem sikerült elindítani a bejelentkezést",
+			"loginSuccess": "Sikeres bejelentkezés"
 		},
 		"scheduling": {
 			"title": "YouTube Ütemezés",
@@ -416,6 +417,21 @@
 			"triggerManually": "Utófeldolgozás Indítása"
 		},
 		"finishSession": "Munkamenet befejezése",
+		"activity": {
+			"title": "Munkamenet Napló",
+			"SESSION_STARTED": "Munkamenet elindult",
+			"OBS_CONNECTED": "OBS csatlakozva",
+			"OBS_DISCONNECTED": "OBS lecsatlakozva",
+			"STREAM_STARTED": "Közvetítés elindult",
+			"STREAM_STOPPED": "Közvetítés leállt",
+			"RECORD_STARTED": "Felvétel elindult",
+			"RECORD_STOPPED": "Felvétel leállt",
+			"YOUTUBE_LIVE": "YouTube élő adásban",
+			"SESSION_FINALIZING": "Utófeldolgozás",
+			"SESSION_COMPLETED": "Munkamenet kész",
+			"SESSION_ERROR": "Hiba",
+			"SESSION_ENDED": "Munkamenet befejezve"
+		},
 		"connection": {
 			"lost": "Kapcsolat Elveszett",
 			"reconnecting": "Újracsatlakozás...",

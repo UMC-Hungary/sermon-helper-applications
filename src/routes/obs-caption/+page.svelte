@@ -15,6 +15,10 @@
 		getCaptionHeight
 	} from '$lib/utils/caption-store';
 	import { discoveryServerStatus } from '$lib/stores/discovery-server-store';
+	import { appSettings } from '$lib/utils/app-settings-store';
+	import { appSettingsStore } from '$lib/utils/app-settings-store';
+	import { saveFile, pickOutputFolder, openFolder } from '$lib/utils/file-saver';
+	import { isTauriApp } from '$lib/utils/storage-helpers';
 	import {
 		Subtitles,
 		Copy,
@@ -26,9 +30,12 @@
 		Download,
 		Monitor,
 		Image,
-		Loader2
+		Loader2,
+		FolderOpen
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
+
+	const isTauri = isTauriApp();
 
 	let settings: CaptionSettings = captionSettingsStore.getDefaultSettings();
 	let isLoading = true;
@@ -306,7 +313,7 @@
 				}
 			}
 
-			// Convert to blob and download
+			// Convert to blob and save
 			const blob = await new Promise<Blob>((resolve, reject) => {
 				canvas.toBlob((b) => {
 					if (b) resolve(b);
@@ -314,20 +321,39 @@
 				}, 'image/png');
 			});
 
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `caption-${settings.resolution}-${settings.aspectRatio.replace(':', 'x')}.png`;
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
+			const filename = `caption-${settings.resolution}-${settings.aspectRatio.replace(':', 'x')}.png`;
 
-			toast({
-				title: 'Export Complete',
-				description: `Image exported at ${width}x${settings.type === 'preview' ? exportDimensions.height : captionHeight}`,
-				variant: 'success'
-			});
+			// If Tauri and no output path configured, prompt for folder
+			if (isTauri && !$appSettings.captionOutputPath) {
+				const selectedPath = await pickOutputFolder('Select Caption Export Folder');
+				if (!selectedPath) {
+					toast({
+						title: 'Export Cancelled',
+						description: 'No output folder selected',
+						variant: 'error'
+					});
+					return;
+				}
+				await appSettingsStore.set('captionOutputPath', selectedPath);
+			}
+
+			const result = await saveFile(blob, filename, $appSettings.captionOutputPath);
+
+			if (result.success) {
+				toast({
+					title: 'Export Complete',
+					description: result.path
+						? `Saved to ${result.path}`
+						: `Image exported at ${width}x${settings.type === 'preview' ? exportDimensions.height : captionHeight}`,
+					variant: 'success'
+				});
+			} else {
+				toast({
+					title: 'Export Failed',
+					description: result.error || 'Failed to export image',
+					variant: 'error'
+				});
+			}
 		} catch (error) {
 			console.error('Export failed:', error);
 			toast({
@@ -337,6 +363,19 @@
 			});
 		} finally {
 			isExporting = false;
+		}
+	}
+
+	async function handleChangeFolder() {
+		const selectedPath = await pickOutputFolder('Select Caption Export Folder');
+		if (selectedPath) {
+			await appSettingsStore.set('captionOutputPath', selectedPath);
+		}
+	}
+
+	async function handleOpenFolder() {
+		if ($appSettings.captionOutputPath) {
+			await openFolder($appSettings.captionOutputPath);
 		}
 	}
 
@@ -590,6 +629,42 @@
 						<div class="text-xs text-muted-foreground">
 							Export size: {exportDimensions.width} × {settings.type === 'preview' ? exportDimensions.height : captionHeight} pixels
 						</div>
+
+						<!-- Output folder (Tauri only) -->
+						{#if isTauri}
+							<div class="space-y-2">
+								<Label>Output Folder</Label>
+								{#if $appSettings.captionOutputPath}
+									<div class="flex items-center gap-2">
+										<code class="flex-1 text-xs bg-background rounded px-2 py-1.5 truncate border">{$appSettings.captionOutputPath}</code>
+										<button
+											type="button"
+											on:click={handleOpenFolder}
+											class="shrink-0 p-1.5 rounded hover:bg-background transition-colors"
+											title="Open folder"
+										>
+											<FolderOpen class="h-4 w-4" />
+										</button>
+										<button
+											type="button"
+											on:click={handleChangeFolder}
+											class="shrink-0 text-xs text-muted-foreground hover:text-foreground underline"
+										>
+											Change
+										</button>
+									</div>
+								{:else}
+									<Button
+										buttonVariant="outline"
+										onclick={handleChangeFolder}
+										className="w-full bg-transparent"
+									>
+										<FolderOpen class="mr-2 h-4 w-4" />
+										Select Output Folder
+									</Button>
+								{/if}
+							</div>
+						{/if}
 
 						<Button
 							onclick={handleExport}

@@ -31,6 +31,8 @@ export interface AppSettings {
 	rfIrSettings: RfIrSettings;
 	// PPT folder settings (for Companion integration)
 	pptSettings: PptSettings;
+	// OBS caption export output folder path (Tauri only)
+	captionOutputPath: string | null;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -44,6 +46,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 	discoverySettings: DEFAULT_DISCOVERY_SETTINGS,
 	rfIrSettings: DEFAULT_RF_IR_SETTINGS,
 	pptSettings: DEFAULT_PPT_SETTINGS,
+	captionOutputPath: null,
 };
 
 // Reactive store for app settings - can be subscribed to by components

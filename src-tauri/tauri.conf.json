@@ -14,11 +14,11 @@
     "windows": [
       {
         "title": "sermon-helper-tauri",
-        "width": 800,
-        "height": 600,
+        "width": 1280,
+        "height": 800,
         "transparent": true,
         "decorations": true,
-        "titleBarStyle": "overlay",
+        "titleBarStyle": "Overlay",
         "hiddenTitle": true
       }
     ],

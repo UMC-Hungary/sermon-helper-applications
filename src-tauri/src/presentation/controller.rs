@@ -8,8 +8,6 @@ use super::types::{PresentationError, PresentationStatus};
 /// implements this trait to provide a unified control interface.
 #[async_trait]
 pub trait PresentationController: Send + Sync {
-    /// Check if the target application is running
-    async fn is_running(&self) -> bool;
 
     /// Open a presentation file
     async fn open(&self, file_path: &str) -> Result<(), PresentationError>;

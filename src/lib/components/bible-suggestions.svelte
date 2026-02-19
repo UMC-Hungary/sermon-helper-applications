@@ -40,6 +40,7 @@
 				<button
 					type="button"
 					role="option"
+					aria-selected={false}
 					tabindex={0}
 					class="relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 px-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
 					onclick={() => handleSelect(suggestion)}

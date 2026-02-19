@@ -15,10 +15,19 @@
 		if (disabled) return;
 		onclick?.();
 	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (disabled) return;
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onclick?.();
+		}
+	}
 </script>
 
 <div
 	role="menuitem"
+	tabindex={disabled ? -1 : 0}
 	class={cn(
 		'relative flex cursor-default select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
 		className,
@@ -26,6 +35,7 @@
 	)}
 	data-disabled={disabled}
 	onclick={handleClick}
+	onkeydown={handleKeydown}
 >
 	{@render children?.()}
 </div>
