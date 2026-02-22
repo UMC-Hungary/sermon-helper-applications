@@ -29,9 +29,10 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_dialog::init());
 
-    // Commands registered only on desktop (require server or filesystem access).
+    // Pass generate_handler! directly into invoke_handler so the closure type
+    // is inferred at the call site — storing it in a let binding loses the type.
     #[cfg(desktop)]
-    let invoke_handler = tauri::generate_handler![
+    let builder = builder.invoke_handler(tauri::generate_handler![
         commands::collections::save_bruno_collection,
         commands::token::get_token,
         commands::token::refresh_token,
@@ -42,11 +43,11 @@ pub fn run() {
         commands::server::get_client_url,
         commands::server::get_client_token,
         commands::server::reset_setup,
-    ];
+    ]);
 
     // Mobile is client-only — no server or Bruno collection commands.
     #[cfg(mobile)]
-    let invoke_handler = tauri::generate_handler![
+    let builder = builder.invoke_handler(tauri::generate_handler![
         commands::token::get_token,
         commands::token::refresh_token,
         commands::server::get_server_port,
@@ -56,7 +57,7 @@ pub fn run() {
         commands::server::get_client_url,
         commands::server::get_client_token,
         commands::server::reset_setup,
-    ];
+    ]);
 
     builder
         .setup(|app| {
@@ -121,7 +122,6 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(invoke_handler)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
