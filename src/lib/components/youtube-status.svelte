@@ -41,7 +41,7 @@
 
 		isGoingLive = true;
 		try {
-			await youtubeApi.goLive(event.youtubeScheduledId);
+			await youtubeApi.goLive(event.youtubeScheduledId, status === 'testing' ? 'testing' : 'ready');
 			toast({
 				title: $_('streaming.youtube.liveSuccess'),
 				description: $_('streaming.youtube.liveSuccessDescription'),

@@ -10,10 +10,12 @@
 	import { uploadManager } from '$lib/services/upload/upload-manager';
 	import {
 		formatEventDate,
+		formatEventTime,
 		formatDuration,
 		generateCalculatedTitle,
 		getRecordingStatus,
 		getYouTubeVideoUrl,
+		getEventDate,
 		getLocalToday,
 		type ServiceEvent,
 		type EventRecording,
@@ -182,9 +184,10 @@
 	// Get badge variant for event
 	function getEventBadge(event: ServiceEvent): { variant: 'default' | 'secondary' | 'success'; label: string } {
 		const today = getLocalToday();
-		if (event.date === today) {
+		const eventDate = getEventDate(event);
+		if (eventDate === today) {
 			return { variant: 'success', label: $_('events.badges.today') };
-		} else if (event.date > today) {
+		} else if (eventDate > today) {
 			return { variant: 'default', label: $_('events.badges.upcoming') };
 		}
 		return { variant: 'secondary', label: $_('events.badges.past') };
@@ -256,7 +259,7 @@
 			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
 					<Clock class="h-4 w-4" />
-					<span>{$todayEvent.time || $_('events.noTime')}</span>
+					<span>{formatEventTime($todayEvent.dateTime) || $_('events.noTime')}</span>
 				</div>
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
 					<User class="h-4 w-4" />
@@ -305,10 +308,10 @@
 					</svelte:fragment>
 					<svelte:fragment slot="content">
 						<div class="space-y-2 text-sm">
-							{#if event.time}
+							{#if formatEventTime(event.dateTime)}
 								<div class="flex items-center gap-2 text-muted-foreground">
 									<Clock class="h-4 w-4" />
-									<span>{event.time}</span>
+									<span>{formatEventTime(event.dateTime)}</span>
 								</div>
 							{/if}
 							{#if event.speaker}
@@ -482,7 +485,7 @@
 									{generateCalculatedTitle(event)}
 								</td>
 								<td class="px-4 py-3 text-muted-foreground whitespace-nowrap">
-									{formatEventDate(event.date)}
+									{formatEventDate(event.dateTime)}
 								</td>
 								<td class="px-4 py-3 text-muted-foreground">
 									{event.speaker || '-'}

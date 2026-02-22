@@ -430,7 +430,13 @@
 			"SESSION_FINALIZING": "Post-event processing",
 			"SESSION_COMPLETED": "Session completed",
 			"SESSION_ERROR": "Error",
-			"SESSION_ENDED": "Session ended"
+			"SESSION_ENDED": "Session ended",
+			"RECORDING_SCAN_STARTED": "Recording scan started",
+			"RECORDING_SCAN_COMPLETED": "Recording scan completed",
+			"RECORDING_MANUALLY_ADDED": "Recording manually added",
+			"RECORDING_SELECTED_FOR_UPLOAD": "Recording selected for upload",
+			"RECORDING_DESELECTED_FROM_UPLOAD": "Recording deselected from upload",
+			"SESSION_FINALIZED": "Session finalized"
 		},
 		"connection": {
 			"lost": "Connection Lost",
@@ -588,6 +594,31 @@
 			"paused": "Paused",
 			"processing": "Processing",
 			"failed": "Failed"
+		}
+	},
+	"finalize": {
+		"title": "Finalize Event",
+		"button": "Finalize Event",
+		"submit": "Finalize",
+		"scan": {
+			"title": "Scan for Recordings",
+			"scanning": "Scanning...",
+			"noDirectory": "No recording directory set for this event.",
+			"found": "{count} recording(s) found",
+			"noneFound": "No new recordings found",
+			"addToEvent": "Add",
+			"startScan": "Scan Directory"
+		},
+		"manual": {
+			"title": "Add Files Manually",
+			"selectFiles": "Select Files"
+		},
+		"recordings": {
+			"title": "Recordings"
+		},
+		"toast": {
+			"finalized": "Event Finalized",
+			"finalizedDescription": "The event has been finalized successfully"
 		}
 	},
 	"obsDevices": {
