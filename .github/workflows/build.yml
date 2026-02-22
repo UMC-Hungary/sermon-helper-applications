@@ -19,6 +19,9 @@ env:
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
 jobs:
+  # ──────────────────────────────────────────────
+  # Desktop builds (macOS, Windows, Linux)
+  # ──────────────────────────────────────────────
   build:
     permissions:
       contents: write
@@ -220,9 +223,293 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.sig
           if-no-files-found: error
 
-  # Create release (only on version tags)
+  # ──────────────────────────────────────────────
+  # iOS build (client-only, no embedded server)
+  # Requires: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
+  #           APPLE_PROVISIONING_PROFILE secrets for signed builds.
+  # Without those secrets an unsigned simulator/device build is produced.
+  #
+  # One-time setup: run `pnpm tauri ios init` locally and commit
+  # src-tauri/gen/apple/ to the repository.
+  # ──────────────────────────────────────────────
+  build-ios:
+    runs-on: macos-latest
+    name: Build (iOS)
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: macOS-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: macOS-pnpm-store-
+
+      - name: Setup Rust with iOS targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: ios
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Update version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = '$VERSION';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+          "
+          sed -i '' 's/^version = ".*"/version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+
+      # Initialize iOS project if it hasn't been committed to the repo yet.
+      # Best practice: run `pnpm tauri ios init` locally and commit the result.
+      - name: Initialize iOS project (if needed)
+        run: |
+          if [ ! -d "src-tauri/gen/apple" ]; then
+            echo "iOS project not found — running tauri ios init"
+            pnpm tauri ios init
+          else
+            echo "iOS project already present"
+          fi
+
+      # Import Apple signing certificate when the secret is configured.
+      - name: Import Apple signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          security create-keychain -p "" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "" $KEYCHAIN_PATH
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 \
+            -k $KEYCHAIN_PATH \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "" $KEYCHAIN_PATH
+
+      # Install provisioning profile when configured.
+      - name: Install provisioning profile
+        if: env.APPLE_PROVISIONING_PROFILE != ''
+        env:
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$APPLE_PROVISIONING_PROFILE" | base64 --decode \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      # Signed build when signing secrets are available.
+      - name: Build iOS app (signed)
+        if: env.APPLE_CERTIFICATE != '' && env.APPLE_PROVISIONING_PROFILE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: pnpm tauri ios build --export-method ad-hoc
+
+      # Unsigned build when signing secrets are not available (CI verification only).
+      - name: Build iOS app (unsigned)
+        if: env.APPLE_CERTIFICATE == '' || env.APPLE_PROVISIONING_PROFILE == ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          pnpm tauri ios build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS
+          path: |
+            src-tauri/gen/apple/build/**/*.ipa
+            src-tauri/gen/apple/build/**/*.app
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────
+  # Android build (client-only, no embedded server)
+  # Requires: ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD,
+  #           ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD secrets
+  #           for signed release builds.
+  #
+  # One-time setup: run `pnpm tauri android init` locally and commit
+  # src-tauri/gen/android/ to the repository.
+  # ──────────────────────────────────────────────
+  build-android:
+    runs-on: ubuntu-latest
+    name: Build (Android)
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: Linux-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: Linux-pnpm-store-
+
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;27.0.12077973"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Setup Rust with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: android
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Update version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = '$VERSION';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+          "
+          sed -i 's/^version = ".*"/version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+
+      # Initialize Android project if not committed to the repo.
+      # Best practice: run `pnpm tauri android init` locally and commit the result.
+      - name: Initialize Android project (if needed)
+        run: |
+          if [ ! -d "src-tauri/gen/android" ]; then
+            echo "Android project not found — running tauri android init"
+            pnpm tauri android init
+          else
+            echo "Android project already present"
+          fi
+
+      # Decode keystore for signed release builds.
+      - name: Setup Android keystore
+        if: env.ANDROID_KEYSTORE != ''
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 --decode > $RUNNER_TEMP/release.keystore
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
+
+      # Signed release build when keystore is available.
+      - name: Build Android app (signed release)
+        if: env.ANDROID_KEYSTORE != ''
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          pnpm tauri android build \
+            --apk \
+            -- \
+            -Pandroid.injected.signing.store.file="$ANDROID_KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      # Debug (unsigned) build when keystore is not available.
+      - name: Build Android app (debug)
+        if: env.ANDROID_KEYSTORE == ''
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: pnpm tauri android build --apk --debug
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────
+  # Release (version tags only)
+  # ──────────────────────────────────────────────
   release:
-    needs: build
+    needs: [build, build-ios, build-android]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -339,6 +626,12 @@ jobs:
             - `.rpm` - Fedora/RHEL
             - `.AppImage` - Universal (make executable with `chmod +x`)
 
+            ### iOS
+            Install via TestFlight or side-load the `.ipa` (requires ad-hoc provisioning).
+
+            ### Android
+            Install the `.apk` directly (enable "Install from unknown sources").
+
           files: |
             latest.json
             artifacts/**/*.exe
@@ -354,3 +647,6 @@ jobs:
             artifacts/**/*.rpm.sig
             artifacts/**/*.AppImage
             artifacts/**/*.AppImage.sig
+            artifacts/**/*.ipa
+            artifacts/**/*.apk
+            artifacts/**/*.aab
