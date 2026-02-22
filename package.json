@@ -1,7 +1,7 @@
 {
   "name": "sermon-helper-tauri",
-  "version": "0.1.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "Sermon Helper v2 — embedded PostgreSQL + Axum",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -10,34 +10,14 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "tauri": "tauri",
-    "tauri:build": "tauri build --bundles nsis,msi",
-    "tauri:build:nsis": "tauri build --bundles nsis",
-    "tauri:build:msi": "tauri build --bundles msi"
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "license": "MIT",
   "dependencies": {
-    "@fontsource-variable/geist": "^5.2.8",
-    "@melt-ui/svelte": "^0.86.6",
-    "@tailwindcss/vite": "^4.1.18",
     "@tauri-apps/api": "^2.10.1",
-    "@tauri-apps/plugin-deep-link": "^2",
-    "@tauri-apps/plugin-dialog": "^2.6.0",
-    "@tauri-apps/plugin-fs": "^2.4.5",
-    "@tauri-apps/plugin-log": "^2.8.0",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-store": "^2.4.1",
-    "@tauri-apps/plugin-updater": "^2.10.0",
-    "@tauri-apps/plugin-websocket": "~2.4.1",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-svelte": "^0.562.0",
-    "obs-websocket-js": "5.0.7",
-    "pptxgenjs": "^4.0.1",
-    "svelte-i18n": "^4.0.1",
-    "svelte-sonner": "^1.0.7",
-    "tailwind-merge": "^3.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "lucide-svelte": "^0.562.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
@@ -46,7 +26,6 @@
     "@tauri-apps/cli": "^2",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
-    "tailwindcss": "^4.1.18",
     "typescript": "~5.6.2",
     "vite": "^6.0.3"
   }

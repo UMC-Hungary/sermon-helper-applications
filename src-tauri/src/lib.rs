@@ -1,120 +1,121 @@
-#![recursion_limit = "256"]
+mod commands;
+mod database;
+mod models;
+mod server;
 
-mod bible;
-mod broadlink;
-mod broadlink_commands;
-mod companion_api;
-mod companion_commands;
-mod discovery_commands;
-mod discovery_server;
-mod local_server;
-mod presentation;
-
-mod video_upload;
-
-use bible::{fetch_bible_v2, fetch_bible_suggestions, fetch_bible_legacy};
-use broadlink_commands::{
-    broadlink_discover, broadlink_learn, broadlink_cancel_learn,
-    broadlink_send, broadlink_test_device, broadlink_list_interfaces
-};
-use companion_commands::{
-    check_companion_connection, create_companion_ppt_page, get_companion_config_path
-};
-use discovery_commands::{
-    start_discovery_server, stop_discovery_server, get_discovery_server_status,
-    generate_discovery_auth_token, get_local_ip_addresses, get_network_addresses,
-    update_discovery_system_status, update_discovery_obs_status, update_discovery_rfir_commands,
-    update_discovery_ppt_folders, get_discovery_ppt_folders
-};
-use local_server::{start_oauth_callback_server, start_oauth_flow_with_callback, get_oauth_redirect_uri};
-use video_upload::{
-    scan_recording_directory, get_video_file_info, get_file_metadata, init_youtube_upload,
-    upload_video_chunk, get_upload_status, cancel_upload
-};
-#[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
-use tauri_plugin_deep_link::DeepLinkExt;
-#[cfg(not(target_os = "macos"))]
+use std::path::PathBuf;
+use std::sync::Arc;
 use tauri::Manager;
+use tauri_plugin_store::StoreExt;
+use tokio::sync::RwLock;
+use uuid::Uuid;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+pub struct AppRuntime {
+    pub mode: String,
+    pub server_port: u16,
+    pub client_url: Option<String>,
+    pub auth_token: Arc<RwLock<String>>,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_deep_link::init())
-        .plugin(tauri_plugin_websocket::init())
-        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_log::Builder::new().build())
-        .setup(|_app| {
-            // Register the deep link scheme on Linux/Windows (macOS uses Info.plist)
-            // In dev mode, this may fail if the app isn't installed - that's OK
-            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
-            {
-                if let Err(e) = _app.deep_link().register("sermon-helper") {
-                    eprintln!("Warning: Failed to register deep link scheme: {}. Deep links may not work in dev mode.", e);
-                }
-            }
+        .setup(|app| {
+            let handle = app.handle().clone();
 
-            // Non-macOS: remove decorations for custom titlebar
-            // macOS uses titleBarStyle=overlay from config to keep traffic lights
-            #[cfg(not(target_os = "macos"))]
-            {
-                let window = _app.get_webview_window("main").unwrap();
-                window.set_decorations(false)?;
-            }
+            tokio::spawn(async move {
+                if let Err(e) = start_backend(handle).await {
+                    tracing::error!("Backend startup failed: {e}");
+                }
+            });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
-            fetch_bible_v2,
-            fetch_bible_suggestions,
-            fetch_bible_legacy,
-            start_oauth_callback_server,
-            start_oauth_flow_with_callback,
-            get_oauth_redirect_uri,
-            // Video upload commands
-            scan_recording_directory,
-            get_video_file_info,
-            get_file_metadata,
-            init_youtube_upload,
-            upload_video_chunk,
-            get_upload_status,
-            cancel_upload,
-            // Discovery server commands
-            start_discovery_server,
-            stop_discovery_server,
-            get_discovery_server_status,
-            generate_discovery_auth_token,
-            get_local_ip_addresses,
-            get_network_addresses,
-            update_discovery_system_status,
-            update_discovery_obs_status,
-            update_discovery_rfir_commands,
-            // PPT folder commands
-            update_discovery_ppt_folders,
-            get_discovery_ppt_folders,
-            // Broadlink RF/IR commands
-            broadlink_discover,
-            broadlink_learn,
-            broadlink_cancel_learn,
-            broadlink_send,
-            broadlink_test_device,
-            broadlink_list_interfaces,
-            // Companion API commands
-            check_companion_connection,
-            create_companion_ppt_page,
-            get_companion_config_path
+            commands::token::get_token,
+            commands::token::refresh_token,
+            commands::server::get_server_port,
+            commands::server::get_app_mode,
+            commands::server::set_app_mode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+async fn start_backend(app: tauri::AppHandle) -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info".into()),
+        )
+        .init();
+
+    let store = app.store("app-settings.json")?;
+
+    let mode = store
+        .get("mode")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_else(|| "server".to_string());
+
+    let auth_token = store
+        .get("auth_token")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_else(|| {
+            let t = Uuid::new_v4().to_string();
+            store.set("auth_token", serde_json::Value::String(t.clone()));
+            let _ = store.save();
+            t
+        });
+
+    let client_url = store
+        .get("server_url")
+        .and_then(|v| v.as_str().map(String::from));
+
+    let port: u16 = store
+        .get("server_port")
+        .and_then(|v| v.as_u64())
+        .map(|p| p as u16)
+        .unwrap_or(3737);
+
+    let auth_token_arc = Arc::new(RwLock::new(auth_token));
+
+    let runtime = Arc::new(RwLock::new(AppRuntime {
+        mode: mode.clone(),
+        server_port: port,
+        client_url,
+        auth_token: auth_token_arc.clone(),
+    }));
+
+    app.manage(runtime);
+
+    if mode == "server" {
+        let data_dir = app
+            .path()
+            .app_data_dir()
+            .unwrap_or_else(|_| PathBuf::from("./data"));
+
+        tracing::info!("Starting embedded PostgreSQL in {data_dir:?}");
+        let embedded = database::embedded::EmbeddedDb::start(data_dir).await?;
+        let connection_url = embedded.connection_url.clone();
+
+        tracing::info!("Connecting pool to {connection_url}");
+        let pool = database::create_pool(&connection_url).await?;
+
+        tracing::info!("Running migrations");
+        database::run_migrations(&pool).await?;
+
+        let static_dir = app
+            .path()
+            .resource_dir()
+            .ok()
+            .map(|p| p.join("_up_").to_string_lossy().into_owned());
+
+        tracing::info!("Starting Axum on port {port}");
+        server::build_and_serve(pool, auth_token_arc, connection_url, port, static_dir).await?;
+
+        embedded.stop().await?;
+    }
+
+    Ok(())
 }

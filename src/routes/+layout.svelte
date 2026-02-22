@@ -1,191 +1,71 @@
 <script lang="ts">
-	import '../app.css';
-    import { Toaster } from 'svelte-sonner';
-    import ErrorMessages from "$lib/components/ui/error-messages.svelte";
-    import Sidebar from '$lib/components/sidebar.svelte';
-    import '$lib/i18n'; // Initialize i18n at module level
-    import { loadSavedLocale } from '$lib/i18n';
-    import { isLoading } from 'svelte-i18n';
-    import { onMount, onDestroy } from 'svelte';
-    import { obsWebSocket } from "$lib/utils/obs-websocket";
-    import { appSettingsStore, appSettingsLoaded } from '$lib/utils/app-settings-store';
-    import { initTheme } from '$lib/stores/theme-store';
-    import { initOAuthHandler } from '$lib/utils/oauth-handler';
-    import { refreshStore } from '$lib/stores/refresh-store';
-    import { uploaderIntegration } from '$lib/services/uploader-integration';
-    import { backgroundUploadService } from '$lib/services/background-upload-service';
-    import { dataSchemaCleanup } from '$lib/services/data-schema-cleanup';
-    import { initEventStore } from '$lib/stores/event-store';
-    import { attemptAutoResume } from '$lib/services/upload/upload-auto-resume';
-    import UpdateChecker from '$lib/components/update-checker.svelte';
-    import Titlebar from '$lib/components/titlebar.svelte';
-    import { browser } from '$app/environment';
-    import { isTauriApp } from '$lib/utils/storage-helpers';
-    import { discoveryServerManager, discoveryServerStatus } from '$lib/stores/discovery-server-store';
-    import { systemStore } from '$lib/stores/system-store';
-    import { initStreamingBroadcast } from '$lib/stores/streaming-store';
-    import type { DiscoverySystemStatus } from '$lib/types/discovery';
+  import { onMount, onDestroy } from 'svelte';
+  import { invoke } from '@tauri-apps/api/core';
+  import { appMode } from '$lib/stores/mode.js';
+  import { serverUrl, serverPort, authToken } from '$lib/stores/server-url.js';
+  import { connectWs, disconnectWs } from '$lib/ws/client.js';
+  import type { AppMode } from '$lib/stores/mode.js';
 
-    let { children } = $props();
+  let { children } = $props();
 
-    // Logging helper that works in both browser and Tauri
-    async function log(level: 'info' | 'error' | 'warn' | 'debug', message: string) {
-        console.log(`[${level.toUpperCase()}] ${message}`);
-        if (browser && '__TAURI_INTERNALS__' in window) {
-            try {
-                const { info, error, warn, debug } = await import('@tauri-apps/plugin-log');
-                const logFn = { info, error, warn, debug }[level];
-                await logFn(message);
-            } catch (e) {
-                console.error('Failed to log to Tauri:', e);
-            }
-        }
+  onMount(async () => {
+    try {
+      const mode = await invoke<string>('get_app_mode');
+      appMode.set(mode as AppMode);
+
+      if (mode === 'server') {
+        const token = await invoke<string>('get_token');
+        const port = await invoke<number>('get_server_port');
+        authToken.set(token);
+        serverPort.set(port);
+        serverUrl.set(`http://localhost:${port}`);
+      }
+
+      connectWs();
+    } catch (e) {
+      console.error('Layout init error:', e);
     }
+  });
 
-    onMount(async () => {
-        await log('info', 'Layout onMount started');
-        try {
-            await log('info', 'Initializing theme...');
-            await initTheme();
-            await log('info', 'Theme initialized');
-
-            await log('info', 'Loading app settings...');
-            await appSettingsStore.load();
-            await log('info', 'App settings loaded');
-
-            await log('info', 'Running data schema cleanup...');
-            await dataSchemaCleanup.runCleanup();
-            await log('info', 'Data schema cleanup complete');
-
-            initEventStore();
-            await log('info', 'Event store initialized');
-
-            await log('info', 'Initializing OAuth handler...');
-            await initOAuthHandler();
-            await log('info', 'OAuth handler initialized');
-
-            attemptAutoResume();
-            await log('info', 'Upload auto-resume attempted');
-
-            loadSavedLocale();
-            await log('info', 'Locale loaded');
-
-            obsWebSocket.autoconnect();
-            await log('info', 'OBS autoconnect started');
-
-            refreshStore.start();
-            await log('info', 'Refresh store started');
-
-            // Only initialize session integration in Tauri desktop app
-            if (isTauriApp()) {
-                await uploaderIntegration.init();
-                await log('info', 'Uploader integration initialized');
-
-                backgroundUploadService.init();
-                await log('info', 'Background upload service initialized');
-
-                // Initialize discovery server manager
-                await discoveryServerManager.init();
-                await log('info', 'Discovery server manager initialized');
-
-                // Wire OBS media status → discovery server broadcasts
-                initStreamingBroadcast();
-                await log('info', 'Streaming broadcast initialized');
-
-                // Auto-start discovery server if enabled and has auth token
-                const discoverySettings = await appSettingsStore.get('discoverySettings');
-                await log('info', `Discovery settings loaded: autoStart=${discoverySettings?.autoStart}, hasToken=${!!discoverySettings?.authToken}`);
-                if (discoverySettings?.autoStart && discoverySettings?.authToken) {
-                    try {
-                        await discoveryServerManager.start(discoverySettings);
-                        await log('info', 'Discovery server auto-started');
-
-                        // Sync RF/IR commands to the server
-                        const { broadlinkService } = await import('$lib/utils/broadlink-service');
-                        await broadlinkService.syncCommandsToServer();
-                        await log('info', 'RF/IR commands synced to discovery server');
-                    } catch (e) {
-                        await log('warn', `Failed to auto-start discovery server: ${e}`);
-                    }
-                }
-            } else {
-                await log('info', 'Uploader integration skipped (web mode)');
-            }
-
-            await log('info', 'Layout onMount completed successfully');
-        } catch (e) {
-            await log('error', `Layout onMount error: ${e}`);
-        }
-    });
-
-    // Subscription for broadcasting system status (YouTube login etc.) to discovery server
-    let systemUnsubscribe: (() => void) | undefined;
-
-    // Set up subscription after mount
-    $effect(() => {
-        if (browser && isTauriApp() && $discoveryServerStatus.running) {
-            // Subscribe to system store changes (YouTube login, OBS connection)
-            // OBS streaming/recording state is handled by initStreamingBroadcast()
-            systemUnsubscribe = systemStore.subscribe(($system) => {
-                const status: DiscoverySystemStatus = {
-                    obsConnected: $system.obs,
-                    obsStreaming: false,
-                    obsRecording: false,
-                    youtubeLoggedIn: $system.youtubeLoggedIn
-                };
-                discoveryServerManager.updateSystemStatus(status);
-            });
-        }
-
-        return () => {
-            systemUnsubscribe?.();
-        };
-    });
-
-    onDestroy(() => {
-        refreshStore.stop();
-        systemUnsubscribe?.();
-    });
-
-    let isMobileMenuOpen = $state(false);
-
-    function toggleMobileMenu() {
-        isMobileMenuOpen = !isMobileMenuOpen;
-    }
-
-    const handleRecheck = async () => {
-        await handleReconnect();
-        console.log("Rechecking all systems...");
-    };
-
-    const handleReconnect = async () => {
-        await obsWebSocket.autoconnect();
-    };
+  onDestroy(() => {
+    disconnectWs();
+  });
 </script>
 
-<Toaster
-        position="top-right" richColors closeButton
-	/>
-<UpdateChecker />
-
-{#if $isLoading || !$appSettingsLoaded}
-<div class="flex h-screen items-center justify-center bg-background">
-    <div class="animate-pulse text-muted-foreground">Loading...</div>
+<div class="app">
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/events">Events</a>
+    <a href="/connect">Connect</a>
+  </nav>
+  <main>
+    {@render children()}
+  </main>
 </div>
-{:else}
-<Titlebar />
-<div class="flex h-screen overflow-hidden bg-background">
-    <Sidebar
-            isMobileMenuOpen={isMobileMenuOpen}
-            onMobileMenuToggle={toggleMobileMenu}
-    />
 
-     <main class="flex-1 overflow-y-auto">
-         <div class="p-4 md:p-8 space-y-6 pt-20 md:pt-8">
-             <ErrorMessages onRecheck={handleRecheck} onReconnect={handleReconnect} />
+<style>
+  .app {
+    font-family: system-ui, sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
 
-             {@render children()}
-         </div>
-     </main>
-</div>
-{/if}
+  nav {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+  }
+
+  nav a {
+    color: #374151;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  nav a:hover {
+    color: #1d4ed8;
+  }
+</style>
