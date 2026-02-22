@@ -22,6 +22,11 @@ export const isYouTubeConnected = derived(
 	($tokens) => $tokens !== null && !!$tokens.accessToken
 );
 
+// Keep systemStore.youtubeLoggedIn in sync with token presence.
+// Runs immediately on module load (covers the initial settings-loaded case)
+// and re-runs whenever tokens are added, refreshed, or cleared.
+isYouTubeConnected.subscribe(updateYoutubeLogin);
+
 // Check if tokens are valid (not expired, with 5 min buffer)
 export const isTokenValid = derived(youtubeTokens, ($tokens) => {
 	if (!$tokens) return false;
