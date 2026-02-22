@@ -44,7 +44,7 @@
 	// Build initial form data from event prop (intentionally captures initial value only)
 	function buildInitialFormData(): ServiceEvent {
 		if (!event) return createEmptyEvent();
-		return { ...event, ...(event.autoUploadEnabled ? {} : { autoUploadEnabled: true }) };
+		return { ...event };
 	}
 
 	// Form state
@@ -231,7 +231,7 @@
 			return;
 		}
 
-		if (!formData.date) {
+		if (!formData.dateTime) {
 			toast({
 				title: $_('events.form.validation.date'),
 				variant: 'warning'
@@ -265,7 +265,7 @@
 			return;
 		}
 
-		if (!formData.date || !formData.time) {
+		if (!formData.dateTime) {
 			toast({
 				title: $_('events.form.validation.date'),
 				variant: 'warning'
@@ -356,14 +356,9 @@
 						/>
 					</div>
 
-					<div class="space-y-2">
-						<Label for="event-date">{$_('events.form.date')}</Label>
-						<Input id="event-date" type="date" bind:value={formData.date} />
-					</div>
-
-					<div class="space-y-2">
-						<Label for="event-time">{$_('events.form.time')}</Label>
-						<Input id="event-time" type="time" bind:value={formData.time} />
+					<div class="md:col-span-2 space-y-2">
+						<Label for="event-datetime">{$_('events.form.date')}</Label>
+						<Input id="event-datetime" type="datetime-local" bind:value={formData.dateTime} />
 					</div>
 
 					<div class="md:col-span-2 space-y-2">

@@ -11,10 +11,9 @@
     import { appSettingsStore, appSettingsLoaded } from '$lib/utils/app-settings-store';
     import { initTheme } from '$lib/stores/theme-store';
     import { initOAuthHandler } from '$lib/utils/oauth-handler';
-    import { youtubeAuthStore } from '$lib/stores/youtube-store';
-    import { updateYoutubeLogin } from '$lib/stores/system-store';
     import { refreshStore } from '$lib/stores/refresh-store';
     import { uploaderIntegration } from '$lib/services/uploader-integration';
+    import { backgroundUploadService } from '$lib/services/background-upload-service';
     import { dataSchemaCleanup } from '$lib/services/data-schema-cleanup';
     import { initEventStore } from '$lib/stores/event-store';
     import { attemptAutoResume } from '$lib/services/upload/upload-auto-resume';
@@ -65,9 +64,6 @@
             await initOAuthHandler();
             await log('info', 'OAuth handler initialized');
 
-            updateYoutubeLogin(youtubeAuthStore.isLoggedIn());
-            await log('info', 'YouTube login status updated');
-
             attemptAutoResume();
             await log('info', 'Upload auto-resume attempted');
 
@@ -84,6 +80,9 @@
             if (isTauriApp()) {
                 await uploaderIntegration.init();
                 await log('info', 'Uploader integration initialized');
+
+                backgroundUploadService.init();
+                await log('info', 'Background upload service initialized');
 
                 // Initialize discovery server manager
                 await discoveryServerManager.init();

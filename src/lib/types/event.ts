@@ -9,7 +9,7 @@ export type YouTubeLifeCycleStatus = 'created' | 'ready' | 'testing' | 'live' | 
 // ============================================
 
 export const MIN_RECORDING_DURATION_SECONDS = 2 * 60; // 2 minutes
-export const CURRENT_EVENT_VERSION = 'v0.7.0';
+export const CURRENT_EVENT_VERSION = 'v0.8.0';
 
 // ============================================
 // Session State Types
@@ -36,7 +36,13 @@ export type SessionActivityType =
 	| 'SESSION_FINALIZING'
 	| 'SESSION_COMPLETED'
 	| 'SESSION_ERROR'
-	| 'SESSION_ENDED';
+	| 'SESSION_ENDED'
+	| 'RECORDING_SCAN_STARTED'
+	| 'RECORDING_SCAN_COMPLETED'
+	| 'RECORDING_MANUALLY_ADDED'
+	| 'RECORDING_SELECTED_FOR_UPLOAD'
+	| 'RECORDING_DESELECTED_FROM_UPLOAD'
+	| 'SESSION_FINALIZED';
 
 export interface SessionActivity {
 	type: SessionActivityType;
@@ -83,8 +89,7 @@ export interface EventRecording {
 export interface ServiceEvent {
 	id: string;
 	title: string;
-	date: string; // YYYY-MM-DD format
-	time: string; // HH:MM format
+	dateTime: string; // ISO 8601 local, e.g. 2026-02-21T10:00
 	speaker: string;
 	description: string;
 
@@ -134,10 +139,10 @@ export function generateEventId(): string {
 	return crypto.randomUUID();
 }
 
-// Get next Sunday date
-// If today is Sunday and time < 10:45, return today
-// Otherwise, find next Sunday
-export function getNextSundayDate(): string {
+// Get next Sunday date+time as YYYY-MM-DDTHH:MM
+// If today is Sunday and time < 10:45, return today with default time 10:00
+// Otherwise, find next Sunday with default time 10:00
+export function getNextSundayDateTime(): string {
 	const now = new Date();
 	const dayOfWeek = now.getDay(); // 0 = Sunday
 	const hours = now.getHours();
@@ -162,12 +167,12 @@ export function getNextSundayDate(): string {
 	const nextSunday = new Date(now);
 	nextSunday.setDate(now.getDate() + daysUntilSunday);
 
-	// Format as YYYY-MM-DD
+	// Format as YYYY-MM-DDTHH:MM
 	const year = nextSunday.getFullYear();
 	const month = String(nextSunday.getMonth() + 1).padStart(2, '0');
 	const day = String(nextSunday.getDate()).padStart(2, '0');
 
-	return `${year}-${month}-${day}`;
+	return `${year}-${month}-${day}T10:00`;
 }
 
 // Generate calculated event title for YouTube
@@ -175,10 +180,10 @@ export function getNextSundayDate(): string {
 // Each section after the first is optional
 // Max 100 characters
 export function generateCalculatedTitle(event: ServiceEvent): string {
-	if (!event.date) return '';
+	if (!event.dateTime) return '';
 
 	// Format date as YYYY.MM.DD.
-	const [year, month, day] = event.date.split('-');
+	const [year, month, day] = getEventDate(event).split('-');
 	const dateStr = `${year}.${month}.${day}.`;
 
 	// Start with date and title
@@ -210,14 +215,23 @@ export function getCalculatedTitleLength(event: ServiceEvent): number {
 	return generateCalculatedTitle(event).length;
 }
 
+// Extract date portion from dateTime (YYYY-MM-DD)
+export function getEventDate(event: ServiceEvent): string {
+	return event.dateTime.slice(0, 10);
+}
+
+// Extract time portion from dateTime (HH:MM)
+export function getEventTime(event: ServiceEvent): string {
+	return event.dateTime.slice(11, 16);
+}
+
 // Create an empty event with defaults
 export function createEmptyEvent(): ServiceEvent {
 	const now = new Date().toISOString();
 	return {
 		id: generateEventId(),
 		title: '(vasárnapi) istentisztelet',
-		date: getNextSundayDate(),
-		time: '10:00',
+		dateTime: getNextSundayDateTime(),
 		speaker: '',
 		description: '',
 		textus: '',
@@ -248,27 +262,23 @@ export function getLocalToday(): string {
 
 // Check if an event is scheduled for today
 export function isEventToday(event: ServiceEvent): boolean {
-	return event.date === getLocalToday();
+	return getEventDate(event) === getLocalToday();
 }
 
 // Check if an event is in the future (including today)
 export function isEventUpcoming(event: ServiceEvent): boolean {
-	return event.date >= getLocalToday();
+	return getEventDate(event) >= getLocalToday();
 }
 
-// Sort events by date and time (ascending)
+// Sort events by dateTime (ascending — ISO strings sort correctly)
 export function sortEventsByDate(events: ServiceEvent[]): ServiceEvent[] {
-	return [...events].sort((a, b) => {
-		const dateCompare = a.date.localeCompare(b.date);
-		if (dateCompare !== 0) return dateCompare;
-		return a.time.localeCompare(b.time);
-	});
+	return [...events].sort((a, b) => a.dateTime.localeCompare(b.dateTime));
 }
 
-// Format event date for display
-export function formatEventDate(date: string): string {
-	if (!date) return '';
-	const d = new Date(date);
+// Format event date for display (accepts dateTime string)
+export function formatEventDate(dateTime: string): string {
+	if (!dateTime) return '';
+	const d = new Date(dateTime);
 	return d.toLocaleDateString(undefined, {
 		weekday: 'long',
 		year: 'numeric',
@@ -277,10 +287,10 @@ export function formatEventDate(date: string): string {
 	});
 }
 
-// Format event time for display
-export function formatEventTime(time: string): string {
-	if (!time) return '';
-	return time;
+// Format event time for display (accepts dateTime string, returns HH:MM)
+export function formatEventTime(dateTime: string): string {
+	if (!dateTime) return '';
+	return dateTime.slice(11, 16);
 }
 
 // ============================================
@@ -398,6 +408,7 @@ export function pushActivity(
 const STATE_PRODUCING_ACTIVITIES: Record<string, EventSessionState> = {
 	SESSION_ENDED: 'IDLE',
 	SESSION_COMPLETED: 'COMPLETED',
+	SESSION_FINALIZED: 'COMPLETED',
 	SESSION_FINALIZING: 'FINALIZING',
 	STREAM_STARTED: 'ACTIVE',
 	RECORD_STARTED: 'ACTIVE',

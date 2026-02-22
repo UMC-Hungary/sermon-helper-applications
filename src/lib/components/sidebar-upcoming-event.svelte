@@ -136,7 +136,7 @@
 			<!-- Scheduled Date -->
 			<div>
 				<span class="text-xs text-muted-foreground">{$_('sidebar.upcomingEvent.scheduledDate')}</span>
-				<p class="text-sm text-card-foreground">{formatEventDate(nextEvent.date)}</p>
+				<p class="text-sm text-card-foreground">{formatEventDate(nextEvent.dateTime)}</p>
 			</div>
 
 			<!-- Recordings Status (compact view in sidebar) -->

@@ -430,7 +430,13 @@
 			"SESSION_FINALIZING": "Utófeldolgozás",
 			"SESSION_COMPLETED": "Munkamenet kész",
 			"SESSION_ERROR": "Hiba",
-			"SESSION_ENDED": "Munkamenet befejezve"
+			"SESSION_ENDED": "Munkamenet befejezve",
+			"RECORDING_SCAN_STARTED": "Felvétel keresés elindult",
+			"RECORDING_SCAN_COMPLETED": "Felvétel keresés kész",
+			"RECORDING_MANUALLY_ADDED": "Felvétel kézzel hozzáadva",
+			"RECORDING_SELECTED_FOR_UPLOAD": "Felvétel kiválasztva feltöltésre",
+			"RECORDING_DESELECTED_FROM_UPLOAD": "Felvétel eltávolítva a feltöltésből",
+			"SESSION_FINALIZED": "Munkamenet véglegesítve"
 		},
 		"connection": {
 			"lost": "Kapcsolat Elveszett",
@@ -588,6 +594,31 @@
 			"paused": "Szünetel",
 			"processing": "Feldolgozás",
 			"failed": "Sikertelen"
+		}
+	},
+	"finalize": {
+		"title": "Esemény Véglegesítése",
+		"button": "Esemény Véglegesítése",
+		"submit": "Véglegesítés",
+		"scan": {
+			"title": "Felvételek Keresése",
+			"scanning": "Keresés...",
+			"noDirectory": "Nincs felvételi mappa beállítva ehhez az eseményhez.",
+			"found": "{count} felvétel találva",
+			"noneFound": "Nem találhatók új felvételek",
+			"addToEvent": "Hozzáadás",
+			"startScan": "Mappa Átvizsgálása"
+		},
+		"manual": {
+			"title": "Fájlok Kézi Hozzáadása",
+			"selectFiles": "Fájlok Kiválasztása"
+		},
+		"recordings": {
+			"title": "Felvételek"
+		},
+		"toast": {
+			"finalized": "Esemény Véglegesítve",
+			"finalizedDescription": "Az esemény sikeresen véglegesítve"
 		}
 	},
 	"obsDevices": {

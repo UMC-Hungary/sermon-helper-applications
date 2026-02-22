@@ -6,7 +6,6 @@ import { get } from 'svelte/store';
 import { obsWebSocket } from '$lib/utils/obs-websocket';
 import { eventStore, currentEvent, todayEvent } from '$lib/stores/event-store';
 import { uploadSettingsStore } from '$lib/stores/upload-settings-store';
-import { postEventAutomation } from './post-event-automation';
 import { streamStatus, recordStatus } from '$lib/stores/streaming-store';
 import type { OBSOutputState } from '$lib/types/obs-streaming';
 import { isSessionActive, createEventRecording, type RecordingFile } from '$lib/types/event';
@@ -253,20 +252,6 @@ class UploaderIntegrationService {
 		return started?.id ?? null;
 	}
 
-	// Manually trigger post-event automation (for Finish Session button)
-	async triggerPostEventAutomation(): Promise<void> {
-		await postEventAutomation.runWorkflow();
-	}
-
-	// Get current automation state
-	getAutomationState() {
-		return postEventAutomation.getState();
-	}
-
-	// Check if automation is running
-	isAutomationRunning(): boolean {
-		return postEventAutomation.isRunning();
-	}
 }
 
 // Export singleton instance

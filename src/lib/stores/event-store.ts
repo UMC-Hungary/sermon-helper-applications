@@ -15,6 +15,8 @@ import {
 	pushActivity,
 	isEventUploadable,
 	getUploadableRecordings,
+	getEventDate,
+	getEventTime,
 	getLocalToday,
 	MIN_RECORDING_DURATION_SECONDS
 } from '$lib/types/event';
@@ -51,34 +53,36 @@ export const upcomingEvents = derived(eventList, ($eventList) => {
 export const pastEvents = derived(eventList, ($eventList) => {
 	const list = $eventList ?? [];
 	const today = getLocalToday();
-	return sortEventsByDate(list.filter((e) => e.date < today || deriveSessionState(e.activities) === 'COMPLETED')).reverse();
+	return sortEventsByDate(list.filter((e) => getEventDate(e) < today || deriveSessionState(e.activities) === 'COMPLETED')).reverse();
 });
 
 // ============================================
 // Derived Stores - Session State
 // ============================================
 
-// Current event with active session (today's event with session OR any event with active session)
+// Current event — the event that receives OBS activities and recordings.
+// Today's event always wins over past events (past active sessions are stale).
+// When multiple today events exist, pick the one closest to the current time.
 export const currentEvent = derived(eventList, ($eventList) => {
 	const list = $eventList ?? [];
+	const now = new Date();
+	const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-	// First, check for any event with an active session
-	const activeSessionEvent = list.find((e) => isSessionActive(e));
-	if (activeSessionEvent) return activeSessionEvent;
+	const toMinutes = (event: ServiceEvent) => {
+		const time = getEventTime(event);
+		const [h, m] = time.split(':').map(Number);
+		return h * 60 + m;
+	};
 
-	// Then check for a finalizing session
-	const finalizingEvent = list.find((e) => deriveSessionState(e.activities) === 'FINALIZING');
-	if (finalizingEvent) return finalizingEvent;
+	// Today's non-completed events, sorted by dateTime
+	const todayEvents = sortEventsByDate(list.filter(isEventToday))
+		.filter((e) => deriveSessionState(e.activities) !== 'COMPLETED');
 
-	// Fall back to today's first non-completed event (by time) if it has a session state
-	const todayEvents = sortEventsByDate(list.filter(isEventToday));
-	const today = todayEvents.find((e) => {
-		const state = deriveSessionState(e.activities);
-		return state !== 'IDLE' && state !== 'COMPLETED';
-	});
-	if (today) return today;
+	// Prefer the latest event whose time has already passed, otherwise the earliest upcoming
+	const started = todayEvents.filter((e) => toMinutes(e) <= nowMinutes);
+	const upcoming = todayEvents.filter((e) => toMinutes(e) > nowMinutes);
 
-	return null;
+	return started.at(-1) ?? upcoming.at(0) ?? null;
 });
 
 // Current session state (derived from currentEvent)
@@ -107,7 +111,7 @@ export const uploadableEvents = derived(eventList, ($events) =>
 // Flat queue of recordings ready to upload
 export const uploadQueue = derived(eventList, ($events) =>
 	($events ?? [])
-		.filter(isEventUploadable)
+		.filter((e) => isEventUploadable(e) && e.autoUploadEnabled)
 		.flatMap((event) => {
 			const uploadable = getUploadableRecordings(event);
 
@@ -443,6 +447,19 @@ export const eventStore = {
 	getSessionDuration(eventId: string): number {
 		const event = this.getEventById(eventId);
 		return event ? getSessionDuration(event) : 0;
+	},
+
+	// Finalize session (push SESSION_FINALIZED activity)
+	setSessionFinalized(eventId: string): void {
+		this.pushSessionActivity(eventId, 'SESSION_FINALIZED');
+		console.log(`[EventStore] Session finalized for event ${eventId}`);
+	},
+
+	// Get all recording file paths across all events (for deduplication)
+	getAllRecordingPaths(): Set<string> {
+		return new Set(
+			(get(eventList) ?? []).flatMap((event) => (event.recordings ?? []).map((rec) => rec.file.path))
+		);
 	},
 
 };

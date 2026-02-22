@@ -32,9 +32,7 @@ export async function scheduleYoutubeBroadcast(event: ServiceEvent): Promise<voi
 	await eventStore.updateEvent(event.id, { isBroadcastScheduling: true });
 
 	try {
-		const scheduledStartTime = new Date(
-			`${event.date}T${event.time}:00`
-		).toISOString();
+		const scheduledStartTime = new Date(event.dateTime).toISOString();
 
 		const broadcast = await youtubeApi.createBroadcast({
 			title: generateCalculatedTitle(event),
@@ -78,9 +76,7 @@ export async function scheduleYoutubeBroadcast(event: ServiceEvent): Promise<voi
 export async function updateYoutubeBroadcast(event: ServiceEvent): Promise<void> {
 	if (!get(systemStore).youtubeLoggedIn || !event.youtubeScheduledId) return;
 
-	const scheduledStartTime = new Date(
-		`${event.date}T${event.time || '10:00'}:00`
-	).toISOString();
+	const scheduledStartTime = new Date(event.dateTime).toISOString();
 
 	await youtubeApi.updateBroadcast(event.youtubeScheduledId, {
 		title: generateCalculatedTitle(event),

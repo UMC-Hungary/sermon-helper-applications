@@ -460,11 +460,19 @@ class YouTubeApiService {
 	}
 
 	/**
-	 * Go live - transition broadcast from ready/testing to live
-	 * This is a convenience wrapper around transitionBroadcast
+	 * Go live - transition broadcast from ready/testing to live.
+	 * YouTube requires ready → testing → live, so if the broadcast is still
+	 * in 'ready' state we step through 'testing' first.
 	 * @param broadcastId - The YouTube broadcast ID
+	 * @param currentStatus - Current lifecycle status (used to skip the testing step if already there)
 	 */
-	async goLive(broadcastId: string): Promise<YouTubeBroadcastResponse> {
+	async goLive(
+		broadcastId: string,
+		currentStatus: 'ready' | 'testing' = 'testing'
+	): Promise<YouTubeBroadcastResponse> {
+		if (currentStatus === 'ready') {
+			await this.transitionBroadcast(broadcastId, 'testing');
+		}
 		return this.transitionBroadcast(broadcastId, 'live');
 	}
 
