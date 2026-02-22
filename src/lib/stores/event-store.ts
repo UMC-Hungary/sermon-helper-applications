@@ -457,14 +457,9 @@ export const eventStore = {
 
 	// Get all recording file paths across all events (for deduplication)
 	getAllRecordingPaths(): Set<string> {
-		const events = get(eventList) ?? [];
-		const paths = new Set<string>();
-		for (const event of events) {
-			for (const rec of event.recordings ?? []) {
-				paths.add(rec.file.path);
-			}
-		}
-		return paths;
+		return new Set(
+			(get(eventList) ?? []).flatMap((event) => (event.recordings ?? []).map((rec) => rec.file.path))
+		);
 	},
 
 };
