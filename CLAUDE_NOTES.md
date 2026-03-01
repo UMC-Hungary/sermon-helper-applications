@@ -9,6 +9,7 @@
 This is a desktop application for managing church livestreams and presentations. It's being migrated from a React/Next.js web app (`/home/church-control-app`) to a Tauri desktop app with SvelteKit.
 
 ### Tech Stack
+
 - **Frontend:** SvelteKit 2.9.0 + Svelte 5.0.0 + TypeScript 5.6.2
 - **Backend:** Tauri 2 + Rust
 - **Styling:** Tailwind CSS 4.1.18
@@ -62,9 +63,11 @@ sermon-helper-tauri/
 ## ✅ Recent Work Completed (2026-01-05)
 
 ### Error Messages Component Synchronization
+
 **Status:** Fully synchronized with React version at `/home/church-control-app`
 
 #### Changes Made:
+
 1. **error-messages.svelte** (220 lines) - Complete rewrite
    - Fixed SystemStatus type to use flat boolean structure
    - Replaced inline SVG with lucide-svelte icons (AlertCircle, Info, RefreshCw)
@@ -101,6 +104,7 @@ sermon-helper-tauri/
 ## 🔑 Key Type Definitions
 
 ### SystemStatus (Flat Structure)
+
 ```typescript
 // src/lib/stores/types.ts
 export type SystemStatus = {
@@ -111,7 +115,7 @@ export type SystemStatus = {
   airplayDisplay: boolean;
   displayAlignment: boolean;
   youtubeLoggedIn: boolean;
-}
+};
 ```
 
 **Note:** There's also a nested version in `src/lib/types.ts` - the flat version in `stores/types.ts` is the correct one matching React.
@@ -119,6 +123,7 @@ export type SystemStatus = {
 ## 🎯 Error Messages System
 
 ### Error Definitions
+
 5 error types with detailed troubleshooting steps:
 
 1. **airplayDisplay** - AirPlay Display Not Connected (6 steps + image)
@@ -128,18 +133,20 @@ export type SystemStatus = {
 5. **youtubeLoggedIn** - YouTube Not Logged In (5 steps)
 
 ### Error Message Interface
+
 ```typescript
 interface ErrorMessage {
   id: string;
   title: string;
   description: string;
-  status: keyof SystemStatus;  // Maps to boolean flag
+  status: keyof SystemStatus; // Maps to boolean flag
   detailedSteps: string[];
-  imageUrl?: string;           // Reference images for troubleshooting
+  imageUrl?: string; // Reference images for troubleshooting
 }
 ```
 
 ### Component Hierarchy
+
 ```
 View Component
 └── ErrorMessages
@@ -160,23 +167,27 @@ View Component
 ## 🎨 Styling Conventions
 
 ### Tailwind CSS
+
 - Using Tailwind v4 with custom CSS variables for theming
 - CSS variable pattern: `var(--spacing)`, `var(--foreground)`, etc.
 - Dark mode support via `dark:` prefix
 
 ### Class Utility
+
 ```typescript
 // src/lib/utils.ts
-import { clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 ```
+
 **Usage:** Merges Tailwind classes intelligently, later classes override earlier ones
 
 ### Component Patterns
+
 - All UI components accept `className` prop for custom styling
 - Use `data-slot` attributes for scoped styling (matching React pattern)
 - Reactive statements (`$:`) for computed classes
@@ -184,11 +195,13 @@ export function cn(...inputs: ClassValue[]) {
 ## ⚠️ Known Issues & Warnings
 
 ### Build Status
+
 - ✅ 0 TypeScript errors
 - ⚠️ 15 warnings (all about unused export properties in stub view components)
 - These warnings are expected and will resolve when views are fully implemented
 
 ### Incomplete Components
+
 1. **Dialog Component** (`ui/dialog.svelte`)
    - Currently a simplified stub
    - ErrorMessages uses native HTML5 `<dialog>` instead
@@ -208,6 +221,7 @@ export function cn(...inputs: ClassValue[]) {
 **Location:** `/home/church-control-app`
 
 ### Key Files to Reference:
+
 - `components/error-messages.tsx` - Source of truth for error messages (188 lines)
 - `components/ui/alert.tsx` - Alert component implementation (67 lines)
 - `components/ui/button.tsx` - Button variants and sizes (60 lines)
@@ -217,27 +231,30 @@ export function cn(...inputs: ClassValue[]) {
 ## 🔄 State Management
 
 ### Current Approach
+
 - Local state in `+page.svelte`
 - Props passed down to view components
 - No global store implementation yet
 
 ### SystemStatus Default Values
+
 ```typescript
 // All false except these:
-obs: true
-rodeInterface: true
-mainDisplay: true
-secondaryDisplay: true
+obs: true;
+rodeInterface: true;
+mainDisplay: true;
+secondaryDisplay: true;
 
 // These show errors by default:
-airplayDisplay: false
-displayAlignment: false
-youtubeLoggedIn: false
+airplayDisplay: false;
+displayAlignment: false;
+youtubeLoggedIn: false;
 ```
 
 ## 🚀 Next Steps / TODO
 
 ### High Priority
+
 1. **Implement Dashboard View**
    - Reference: `/home/church-control-app/components/dashboard-view.tsx`
    - Sermon title management (OBS integration)
@@ -259,6 +276,7 @@ youtubeLoggedIn: false
    - Live stream management
 
 ### Medium Priority
+
 4. **Implement Toast Notifications**
    - Replace toaster.svelte placeholder
    - Add toast hook similar to React's use-toast.ts
@@ -276,6 +294,7 @@ youtubeLoggedIn: false
    - Replace native `<dialog>` in error-messages if needed
 
 ### Low Priority
+
 7. **Testing Setup**
    - Add Vitest for unit tests
    - Playwright for E2E tests
@@ -309,20 +328,23 @@ pnpm format
 ## 📝 Git Workflow
 
 ### Current Status
+
 - Initialized on 2026-01-05
 - Branch: `main`
 - Initial commit: `b76b2d6` - "Initial commit: Sermon Helper Tauri app with Svelte"
 
 ### .gitignore Coverage
+
 - ✅ node_modules, build artifacts
 - ✅ .svelte-kit, .env files
 - ✅ src-tauri/target (Rust builds)
-- ✅ IDE files (.idea, .vscode/*)
+- ✅ IDE files (.idea, .vscode/\*)
 - ✅ OS files (.DS_Store, Thumbs.db)
 
 ## 🤝 Related Projects
 
 ### Church Control App (React Version)
+
 - **Path:** `/home/church-control-app`
 - **Status:** Source of truth for features
 - **Tech:** Next.js 16 + React 19 + TypeScript
@@ -353,6 +375,7 @@ pnpm format
 ## 📞 Support & Questions
 
 When working on this codebase:
+
 - Always compare with React version at `/home/church-control-app`
 - Check CLAUDE_NOTES.md for latest status
 - Run `pnpm check` before committing

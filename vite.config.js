@@ -1,4 +1,4 @@
-import { sveltekit } from "@sveltejs/kit/vite";
+import { sveltekit } from '@sveltejs/kit/vite';
 
 export default {
   plugins: [sveltekit()],
@@ -7,6 +7,6 @@ export default {
     strictPort: true,
   },
   ssr: {
-    noExternal: ['@tauri-apps/api']
+    noExternal: ['@tauri-apps/api', 'svelte-sonner'],
   },
 };
