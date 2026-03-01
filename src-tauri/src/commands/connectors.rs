@@ -1,0 +1,394 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::Instant;
+
+use tauri::{AppHandle, State};
+use tauri_plugin_store::StoreExt;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+
+use crate::{
+    connectors::{
+        AtemConfig, ConnectorStatus, DiscordConfig, FacebookConfig, ObsConfig, VmixConfig,
+        YouTubeConfig,
+    },
+    server::OAUTH_REDIRECT_URI,
+    AppRuntime,
+};
+
+fn load_obs_config(app: &AppHandle) -> Result<ObsConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("obs_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+fn load_vmix_config(app: &AppHandle) -> Result<VmixConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("vmix_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+// ── OBS ─────────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_obs_config(app: AppHandle) -> Result<ObsConfig, String> {
+    load_obs_config(&app)
+}
+
+#[tauri::command]
+pub async fn save_obs_config(
+    config: ObsConfig,
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "obs_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+
+    let obs_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.obs_connector)
+    };
+
+    if config.enabled {
+        obs_connector.start(config, app).await;
+    } else {
+        obs_connector.stop().await;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_obs_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let obs_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.obs_connector)
+    };
+    Ok(obs_connector.get_status().await)
+}
+
+#[tauri::command]
+pub async fn connect_obs(
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let config = load_obs_config(&app)?;
+    let obs_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.obs_connector)
+    };
+    obs_connector.start(config, app).await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn disconnect_obs(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let obs_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.obs_connector)
+    };
+    obs_connector.stop().await;
+    Ok(())
+}
+
+// ── VMix (stubs) ─────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_vmix_config(app: AppHandle) -> Result<VmixConfig, String> {
+    load_vmix_config(&app)
+}
+
+#[tauri::command]
+pub fn save_vmix_config(config: VmixConfig, app: AppHandle) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "vmix_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_vmix_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let rt = runtime.read().await;
+    Ok(rt.vmix_connector.get_status())
+}
+
+// ── ATEM (stub) ───────────────────────────────────────────────────────────────
+
+fn load_atem_config(app: &AppHandle) -> Result<AtemConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("atem_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_atem_config(app: AppHandle) -> Result<AtemConfig, String> {
+    load_atem_config(&app)
+}
+
+#[tauri::command]
+pub fn save_atem_config(config: AtemConfig, app: AppHandle) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "atem_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_atem_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let rt = runtime.read().await;
+    Ok(rt.atem_connector.get_status())
+}
+
+// ── Discord (stub) ────────────────────────────────────────────────────────────
+
+fn load_discord_config(app: &AppHandle) -> Result<DiscordConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("discord_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_discord_config(app: AppHandle) -> Result<DiscordConfig, String> {
+    load_discord_config(&app)
+}
+
+#[tauri::command]
+pub fn save_discord_config(config: DiscordConfig, app: AppHandle) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "discord_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_discord_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let rt = runtime.read().await;
+    Ok(rt.discord_connector.get_status())
+}
+
+// ── YouTube ───────────────────────────────────────────────────────────────────
+
+fn load_youtube_config(app: &AppHandle) -> Result<YouTubeConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("youtube_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_youtube_config(app: AppHandle) -> Result<YouTubeConfig, String> {
+    load_youtube_config(&app)
+}
+
+#[tauri::command]
+pub async fn save_youtube_config(
+    config: YouTubeConfig,
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "youtube_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+
+    let (yt_connector, yt_config_arc) = {
+        let rt = runtime.read().await;
+        (Arc::clone(&rt.youtube_connector), Arc::clone(&rt.youtube_config))
+    };
+
+    // Update the shared Arc so Axum OAuth routes see the new config immediately.
+    *yt_config_arc.write().await = config.clone();
+
+    if !config.enabled {
+        yt_connector.stop().await;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_youtube_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let yt_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.youtube_connector)
+    };
+    Ok(yt_connector.get_status().await)
+}
+
+/// Generate the Google OAuth authorization URL and store the CSRF state token.
+/// Called directly via Tauri IPC to avoid the WebView's mixed-content restriction.
+#[tauri::command]
+pub async fn get_youtube_auth_url(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<String, String> {
+    let (config, oauth_states) = {
+        let rt = runtime.read().await;
+        let config = rt.youtube_config.read().await.clone();
+        let oauth_states: Arc<RwLock<HashMap<String, (String, Instant)>>> =
+            Arc::clone(&rt.oauth_states);
+        (config, oauth_states)
+    };
+
+    if config.client_id.is_empty() {
+        return Err("YouTube not configured. Please save your Client ID and Client Secret first.".to_string());
+    }
+
+    let state_token = Uuid::new_v4().to_string();
+    oauth_states
+        .write()
+        .await
+        .insert(state_token.clone(), ("youtube".to_string(), Instant::now()));
+
+    Ok(format!(
+        "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=https://www.googleapis.com/auth/youtube&access_type=offline&prompt=consent&state={}",
+        urlencoding::encode(&config.client_id),
+        urlencoding::encode(OAUTH_REDIRECT_URI),
+        urlencoding::encode(&state_token),
+    ))
+}
+
+#[tauri::command]
+pub async fn youtube_logout(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let yt_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.youtube_connector)
+    };
+    yt_connector.stop().await;
+    Ok(())
+}
+
+// ── Facebook ──────────────────────────────────────────────────────────────────
+
+fn load_facebook_config(app: &AppHandle) -> Result<FacebookConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("facebook_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_facebook_config(app: AppHandle) -> Result<FacebookConfig, String> {
+    load_facebook_config(&app)
+}
+
+#[tauri::command]
+pub async fn save_facebook_config(
+    config: FacebookConfig,
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "facebook_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+
+    let (fb_connector, fb_config_arc) = {
+        let rt = runtime.read().await;
+        (Arc::clone(&rt.facebook_connector), Arc::clone(&rt.facebook_config))
+    };
+
+    // Update the shared Arc so Axum OAuth routes see the new config immediately.
+    *fb_config_arc.write().await = config.clone();
+
+    if !config.enabled {
+        fb_connector.stop().await;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_facebook_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let fb_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.facebook_connector)
+    };
+    Ok(fb_connector.get_status().await)
+}
+
+/// Generate the Facebook OAuth authorization URL and store the CSRF state token.
+/// Called directly via Tauri IPC to avoid the WebView's mixed-content restriction.
+#[tauri::command]
+pub async fn get_facebook_auth_url(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<String, String> {
+    let (config, oauth_states) = {
+        let rt = runtime.read().await;
+        let config = rt.facebook_config.read().await.clone();
+        let oauth_states: Arc<RwLock<HashMap<String, (String, Instant)>>> =
+            Arc::clone(&rt.oauth_states);
+        (config, oauth_states)
+    };
+
+    if config.app_id.is_empty() {
+        return Err("Facebook not configured. Please save your App ID, App Secret, and Page ID first.".to_string());
+    }
+
+    let state_token = Uuid::new_v4().to_string();
+    oauth_states
+        .write()
+        .await
+        .insert(state_token.clone(), ("facebook".to_string(), Instant::now()));
+
+    Ok(format!(
+        "https://www.facebook.com/v19.0/dialog/oauth?client_id={}&redirect_uri={}&scope=pages_manage_posts,pages_read_engagement,publish_video&state={}",
+        urlencoding::encode(&config.app_id),
+        urlencoding::encode(OAUTH_REDIRECT_URI),
+        urlencoding::encode(&state_token),
+    ))
+}
+
+#[tauri::command]
+pub async fn facebook_logout(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let fb_connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.facebook_connector)
+    };
+    fb_connector.stop().await;
+    Ok(())
+}
