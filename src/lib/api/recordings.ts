@@ -1,13 +1,21 @@
+import { z } from 'zod';
 import { apiFetch } from './client.js';
-import type { Recording, CreateRecordingPayload } from '$lib/types/recording.js';
+import {
+  RecordingSchema,
+  type Recording,
+  type CreateRecordingPayload,
+} from '$lib/schemas/recording.js';
 
 export function listRecordings(eventId: string): Promise<Recording[]> {
-  return apiFetch<Recording[]>(`/api/events/${eventId}/recordings`);
+  return apiFetch(`/api/events/${eventId}/recordings`, z.array(RecordingSchema));
 }
 
-export function createRecording(eventId: string, payload: CreateRecordingPayload): Promise<Recording> {
-  return apiFetch<Recording>(`/api/events/${eventId}/recordings`, {
+export function createRecording(
+  eventId: string,
+  payload: CreateRecordingPayload,
+): Promise<Recording> {
+  return apiFetch(`/api/events/${eventId}/recordings`, RecordingSchema, {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: payload,
   });
 }

@@ -16,7 +16,9 @@
     try {
       await navigator.clipboard.writeText($authToken);
       copied = true;
-      setTimeout(() => { copied = false; }, 2000);
+      setTimeout(() => {
+        copied = false;
+      }, 2000);
     } catch {
       error = 'Failed to copy to clipboard';
     }
@@ -48,7 +50,11 @@
   </div>
 
   <div class="token-display__actions">
-    <button onclick={() => { revealed = !revealed; }}>
+    <button
+      onclick={() => {
+        revealed = !revealed;
+      }}
+    >
       {revealed ? 'Hide' : 'Reveal'}
     </button>
     <button onclick={copyToken}>
@@ -73,7 +79,9 @@
     max-width: 600px;
   }
 
-  .token-display h3 { margin: 0 0 1rem; }
+  .token-display h3 {
+    margin: 0 0 1rem;
+  }
 
   .token-display__value {
     padding: 0.75rem;
@@ -99,8 +107,13 @@
     font-size: 0.875rem;
   }
 
-  .token-display__actions button:hover { background: #f3f4f6; }
-  .token-display__actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .token-display__actions button:hover {
+    background: #f3f4f6;
+  }
+  .token-display__actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 
   .token-display__warning {
     margin: 0.75rem 0 0;

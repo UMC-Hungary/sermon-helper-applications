@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { EventSummary } from '$lib/types/event.js';
+  import type { EventSummary } from '$lib/schemas/event.js';
   import EventCard from './EventCard.svelte';
 
   interface Props {
@@ -34,5 +34,7 @@
     gap: 0.75rem;
   }
 
-  .empty { color: #6b7280; }
+  .empty {
+    color: #6b7280;
+  }
 </style>

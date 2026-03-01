@@ -42,7 +42,9 @@
     margin-bottom: 1.5rem;
   }
 
-  .page-header h1 { margin: 0; }
+  .page-header h1 {
+    margin: 0;
+  }
 
   .btn {
     padding: 0.5rem 1rem;

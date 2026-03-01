@@ -1,24 +1,40 @@
 import { get } from 'svelte/store';
+import type { z } from 'zod';
 import { serverUrl, authToken } from '$lib/stores/server-url.js';
 
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+type RequestOptions = Omit<RequestInit, 'headers' | 'body'> & {
+  body?: unknown;
+};
+
+export async function apiFetch<S extends z.ZodType>(
+  path: string,
+  schema: S,
+  options: RequestOptions = {},
+): Promise<z.infer<S>> {
   const base = get(serverUrl);
   const token = get(authToken);
+  const { body, ...restOptions } = options;
 
-  const res = await fetch(`${base}${path}`, {
-    ...options,
+  const init: RequestInit = {
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      ...options.headers,
     },
-  });
+  };
+  if (body !== undefined) {
+    init.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(`${base}${path}`, init);
 
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${await res.text()}`);
   }
 
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return schema.parse(undefined) as z.infer<S>;
+  }
+  const data: unknown = await res.json();
+  return schema.parse(data) as z.infer<S>;
 }
-
-export { apiFetch };

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Recording } from '$lib/types/recording.js';
+  import type { Recording } from '$lib/schemas/recording.js';
 
   interface Props {
     recordings: Recording[];
@@ -45,7 +45,14 @@
 {/if}
 
 <style>
-  .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 
   .item {
     padding: 0.75rem;
@@ -53,11 +60,22 @@
     border-radius: 0.375rem;
   }
 
-  .item__name { font-weight: 500; margin-bottom: 0.25rem; }
+  .item__name {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
 
-  .item__meta { font-size: 0.875rem; color: #6b7280; }
+  .item__meta {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
 
-  .badge--uploaded { color: #065f46; font-weight: 500; }
+  .badge--uploaded {
+    color: #065f46;
+    font-weight: 500;
+  }
 
-  .empty { color: #6b7280; }
+  .empty {
+    color: #6b7280;
+  }
 </style>

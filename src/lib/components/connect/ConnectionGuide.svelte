@@ -1,61 +1,150 @@
 <script lang="ts">
-  import { serverUrl, serverPort, authToken } from '$lib/stores/server-url.js';
+  import { invoke } from '@tauri-apps/api/core';
+  import { open } from '@tauri-apps/plugin-dialog';
+  import { serverUrl, serverPort, authToken, localNetworkUrl } from '$lib/stores/server-url.js';
 
   let copiedCurl = $state(false);
-  let copiedPostman = $state(false);
 
   function curlExample(): string {
-    return `curl -H "Authorization: Bearer ${$authToken}" ${$serverUrl}/api/events`;
-  }
-
-  function postmanExample(): string {
-    return JSON.stringify({
-      info: { name: 'Sermon Helper API', schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
-      item: [
-        {
-          name: 'List Events',
-          request: {
-            method: 'GET',
-            url: `${$serverUrl}/api/events`,
-            header: [{ key: 'Authorization', value: `Bearer ${$authToken}` }],
-          },
-        },
-        {
-          name: 'Create Event',
-          request: {
-            method: 'POST',
-            url: `${$serverUrl}/api/events`,
-            header: [
-              { key: 'Authorization', value: `Bearer ${$authToken}` },
-              { key: 'Content-Type', value: 'application/json' },
-            ],
-            body: {
-              mode: 'raw',
-              raw: JSON.stringify({ title: 'Sunday Service', date_time: new Date().toISOString(), speaker: 'Pastor' }, null, 2),
-            },
-          },
-        },
-        {
-          name: 'WebSocket',
-          request: {
-            method: 'GET',
-            url: `ws://localhost:${$serverPort}/ws?token=${$authToken}`,
-          },
-        },
-      ],
-    }, null, 2);
+    const base = $localNetworkUrl || $serverUrl;
+    return `curl -H "Authorization: Bearer ${$authToken}" ${base}/api/events`;
   }
 
   async function copyCurl() {
     await navigator.clipboard.writeText(curlExample());
     copiedCurl = true;
-    setTimeout(() => { copiedCurl = false; }, 2000);
+    setTimeout(() => {
+      copiedCurl = false;
+    }, 2000);
   }
 
-  async function copyPostman() {
-    await navigator.clipboard.writeText(postmanExample());
-    copiedPostman = true;
-    setTimeout(() => { copiedPostman = false; }, 2000);
+  function httpFile(name: string, seq: number, method: 'GET' | 'POST', path: string, body?: string): string {
+    const lines = [
+      `info:`,
+      `  name: ${name}`,
+      `  type: http`,
+      `  seq: ${seq}`,
+      ``,
+      `http:`,
+      `  method: ${method}`,
+      `  url: "{{baseUrl}}${path}"`,
+    ];
+    if (body) {
+      lines.push(`  body:`);
+      lines.push(`    type: json`);
+      lines.push(`    data: |-`);
+      body.split('\n').forEach((line) => lines.push(`      ${line}`));
+    }
+    lines.push(
+      `  auth:`,
+      `    type: bearer`,
+      `    token: "{{authToken}}"`,
+      ``,
+      `settings:`,
+      `  encodeUrl: true`,
+      `  timeout: 0`,
+      `  followRedirects: true`,
+    );
+    return lines.join('\n');
+  }
+
+  function httpFilePublic(name: string, seq: number, path: string): string {
+    return [
+      `info:`,
+      `  name: ${name}`,
+      `  type: http`,
+      `  seq: ${seq}`,
+      ``,
+      `http:`,
+      `  method: GET`,
+      `  url: "{{baseUrl}}${path}"`,
+      `  auth:`,
+      `    type: none`,
+      ``,
+      `settings:`,
+      `  encodeUrl: true`,
+      `  timeout: 0`,
+      `  followRedirects: true`,
+    ].join('\n');
+  }
+
+  function wsFile(): string {
+    const wsBase = $localNetworkUrl
+      ? $localNetworkUrl.replace('http', 'ws')
+      : `ws://localhost:{{serverPort}}`;
+    return [
+      `info:`,
+      `  name: WebSocket`,
+      `  type: websocket`,
+      `  seq: 7`,
+      ``,
+      `websocket:`,
+      `  url: ${wsBase}/ws?token={{authToken}}`,
+      `  message:`,
+      `    type: json`,
+      `    data: "{}"`,
+      `  auth: inherit`,
+      ``,
+      `settings:`,
+      `  timeout: 0`,
+      `  keepAliveInterval: 0`,
+    ].join('\n');
+  }
+
+  function envFile(): string {
+    return [
+      `name: Local`,
+      `variables:`,
+      `  - name: baseUrl`,
+      `    value: "${$serverUrl}"`,
+      `  - name: authToken`,
+      `    value: "${$authToken}"`,
+      `  - name: serverPort`,
+      `    value: "${$serverPort}"`,
+    ].join('\n');
+  }
+
+  async function saveBruno() {
+    const dir = await open({ directory: true, title: 'Choose folder for Bruno collection' });
+    if (!dir) return;
+
+    const files: Record<string, string> = {
+      'Sermon Helper API/opencollection.yml': [
+        `opencollection: 1.0.0`,
+        ``,
+        `info:`,
+        `  name: Sermon Helper API`,
+        `bundled: false`,
+        `extensions:`,
+        `  bruno:`,
+        `    ignore:`,
+        `      - node_modules`,
+        `      - .git`,
+      ].join('\n'),
+      'Sermon Helper API/List Events.yml': httpFile('List Events', 1, 'GET', '/api/events'),
+      'Sermon Helper API/Get Event.yml': httpFile('Get Event', 2, 'GET', '/api/events/:id'),
+      'Sermon Helper API/Create Event.yml': httpFile(
+        'Create Event',
+        3,
+        'POST',
+        '/api/events',
+        `{\n  "title": "Sunday Service",\n  "date_time": "${new Date().toISOString()}",\n  "speaker": "Pastor"\n}`,
+      ),
+      'Sermon Helper API/List Recordings.yml': httpFile('List Recordings', 4, 'GET', '/api/events/:id/recordings'),
+      'Sermon Helper API/Add Recording.yml': httpFile(
+        'Add Recording',
+        5,
+        'POST',
+        '/api/events/:id/recordings',
+        `{\n  "filename": "recording.mp4",\n  "duration_seconds": 3600\n}`,
+      ),
+      'Sermon Helper API/Get Connector Statuses.yml': httpFile('Get Connector Statuses', 6, 'GET', '/api/connectors/status'),
+      'Sermon Helper API/WebSocket.yml': wsFile(),
+      'Sermon Helper API/OpenAPI Spec.yml': httpFilePublic('OpenAPI Spec', 8, '/openapi.json'),
+      'Sermon Helper API/environments/Local.yml': envFile(),
+    };
+
+    await invoke('save_bruno_collection', { dir, files });
   }
 </script>
 
@@ -70,12 +159,17 @@
 
   <section>
     <h4>WebSocket (connect from any client)</h4>
-    <pre><code>ws://localhost:{$serverPort}/ws?token={$authToken}</code></pre>
+    {#if $localNetworkUrl}
+      <pre><code>{$localNetworkUrl.replace('http', 'ws')}/ws?token={$authToken}</code></pre>
+    {:else}
+      <pre><code>ws://localhost:{$serverPort}/ws?token={$authToken}</code></pre>
+    {/if}
   </section>
 
   <section>
-    <h4>Postman Collection</h4>
-    <button onclick={copyPostman}>{copiedPostman ? 'Copied!' : 'Copy Postman Collection JSON'}</button>
+    <h4>Bruno Collection</h4>
+    <p class="hint">Choose a folder — a "Sermon Helper API" collection will be created inside it.</p>
+    <button onclick={saveBruno}>Save Bruno Collection…</button>
   </section>
 
   <section>
@@ -94,20 +188,41 @@
         <tr><td>POST</td><td>/api/events</td><td>Create event</td></tr>
         <tr><td>GET</td><td>/api/events/:id/recordings</td><td>List recordings</td></tr>
         <tr><td>POST</td><td>/api/events/:id/recordings</td><td>Add recording</td></tr>
+        <tr><td>GET</td><td>/api/connectors/status</td><td>Connector statuses (OBS, VMix)</td></tr>
         <tr><td>GET</td><td>/ws?token=…</td><td>WebSocket stream</td></tr>
+        <tr><td>GET</td><td>/openapi.json</td><td>OpenAPI 3.1 spec (no auth)</td></tr>
+        <tr><td>GET</td><td>/docs</td><td>Interactive API reference (no auth)</td></tr>
       </tbody>
     </table>
   </section>
 </div>
 
 <style>
-  .guide { max-width: 700px; }
+  .guide {
+    max-width: 700px;
+  }
 
-  .guide h3 { margin: 0 0 1.5rem; }
+  .guide h3 {
+    margin: 0 0 1.5rem;
+  }
 
-  section { margin-bottom: 1.5rem; }
+  section {
+    margin-bottom: 1.5rem;
+  }
 
-  h4 { margin: 0 0 0.5rem; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+  h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+  }
+
+  .hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+  }
 
   pre {
     padding: 0.75rem;
@@ -127,11 +242,24 @@
     font-size: 0.875rem;
   }
 
-  button:hover { background: #f3f4f6; }
+  button:hover {
+    background: #f3f4f6;
+  }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
 
-  th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  th,
+  td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
 
-  th { font-weight: 600; }
+  th {
+    font-weight: 600;
+  }
 </style>

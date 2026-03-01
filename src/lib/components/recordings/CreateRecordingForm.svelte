@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createRecording } from '$lib/api/recordings.js';
-  import type { Recording } from '$lib/types/recording.js';
+  import type { Recording } from '$lib/schemas/recording.js';
 
   interface Props {
     eventId: string;
@@ -45,7 +45,13 @@
 
   <div class="form__field">
     <label for="file-path">File Path *</label>
-    <input id="file-path" type="text" bind:value={filePath} required placeholder="/path/to/recording.mp4" />
+    <input
+      id="file-path"
+      type="text"
+      bind:value={filePath}
+      required
+      placeholder="/path/to/recording.mp4"
+    />
   </div>
 
   <div class="form__field">
@@ -64,9 +70,21 @@
 </form>
 
 <style>
-  .form { display: flex; flex-direction: column; gap: 1rem; max-width: 500px; }
-  .form__field { display: flex; flex-direction: column; gap: 0.25rem; }
-  .form__field label { font-size: 0.875rem; font-weight: 500; }
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 500px;
+  }
+  .form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .form__field label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
   .form__field input {
     padding: 0.5rem 0.75rem;
     border: 1px solid #d1d5db;
@@ -89,5 +107,8 @@
     font-size: 1rem;
     cursor: pointer;
   }
-  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { EventSummary } from '$lib/types/event.js';
+  import type { EventSummary } from '$lib/schemas/event.js';
 
   interface Props {
     event: EventSummary;
@@ -21,7 +21,9 @@
 <a class="card" href="/events/{event.id}">
   <div class="card__header">
     <h3>{event.title}</h3>
-    <span class="badge">{event.recordingCount} recording{event.recordingCount !== 1 ? 's' : ''}</span>
+    <span class="badge"
+      >{event.recordingCount} recording{event.recordingCount !== 1 ? 's' : ''}</span
+    >
   </div>
   <p class="card__meta">
     {#if event.speaker}
@@ -42,7 +44,9 @@
     transition: border-color 0.15s;
   }
 
-  .card:hover { border-color: #93c5fd; }
+  .card:hover {
+    border-color: #93c5fd;
+  }
 
   .card__header {
     display: flex;
@@ -52,7 +56,10 @@
     margin-bottom: 0.5rem;
   }
 
-  .card__header h3 { margin: 0; font-size: 1rem; }
+  .card__header h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
 
   .badge {
     font-size: 0.75rem;
@@ -63,5 +70,9 @@
     white-space: nowrap;
   }
 
-  .card__meta { margin: 0; font-size: 0.875rem; color: #6b7280; }
+  .card__meta {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
 </style>
