@@ -4,6 +4,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
 pub struct Recording {
     pub id: Uuid,
     pub event_id: Uuid,
@@ -22,6 +23,7 @@ pub struct Recording {
     pub updated_at: DateTime<Utc>,
 }
 
+// Received from frontend — stays snake_case to match JSON body
 #[derive(Debug, Deserialize)]
 pub struct CreateRecording {
     pub file_path: String,

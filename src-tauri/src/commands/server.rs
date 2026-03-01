@@ -80,11 +80,22 @@ pub async fn complete_setup(
             rt.mode = Some(mode);
             let auth_token_arc = rt.auth_token.clone();
             let port = rt.server_port;
+            let obs = Arc::clone(&rt.obs_connector);
+            let vmix = Arc::clone(&rt.vmix_connector);
+            let yt = Arc::clone(&rt.youtube_connector);
+            let fb = Arc::clone(&rt.facebook_connector);
+            // Use the shared config Arcs from AppRuntime so that any config
+            // saved via Tauri commands is immediately visible to Axum routes.
+            let yt_cfg = Arc::clone(&rt.youtube_config);
+            let fb_cfg = Arc::clone(&rt.facebook_config);
+            let oauth = Arc::clone(&rt.oauth_states);
             drop(rt);
 
             let handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = crate::start_server(handle, auth_token_arc, port).await {
+                if let Err(e) =
+                    crate::start_server(handle, auth_token_arc, port, obs, vmix, yt, fb, yt_cfg, fb_cfg, oauth).await
+                {
                     tracing::error!("Backend startup failed: {e}");
                 }
             });
@@ -126,6 +137,14 @@ pub async fn reset_setup(
     let mut rt = runtime.write().await;
     rt.mode = None;
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_local_ip() -> Option<String> {
+    use std::net::UdpSocket;
+    let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    Some(socket.local_addr().ok()?.ip().to_string())
 }
 
 async fn save_setting(app: &tauri::AppHandle, key: &str, value: &str) -> Result<(), String> {
