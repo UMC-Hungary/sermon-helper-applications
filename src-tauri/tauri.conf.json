@@ -38,8 +38,5 @@
       "signingIdentity": "-",
       "minimumSystemVersion": "10.13"
     }
-  },
-  "plugins": {
-    "store": {}
   }
 }
