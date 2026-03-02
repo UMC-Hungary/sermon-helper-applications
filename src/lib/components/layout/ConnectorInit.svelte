@@ -17,6 +17,9 @@
 		atemStatus,
 		atemConfig,
 		atemState,
+		broadlinkStatus,
+		broadlinkConfig,
+		broadlinkState,
 		youtubeStatus,
 		youtubeConfig,
 		youtubeState,
@@ -33,6 +36,7 @@
 		ObsConfig,
 		VmixConfig,
 		AtemConfig,
+		BroadlinkConfig,
 		YouTubeConfig,
 		FacebookConfig,
 		DiscordConfig,
@@ -68,6 +72,7 @@
 	$effect(() => { syncErrorStore('obs', $obsStatus); });
 	$effect(() => { syncErrorStore('vmix', $vmixStatus); });
 	$effect(() => { syncErrorStore('atem', $atemStatus); });
+	$effect(() => { syncErrorStore('broadlink', $broadlinkStatus); });
 	$effect(() => { syncErrorStore('youtube', $youtubeStatus); });
 	$effect(() => { syncErrorStore('facebook', $facebookStatus); });
 	$effect(() => { syncErrorStore('discord', $discordStatus); });
@@ -153,6 +158,19 @@
 				atemState.update((s) => ({ ...s, connection: mapped }));
 			} catch (e) {
 				console.error('ATEM connector init error:', e);
+			}
+
+			try {
+				const [cfg, status] = await Promise.all([
+					invoke<BroadlinkConfig>('get_broadlink_config'),
+					invoke<{ type: string }>('get_broadlink_status')
+				]);
+				broadlinkConfig.set(cfg);
+				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
+				broadlinkStatus.set(mapped);
+				broadlinkState.update((s) => ({ ...s, connection: mapped }));
+			} catch (e) {
+				console.error('BroadLink connector init error:', e);
 			}
 
 			try {

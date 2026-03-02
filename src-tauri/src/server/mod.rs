@@ -127,6 +127,27 @@ pub async fn build_and_serve(
         });
     }
 
+    // Forward OBS streaming/recording state changes to all connected WS clients.
+    {
+        let clients = ws_clients.clone();
+        let mut obs_state_rx = obs_connector.output_state_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(state) = obs_state_rx.recv().await {
+                let msg = json!({
+                    "type": "connector.state",
+                    "connector": "obs",
+                    "isStreaming": state.is_streaming,
+                    "isRecording": state.is_recording,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
     // Forward YouTube status broadcasts to all connected WS clients.
     {
         let clients = ws_clients.clone();
@@ -190,7 +211,10 @@ pub async fn build_and_serve(
             get(routes::list_recordings).post(routes::create_recording),
         )
         .route("/connectors/status", get(routes::get_connector_statuses))
+        .route("/stream/stats", get(routes::get_stream_stats))
         .route("/connectors/youtube/content", get(routes::get_youtube_content))
+        .route("/connectors/youtube/stream-key", get(routes::get_youtube_stream_key))
+        .route("/connectors/facebook/stream-key", get(routes::get_facebook_stream_key))
         .route(
             "/connectors/youtube/schedule/{event_id}",
             post(routes::trigger_youtube_schedule),
@@ -213,21 +237,23 @@ pub async fn build_and_serve(
         ))
         .merge(oauth_routes);
 
-    // CORS applies only to /api routes — the WebSocket upgrade path must not
-    // be wrapped by CorsLayer because some CORS middleware implementations
-    // strip hop-by-hop headers (Connection, Upgrade) before they reach the
-    // WebSocketUpgrade extractor, causing it to reject the connection.
+    // CorsLayer must be the outermost layer so it intercepts OPTIONS preflight
+    // requests before they reach the auth middleware. tower-http's CorsLayer
+    // only adds response headers and never modifies request headers, so it is
+    // safe to apply to all routes including /ws.
     let mut app = Router::new()
         .route("/openapi.json", get(openapi::serve_spec))
         .route("/docs", get(openapi::serve_docs))
         .route("/ws", get(websocket::ws_handler))
-        .nest("/api", api_routes.layer(cors))
+        .nest("/api", api_routes)
         .with_state(state.clone());
 
     if let Some(dir) = static_dir {
         let fallback = ServeFile::new(format!("{dir}/index.html"));
         app = app.fallback_service(ServeDir::new(&dir).not_found_service(fallback));
     }
+
+    let app = app.layer(cors);
 
     // Dedicated OAuth callback listener on the fixed port 8766.
     // This keeps the redirect URI stable (matching the Cloud Console config)

@@ -35,6 +35,12 @@ export interface FacebookConfig {
 	pageId: string;
 }
 
+export interface BroadlinkConfig {
+	enabled: boolean;
+	host: string;
+	port: number;
+}
+
 export interface DiscordConfig {
 	enabled: boolean;
 	webhookUrl: string;
@@ -56,6 +62,7 @@ export function mapConnectorStatus(payload: ConnectorStatusPayload): ConnectorSt
 export const obsStatus = writable<ConnectorStatus>('disconnected');
 export const vmixStatus = writable<ConnectorStatus>('disconnected');
 export const atemStatus = writable<ConnectorStatus>('disconnected');
+export const broadlinkStatus = writable<ConnectorStatus>('disconnected');
 export const youtubeStatus = writable<ConnectorStatus>('disconnected');
 export const facebookStatus = writable<ConnectorStatus>('disconnected');
 export const discordStatus = writable<ConnectorStatus>('disconnected');
@@ -79,6 +86,12 @@ export const atemConfig = writable<AtemConfig>({
 	enabled: false,
 	host: '',
 	port: 9910
+});
+
+export const broadlinkConfig = writable<BroadlinkConfig>({
+	enabled: false,
+	host: '',
+	port: 80
 });
 
 export const youtubeConfig = writable<YouTubeConfig>({
@@ -106,6 +119,7 @@ export const discordConfig = writable<DiscordConfig>({
 export const obsState = writable<ConnectorState>({ connection: 'disconnected' });
 export const vmixState = writable<ConnectorState>({ connection: 'disconnected' });
 export const atemState = writable<ConnectorState>({ connection: 'disconnected' });
+export const broadlinkState = writable<ConnectorState>({ connection: 'disconnected' });
 export const youtubeState = writable<ConnectorState>({ connection: 'disconnected' });
 export const facebookState = writable<ConnectorState>({ connection: 'disconnected' });
 export const discordState = writable<ConnectorState>({ connection: 'disconnected' });

@@ -6,6 +6,8 @@
 		vmixState,
 		atemConfig,
 		atemState,
+		broadlinkConfig,
+		broadlinkState,
 		youtubeConfig,
 		youtubeState,
 		facebookConfig,
@@ -30,6 +32,7 @@
 		if (connectorId === 'obs') return $obsConfig;
 		if (connectorId === 'vmix') return $vmixConfig;
 		if (connectorId === 'atem') return $atemConfig;
+		if (connectorId === 'broadlink') return $broadlinkConfig;
 		if (connectorId === 'youtube') return $youtubeConfig;
 		if (connectorId === 'facebook') return $facebookConfig;
 		if (connectorId === 'discord') return $discordConfig;
@@ -40,6 +43,7 @@
 		if (connectorId === 'obs') return $obsState;
 		if (connectorId === 'vmix') return $vmixState;
 		if (connectorId === 'atem') return $atemState;
+		if (connectorId === 'broadlink') return $broadlinkState;
 		if (connectorId === 'youtube') return $youtubeState;
 		if (connectorId === 'facebook') return $facebookState;
 		if (connectorId === 'discord') return $discordState;
@@ -47,11 +51,14 @@
 	});
 
 	const isConfigured = $derived(def ? def.isConfigured(config) : false);
+	const isConnected = $derived(state.connection === 'connected');
 
 	const hasFlags = $derived(
-		(def?.capabilities.streaming && state.isStreaming !== undefined) ||
-		(def?.capabilities.recording && state.isRecording !== undefined) ||
-		(def?.capabilities.live && state.isLive !== undefined)
+		isConnected && (
+			!!def?.capabilities.streaming ||
+			!!def?.capabilities.recording ||
+			!!def?.capabilities.live
+		)
 	);
 </script>
 
@@ -61,17 +68,17 @@
 
 		{#if hasFlags}
 			<div class="flag-row">
-				{#if def.capabilities.streaming && state.isStreaming !== undefined}
+				{#if def.capabilities.streaming}
 					<span class="flag" class:flag--active={state.isStreaming}>
 						{state.isStreaming ? 'Streaming' : 'Not Streaming'}
 					</span>
 				{/if}
-				{#if def.capabilities.recording && state.isRecording !== undefined}
+				{#if def.capabilities.recording}
 					<span class="flag" class:flag--active={state.isRecording}>
 						{state.isRecording ? 'Recording' : 'Not Recording'}
 					</span>
 				{/if}
-				{#if def.capabilities.live && state.isLive !== undefined}
+				{#if def.capabilities.live}
 					<span class="flag" class:flag--active={state.isLive}>
 						{state.isLive ? 'Live' : 'Not Live'}
 					</span>

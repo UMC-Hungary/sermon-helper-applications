@@ -421,6 +421,234 @@ pub async fn trigger_facebook_schedule(
 }
 
 
+// ── Stream stats (mediamtx API proxy) ────────────────────────────────────────
+
+/// Proxy the mediamtx `/v3/paths/list` response to a minimal stats object.
+/// Returns a fixed shape even when mediamtx is not running (ready: false).
+pub async fn get_stream_stats() -> impl IntoResponse {
+    #[derive(Deserialize)]
+    struct MtxPath {
+        ready: bool,
+        #[serde(rename = "bytesReceived")]
+        bytes_received: u64,
+        #[serde(rename = "bytesSent")]
+        bytes_sent: u64,
+        tracks: Vec<String>,
+        readers: Vec<serde_json::Value>,
+    }
+
+    #[derive(Deserialize)]
+    struct MtxList {
+        items: Vec<MtxPath>,
+    }
+
+    let client = reqwest::Client::new();
+    let url = format!("http://localhost:{}/v3/paths/list", crate::mediamtx::API_PORT);
+
+    let result = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await;
+
+    let offline = json!({
+        "ready": false,
+        "bytesReceived": 0u64,
+        "bytesSent": 0u64,
+        "readers": 0u32,
+        "tracks": serde_json::Value::Array(vec![]),
+    });
+
+    match result {
+        Ok(r) if r.status().is_success() => match r.json::<MtxList>().await {
+            Ok(list) => {
+                let live = list.items.into_iter().find(|p| p.ready);
+                match live {
+                    Some(p) => Json(json!({
+                        "ready": true,
+                        "bytesReceived": p.bytes_received,
+                        "bytesSent": p.bytes_sent,
+                        "readers": p.readers.len() as u32,
+                        "tracks": p.tracks,
+                    }))
+                    .into_response(),
+                    None => Json(offline).into_response(),
+                }
+            }
+            Err(_) => Json(offline).into_response(),
+        },
+        _ => Json(offline).into_response(),
+    }
+}
+
+// ── Multi-stream relay: stream key fetch ──────────────────────────────────────
+
+/// Fetch the default ingestion (stream) key for the authenticated YouTube channel.
+/// Returns `{ rtmpUrl: "rtmp://a.rtmp.youtube.com/live2/STREAM_KEY" }`.
+pub async fn get_youtube_stream_key(State(state): State<AppState>) -> impl IntoResponse {
+    let token = match youtube::load_tokens(&state.pool).await {
+        Some(t) => t,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Not authenticated with YouTube"})),
+            )
+                .into_response()
+        }
+    };
+
+    #[derive(Deserialize)]
+    struct IngestionInfo {
+        #[serde(rename = "ingestionAddress")]
+        ingestion_address: String,
+        #[serde(rename = "streamName")]
+        stream_name: String,
+    }
+
+    #[derive(Deserialize)]
+    struct Cdn {
+        #[serde(rename = "ingestionInfo")]
+        ingestion_info: IngestionInfo,
+    }
+
+    #[derive(Deserialize)]
+    struct StreamItem {
+        cdn: Cdn,
+    }
+
+    #[derive(Deserialize)]
+    struct StreamList {
+        items: Option<Vec<StreamItem>>,
+    }
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://www.googleapis.com/youtube/v3/liveStreams")
+        .query(&[("part", "cdn"), ("mine", "true")])
+        .bearer_auth(&token.access_token)
+        .send()
+        .await;
+
+    match resp {
+        Ok(r) if r.status().is_success() => match r.json::<StreamList>().await {
+            Ok(list) => match list.items.and_then(|items| items.into_iter().next()) {
+                Some(item) => {
+                    let rtmp_url = format!(
+                        "{}/{}",
+                        item.cdn.ingestion_info.ingestion_address,
+                        item.cdn.ingestion_info.stream_name
+                    );
+                    Json(json!({ "rtmpUrl": rtmp_url })).into_response()
+                }
+                None => (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({"error": "No YouTube live stream found for this account. Make sure you have a live stream set up in YouTube Studio."})),
+                )
+                    .into_response(),
+            },
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response(),
+        },
+        Ok(r) => {
+            let status = r.status();
+            let detail = r.text().await.unwrap_or_default();
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("YouTube API {status}: {detail}")})),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+/// Fetch the RTMP stream URL for the first scheduled Facebook live video on the page.
+/// Returns `{ rtmpUrl: "rtmps://live-api-s.facebook.com:443/rtmp/STREAM_KEY" }`.
+pub async fn get_facebook_stream_key(State(state): State<AppState>) -> impl IntoResponse {
+    let token = match facebook::load_tokens(&state.pool).await {
+        Some(t) => t,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Not authenticated with Facebook"})),
+            )
+                .into_response()
+        }
+    };
+
+    let config = state.facebook_config.read().await.clone();
+    if config.page_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Facebook page_id not configured"})),
+        )
+            .into_response();
+    }
+
+    #[derive(Deserialize)]
+    struct LiveVideo {
+        secure_stream_url: Option<String>,
+    }
+
+    #[derive(Deserialize)]
+    struct LiveVideoList {
+        data: Vec<LiveVideo>,
+    }
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(format!(
+            "https://graph.facebook.com/v19.0/{}/live_videos",
+            config.page_id
+        ))
+        .query(&[
+            ("fields", "secure_stream_url"),
+            ("status", "SCHEDULED_UNPUBLISHED"),
+            ("access_token", token.access_token.as_str()),
+        ])
+        .send()
+        .await;
+
+    match resp {
+        Ok(r) if r.status().is_success() => match r.json::<LiveVideoList>().await {
+            Ok(list) => match list.data.into_iter().next().and_then(|v| v.secure_stream_url) {
+                Some(url) => Json(json!({ "rtmpUrl": url })).into_response(),
+                None => (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({"error": "No scheduled Facebook live video found. Create a live event in the app first."})),
+                )
+                    .into_response(),
+            },
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response(),
+        },
+        Ok(r) => {
+            let status = r.status();
+            let detail = r.text().await.unwrap_or_default();
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("Facebook API {status}: {detail}")})),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
 pub async fn list_events(State(state): State<AppState>) -> impl IntoResponse {
     let result = sqlx::query_as::<_, EventSummary>(
         r#"

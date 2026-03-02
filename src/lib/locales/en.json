@@ -767,6 +767,16 @@
 				"saving": "Saving…",
 				"comingSoon": "ATEM integration is not yet implemented. Configuration is saved for future use."
 			},
+			"broadlink": {
+				"title": "BroadLink",
+				"subtitle": "BroadLink hub support coming soon",
+				"host": "Host / IP",
+				"port": "Port",
+				"enabled": "Enable BroadLink connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"comingSoon": "BroadLink integration is not yet implemented. Configuration is saved for future use."
+			},
 			"discord": {
 				"title": "Discord",
 				"subtitle": "Discord webhook support coming soon",

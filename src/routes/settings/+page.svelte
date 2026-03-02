@@ -153,6 +153,7 @@
   <ConnectorSettingsBlock connectorId="facebook" />
   <ConnectorSettingsBlock connectorId="vmix" />
   <ConnectorSettingsBlock connectorId="atem" />
+  <ConnectorSettingsBlock connectorId="broadlink" />
   <ConnectorSettingsBlock connectorId="discord" />
 
   <!-- Cron Jobs -->

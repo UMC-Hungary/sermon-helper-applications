@@ -2,19 +2,28 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-use tauri::{AppHandle, State};
+use serde::Serialize;
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::{
     connectors::{
-        AtemConfig, ConnectorStatus, DiscordConfig, FacebookConfig, ObsConfig, VmixConfig,
-        YouTubeConfig,
+        AtemConfig, BroadlinkConfig, ConnectorStatus, DiscordConfig, FacebookConfig, ObsConfig,
+        VmixConfig, YouTubeConfig,
     },
     server::OAUTH_REDIRECT_URI,
     AppRuntime,
 };
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObsStreamSettings {
+    pub service_type: String,
+    pub server: String,
+    pub key: String,
+}
 
 fn load_obs_config(app: &AppHandle) -> Result<ObsConfig, String> {
     let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
@@ -103,6 +112,66 @@ pub async fn disconnect_obs(
     Ok(())
 }
 
+/// Returns the current OBS stream service settings (server URL and stream key).
+/// Fails if OBS is not connected.
+#[tauri::command]
+pub async fn get_obs_stream_settings(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ObsStreamSettings, String> {
+    let client_opt = {
+        let rt = runtime.read().await;
+        let guard = rt.obs_connector.client.lock().await;
+        guard.as_ref().map(Arc::clone)
+    };
+    let client = client_opt.ok_or_else(|| "OBS is not connected".to_string())?;
+    let settings = client
+        .config()
+        .stream_service_settings::<serde_json::Value>()
+        .await
+        .map_err(|e| e.to_string())?;
+    let server = settings
+        .settings
+        .get("server")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let key = settings
+        .settings
+        .get("key")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    Ok(ObsStreamSettings {
+        service_type: settings.r#type,
+        server,
+        key,
+    })
+}
+
+/// Applies a custom RTMP stream destination to OBS.
+/// Fails if OBS is not connected.
+#[tauri::command]
+pub async fn set_obs_stream_settings(
+    server: String,
+    key: String,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let client_opt = {
+        let rt = runtime.read().await;
+        let guard = rt.obs_connector.client.lock().await;
+        guard.as_ref().map(Arc::clone)
+    };
+    let client = client_opt.ok_or_else(|| "OBS is not connected".to_string())?;
+    client
+        .config()
+        .set_stream_service_settings(
+            "rtmp_custom",
+            &serde_json::json!({ "server": server, "key": key }),
+        )
+        .await
+        .map_err(|e| e.to_string())
+}
+
 // ── VMix (stubs) ─────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -161,6 +230,40 @@ pub async fn get_atem_status(
 ) -> Result<ConnectorStatus, String> {
     let rt = runtime.read().await;
     Ok(rt.atem_connector.get_status())
+}
+
+// ── BroadLink (stub) ──────────────────────────────────────────────────────────
+
+fn load_broadlink_config(app: &AppHandle) -> Result<BroadlinkConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("broadlink_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_broadlink_config(app: AppHandle) -> Result<BroadlinkConfig, String> {
+    load_broadlink_config(&app)
+}
+
+#[tauri::command]
+pub fn save_broadlink_config(config: BroadlinkConfig, app: AppHandle) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "broadlink_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_broadlink_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let rt = runtime.read().await;
+    Ok(rt.broadlink_connector.get_status())
 }
 
 // ── Discord (stub) ────────────────────────────────────────────────────────────
@@ -390,5 +493,53 @@ pub async fn facebook_logout(
         Arc::clone(&rt.facebook_connector)
     };
     fb_connector.stop().await;
+    Ok(())
+}
+
+// ── Relay config ──────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_relay_config(app: AppHandle) -> Result<crate::mediamtx::RelayConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("relay_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub async fn save_relay_config(
+    config: crate::mediamtx::RelayConfig,
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "relay_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+
+    let (mediamtx_mgr, relay_config_arc, mode) = {
+        let rt = runtime.read().await;
+        (
+            Arc::clone(&rt.mediamtx_manager),
+            Arc::clone(&rt.relay_config),
+            rt.mode.clone(),
+        )
+    };
+
+    *relay_config_arc.write().await = config.clone();
+
+    // Restart mediamtx to apply the new relay config, but only in server mode
+    // where mediamtx is running. Skip silently in client mode.
+    if mode.as_deref() == Some("server") {
+        let data_dir = app.path().app_data_dir().map_err(|e: tauri::Error| e.to_string())?;
+        mediamtx_mgr
+            .restart(&app, &data_dir, &config)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
     Ok(())
 }

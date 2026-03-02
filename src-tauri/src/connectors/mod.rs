@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod atem;
+pub mod broadlink;
 pub mod discord;
 pub mod facebook;
 pub mod obs;
@@ -167,5 +168,29 @@ impl Default for DiscordConfig {
 impl ConnectorConfig for DiscordConfig {
     fn is_configured(&self) -> bool {
         self.enabled && !self.webhook_url.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BroadlinkConfig {
+    pub enabled: bool,
+    pub host: String,
+    pub port: u16,
+}
+
+impl Default for BroadlinkConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            host: String::new(),
+            port: 80,
+        }
+    }
+}
+
+impl ConnectorConfig for BroadlinkConfig {
+    fn is_configured(&self) -> bool {
+        self.enabled && !self.host.is_empty()
     }
 }
