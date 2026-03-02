@@ -11,6 +11,8 @@ import {
 	vmixState,
 	atemStatus,
 	atemState,
+	broadlinkStatus,
+	broadlinkState,
 	youtubeStatus,
 	youtubeState,
 	facebookStatus,
@@ -126,6 +128,9 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 		} else if (msg.connector === 'atem') {
 			atemStatus.set(status);
 			atemState.update((s) => ({ ...s, connection: status }));
+		} else if (msg.connector === 'broadlink') {
+			broadlinkStatus.set(status);
+			broadlinkState.update((s) => ({ ...s, connection: status }));
 		} else if (msg.connector === 'youtube') {
 			youtubeStatus.set(status);
 			youtubeState.update((s) => ({ ...s, connection: status }));
@@ -135,6 +140,17 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 		} else if (msg.connector === 'discord') {
 			discordStatus.set(status);
 			discordState.update((s) => ({ ...s, connection: status }));
+		}
+	} else if (msg.type === 'connector.state') {
+		const patch: { isStreaming?: boolean; isRecording?: boolean } = {};
+		if (msg.isStreaming !== undefined) patch.isStreaming = msg.isStreaming;
+		if (msg.isRecording !== undefined) patch.isRecording = msg.isRecording;
+		if (msg.connector === 'obs') {
+			obsState.update((s) => ({ ...s, ...patch }));
+		} else if (msg.connector === 'vmix') {
+			vmixState.update((s) => ({ ...s, ...patch }));
+		} else if (msg.connector === 'broadlink') {
+			broadlinkState.update((s) => ({ ...s, ...patch }));
 		}
 	} else if (msg.type === 'cron.youtube_pull') {
 		youtubeLiveActive.set(msg.hasLive);

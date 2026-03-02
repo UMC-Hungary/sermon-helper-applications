@@ -42,3 +42,13 @@ export function triggerFacebookSchedule(eventId: string): Promise<unknown> {
 export function fetchYouTubeContent(): Promise<ChannelContent> {
   return apiFetch('/api/connectors/youtube/content', ChannelContentSchema);
 }
+
+const StreamKeySchema = z.object({ rtmpUrl: z.string() });
+
+export function fetchYouTubeStreamKey(): Promise<{ rtmpUrl: string }> {
+  return apiFetch('/api/connectors/youtube/stream-key', StreamKeySchema);
+}
+
+export function fetchFacebookStreamKey(): Promise<{ rtmpUrl: string }> {
+  return apiFetch('/api/connectors/facebook/stream-key', StreamKeySchema);
+}

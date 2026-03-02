@@ -6,6 +6,8 @@
 	import ReLoginHandler from '$lib/components/layout/ReLoginHandler.svelte';
 	import NavConnectors from '$lib/components/layout/NavConnectors.svelte';
 	import NavErrorBadge from '$lib/components/layout/NavErrorBadge.svelte';
+	import FloatingStreamPlayer from '$lib/components/FloatingStreamPlayer.svelte';
+	import { streamPreviewEnabled } from '$lib/stores/stream-preview.js';
 
 	let { children } = $props();
 </script>
@@ -13,6 +15,9 @@
 <Toaster richColors position="top-right" />
 <ConnectorInit />
 <ReLoginHandler />
+{#if $streamPreviewEnabled}
+	<FloatingStreamPlayer />
+{/if}
 
 <div class="app">
 	<nav>

@@ -4,12 +4,14 @@ import { atemDefinition } from './atem.js';
 import { youtubeDefinition } from './youtube.js';
 import { facebookDefinition } from './facebook.js';
 import { discordDefinition } from './discord.js';
+import { broadlinkDefinition } from './broadlink.js';
 import type { BaseConfig, ConnectorDefinition } from './types.js';
 
 export const CONNECTORS: ConnectorDefinition<BaseConfig>[] = [
 	obsDefinition as ConnectorDefinition<BaseConfig>,
 	vmixDefinition as ConnectorDefinition<BaseConfig>,
 	atemDefinition as ConnectorDefinition<BaseConfig>,
+	broadlinkDefinition as ConnectorDefinition<BaseConfig>,
 	youtubeDefinition as ConnectorDefinition<BaseConfig>,
 	facebookDefinition as ConnectorDefinition<BaseConfig>,
 	discordDefinition as ConnectorDefinition<BaseConfig>
