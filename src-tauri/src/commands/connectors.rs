@@ -543,3 +543,28 @@ pub async fn save_relay_config(
 
     Ok(())
 }
+
+/// Returns `true` if the mediamtx binary is present on this machine.
+#[tauri::command]
+pub async fn get_mediamtx_status(
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<bool, String> {
+    let data_dir = app.path().app_data_dir().map_err(|e: tauri::Error| e.to_string())?;
+    let rt = runtime.read().await;
+    Ok(rt.mediamtx_manager.is_installed(&app, &data_dir))
+}
+
+/// Download the mediamtx binary. Emits `mediamtx://progress` events during download.
+#[tauri::command]
+pub async fn download_mediamtx(
+    app: AppHandle,
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<(), String> {
+    let data_dir = app.path().app_data_dir().map_err(|e: tauri::Error| e.to_string())?;
+    let mgr = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.mediamtx_manager)
+    };
+    mgr.download(&app, &data_dir).await.map_err(|e| e.to_string())
+}

@@ -8,6 +8,7 @@
 	import { setLocale, availableLocales } from '$lib/i18n';
 	import { authToken } from '$lib/stores/server-url.js';
 	import ConnectorSettingsBlock from '$lib/components/connectors/ConnectorSettingsBlock.svelte';
+	import MediamtxDownloadManager from '$lib/components/MediamtxDownloadManager.svelte';
 	import {
 		listCronJobs,
 		createCronJob,
@@ -143,6 +144,13 @@
     <button onclick={changeMode} disabled={resetting}>
       {resetting ? $_('appSettings.appMode.changing') : $_('appSettings.appMode.changeMode')}
     </button>
+  </section>
+
+  <!-- ── Dependencies ────────────────────────────────────────────── -->
+  <h2 class="section-heading">Dependencies</h2>
+  <section>
+    <p class="note">Optional packages needed for stream preview and multi-stream relay.</p>
+    <MediamtxDownloadManager />
   </section>
 
   <!-- ── Connectors ──────────────────────────────────────────────── -->

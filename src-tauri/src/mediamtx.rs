@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
+use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tokio::process::Child;
 use tokio::sync::Mutex;
 
@@ -13,7 +14,6 @@ pub const STREAM_PATH: &str = "live";
 
 const MEDIAMTX_VERSION: &str = "v1.12.2";
 
-// Platform-specific names used for both the archive download and the binary.
 #[cfg(target_os = "windows")]
 const MEDIAMTX_OS: &str = "windows";
 #[cfg(target_os = "macos")]
@@ -26,7 +26,6 @@ const MEDIAMTX_ARCH: &str = "arm64";
 #[cfg(not(target_arch = "aarch64"))]
 const MEDIAMTX_ARCH: &str = "amd64";
 
-/// Name of the mediamtx binary on the current platform.
 #[cfg(target_os = "windows")]
 const MEDIAMTX_BINARY: &str = "mediamtx.exe";
 #[cfg(not(target_os = "windows"))]
@@ -60,14 +59,11 @@ impl Default for RelayConfig {
     }
 }
 
-/// Build the mediamtx YAML config (v1.x flat-key format), optionally including
-/// a FFmpeg runOnReady relay command when one or both relay destinations are set.
 fn build_config(relay: &RelayConfig) -> String {
     let yt = relay.youtube_rtmp_url.trim();
     let fb = relay.facebook_rtmp_url.trim();
     let rtmp_addr = if relay.rtmp_restream_enabled { ":1935" } else { "127.0.0.1:1935" };
 
-    // mediamtx v1.x uses flat top-level keys, not nested objects.
     let mut config = format!("\
 logLevel: warn
 api: yes
@@ -90,7 +86,6 @@ paths:
         if !fb.is_empty() {
             cmd.push_str(&format!(" -c copy -f flv {fb}"));
         }
-        // v1.x hook name is runOnReady (fires when a publisher connects).
         config.push_str(&format!("    runOnReady: {cmd}\n"));
         config.push_str("    runOnReadyRestart: yes\n");
     }
@@ -98,33 +93,54 @@ paths:
     config
 }
 
+/// Progress event payload emitted during a mediamtx download.
+#[derive(Clone, Serialize)]
+pub struct DownloadProgress {
+    pub downloaded: u64,
+    /// Total expected bytes. `0` means unknown.
+    pub total: u64,
+}
+
 pub struct MediamtxManager {
     child: Mutex<Option<Child>>,
+    /// Held for the duration of a download to prevent concurrent downloads.
+    download_lock: Mutex<()>,
 }
 
 impl MediamtxManager {
     pub fn new() -> Self {
         Self {
             child: Mutex::new(None),
+            download_lock: Mutex::new(()),
         }
     }
 
-    /// Start mediamtx. Writes a config file into `data_dir` and spawns the process.
-    /// If the binary is not present it is downloaded automatically.
-    /// Does nothing if already running.
+    /// Returns `true` if the mediamtx binary is available on this machine.
+    pub fn is_installed(&self, app: &tauri::AppHandle, data_dir: &Path) -> bool {
+        resolve_binary(app, data_dir).is_some()
+    }
+
+    /// Download mediamtx into `data_dir`, emitting `mediamtx://progress` events.
+    /// Returns an error if a download is already in progress.
+    pub async fn download(&self, app: &tauri::AppHandle, data_dir: &Path) -> Result<()> {
+        let _lock = self
+            .download_lock
+            .try_lock()
+            .map_err(|_| anyhow!("Download already in progress"))?;
+        download_binary(app, data_dir).await?;
+        Ok(())
+    }
+
+    /// Start mediamtx. Returns an error if the binary is not installed.
+    /// Use `download()` first if `is_installed()` returns false.
     pub async fn start(&self, app: &tauri::AppHandle, data_dir: &Path, relay: &RelayConfig) -> Result<()> {
         let mut guard = self.child.lock().await;
         if guard.is_some() {
             return Ok(());
         }
 
-        let binary = match resolve_binary(app, data_dir) {
-            Some(p) => p,
-            None => {
-                tracing::info!("mediamtx binary not found; downloading {MEDIAMTX_VERSION}…");
-                download_binary(data_dir).await?
-            }
-        };
+        let binary = resolve_binary(app, data_dir)
+            .ok_or_else(|| anyhow!("mediamtx is not installed. Download it from Settings → Dependencies."))?;
 
         let config_path = data_dir.join("mediamtx.yml");
         std::fs::write(&config_path, build_config(relay))
@@ -139,9 +155,7 @@ impl MediamtxManager {
             .map_err(|e| anyhow!("Failed to spawn mediamtx at {binary:?}: {e}"))?;
 
         *guard = Some(child);
-        tracing::info!(
-            "mediamtx started (RTMP :{RTMP_PORT}, HLS :{HLS_PORT}, path /{STREAM_PATH})"
-        );
+        tracing::info!("mediamtx started (RTMP :{RTMP_PORT}, HLS :{HLS_PORT}, path /{STREAM_PATH})");
         Ok(())
     }
 
@@ -153,25 +167,22 @@ impl MediamtxManager {
         }
     }
 
-    /// Stop and restart mediamtx with an updated relay config.
     pub async fn restart(&self, app: &tauri::AppHandle, data_dir: &Path, relay: &RelayConfig) -> Result<()> {
         self.stop().await;
         self.start(app, data_dir, relay).await
     }
 }
 
-/// Look for the mediamtx binary in the following order:
-/// 1. App data dir — previously auto-downloaded.
-/// 2. Tauri resource dir — legacy bundled path (kept for safety).
-/// 3. Development path: src-tauri/binaries/mediamtx-{target}[.exe].
+/// Find an existing mediamtx binary, checking (in order):
+/// 1. App data dir — previously downloaded.
+/// 2. Tauri resource dir — for any future bundled distribution.
+/// 3. Development path: `src-tauri/binaries/mediamtx-{target}[.exe]`.
 fn resolve_binary(app: &tauri::AppHandle, data_dir: &Path) -> Option<PathBuf> {
-    // 1. Previously downloaded into app data dir.
     let path = data_dir.join(MEDIAMTX_BINARY);
     if path.exists() {
         return Some(path);
     }
 
-    // 2. Bundled in Tauri resource dir (legacy).
     if let Ok(dir) = app.path().resource_dir() {
         let path = dir.join(MEDIAMTX_BINARY);
         if path.exists() {
@@ -179,7 +190,6 @@ fn resolve_binary(app: &tauri::AppHandle, data_dir: &Path) -> Option<PathBuf> {
         }
     }
 
-    // 3. Development: src-tauri/binaries/mediamtx-{target}[.exe].
     #[cfg(target_os = "windows")]
     let dev_name = concat!("mediamtx-", env!("TARGET"), ".exe");
     #[cfg(not(target_os = "windows"))]
@@ -195,10 +205,9 @@ fn resolve_binary(app: &tauri::AppHandle, data_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Download the mediamtx binary for the current platform into `dest_dir`.
-/// Uses `tar` (available on all platforms — Windows 10+ ships BSD tar) to
-/// extract the binary from the release archive.
-async fn download_binary(dest_dir: &Path) -> Result<PathBuf> {
+/// Download the mediamtx release archive for the current platform, extract the
+/// binary into `dest_dir`, and emit `mediamtx://progress` events on `app`.
+async fn download_binary(app: &tauri::AppHandle, dest_dir: &Path) -> Result<PathBuf> {
     std::fs::create_dir_all(dest_dir)?;
 
     #[cfg(target_os = "windows")]
@@ -220,22 +229,29 @@ async fn download_binary(dest_dir: &Path) -> Result<PathBuf> {
     if !response.status().is_success() {
         return Err(anyhow!("Download failed: HTTP {}", response.status()));
     }
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| anyhow!("Download read failed: {e}"))?;
+
+    let total = response.content_length().unwrap_or(0);
+    let mut stream = response.bytes_stream();
+    let mut data: Vec<u8> = Vec::new();
+    let mut downloaded: u64 = 0;
+
+    while let Some(chunk) = stream.try_next().await.map_err(|e| anyhow!("Stream error: {e}"))? {
+        downloaded += chunk.len() as u64;
+        data.extend_from_slice(&chunk);
+        let _ = app.emit("mediamtx://progress", DownloadProgress { downloaded, total });
+    }
 
     let archive_path = dest_dir.join(&archive_name);
-    std::fs::write(&archive_path, &bytes)
+    std::fs::write(&archive_path, &data)
         .map_err(|e| anyhow!("Failed to save archive: {e}"))?;
 
     let binary_path = dest_dir.join(MEDIAMTX_BINARY);
 
-    // tar is available on all platforms (Windows 10+ ships BSD tar that handles ZIP).
+    // `tar` is available on all platforms — Windows 10+ ships BSD tar (supports ZIP).
     #[cfg(target_os = "windows")]
-    let tar_flags = "xf"; // ZIP — no decompression flag needed
+    let tar_flags = "xf";
     #[cfg(not(target_os = "windows"))]
-    let tar_flags = "xzf"; // tar.gz
+    let tar_flags = "xzf";
 
     let status = tokio::process::Command::new("tar")
         .arg(tar_flags)
@@ -250,7 +266,7 @@ async fn download_binary(dest_dir: &Path) -> Result<PathBuf> {
     let _ = std::fs::remove_file(&archive_path);
 
     if !status.success() {
-        return Err(anyhow!("Failed to extract mediamtx archive (tar exited with {status})"));
+        return Err(anyhow!("Failed to extract mediamtx archive (tar exited {status})"));
     }
 
     #[cfg(unix)]
