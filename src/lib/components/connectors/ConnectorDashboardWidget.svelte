@@ -18,6 +18,7 @@
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorStatusBadge from './ConnectorStatusBadge.svelte';
 	import type { BaseConfig, ConnectorState } from '$lib/connectors/types.js';
+	import { appMode } from '$lib/stores/mode.js';
 
 	interface Props {
 		connectorId: string;
@@ -62,7 +63,7 @@
 	);
 </script>
 
-{#if def && isConfigured}
+{#if def && (isConfigured || $appMode === 'client')}
 	<div class="widget" class:widget--compact={compact}>
 		<ConnectorStatusBadge name={def.name} status={state.connection} />
 

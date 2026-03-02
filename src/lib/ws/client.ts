@@ -27,6 +27,9 @@ import { toast } from 'svelte-sonner';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectDelay = 3000;
+const RECONNECT_DELAY_MIN = 3000;
+const RECONNECT_DELAY_MAX = 30000;
 
 export function connectWs(): void {
 	if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING))
@@ -49,6 +52,7 @@ export function connectWs(): void {
 
 	socket.addEventListener('open', () => {
 		wsStatus.set('connected');
+		reconnectDelay = RECONNECT_DELAY_MIN;
 		if (reconnectTimer !== null) {
 			clearTimeout(reconnectTimer);
 			reconnectTimer = null;
@@ -82,13 +86,15 @@ export function disconnectWs(): void {
 	}
 	socket?.close();
 	socket = null;
+	reconnectDelay = RECONNECT_DELAY_MIN;
 	wsStatus.set('disconnected');
 }
 
 function scheduleReconnect(): void {
 	reconnectTimer = setTimeout(() => {
 		connectWs();
-	}, 3000);
+	}, reconnectDelay);
+	reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_DELAY_MAX);
 }
 
 function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
