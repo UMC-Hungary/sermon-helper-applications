@@ -11,6 +11,27 @@ pub const API_PORT: u16 = 9997;
 /// RTMP path that OBS should stream to (app name, no stream key).
 pub const STREAM_PATH: &str = "live";
 
+const MEDIAMTX_VERSION: &str = "v1.12.2";
+
+// Platform-specific names used for both the archive download and the binary.
+#[cfg(target_os = "windows")]
+const MEDIAMTX_OS: &str = "windows";
+#[cfg(target_os = "macos")]
+const MEDIAMTX_OS: &str = "darwin";
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+const MEDIAMTX_OS: &str = "linux";
+
+#[cfg(target_arch = "aarch64")]
+const MEDIAMTX_ARCH: &str = "arm64";
+#[cfg(not(target_arch = "aarch64"))]
+const MEDIAMTX_ARCH: &str = "amd64";
+
+/// Name of the mediamtx binary on the current platform.
+#[cfg(target_os = "windows")]
+const MEDIAMTX_BINARY: &str = "mediamtx.exe";
+#[cfg(not(target_os = "windows"))]
+const MEDIAMTX_BINARY: &str = "mediamtx";
+
 fn default_true() -> bool {
     true
 }
@@ -89,6 +110,7 @@ impl MediamtxManager {
     }
 
     /// Start mediamtx. Writes a config file into `data_dir` and spawns the process.
+    /// If the binary is not present it is downloaded automatically.
     /// Does nothing if already running.
     pub async fn start(&self, app: &tauri::AppHandle, data_dir: &Path, relay: &RelayConfig) -> Result<()> {
         let mut guard = self.child.lock().await;
@@ -96,7 +118,14 @@ impl MediamtxManager {
             return Ok(());
         }
 
-        let binary = resolve_binary(app)?;
+        let binary = match resolve_binary(app, data_dir) {
+            Some(p) => p,
+            None => {
+                tracing::info!("mediamtx binary not found; downloading {MEDIAMTX_VERSION}…");
+                download_binary(data_dir).await?
+            }
+        };
+
         let config_path = data_dir.join("mediamtx.yml");
         std::fs::write(&config_path, build_config(relay))
             .map_err(|e| anyhow!("Failed to write mediamtx config: {e}"))?;
@@ -131,24 +160,107 @@ impl MediamtxManager {
     }
 }
 
-fn resolve_binary(app: &tauri::AppHandle) -> Result<PathBuf> {
-    // Production: Tauri copies the binary (without triple suffix) into the resource dir.
+/// Look for the mediamtx binary in the following order:
+/// 1. App data dir — previously auto-downloaded.
+/// 2. Tauri resource dir — legacy bundled path (kept for safety).
+/// 3. Development path: src-tauri/binaries/mediamtx-{target}[.exe].
+fn resolve_binary(app: &tauri::AppHandle, data_dir: &Path) -> Option<PathBuf> {
+    // 1. Previously downloaded into app data dir.
+    let path = data_dir.join(MEDIAMTX_BINARY);
+    if path.exists() {
+        return Some(path);
+    }
+
+    // 2. Bundled in Tauri resource dir (legacy).
     if let Ok(dir) = app.path().resource_dir() {
-        let path = dir.join("mediamtx");
+        let path = dir.join(MEDIAMTX_BINARY);
         if path.exists() {
-            return Ok(path);
+            return Some(path);
         }
     }
 
-    // Development: binary lives in src-tauri/binaries/mediamtx-{target}.
+    // 3. Development: src-tauri/binaries/mediamtx-{target}[.exe].
+    #[cfg(target_os = "windows")]
+    let dev_name = concat!("mediamtx-", env!("TARGET"), ".exe");
+    #[cfg(not(target_os = "windows"))]
+    let dev_name = concat!("mediamtx-", env!("TARGET"));
+
     let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("binaries")
-        .join(concat!("mediamtx-", env!("TARGET")));
+        .join(dev_name);
     if dev.exists() {
-        return Ok(dev);
+        return Some(dev);
     }
 
-    Err(anyhow!(
-        "mediamtx binary not found. Run: bash scripts/download-mediamtx.sh"
-    ))
+    None
+}
+
+/// Download the mediamtx binary for the current platform into `dest_dir`.
+/// Uses `tar` (available on all platforms — Windows 10+ ships BSD tar) to
+/// extract the binary from the release archive.
+async fn download_binary(dest_dir: &Path) -> Result<PathBuf> {
+    std::fs::create_dir_all(dest_dir)?;
+
+    #[cfg(target_os = "windows")]
+    let archive_ext = "zip";
+    #[cfg(not(target_os = "windows"))]
+    let archive_ext = "tar.gz";
+
+    let archive_name = format!(
+        "mediamtx_{MEDIAMTX_VERSION}_{MEDIAMTX_OS}_{MEDIAMTX_ARCH}.{archive_ext}"
+    );
+    let url = format!(
+        "https://github.com/bluenviron/mediamtx/releases/download/{MEDIAMTX_VERSION}/{archive_name}"
+    );
+
+    tracing::info!("Downloading {url}");
+    let response = reqwest::get(&url)
+        .await
+        .map_err(|e| anyhow!("Download request failed: {e}"))?;
+    if !response.status().is_success() {
+        return Err(anyhow!("Download failed: HTTP {}", response.status()));
+    }
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| anyhow!("Download read failed: {e}"))?;
+
+    let archive_path = dest_dir.join(&archive_name);
+    std::fs::write(&archive_path, &bytes)
+        .map_err(|e| anyhow!("Failed to save archive: {e}"))?;
+
+    let binary_path = dest_dir.join(MEDIAMTX_BINARY);
+
+    // tar is available on all platforms (Windows 10+ ships BSD tar that handles ZIP).
+    #[cfg(target_os = "windows")]
+    let tar_flags = "xf"; // ZIP — no decompression flag needed
+    #[cfg(not(target_os = "windows"))]
+    let tar_flags = "xzf"; // tar.gz
+
+    let status = tokio::process::Command::new("tar")
+        .arg(tar_flags)
+        .arg(&archive_path)
+        .arg("-C")
+        .arg(dest_dir)
+        .arg(MEDIAMTX_BINARY)
+        .status()
+        .await
+        .map_err(|e| anyhow!("Failed to run tar: {e}"))?;
+
+    let _ = std::fs::remove_file(&archive_path);
+
+    if !status.success() {
+        return Err(anyhow!("Failed to extract mediamtx archive (tar exited with {status})"));
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary_path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path, perms)?;
+    }
+
+    tracing::info!("mediamtx saved to {binary_path:?}");
+    Ok(binary_path)
 }
