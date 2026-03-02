@@ -117,6 +117,8 @@ pub fn run() {
         commands::connectors::save_relay_config,
         commands::connectors::get_obs_stream_settings,
         commands::connectors::set_obs_stream_settings,
+        commands::connectors::get_mediamtx_status,
+        commands::connectors::download_mediamtx,
     ]);
 
     // Mobile is client-only — no server or Bruno collection commands.
