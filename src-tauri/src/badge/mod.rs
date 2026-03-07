@@ -34,7 +34,11 @@ pub async fn download_shaderfilter() -> Result<PathBuf, String> {
     let plugin_dir = get_obs_plugin_dir();
     fs::create_dir_all(&plugin_dir).map_err(|e| format!("Failed to create plugin directory: {}", e))?;
     
-    let url = "https://github.com/exeldro/obs-shaderfilter/releases/download/2.4.3/obs-shaderfilter-macOS.zip";
+    #[cfg(target_os = "macos")]
+    let url = "https://github.com/exeldro/obs-shaderfilter/releases/download/2.4.3/obs-shaderfilter-2.4.3-macos-universal.pkg";
+    
+    #[cfg(not(target_os = "macos"))]
+    let url = "https://github.com/exeldro/obs-shaderfilter/releases/download/2.4.3/obs-shaderfilter-2.4.3-windows.zip";
     
     let client = Client::new();
     let response = client.get(url)
@@ -46,12 +50,54 @@ pub async fn download_shaderfilter() -> Result<PathBuf, String> {
         .await
         .map_err(|e| format!("Failed to read response: {}", e))?;
     
-    let zip_path = plugin_dir.join("obs-shaderfilter.zip");
-    fs::write(&zip_path, &bytes).map_err(|e| format!("Failed to save zip: {}", e))?;
+    #[cfg(target_os = "macos")]
+    let pkg_path = plugin_dir.join("obs-shaderfilter.pkg");
     
-    Ok(zip_path)
+    #[cfg(not(target_os = "macos"))]
+    let pkg_path = plugin_dir.join("obs-shaderfilter.zip");
+    
+    fs::write(&pkg_path, &bytes).map_err(|e| format!("Failed to save file: {}", e))?;
+    
+    Ok(pkg_path)
 }
 
+#[cfg(target_os = "macos")]
+pub fn extract_shaderfilter(pkg_path: &PathBuf) -> Result<(), String> {
+    use std::process::Command;
+    
+    let plugin_dir = get_obs_plugin_dir();
+    let extract_dir = plugin_dir.join("extracted");
+    
+    std::fs::create_dir_all(&extract_dir).map_err(|e| format!("Failed to create extract dir: {}", e))?;
+    
+    let output = Command::new("xar")
+        .arg("-xf")
+        .arg(pkg_path)
+        .arg("-C")
+        .arg(&extract_dir)
+        .output()
+        .map_err(|e| format!("Failed to extract pkg: {}", e))?;
+    
+    if !output.status.success() {
+        return Err(format!("xar extraction failed: {:?}", String::from_utf8_lossy(&output.stderr)));
+    }
+    
+    let payload_dir = extract_dir.join("Payload");
+    if payload_dir.exists() {
+        for entry in std::fs::read_dir(&payload_dir).map_err(|e| format!("Failed to read payload: {}", e))? {
+            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+            let path = entry.path();
+            if path.is_file() && path.to_string_lossy().ends_with(".so") || path.to_string_lossy().ends_with(".dylib") {
+                let dest = plugin_dir.join(path.file_name().unwrap());
+                std::fs::copy(&path, &dest).map_err(|e| format!("Failed to copy plugin: {}", e))?;
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
 pub fn extract_shaderfilter(zip_path: &PathBuf) -> Result<(), String> {
     use std::fs::File;
     
