@@ -1,3 +1,4 @@
+mod badge;
 mod bible;
 mod commands;
 
@@ -130,6 +131,9 @@ pub fn run() {
         commands::connectors::set_obs_stream_settings,
         commands::connectors::get_mediamtx_status,
         commands::connectors::download_mediamtx,
+        commands::badge::install_badge,
+        commands::badge::get_obs_scenes,
+        commands::badge::create_badge_sources,
     ]);
 
     // Mobile is client-only — no server or Bruno collection commands.
