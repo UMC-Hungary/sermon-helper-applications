@@ -1,113 +1,140 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { invoke } from '@tauri-apps/api/core';
-	import { appMode } from '$lib/stores/mode.js';
-	import type { AppMode } from '$lib/stores/mode.js';
-	import { locale, _ } from 'svelte-i18n';
-	import { setLocale, availableLocales } from '$lib/i18n';
-	import { authToken } from '$lib/stores/server-url.js';
-	import ConnectorSettingsBlock from '$lib/components/connectors/ConnectorSettingsBlock.svelte';
-	import MediamtxDownloadManager from '$lib/components/MediamtxDownloadManager.svelte';
-	import {
-		listCronJobs,
-		createCronJob,
-		updateCronJob,
-		deleteCronJob
-	} from '$lib/api/cron-jobs.js';
-	import type { CronJob } from '$lib/api/cron-jobs.js';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { invoke } from '@tauri-apps/api/core';
+  import { appMode } from '$lib/stores/mode.js';
+  import type { AppMode } from '$lib/stores/mode.js';
+  import { locale, _ } from 'svelte-i18n';
+  import { setLocale, availableLocales } from '$lib/i18n';
+  import { authToken } from '$lib/stores/server-url.js';
+  import ConnectorSettingsBlock from '$lib/components/connectors/ConnectorSettingsBlock.svelte';
+  import MediamtxDownloadManager from '$lib/components/MediamtxDownloadManager.svelte';
+  import { listCronJobs, createCronJob, updateCronJob, deleteCronJob } from '$lib/api/cron-jobs.js';
+  import type { CronJob } from '$lib/api/cron-jobs.js';
+  import { installBadge, getObsScenes, createBadgeSources } from '$lib/api/badge.js';
+  import { obsBadgeConfig } from '$lib/stores/connectors.js';
+  import { obsState } from '$lib/stores/connectors.js';
 
-	let currentMode: AppMode | null = $state(null);
-	let resetting = $state(false);
-	let errorMessage = $state('');
+  let currentMode: AppMode | null = $state(null);
+  let resetting = $state(false);
+  let errorMessage = $state('');
 
-	// Cron Jobs state
-	let cronJobs: CronJob[] = $state([]);
-	let cronForm = $state({ name: '', cronExpression: '', enabled: true, pullYoutube: false });
-	let editingCronId: string | null = $state(null);
-	let cronSaving = $state(false);
-	let cronError = $state('');
+  // Cron Jobs state
+  let cronJobs: CronJob[] = $state([]);
+  let cronForm = $state({ name: '', cronExpression: '', enabled: true, pullYoutube: false });
+  let editingCronId: string | null = $state(null);
+  let cronSaving = $state(false);
+  let cronError = $state('');
 
-	onMount(async () => {
-		try {
-			const mode = await invoke<string | null>('get_app_mode');
-			currentMode = (mode as AppMode) ?? null;
-		} catch (e) {
-			console.error('Settings load error:', e);
-		}
-	});
+  // OBS Badge state
+  let badgeSaving = $state(false);
+  let badgeError = $state('');
+  let badgeScenes: { name: string }[] = $state([]);
+  let badgeLoadingScenes = $state(false);
+  let badgeInstallResult = $state<{
+    shaderfilter_installed: boolean;
+    shader_installed: boolean;
+  } | null>(null);
 
-	// Load cron jobs once the auth token is available (set async by layout onMount).
-	$effect(() => {
-		if ($authToken) {
-			loadCronJobs();
-		}
-	});
+  async function loadBadgeScenes() {
+    if ($obsState.connection === 'connected') {
+      badgeLoadingScenes = true;
+      try {
+        badgeScenes = await getObsScenes();
+      } catch (e) {
+        console.error('Failed to load scenes:', e);
+      } finally {
+        badgeLoadingScenes = false;
+      }
+    }
+  }
 
-	async function loadCronJobs() {
-		try {
-			cronJobs = await listCronJobs();
-		} catch {
-			// server might not be running in client mode — silently ignore
-		}
-	}
+  $effect(() => {
+    if ($obsState.connection === 'connected') {
+      loadBadgeScenes();
+    }
+  });
 
-	function startEditCron(job: CronJob) {
-		editingCronId = job.id;
-		cronForm = {
-			name: job.name,
-			cronExpression: job.cronExpression,
-			enabled: job.enabled,
-			pullYoutube: job.pullYoutube
-		};
-	}
+  onMount(async () => {
+    try {
+      const mode = await invoke<string | null>('get_app_mode');
+      currentMode = (mode as AppMode) ?? null;
+    } catch (e) {
+      console.error('Settings load error:', e);
+    }
+  });
 
-	function cancelEditCron() {
-		editingCronId = null;
-		cronForm = { name: '', cronExpression: '', enabled: true, pullYoutube: false };
-		cronError = '';
-	}
+  // Load cron jobs once the auth token is available (set async by layout onMount).
+  $effect(() => {
+    if ($authToken) {
+      loadCronJobs();
+    }
+  });
 
-	async function saveCronJob() {
-		cronSaving = true;
-		cronError = '';
-		try {
-			if (editingCronId) {
-				await updateCronJob(editingCronId, cronForm);
-			} else {
-				await createCronJob(cronForm);
-			}
-			cancelEditCron();
-			await loadCronJobs();
-		} catch (e) {
-			cronError = String(e);
-		} finally {
-			cronSaving = false;
-		}
-	}
+  async function loadCronJobs() {
+    try {
+      cronJobs = await listCronJobs();
+    } catch {
+      // server might not be running in client mode — silently ignore
+    }
+  }
 
-	async function removeCronJob(id: string) {
-		cronError = '';
-		try {
-			await deleteCronJob(id);
-			await loadCronJobs();
-		} catch (e) {
-			cronError = String(e);
-		}
-	}
+  function startEditCron(job: CronJob) {
+    editingCronId = job.id;
+    cronForm = {
+      name: job.name,
+      cronExpression: job.cronExpression,
+      enabled: job.enabled,
+      pullYoutube: job.pullYoutube,
+    };
+  }
 
-	async function changeMode() {
-		resetting = true;
-		errorMessage = '';
-		try {
-			await invoke('reset_setup');
-			appMode.set('server');
-			await goto('/setup');
-		} catch (e) {
-			errorMessage = String(e);
-			resetting = false;
-		}
-	}
+  function cancelEditCron() {
+    editingCronId = null;
+    cronForm = { name: '', cronExpression: '', enabled: true, pullYoutube: false };
+    cronError = '';
+  }
+
+  async function saveCronJob() {
+    cronSaving = true;
+    cronError = '';
+    try {
+      if (editingCronId) {
+        await updateCronJob(editingCronId, cronForm);
+      } else {
+        await createCronJob(cronForm);
+      }
+      cancelEditCron();
+      await loadCronJobs();
+    } catch (e) {
+      cronError = String(e);
+    } finally {
+      cronSaving = false;
+    }
+  }
+
+  async function removeCronJob(id: string) {
+    cronError = '';
+    try {
+      await deleteCronJob(id);
+      await loadCronJobs();
+    } catch (e) {
+      cronError = String(e);
+    }
+  }
+
+  async function changeMode() {
+    resetting = true;
+    errorMessage = '';
+    try {
+      await invoke('reset_setup');
+      appMode.set('server');
+      await goto('/setup');
+    } catch (e) {
+      errorMessage = String(e);
+      resetting = false;
+    }
+  }
 </script>
 
 <div class="settings-container">
@@ -122,7 +149,8 @@
           class:active={$locale === lang.code}
           onclick={() => setLocale(lang.code)}
         >
-          {lang.flag} {lang.name}
+          {lang.flag}
+          {lang.name}
         </button>
       {/each}
     </div>
@@ -163,7 +191,83 @@
   <ConnectorSettingsBlock connectorId="atem" />
   <ConnectorSettingsBlock connectorId="broadlink" />
   <ConnectorSettingsBlock connectorId="discord" />
-  <ConnectorSettingsBlock connectorId="broadlink" />
+
+  <!-- OBS Badge -->
+  <h2 class="section-heading">OBS Badge</h2>
+  <section class="card">
+    <p class="help-text">
+      Create a liquid glass badge in OBS using the LucidGlass shader. Requires OBS to be connected
+      first.
+    </p>
+
+    {#if $obsState.connection !== 'connected'}
+      <p class="error-text">OBS must be connected first. Please configure and connect OBS.</p>
+    {:else}
+      <button
+        class="btn btn--primary"
+        onclick={async () => {
+          badgeSaving = true;
+          badgeError = '';
+          try {
+            badgeInstallResult = await installBadge();
+          } catch (e) {
+            badgeError = String(e);
+          } finally {
+            badgeSaving = false;
+          }
+        }}
+        disabled={badgeSaving}
+      >
+        {badgeSaving ? 'Installing...' : 'Install Plugin & Shader'}
+      </button>
+
+      {#if badgeInstallResult}
+        <p class="success-text">
+          Plugin: {badgeInstallResult.shaderfilter_installed ? 'Installed' : 'Already exists'}<br />
+          Shader: {badgeInstallResult.shader_installed ? 'Installed' : 'Already exists'}
+        </p>
+      {/if}
+
+      <hr />
+
+      <label class="field">
+        <span>Target Scene</span>
+        <select bind:value={$obsBadgeConfig.sceneName}>
+          <option value="">Select a scene...</option>
+          {#each badgeScenes as scene}
+            <option value={scene.name}>{scene.name}</option>
+          {/each}
+        </select>
+      </label>
+
+      <button
+        class="btn btn--primary"
+        onclick={async () => {
+          if (!$obsBadgeConfig.sceneName) {
+            badgeError = 'Please select a scene';
+            return;
+          }
+          badgeSaving = true;
+          badgeError = '';
+          try {
+            await createBadgeSources($obsBadgeConfig.sceneName);
+            $obsBadgeConfig.enabled = true;
+          } catch (e) {
+            badgeError = String(e);
+          } finally {
+            badgeSaving = false;
+          }
+        }}
+        disabled={badgeSaving || !$obsBadgeConfig.sceneName}
+      >
+        {badgeSaving ? 'Creating...' : 'Create Badge Sources'}
+      </button>
+    {/if}
+
+    {#if badgeError}
+      <p class="error-text" role="alert">{badgeError}</p>
+    {/if}
+  </section>
 
   <!-- Cron Jobs -->
   <h2 class="section-heading">Cron Jobs</h2>
@@ -187,8 +291,11 @@
               <td>{job.enabled ? '✓' : '✗'}</td>
               <td>{job.pullYoutube ? '✓' : '✗'}</td>
               <td class="cron-actions">
-                <button class="btn-secondary btn-sm" onclick={() => startEditCron(job)}>Edit</button>
-                <button class="btn-danger btn-sm" onclick={() => removeCronJob(job.id)}>Delete</button>
+                <button class="btn-secondary btn-sm" onclick={() => startEditCron(job)}>Edit</button
+                >
+                <button class="btn-danger btn-sm" onclick={() => removeCronJob(job.id)}
+                  >Delete</button
+                >
               </td>
             </tr>
           {/each}
@@ -203,7 +310,12 @@
     <div class="form-grid">
       <div class="field field--full">
         <label for="cron-name">Name</label>
-        <input id="cron-name" type="text" bind:value={cronForm.name} placeholder="e.g. YouTube poll" />
+        <input
+          id="cron-name"
+          type="text"
+          bind:value={cronForm.name}
+          placeholder="e.g. YouTube poll"
+        />
       </div>
       <div class="field field--full">
         <label for="cron-expr">Cron Expression</label>
