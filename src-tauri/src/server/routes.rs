@@ -5,17 +5,22 @@ use axum::{
     Json,
 };
 use chrono::Utc;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
 use crate::connectors::{facebook, youtube};
 use crate::models::{
+    activity::{self, CreateEventActivity},
     cron_job::{self, CreateCronJob, UpdateCronJob},
-    event::{fetch_event, CreateEvent, EventSummary, UpdateEvent},
+    event::{fetch_event, CreateBibleReference, CreateEvent, EventSummary, UpdateEvent},
     recording::{CreateRecording, Recording},
+    untracked_recording,
 };
-use crate::server::websocket::{broadcast_event_changed, spawn_scheduling_tasks};
+use crate::server::websocket::{
+    broadcast_event_changed, broadcast_untracked_removed, spawn_scheduling_tasks,
+};
 use crate::server::AppState;
 use crate::server::OAUTH_REDIRECT_URI;
 
@@ -653,7 +658,11 @@ pub async fn list_events(State(state): State<AppState>) -> impl IntoResponse {
     let result = sqlx::query_as::<_, EventSummary>(
         r#"
         SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
-               COUNT(r.id) AS recording_count
+               COUNT(r.id) AS recording_count,
+               EXISTS (
+                   SELECT 1 FROM event_activities ea
+                   WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
+               ) AS is_completed
         FROM events e
         LEFT JOIN recordings r ON r.event_id = e.id
         GROUP BY e.id
@@ -686,6 +695,51 @@ pub async fn get_event(
     }
 }
 
+/// Upsert (or delete) bible references for an event inside an open transaction.
+/// An entry with an empty reference string is deleted; non-empty entries are upserted.
+async fn upsert_bible_references(
+    event_id: Uuid,
+    refs: &Option<Vec<CreateBibleReference>>,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+) -> anyhow::Result<()> {
+    let Some(refs) = refs else { return Ok(()) };
+    for br in refs {
+        let reference = br.reference.as_deref().unwrap_or("").trim();
+        if reference.is_empty() {
+            sqlx::query(
+                "DELETE FROM event_bible_references WHERE event_id = $1 AND type = $2",
+            )
+            .bind(event_id)
+            .bind(&br.r#type)
+            .execute(&mut **tx)
+            .await?;
+        } else {
+            let translation = br.translation.as_deref().unwrap_or("UF");
+            let verses = br
+                .verses
+                .clone()
+                .unwrap_or_else(|| serde_json::json!([]));
+            sqlx::query(
+                "INSERT INTO event_bible_references (event_id, type, reference, translation, verses) \
+                 VALUES ($1, $2, $3, $4, $5) \
+                 ON CONFLICT (event_id, type) DO UPDATE SET \
+                   reference = EXCLUDED.reference, \
+                   translation = EXCLUDED.translation, \
+                   verses = EXCLUDED.verses, \
+                   updated_at = NOW()",
+            )
+            .bind(event_id)
+            .bind(&br.r#type)
+            .bind(reference)
+            .bind(translation)
+            .bind(verses)
+            .execute(&mut **tx)
+            .await?;
+        }
+    }
+    Ok(())
+}
+
 pub async fn create_event(
     State(state): State<AppState>,
     Json(body): Json<CreateEvent>,
@@ -697,20 +751,14 @@ pub async fn create_event(
             .await?;
 
         let event_id: Uuid = sqlx::query_scalar(
-            r#"INSERT INTO events (
-                title, date_time, speaker, description, textus, leckio,
-                textus_translation, leckio_translation, auto_upload_enabled
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            r#"INSERT INTO events (title, date_time, speaker, description, auto_upload_enabled)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id"#,
         )
         .bind(&body.title)
         .bind(body.date_time)
         .bind(body.speaker.unwrap_or_default())
         .bind(body.description.unwrap_or_default())
-        .bind(body.textus.unwrap_or_default())
-        .bind(body.leckio.unwrap_or_default())
-        .bind(body.textus_translation.unwrap_or_else(|| "UF".to_string()))
-        .bind(body.leckio_translation.unwrap_or_else(|| "UF".to_string()))
         .bind(body.auto_upload_enabled.unwrap_or(false))
         .fetch_one(&mut *tx)
         .await?;
@@ -746,6 +794,8 @@ pub async fn create_event(
             .execute(&mut *tx)
             .await?;
         }
+
+        upsert_bible_references(event_id, &body.bible_references, &mut tx).await?;
 
         tx.commit().await?;
 
@@ -786,23 +836,15 @@ pub async fn update_event(
                 date_time = $2,
                 speaker = $3,
                 description = $4,
-                textus = $5,
-                leckio = $6,
-                textus_translation = $7,
-                leckio_translation = $8,
-                auto_upload_enabled = $9,
+                auto_upload_enabled = $5,
                 updated_at = NOW()
-            WHERE id = $10
+            WHERE id = $6
             RETURNING id"#,
         )
         .bind(&body.title)
         .bind(body.date_time)
         .bind(body.speaker.unwrap_or_default())
         .bind(body.description.unwrap_or_default())
-        .bind(body.textus.unwrap_or_default())
-        .bind(body.leckio.unwrap_or_default())
-        .bind(body.textus_translation.unwrap_or_else(|| "UF".to_string()))
-        .bind(body.leckio_translation.unwrap_or_else(|| "UF".to_string()))
         .bind(body.auto_upload_enabled.unwrap_or(false))
         .bind(id)
         .fetch_optional(&mut *tx)
@@ -828,6 +870,8 @@ pub async fn update_event(
                 }
             }
         }
+
+        upsert_bible_references(id, &body.bible_references, &mut tx).await?;
 
         tx.commit().await?;
 
@@ -897,6 +941,84 @@ pub async fn create_recording(
         Ok(recording) => (StatusCode::CREATED, Json(recording)).into_response(),
         Err(e) => {
             tracing::error!("create_recording: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct DeleteRecordingParams {
+    #[serde(default)]
+    pub delete_file: bool,
+}
+
+pub async fn delete_recording(
+    State(state): State<AppState>,
+    Path((event_id, recording_id)): Path<(Uuid, Uuid)>,
+    Query(params): Query<DeleteRecordingParams>,
+) -> impl IntoResponse {
+    let row = sqlx::query_as::<_, Recording>(
+        "SELECT * FROM recordings WHERE id = $1 AND event_id = $2",
+    )
+    .bind(recording_id)
+    .bind(event_id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    match row {
+        Ok(Some(rec)) => {
+            let del = sqlx::query("DELETE FROM recordings WHERE id = $1")
+                .bind(recording_id)
+                .execute(&state.pool)
+                .await;
+            if let Err(e) = del {
+                tracing::error!("delete_recording DB: {e}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            if params.delete_file {
+                if let Err(e) = tokio::fs::remove_file(&rec.file_path).await {
+                    tracing::warn!(
+                        "delete_recording: could not delete file {}: {e}",
+                        rec.file_path
+                    );
+                }
+            }
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("delete_recording fetch: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn delete_event(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let event = match fetch_event(id, &state.pool).await {
+        Ok(Some(e)) => e,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("delete_event fetch: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let result = sqlx::query("DELETE FROM events WHERE id = $1 RETURNING id")
+        .bind(id)
+        .fetch_optional(&state.pool)
+        .await;
+
+    match result {
+        Ok(Some(_)) => {
+            broadcast_event_changed(&state, "DELETE", &event).await;
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("delete_event: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -1075,6 +1197,717 @@ pub async fn delete_cron_job(
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             tracing::error!("delete_cron_job: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+// ── Untracked recordings ───────────────────────────────────────────────────────
+
+pub async fn list_untracked_recordings(State(state): State<AppState>) -> impl IntoResponse {
+    match untracked_recording::list_untracked(&state.pool).await {
+        Ok(recordings) => (StatusCode::OK, Json(recordings)).into_response(),
+        Err(e) => {
+            tracing::error!("list_untracked_recordings: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct AssignRecordingBody {
+    pub event_id: Uuid,
+}
+
+pub async fn assign_untracked_recording(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<AssignRecordingBody>,
+) -> impl IntoResponse {
+    let result: anyhow::Result<Recording> = async {
+        // Fetch the untracked row (404 if missing)
+        let untracked = sqlx::query_as::<_, untracked_recording::UntrackedRecording>(
+            "SELECT * FROM untracked_recordings WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&state.pool)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("NOT_FOUND"))?;
+
+        // Verify event exists
+        let event_exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)")
+                .bind(body.event_id)
+                .fetch_one(&state.pool)
+                .await?;
+        if !event_exists {
+            return Err(anyhow::anyhow!("EVENT_NOT_FOUND"));
+        }
+
+        let mut tx = state.pool.begin().await?;
+        let recording = sqlx::query_as::<_, Recording>(
+            r#"INSERT INTO recordings (event_id, file_path, file_name, file_size, duration_seconds, detected_at)
+               VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#,
+        )
+        .bind(body.event_id)
+        .bind(&untracked.file_path)
+        .bind(&untracked.file_name)
+        .bind(untracked.file_size)
+        .bind(untracked.duration_seconds)
+        .bind(untracked.detected_at)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        sqlx::query("DELETE FROM untracked_recordings WHERE id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(recording)
+    }
+    .await;
+
+    match result {
+        Ok(recording) => {
+            // Broadcast the removal of the untracked recording
+            let clients = state.ws_clients.clone();
+            tokio::spawn(async move {
+                broadcast_untracked_removed(&clients, id).await;
+            });
+            (StatusCode::CREATED, Json(recording)).into_response()
+        }
+        Err(e) if e.to_string() == "NOT_FOUND" => StatusCode::NOT_FOUND.into_response(),
+        Err(e) if e.to_string() == "EVENT_NOT_FOUND" => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("assign_untracked_recording: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct DeleteUntrackedParams {
+    #[serde(default)]
+    pub delete_file: bool,
+}
+
+pub async fn delete_untracked_recording(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(params): Query<DeleteUntrackedParams>,
+) -> impl IntoResponse {
+    let row = sqlx::query_as::<_, untracked_recording::UntrackedRecording>(
+        "SELECT * FROM untracked_recordings WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    match row {
+        Ok(Some(rec)) => {
+            let del = sqlx::query("DELETE FROM untracked_recordings WHERE id = $1")
+                .bind(id)
+                .execute(&state.pool)
+                .await;
+            if let Err(e) = del {
+                tracing::error!("delete_untracked_recording DB: {e}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            if params.delete_file {
+                if let Err(e) = tokio::fs::remove_file(&rec.file_path).await {
+                    tracing::warn!("delete_untracked_recording: could not delete file {}: {e}", rec.file_path);
+                }
+            }
+            let clients = state.ws_clients.clone();
+            tokio::spawn(async move {
+                broadcast_untracked_removed(&clients, id).await;
+            });
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("delete_untracked_recording fetch: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+// ── Event activities ───────────────────────────────────────────────────────────
+
+pub async fn list_event_activities(
+    State(state): State<AppState>,
+    Path(event_id): Path<Uuid>,
+) -> impl IntoResponse {
+    match activity::list_activities(event_id, &state.pool).await {
+        Ok(activities) => (StatusCode::OK, Json(activities)).into_response(),
+        Err(e) => {
+            tracing::error!("list_event_activities: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn create_event_activity(
+    State(state): State<AppState>,
+    Path(event_id): Path<Uuid>,
+    Json(body): Json<CreateEventActivity>,
+) -> impl IntoResponse {
+    // Verify event exists
+    let event_exists: Result<bool, _> =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)")
+            .bind(event_id)
+            .fetch_one(&state.pool)
+            .await;
+
+    match event_exists {
+        Ok(false) | Err(_) => return StatusCode::NOT_FOUND.into_response(),
+        Ok(true) => {}
+    }
+
+    let result = sqlx::query_as::<_, activity::EventActivity>(
+        "INSERT INTO event_activities (event_id, activity_type, message) VALUES ($1, $2, $3) RETURNING *",
+    )
+    .bind(event_id)
+    .bind(&body.activity_type)
+    .bind(&body.message)
+    .fetch_one(&state.pool)
+    .await;
+
+    match result {
+        Ok(act) => (StatusCode::CREATED, Json(act)).into_response(),
+        Err(e) => {
+            tracing::error!("create_event_activity: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn delete_event_activity(
+    State(state): State<AppState>,
+    Path((event_id, activity_id)): Path<(Uuid, Uuid)>,
+) -> impl IntoResponse {
+    let result = sqlx::query(
+        "DELETE FROM event_activities WHERE id = $1 AND event_id = $2 RETURNING id",
+    )
+    .bind(activity_id)
+    .bind(event_id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    match result {
+        Ok(Some(_)) => StatusCode::NO_CONTENT.into_response(),
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("delete_event_activity: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+// ── Broadlink ─────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BroadlinkDevice {
+    id: Uuid,
+    name: String,
+    device_type: String,
+    model: Option<String>,
+    host: String,
+    mac: String,
+    is_default: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BroadlinkCommand {
+    id: Uuid,
+    device_id: Option<Uuid>,
+    name: String,
+    slug: String,
+    code: String,
+    code_type: String,
+    category: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddDeviceBody {
+    name: String,
+    host: String,
+    mac: String,
+    device_type: String,
+    model: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddCommandBody {
+    device_id: Option<Uuid>,
+    name: String,
+    slug: String,
+    code: String,
+    code_type: String,
+    category: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCommandBody {
+    name: Option<String>,
+    slug: Option<String>,
+    code: Option<String>,
+    code_type: Option<String>,
+    category: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LearnBody {
+    signal_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CommandsQuery {
+    device_id: Option<Uuid>,
+    category: Option<String>,
+}
+
+pub async fn broadlink_get_status(State(state): State<AppState>) -> impl IntoResponse {
+    let status = state.broadlink_connector.get_status().await;
+    Json(json!({ "status": status }))
+}
+
+pub async fn broadlink_list_devices(State(state): State<AppState>) -> impl IntoResponse {
+    let rows = sqlx::query_as::<_, (Uuid, String, String, Option<String>, String, String, bool)>(
+        "SELECT id, name, device_type, model, host, mac, is_default FROM broadlink_devices ORDER BY created_at",
+    )
+    .fetch_all(&state.pool)
+    .await;
+
+    match rows {
+        Ok(devices) => {
+            let list: Vec<BroadlinkDevice> = devices
+                .into_iter()
+                .map(|(id, name, device_type, model, host, mac, is_default)| BroadlinkDevice {
+                    id,
+                    name,
+                    device_type,
+                    model,
+                    host,
+                    mac,
+                    is_default,
+                })
+                .collect();
+            Json(list).into_response()
+        }
+        Err(e) => {
+            tracing::error!("broadlink_list_devices: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_add_device(
+    State(state): State<AppState>,
+    Json(body): Json<AddDeviceBody>,
+) -> impl IntoResponse {
+    let result = sqlx::query_as::<_, (Uuid,)>(
+        "INSERT INTO broadlink_devices (name, device_type, model, host, mac) \
+         VALUES ($1, $2, $3, $4, $5) RETURNING id",
+    )
+    .bind(&body.name)
+    .bind(&body.device_type)
+    .bind(&body.model)
+    .bind(&body.host)
+    .bind(&body.mac)
+    .fetch_one(&state.pool)
+    .await;
+
+    match result {
+        Ok((id,)) => {
+            // Update connector status: now we have at least one device
+            state
+                .broadlink_connector
+                .set_status(crate::connectors::ConnectorStatus::Connected)
+                .await;
+            let device = BroadlinkDevice {
+                id,
+                name: body.name,
+                device_type: body.device_type,
+                model: body.model,
+                host: body.host,
+                mac: body.mac,
+                is_default: false,
+            };
+            (StatusCode::CREATED, Json(device)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("broadlink_add_device: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_remove_device(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let result = sqlx::query("DELETE FROM broadlink_devices WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await;
+
+    match result {
+        Ok(r) if r.rows_affected() == 0 => StatusCode::NOT_FOUND.into_response(),
+        Ok(_) => {
+            // Check if any devices remain; update status accordingly
+            let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
+                .fetch_one(&state.pool)
+                .await
+                .unwrap_or(0);
+            let new_status = if count > 0 {
+                crate::connectors::ConnectorStatus::Connected
+            } else {
+                crate::connectors::ConnectorStatus::Disconnected
+            };
+            state.broadlink_connector.set_status(new_status).await;
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Err(e) => {
+            tracing::error!("broadlink_remove_device: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_discover(State(state): State<AppState>) -> impl IntoResponse {
+    let clients = state.ws_clients.clone();
+    let pool = state.pool.clone();
+    let connector = state.broadlink_connector.clone();
+
+    tokio::spawn(async move {
+        match crate::broadlink::discover_devices(5).await {
+            Ok(devices) => {
+                for dev in devices {
+                    let msg = json!({
+                        "type": "broadlink.device.discovered",
+                        "device": {
+                            "name": dev.name,
+                            "host": dev.host,
+                            "mac": dev.mac,
+                            "deviceType": dev.device_type,
+                            "model": dev.model,
+                        }
+                    })
+                    .to_string();
+                    let guard = clients.read().await;
+                    for tx in guard.values() {
+                        let _ = tx.send(axum::extract::ws::Message::Text(msg.clone().into()));
+                    }
+                    drop(guard);
+
+                    // Upsert discovered device into DB
+                    let _ = sqlx::query(
+                        "INSERT INTO broadlink_devices (name, device_type, model, host, mac, last_seen_at) \
+                         VALUES ($1, $2, $3, $4, $5, NOW()) \
+                         ON CONFLICT (mac) DO UPDATE SET host = EXCLUDED.host, last_seen_at = NOW()",
+                    )
+                    .bind(&dev.name)
+                    .bind(&dev.device_type)
+                    .bind(&dev.model)
+                    .bind(&dev.host)
+                    .bind(&dev.mac)
+                    .execute(&pool)
+                    .await;
+                }
+
+                // Refresh status after upserts
+                let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap_or(0);
+                let new_status = if count > 0 {
+                    crate::connectors::ConnectorStatus::Connected
+                } else {
+                    crate::connectors::ConnectorStatus::Disconnected
+                };
+                connector.set_status(new_status).await;
+            }
+            Err(e) => tracing::error!("broadlink_discover: {e}"),
+        }
+    });
+
+    StatusCode::ACCEPTED.into_response()
+}
+
+pub async fn broadlink_list_commands(
+    State(state): State<AppState>,
+    Query(q): Query<CommandsQuery>,
+) -> impl IntoResponse {
+    let rows = if let Some(device_id) = q.device_id {
+        if let Some(cat) = q.category {
+            sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
+                "SELECT id, device_id, name, slug, code, code_type, category \
+                 FROM broadlink_commands WHERE device_id = $1 AND category = $2 ORDER BY created_at",
+            )
+            .bind(device_id)
+            .bind(cat)
+            .fetch_all(&state.pool)
+            .await
+        } else {
+            sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
+                "SELECT id, device_id, name, slug, code, code_type, category \
+                 FROM broadlink_commands WHERE device_id = $1 ORDER BY created_at",
+            )
+            .bind(device_id)
+            .fetch_all(&state.pool)
+            .await
+        }
+    } else {
+        sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
+            "SELECT id, device_id, name, slug, code, code_type, category \
+             FROM broadlink_commands ORDER BY created_at",
+        )
+        .fetch_all(&state.pool)
+        .await
+    };
+
+    match rows {
+        Ok(commands) => {
+            let list: Vec<BroadlinkCommand> = commands
+                .into_iter()
+                .map(|(id, device_id, name, slug, code, code_type, category)| BroadlinkCommand {
+                    id,
+                    device_id,
+                    name,
+                    slug,
+                    code,
+                    code_type,
+                    category,
+                })
+                .collect();
+            Json(list).into_response()
+        }
+        Err(e) => {
+            tracing::error!("broadlink_list_commands: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_add_command(
+    State(state): State<AppState>,
+    Json(body): Json<AddCommandBody>,
+) -> impl IntoResponse {
+    let category = body.category.unwrap_or_else(|| "other".to_string());
+    let result = sqlx::query_as::<_, (Uuid,)>(
+        "INSERT INTO broadlink_commands (device_id, name, slug, code, code_type, category) \
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+    )
+    .bind(body.device_id)
+    .bind(&body.name)
+    .bind(&body.slug)
+    .bind(&body.code)
+    .bind(&body.code_type)
+    .bind(&category)
+    .fetch_one(&state.pool)
+    .await;
+
+    match result {
+        Ok((id,)) => {
+            let cmd = BroadlinkCommand {
+                id,
+                device_id: body.device_id,
+                name: body.name,
+                slug: body.slug,
+                code: body.code,
+                code_type: body.code_type,
+                category,
+            };
+            (StatusCode::CREATED, Json(cmd)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("broadlink_add_command: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_update_command(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateCommandBody>,
+) -> impl IntoResponse {
+    let result = sqlx::query(
+        "UPDATE broadlink_commands SET \
+         name = COALESCE($2, name), \
+         slug = COALESCE($3, slug), \
+         code = COALESCE($4, code), \
+         code_type = COALESCE($5, code_type), \
+         category = COALESCE($6, category), \
+         updated_at = NOW() \
+         WHERE id = $1",
+    )
+    .bind(id)
+    .bind(&body.name)
+    .bind(&body.slug)
+    .bind(&body.code)
+    .bind(&body.code_type)
+    .bind(&body.category)
+    .execute(&state.pool)
+    .await;
+
+    match result {
+        Ok(r) if r.rows_affected() == 0 => StatusCode::NOT_FOUND.into_response(),
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => {
+            tracing::error!("broadlink_update_command: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_remove_command(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let result = sqlx::query("DELETE FROM broadlink_commands WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await;
+
+    match result {
+        Ok(r) if r.rows_affected() == 0 => StatusCode::NOT_FOUND.into_response(),
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => {
+            tracing::error!("broadlink_remove_command: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn broadlink_start_learn(
+    State(state): State<AppState>,
+    Path(device_id): Path<Uuid>,
+    Json(body): Json<Option<LearnBody>>,
+) -> impl IntoResponse {
+    // Prevent concurrent learns
+    if state
+        .broadlink_learn_active
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "Learning already in progress" })),
+        )
+            .into_response();
+    }
+
+    let signal_type = body
+        .and_then(|b| b.signal_type)
+        .unwrap_or_else(|| "ir".to_string());
+
+    // Fetch device info
+    let device = sqlx::query_as::<_, (String, String, String)>(
+        "SELECT host, mac, device_type FROM broadlink_devices WHERE id = $1",
+    )
+    .bind(device_id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    let (host, mac, devtype) = match device {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            state
+                .broadlink_learn_active
+                .store(false, Ordering::SeqCst);
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "Device not found" })),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            state
+                .broadlink_learn_active
+                .store(false, Ordering::SeqCst);
+            tracing::error!("broadlink_start_learn fetch device: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let learn_active = state.broadlink_learn_active.clone();
+    let learn_tx = state.broadlink_connector.learn_tx.clone();
+
+    tokio::spawn(async move {
+        let result =
+            crate::broadlink::learn_code(&host, &mac, &devtype, &signal_type).await;
+        let event = match result {
+            Ok(lr) => crate::connectors::broadlink::BroadlinkLearnEvent {
+                code: lr.code,
+                error: lr.error,
+            },
+            Err(e) => crate::connectors::broadlink::BroadlinkLearnEvent {
+                code: None,
+                error: Some(e),
+            },
+        };
+        let _ = learn_tx.send(event);
+        learn_active.store(false, Ordering::SeqCst);
+    });
+
+    StatusCode::ACCEPTED.into_response()
+}
+
+pub async fn broadlink_cancel_learn(State(state): State<AppState>) -> impl IntoResponse {
+    crate::broadlink::cancel_learn().await;
+    state
+        .broadlink_learn_active
+        .store(false, Ordering::SeqCst);
+    StatusCode::NO_CONTENT.into_response()
+}
+
+pub async fn broadlink_send_command(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let row = sqlx::query_as::<_, (String, String, String, String)>(
+        "SELECT bc.code, bd.host, bd.mac, bd.device_type \
+         FROM broadlink_commands bc \
+         JOIN broadlink_devices bd ON bc.device_id = bd.id \
+         WHERE bc.id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    let (code, host, mac, devtype) = match row {
+        Ok(Some(r)) => r,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "Command not found" })),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            tracing::error!("broadlink_send_command fetch: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    match crate::broadlink::send_code(&host, &mac, &devtype, &code).await {
+        Ok(r) if r.success => StatusCode::NO_CONTENT.into_response(),
+        Ok(r) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": r.error.unwrap_or_default() })),
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!("broadlink_send_command send: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

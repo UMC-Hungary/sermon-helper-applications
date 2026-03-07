@@ -4,6 +4,8 @@ pub mod atem;
 pub mod broadlink;
 pub mod discord;
 pub mod facebook;
+#[cfg(target_os = "macos")]
+pub mod keynote;
 pub mod obs;
 pub mod vmix;
 pub mod youtube;
@@ -171,26 +173,14 @@ impl ConnectorConfig for DiscordConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BroadlinkConfig {
     pub enabled: bool,
-    pub host: String,
-    pub port: u16,
-}
-
-impl Default for BroadlinkConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            host: String::new(),
-            port: 80,
-        }
-    }
 }
 
 impl ConnectorConfig for BroadlinkConfig {
     fn is_configured(&self) -> bool {
-        self.enabled && !self.host.is_empty()
+        self.enabled
     }
 }

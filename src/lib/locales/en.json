@@ -254,6 +254,7 @@
 		},
 		"form": {
 			"basicInfo": "Basic Information",
+			"defaultTitle": "(Sunday) Worship Service",
 			"title": "Event Title",
 			"titlePlaceholder": "Sunday Service - The Love of God",
 			"date": "Date",
@@ -677,7 +678,40 @@
 		"events": "Events",
 		"connect": "Connect",
 		"settings": "Settings",
-		"liveEvents": "Live Events & Videos"
+		"liveEvents": "Live Events & Videos",
+		"presentations": "Presentations"
+	},
+	"presentations": {
+		"title": "Presentations",
+		"folders": {
+			"title": "Presentation Folders",
+			"add": "Add Folder",
+			"remove": "Remove folder"
+		},
+		"search": {
+			"title": "File Search"
+		},
+		"results": {
+			"title": "Results"
+		},
+		"status": {
+			"title": "Keynote Status",
+			"slideshow": "Slideshow",
+			"slide": "Slide",
+			"document": "Document",
+			"on": "ON",
+			"off": "OFF"
+		},
+		"controls": {
+			"title": "Controls",
+			"first": "First Slide",
+			"prev": "Previous Slide",
+			"next": "Next Slide",
+			"last": "Last Slide",
+			"play": "Play",
+			"stop": "Stop",
+			"closeAll": "Close All"
+		}
 	},
 	"liveEvents": {
 		"title": "Live Events & Videos",
@@ -785,6 +819,13 @@
 				"save": "Save",
 				"saving": "Saving…",
 				"comingSoon": "Discord integration is not yet implemented. Configuration is saved for future use."
+			},
+			"broadlink": {
+				"title": "Broadlink RF/IR",
+				"subtitle": "Control projectors, screens, and AV equipment via IR and RF",
+				"enabled": "Enable Broadlink connector",
+				"save": "Save",
+				"saving": "Saving…"
 			},
 			"statusLabels": {
 				"connected": "Connected",

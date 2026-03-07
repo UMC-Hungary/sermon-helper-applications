@@ -41,10 +41,12 @@
   <StreamStatsWidget />
 
   <!-- One widget per configured connector -->
-  {#each CONNECTORS as def (def.id)}
+  {#each CONNECTORS.filter((c) => c.id !== 'broadlink') as def (def.id)}
     <ConnectorDashboardWidget connectorId={def.id} />
   {/each}
 </section>
+
+<ConnectorDashboardWidget connectorId="broadlink" />
 
 <section class="quick-links">
   <h2>Quick Links</h2>

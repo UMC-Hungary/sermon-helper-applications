@@ -22,7 +22,96 @@ use sqlx::PgPool;
 use crate::connectors::{facebook, youtube, ConnectorStatus};
 use crate::models::event::{fetch_event, Event};
 use crate::models::recording::Recording;
+use crate::server::ppt;
 use crate::server::AppState;
+
+// ── Incoming WebSocket command types ─────────────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum WsCommand {
+    #[serde(rename = "keynote.open")]
+    KeynoteOpen { file_path: String },
+    #[serde(rename = "keynote.next")]
+    KeynoteNext,
+    #[serde(rename = "keynote.prev")]
+    KeynotePrev,
+    #[serde(rename = "keynote.first")]
+    KeynoteFirst,
+    #[serde(rename = "keynote.last")]
+    KeynoteLast,
+    #[serde(rename = "keynote.goto")]
+    KeynoteGoto { slide: u32 },
+    #[serde(rename = "keynote.start")]
+    KeynoteStart,
+    #[serde(rename = "keynote.stop")]
+    KeynoteStop,
+    #[serde(rename = "keynote.close_all")]
+    KeynoteCloseAll,
+    #[serde(rename = "keynote.status")]
+    KeynoteStatus,
+    #[serde(rename = "ppt.search")]
+    PptSearch { filter: String },
+}
+
+async fn handle_ws_command(
+    cmd: WsCommand,
+    state: &AppState,
+    client_tx: &mpsc::UnboundedSender<Message>,
+) {
+    match cmd {
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteOpen { file_path } => {
+            let _ = state.keynote_connector.open_file(&file_path).await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteNext => {
+            let _ = state.keynote_connector.next().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynotePrev => {
+            let _ = state.keynote_connector.prev().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteFirst => {
+            let _ = state.keynote_connector.first().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteLast => {
+            let _ = state.keynote_connector.last().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteGoto { slide } => {
+            let _ = state.keynote_connector.goto(slide).await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteStart => {
+            let _ = state.keynote_connector.start_slideshow().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteStop => {
+            let _ = state.keynote_connector.stop_slideshow().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteCloseAll => {
+            let _ = state.keynote_connector.close_all().await;
+        }
+        #[cfg(target_os = "macos")]
+        WsCommand::KeynoteStatus => {
+            let status = state.keynote_connector.get_status().await;
+            let msg = json!({ "type": "keynote.status", "status": status }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::PptSearch { filter } => {
+            let files = ppt::search_files_internal(&state.pool, &filter).await;
+            let msg = json!({ "type": "ppt.search_results", "files": files }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        // Non-macOS fallthrough: ignore keynote commands silently
+        #[cfg(not(target_os = "macos"))]
+        _ => {}
+    }
+}
 
 #[derive(Deserialize, Serialize)]
 struct PgNotify<T> {
@@ -112,6 +201,14 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
         let _ = tx.send(Message::Text(msg.into()));
     }
 
+    // Send initial Keynote status on connection (macOS only).
+    #[cfg(target_os = "macos")]
+    {
+        let kn_status = state.keynote_connector.get_status().await;
+        let msg = json!({ "type": "keynote.status", "status": kn_status }).to_string();
+        let _ = tx.send(Message::Text(msg.into()));
+    }
+
     // Push current OBS streaming/recording state if OBS is connected.
     if let Some(output) = state.obs_connector.get_output_state().await {
         let msg = json!({
@@ -134,8 +231,16 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
         }
     });
 
+    let state_recv = state.clone();
+    let tx_recv = tx.clone();
     let recv_task = tokio::spawn(async move {
-        while let Some(Ok(_msg)) = ws_stream.next().await {}
+        while let Some(Ok(msg)) = ws_stream.next().await {
+            if let Message::Text(text) = msg {
+                if let Ok(cmd) = serde_json::from_str::<WsCommand>(&text) {
+                    handle_ws_command(cmd, &state_recv, &tx_recv).await;
+                }
+            }
+        }
     });
 
     tokio::select! {
@@ -216,6 +321,51 @@ pub async fn start_notify_listener(
         for tx in clients.values() {
             let _ = tx.send(Message::Text(msg_text.clone().into()));
         }
+    }
+}
+
+/// Broadcast a `ppt.folders_changed` message when PPT folders are added/removed.
+pub async fn broadcast_ppt_folders_changed(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+) {
+    let msg = json!({ "type": "ppt.folders_changed" }).to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast a `recording.detected` message when OBS stops recording.
+pub async fn broadcast_recording_detected(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    file_name: &str,
+    event_title: Option<&str>,
+) {
+    let msg = json!({
+        "type": "recording.detected",
+        "fileName": file_name,
+        "eventTitle": event_title,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast a `recording.untracked.removed` message when an untracked recording is assigned.
+pub async fn broadcast_untracked_removed(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    untracked_id: Uuid,
+) {
+    let msg = json!({
+        "type": "recording.untracked.removed",
+        "id": untracked_id,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
     }
 }
 

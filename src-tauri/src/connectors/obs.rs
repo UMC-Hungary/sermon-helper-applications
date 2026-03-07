@@ -8,6 +8,19 @@ use tokio::time::Duration;
 
 use super::{ConnectorStatus, ObsConfig};
 
+/// Emitted by the OBS connector when a recording stops.
+#[derive(Clone)]
+pub struct ObsRecordingEvent {
+    pub output_path: std::path::PathBuf,
+}
+
+/// Emitted whenever OBS streaming or recording state changes.
+#[derive(Clone)]
+pub struct ObsStateEvent {
+    pub is_streaming: bool,
+    pub is_recording: bool,
+}
+
 /// Snapshot of OBS output states, broadcast whenever either changes.
 #[derive(Debug, Clone, Copy)]
 pub struct ObsOutputState {
@@ -23,7 +36,11 @@ pub struct ObsConnector {
     pub client: Arc<Mutex<Option<Arc<obws::Client>>>>,
     /// Broadcast channel — subscribe to receive every connection status change.
     pub status_tx: broadcast::Sender<ConnectorStatus>,
-    /// Broadcast channel — subscribe to receive streaming/recording state changes.
+    /// Broadcast channel — subscribe to receive OBS recording-stopped events.
+    pub recording_tx: broadcast::Sender<ObsRecordingEvent>,
+    /// Broadcast channel — subscribe to receive streaming/recording state changes (obs.state).
+    pub state_tx: broadcast::Sender<ObsStateEvent>,
+    /// Broadcast channel — subscribe to receive streaming/recording state changes (connector.state).
     pub output_state_tx: broadcast::Sender<ObsOutputState>,
     stop_tx: Mutex<Option<watch::Sender<bool>>>,
 }
@@ -31,12 +48,16 @@ pub struct ObsConnector {
 impl ObsConnector {
     pub fn new() -> Self {
         let (status_tx, _) = broadcast::channel(16);
+        let (recording_tx, _) = broadcast::channel(16);
+        let (state_tx, _) = broadcast::channel(16);
         let (output_state_tx, _) = broadcast::channel(16);
         Self {
             status: Arc::new(RwLock::new(ConnectorStatus::Disconnected)),
             output_state: Arc::new(RwLock::new(None)),
             client: Arc::new(Mutex::new(None)),
             status_tx,
+            recording_tx,
+            state_tx,
             output_state_tx,
             stop_tx: Mutex::new(None),
         }
@@ -52,9 +73,11 @@ impl ObsConnector {
         let output_state = Arc::clone(&self.output_state);
         let client_arc = Arc::clone(&self.client);
         let status_tx = self.status_tx.clone();
+        let recording_tx = self.recording_tx.clone();
+        let state_tx = self.state_tx.clone();
         let output_state_tx = self.output_state_tx.clone();
         tauri::async_runtime::spawn(async move {
-            run_obs_loop(config, app, status, output_state, client_arc, status_tx, output_state_tx, stop_rx).await;
+            run_obs_loop(config, app, status, output_state, client_arc, status_tx, recording_tx, state_tx, output_state_tx, stop_rx).await;
         });
     }
 
@@ -105,6 +128,8 @@ async fn run_obs_loop(
     output_state: Arc<RwLock<Option<ObsOutputState>>>,
     client_arc: Arc<Mutex<Option<Arc<obws::Client>>>>,
     status_tx: broadcast::Sender<ConnectorStatus>,
+    recording_tx: broadcast::Sender<ObsRecordingEvent>,
+    state_tx: broadcast::Sender<ObsStateEvent>,
     output_state_tx: broadcast::Sender<ObsOutputState>,
     mut stop_rx: watch::Receiver<bool>,
 ) {
@@ -130,32 +155,67 @@ async fn run_obs_loop(
                 *client_arc.lock().await = Some(Arc::clone(&client));
                 set_status(&status, &status_tx, &app, ConnectorStatus::Connected).await;
 
-                // Query initial streaming/recording state, persist it, and broadcast it.
+                // Query initial streaming/recording state.
                 let initial = query_output_state(&client).await;
                 *output_state.write().await = Some(initial);
                 let _ = output_state_tx.send(initial);
-                // Use the persistent Arc as the mutable tracker during the session.
+                let _ = state_tx.send(ObsStateEvent { is_streaming: initial.is_streaming, is_recording: initial.is_recording });
                 let current_output = Arc::clone(&output_state);
 
                 match client.events() {
                     Ok(events) => {
                         futures_util::pin_mut!(events);
+
+                        let mut is_streaming = initial.is_streaming;
+                        let mut is_recording = initial.is_recording;
+
                         'events: loop {
                             tokio::select! {
                                 maybe_event = events.next() => {
                                     match maybe_event {
                                         None => break 'events,
                                         Some(event) => {
-                                            handle_event(
-                                                &event,
-                                                &current_output,
-                                                &output_state_tx,
-                                            ).await;
+                                            match &event {
+                                                obws::events::Event::RecordStateChanged { state, path, .. } => {
+                                                    match state {
+                                                        obws::events::OutputState::Started => {
+                                                            is_recording = true;
+                                                            let _ = state_tx.send(ObsStateEvent { is_streaming, is_recording });
+                                                        }
+                                                        obws::events::OutputState::Stopped => {
+                                                            is_recording = false;
+                                                            let _ = state_tx.send(ObsStateEvent { is_streaming, is_recording });
+                                                            if let Some(p) = path {
+                                                                let _ = recording_tx.send(ObsRecordingEvent {
+                                                                    output_path: std::path::PathBuf::from(p),
+                                                                });
+                                                            }
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                }
+                                                obws::events::Event::StreamStateChanged { state, .. } => {
+                                                    match state {
+                                                        obws::events::OutputState::Started => {
+                                                            is_streaming = true;
+                                                            let _ = state_tx.send(ObsStateEvent { is_streaming, is_recording });
+                                                        }
+                                                        obws::events::OutputState::Stopped => {
+                                                            is_streaming = false;
+                                                            let _ = state_tx.send(ObsStateEvent { is_streaming, is_recording });
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                            handle_event(&event, &current_output, &output_state_tx).await;
                                         }
                                     }
                                 }
                                 result = stop_rx.changed() => {
                                     let _ = result;
+                                    let _ = state_tx.send(ObsStateEvent { is_streaming: false, is_recording: false });
                                     *client_arc.lock().await = None;
                                     *output_state.write().await = None;
                                     set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
@@ -163,6 +223,8 @@ async fn run_obs_loop(
                                 }
                             }
                         }
+                        // Connection dropped by OBS — reset state
+                        let _ = state_tx.send(ObsStateEvent { is_streaming: false, is_recording: false });
                         *client_arc.lock().await = None;
                         *output_state.write().await = None;
                         set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;

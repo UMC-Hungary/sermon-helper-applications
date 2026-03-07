@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-/// Raw DB row for the `events` table — no platform fields, no connections.
+/// Raw DB row for the `events` table — no platform fields, no connections, no bible refs.
 /// Used only with sqlx::FromRow inside [`fetch_event`]; never serialized directly.
 #[derive(Debug, FromRow)]
 struct EventRow {
@@ -12,10 +12,6 @@ struct EventRow {
     pub date_time: DateTime<Utc>,
     pub speaker: String,
     pub description: String,
-    pub textus: String,
-    pub leckio: String,
-    pub textus_translation: String,
-    pub leckio_translation: String,
     pub auto_upload_enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -34,7 +30,17 @@ pub struct EventConnection {
     pub extra: Option<serde_json::Value>,
 }
 
-/// Full event including its platform connections.
+/// One row from `event_bible_references`.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
+pub struct BibleReference {
+    pub r#type: String,
+    pub reference: String,
+    pub translation: String,
+    pub verses: serde_json::Value,
+}
+
+/// Full event including its platform connections and bible references.
 /// Serialized as camelCase for API responses; deserialized from snake_case NOTIFY payloads.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
@@ -44,32 +50,30 @@ pub struct Event {
     pub date_time: DateTime<Utc>,
     pub speaker: String,
     pub description: String,
-    pub textus: String,
-    pub leckio: String,
-    pub textus_translation: String,
-    pub leckio_translation: String,
     pub auto_upload_enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub connections: Vec<EventConnection>,
+    pub bible_references: Vec<BibleReference>,
 }
 
 impl Event {
-    fn from_parts(row: EventRow, connections: Vec<EventConnection>) -> Self {
+    fn from_parts(
+        row: EventRow,
+        connections: Vec<EventConnection>,
+        bible_references: Vec<BibleReference>,
+    ) -> Self {
         Self {
             id: row.id,
             title: row.title,
             date_time: row.date_time,
             speaker: row.speaker,
             description: row.description,
-            textus: row.textus,
-            leckio: row.leckio,
-            textus_translation: row.textus_translation,
-            leckio_translation: row.leckio_translation,
             auto_upload_enabled: row.auto_upload_enabled,
             created_at: row.created_at,
             updated_at: row.updated_at,
             connections,
+            bible_references,
         }
     }
 
@@ -79,7 +83,7 @@ impl Event {
     }
 }
 
-/// Fetch a single event with its connections. Returns `None` if not found.
+/// Fetch a single event with its connections and bible references. Returns `None` if not found.
 pub async fn fetch_event(id: Uuid, pool: &PgPool) -> anyhow::Result<Option<Event>> {
     let row = sqlx::query_as::<_, EventRow>("SELECT * FROM events WHERE id = $1")
         .bind(id)
@@ -96,7 +100,14 @@ pub async fn fetch_event(id: Uuid, pool: &PgPool) -> anyhow::Result<Option<Event
     .bind(id)
     .fetch_all(pool)
     .await?;
-    Ok(Some(Event::from_parts(row, connections)))
+    let bible_references = sqlx::query_as::<_, BibleReference>(
+        "SELECT type, reference, translation, verses \
+         FROM event_bible_references WHERE event_id = $1 ORDER BY type",
+    )
+    .bind(id)
+    .fetch_all(pool)
+    .await?;
+    Ok(Some(Event::from_parts(row, connections, bible_references)))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -107,8 +118,34 @@ pub struct EventSummary {
     pub date_time: DateTime<Utc>,
     pub speaker: String,
     pub recording_count: i64,
+    pub is_completed: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+/// Find the earliest event today (UTC) that has no "completed" activity.
+/// Used for auto-assigning OBS recordings.
+pub async fn find_current_event(pool: &PgPool) -> anyhow::Result<Option<EventSummary>> {
+    let event = sqlx::query_as::<_, EventSummary>(
+        r#"
+        SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
+               COUNT(r.id) AS recording_count,
+               false AS is_completed
+        FROM events e
+        LEFT JOIN recordings r ON r.event_id = e.id
+        WHERE DATE(e.date_time AT TIME ZONE 'UTC') = DATE(NOW() AT TIME ZONE 'UTC')
+          AND NOT EXISTS (
+              SELECT 1 FROM event_activities ea
+              WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
+          )
+        GROUP BY e.id
+        ORDER BY e.date_time ASC
+        LIMIT 1
+        "#,
+    )
+    .fetch_optional(pool)
+    .await?;
+    Ok(event)
 }
 
 /// Connection spec in a create/update request body.
@@ -118,6 +155,15 @@ pub struct CreateConnection {
     pub privacy_status: Option<String>,
 }
 
+/// Bible reference spec in a create/update request body.
+#[derive(Debug, Deserialize)]
+pub struct CreateBibleReference {
+    pub r#type: String,
+    pub reference: Option<String>,
+    pub translation: Option<String>,
+    pub verses: Option<serde_json::Value>,
+}
+
 /// Received from frontend — stays snake_case to match JSON body.
 #[derive(Debug, Deserialize)]
 pub struct CreateEvent {
@@ -125,12 +171,9 @@ pub struct CreateEvent {
     pub date_time: DateTime<Utc>,
     pub speaker: Option<String>,
     pub description: Option<String>,
-    pub textus: Option<String>,
-    pub leckio: Option<String>,
-    pub textus_translation: Option<String>,
-    pub leckio_translation: Option<String>,
     pub auto_upload_enabled: Option<bool>,
     pub connections: Option<Vec<CreateConnection>>,
+    pub bible_references: Option<Vec<CreateBibleReference>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -139,10 +182,7 @@ pub struct UpdateEvent {
     pub date_time: DateTime<Utc>,
     pub speaker: Option<String>,
     pub description: Option<String>,
-    pub textus: Option<String>,
-    pub leckio: Option<String>,
-    pub textus_translation: Option<String>,
-    pub leckio_translation: Option<String>,
     pub auto_upload_enabled: Option<bool>,
     pub connections: Option<Vec<CreateConnection>>,
+    pub bible_references: Option<Vec<CreateBibleReference>>,
 }

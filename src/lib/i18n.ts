@@ -8,7 +8,7 @@ addMessages('en', en);
 addMessages('hu', hu);
 
 const isTauriApp = () => {
-	return browser && typeof (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ !== 'undefined';
+	return browser && typeof (window as unknown as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ !== 'undefined';
 };
 
 function getInitialLocale(): string {

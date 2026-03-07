@@ -1,6 +1,8 @@
 <script lang="ts">
   import { createEvent, updateEvent } from '$lib/api/events.js';
   import type { Event } from '$lib/schemas/event.js';
+  import { _ } from 'svelte-i18n';
+  import { get } from 'svelte/store';
   import { bibleApi } from '$lib/utils/bible-api.js';
   import { debounce } from '$lib/utils/debounce.js';
   import { isV2Translation, TRANSLATIONS, type BibleTranslation, type LegacySuggestion, type BibleVerse } from '$lib/types/bible.js';
@@ -22,9 +24,19 @@
     return new Date(d.getTime() - offset).toISOString().slice(0, 16);
   }
 
+  function nextSundayAt(hour: number): string {
+    const now = new Date();
+    const daysUntilSunday = (7 - now.getDay()) % 7;
+    const sunday = new Date(now);
+    sunday.setDate(now.getDate() + daysUntilSunday);
+    sunday.setHours(hour, 0, 0, 0);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${sunday.getFullYear()}-${pad(sunday.getMonth() + 1)}-${pad(sunday.getDate())}T${pad(hour)}:00`;
+  }
+
   // Basic fields
   let title = $state('');
-  let dateTime = $state('');
+  let dateTime = $state(nextSundayAt(10));
   let speaker = $state('');
   let description = $state('');
   let youtubePrivacyStatus = $state<'public' | 'unlisted' | 'private'>('private');
@@ -56,16 +68,20 @@
 
   // Initialize form fields from prop before first render
   $effect.pre(() => {
-    title = initialEvent?.title ?? '';
-    dateTime = initialEvent ? toDatetimeLocalValue(initialEvent.dateTime) : '';
+    title = initialEvent?.title ?? get(_)('events.form.defaultTitle');
+    dateTime = initialEvent ? toDatetimeLocalValue(initialEvent.dateTime) : nextSundayAt(10);
     speaker = initialEvent?.speaker ?? '';
     description = initialEvent?.description ?? '';
-    textus = initialEvent?.textus ?? '';
-    leckio = initialEvent?.leckio ?? '';
-    textusQuery = initialEvent?.textus ?? '';
-    leckioQuery = initialEvent?.leckio ?? '';
-    textusTranslation = (initialEvent?.textusTranslation as BibleTranslation) ?? 'UF_v2';
-    leckioTranslation = (initialEvent?.leckioTranslation as BibleTranslation) ?? 'UF_v2';
+    const textusRef = initialEvent?.bibleReferences?.find((r) => r.type === 'textus');
+    const leckioRef = initialEvent?.bibleReferences?.find((r) => r.type === 'leckio');
+    textus = textusRef?.reference ?? '';
+    leckio = leckioRef?.reference ?? '';
+    textusQuery = textusRef?.reference ?? '';
+    leckioQuery = leckioRef?.reference ?? '';
+    textusTranslation = (textusRef?.translation as BibleTranslation) ?? 'UF_v2';
+    leckioTranslation = (leckioRef?.translation as BibleTranslation) ?? 'UF_v2';
+    textusVerses = textusRef?.verses?.map((v) => ({ ...v, editing: false })) ?? [];
+    leckioVerses = leckioRef?.verses?.map((v) => ({ ...v, editing: false })) ?? [];
     youtubePrivacyStatus = (initialEvent?.connections.find((c) => c.platform === 'youtube')?.privacyStatus as typeof youtubePrivacyStatus) ?? 'private';
     facebookPrivacyStatus = (initialEvent?.connections.find((c) => c.platform === 'facebook')?.privacyStatus as typeof facebookPrivacyStatus) ?? 'EVERYONE';
   });
@@ -216,10 +232,20 @@
       date_time: new Date(dateTime).toISOString(),
       speaker: speaker || undefined,
       description: description || undefined,
-      textus: textus || undefined,
-      leckio: leckio || undefined,
-      textus_translation: textusTranslation,
-      leckio_translation: leckioTranslation,
+      bible_references: [
+        {
+          type: 'textus',
+          reference: textus || '',
+          translation: textusTranslation,
+          verses: textusVerses.map(({ chapter, verse, text }) => ({ chapter, verse, text })),
+        },
+        {
+          type: 'leckio',
+          reference: leckio || '',
+          translation: leckioTranslation,
+          verses: leckioVerses.map(({ chapter, verse, text }) => ({ chapter, verse, text })),
+        },
+      ],
       connections: [
         { platform: 'youtube', privacy_status: youtubePrivacyStatus },
         { platform: 'facebook', privacy_status: facebookPrivacyStatus },

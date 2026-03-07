@@ -163,6 +163,7 @@
   <ConnectorSettingsBlock connectorId="atem" />
   <ConnectorSettingsBlock connectorId="broadlink" />
   <ConnectorSettingsBlock connectorId="discord" />
+  <ConnectorSettingsBlock connectorId="broadlink" />
 
   <!-- Cron Jobs -->
   <h2 class="section-heading">Cron Jobs</h2>

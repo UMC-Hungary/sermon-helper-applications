@@ -14,6 +14,8 @@ mod connectors;
 mod mediamtx;
 #[cfg(desktop)]
 mod scheduler;
+#[cfg(desktop)]
+mod broadlink;
 
 use std::sync::Arc;
 use tauri::Manager;
@@ -43,6 +45,8 @@ pub struct AppRuntime {
     pub facebook_connector: Arc<connectors::facebook::FacebookConnector>,
     #[cfg(desktop)]
     pub discord_connector: Arc<connectors::discord::DiscordConnector>,
+    #[cfg(target_os = "macos")]
+    pub keynote_connector: Arc<connectors::keynote::KeynoteConnector>,
     /// Shared config Arcs — the same Arcs are injected into AppState so that
     /// saving config via Tauri command is immediately visible to Axum routes.
     #[cfg(desktop)]
@@ -113,6 +117,12 @@ pub fn run() {
         commands::connectors::get_facebook_status,
         commands::connectors::get_facebook_auth_url,
         commands::connectors::facebook_logout,
+        commands::connectors::broadlink_discover,
+        commands::connectors::broadlink_learn,
+        commands::connectors::broadlink_cancel_learn,
+        commands::connectors::broadlink_send,
+        commands::connectors::broadlink_test_device,
+        commands::connectors::broadlink_list_interfaces,
         commands::connectors::get_relay_config,
         commands::connectors::save_relay_config,
         commands::connectors::get_obs_stream_settings,
@@ -194,6 +204,8 @@ pub fn run() {
             let facebook_connector = Arc::new(connectors::facebook::FacebookConnector::new());
             #[cfg(desktop)]
             let discord_connector = Arc::new(connectors::discord::DiscordConnector::new());
+            #[cfg(target_os = "macos")]
+            let keynote_connector = Arc::new(connectors::keynote::KeynoteConnector::new());
 
             // Config Arcs created here so both AppRuntime (Tauri) and AppState
             // (Axum) hold the same Arc — writing via a Tauri command is
@@ -253,6 +265,8 @@ pub fn run() {
                 facebook_connector: Arc::clone(&facebook_connector),
                 #[cfg(desktop)]
                 discord_connector: Arc::clone(&discord_connector),
+                #[cfg(target_os = "macos")]
+                keynote_connector: Arc::clone(&keynote_connector),
                 #[cfg(desktop)]
                 youtube_config: Arc::clone(&yt_config_arc),
                 #[cfg(desktop)]
@@ -277,14 +291,33 @@ pub fn run() {
                 let vmix = Arc::clone(&vmix_connector);
                 let yt = Arc::clone(&youtube_connector);
                 let fb = Arc::clone(&facebook_connector);
+                let bl = Arc::clone(&broadlink_connector);
                 // Pass the shared config Arcs so AppState uses the same Arcs
                 // as AppRuntime — updates from Tauri commands are visible immediately.
                 let yt_cfg = Arc::clone(&yt_config_arc);
                 let fb_cfg = Arc::clone(&fb_config_arc);
                 let oauth = Arc::clone(&oauth_states_arc);
+                #[cfg(target_os = "macos")]
+                let kn = Arc::clone(&keynote_connector);
 
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) = start_server(handle, auth_token_arc, port, obs, vmix, yt, fb, yt_cfg, fb_cfg, oauth).await {
+                    if let Err(e) = start_server(
+                        handle,
+                        auth_token_arc,
+                        port,
+                        obs,
+                        vmix,
+                        yt,
+                        fb,
+                        bl,
+                        yt_cfg,
+                        fb_cfg,
+                        oauth,
+                        #[cfg(target_os = "macos")]
+                        kn,
+                    )
+                    .await
+                    {
                         tracing::error!("Backend startup failed: {e}");
                     }
                 });
@@ -349,9 +382,11 @@ pub(crate) async fn start_server(
     vmix_connector: Arc<connectors::vmix::VmixConnector>,
     youtube_connector: Arc<connectors::youtube::YouTubeConnector>,
     facebook_connector: Arc<connectors::facebook::FacebookConnector>,
+    broadlink_connector: Arc<connectors::broadlink::BroadlinkConnector>,
     youtube_config: Arc<RwLock<connectors::YouTubeConfig>>,
     facebook_config: Arc<RwLock<connectors::FacebookConfig>>,
     oauth_states: Arc<RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
+    #[cfg(target_os = "macos")] keynote_connector: Arc<connectors::keynote::KeynoteConnector>,
 ) -> anyhow::Result<()> {
     use std::path::PathBuf;
 
@@ -385,6 +420,19 @@ pub(crate) async fn start_server(
         }
     }
 
+    // Initialise Broadlink status from DB: Connected if at least one device exists.
+    {
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(0);
+        if count > 0 {
+            broadlink_connector
+                .set_status(connectors::ConnectorStatus::Connected)
+                .await;
+        }
+    }
+
     let static_dir = app
         .path()
         .resource_dir()
@@ -404,11 +452,14 @@ pub(crate) async fn start_server(
         vmix_connector,
         youtube_connector,
         facebook_connector,
+        broadlink_connector,
         youtube_config,
         facebook_config,
         oauth_states,
         app.clone(),
         cron_scheduler,
+        #[cfg(target_os = "macos")]
+        keynote_connector,
     )
     .await?;
 

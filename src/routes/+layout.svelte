@@ -24,6 +24,7 @@
 		<a href="/">{$_('nav.dashboard')}</a>
 		<a href="/events">{$_('nav.events')}</a>
 		<a href="/live-events">{$_('nav.liveEvents')}</a>
+		<a href="/presentations">{$_('nav.presentations')}</a>
 		<a href="/connect">{$_('nav.connect')}</a>
 		<a href="/settings">{$_('nav.settings')}</a>
 		<NavErrorBadge />

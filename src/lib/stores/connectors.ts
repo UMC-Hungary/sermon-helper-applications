@@ -37,8 +37,6 @@ export interface FacebookConfig {
 
 export interface BroadlinkConfig {
 	enabled: boolean;
-	host: string;
-	port: number;
 }
 
 export interface DiscordConfig {
@@ -89,9 +87,7 @@ export const atemConfig = writable<AtemConfig>({
 });
 
 export const broadlinkConfig = writable<BroadlinkConfig>({
-	enabled: false,
-	host: '',
-	port: 80
+	enabled: false
 });
 
 export const youtubeConfig = writable<YouTubeConfig>({
@@ -116,7 +112,7 @@ export const discordConfig = writable<DiscordConfig>({
 // These are updated alongside the status stores. The boolean flags (isStreaming,
 // isRecording, isLive) will be populated when WS messages for them arrive.
 
-export const obsState = writable<ConnectorState>({ connection: 'disconnected' });
+export const obsState = writable<ConnectorState>({ connection: 'disconnected', isStreaming: false, isRecording: false });
 export const vmixState = writable<ConnectorState>({ connection: 'disconnected' });
 export const atemState = writable<ConnectorState>({ connection: 'disconnected' });
 export const broadlinkState = writable<ConnectorState>({ connection: 'disconnected' });

@@ -6,6 +6,17 @@ import {
   type CreateRecordingPayload,
 } from '$lib/schemas/recording.js';
 
+export function deleteRecording(
+  eventId: string,
+  recordingId: string,
+  deleteFile = false,
+): Promise<void> {
+  const qs = deleteFile ? '?delete_file=true' : '';
+  return apiFetch(`/api/events/${eventId}/recordings/${recordingId}${qs}`, z.void(), {
+    method: 'DELETE',
+  });
+}
+
 export function listRecordings(eventId: string): Promise<Recording[]> {
   return apiFetch(`/api/events/${eventId}/recordings`, z.array(RecordingSchema));
 }

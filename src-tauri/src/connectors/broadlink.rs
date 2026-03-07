@@ -1,14 +1,38 @@
+use std::sync::Arc;
+use tokio::sync::{broadcast, RwLock};
+
 use super::ConnectorStatus;
 
-pub struct BroadlinkConnector;
+#[derive(Debug, Clone)]
+pub struct BroadlinkLearnEvent {
+    pub code: Option<String>,
+    pub error: Option<String>,
+}
+
+pub struct BroadlinkConnector {
+    pub status: Arc<RwLock<ConnectorStatus>>,
+    pub status_tx: broadcast::Sender<ConnectorStatus>,
+    pub learn_tx: broadcast::Sender<BroadlinkLearnEvent>,
+}
 
 impl BroadlinkConnector {
     pub fn new() -> Self {
-        Self
+        let (status_tx, _) = broadcast::channel(16);
+        let (learn_tx, _) = broadcast::channel(16);
+        Self {
+            status: Arc::new(RwLock::new(ConnectorStatus::Disconnected)),
+            status_tx,
+            learn_tx,
+        }
     }
 
-    pub fn get_status(&self) -> ConnectorStatus {
-        ConnectorStatus::Disconnected
+    pub async fn get_status(&self) -> ConnectorStatus {
+        self.status.read().await.clone()
+    }
+
+    pub async fn set_status(&self, status: ConnectorStatus) {
+        *self.status.write().await = status.clone();
+        let _ = self.status_tx.send(status);
     }
 }
 

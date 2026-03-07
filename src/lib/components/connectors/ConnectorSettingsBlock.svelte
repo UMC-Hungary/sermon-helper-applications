@@ -33,6 +33,7 @@
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorStatusBadge from './ConnectorStatusBadge.svelte';
 	import { youtubeLogout, facebookLogout, fetchYouTubeStreamKey, fetchFacebookStreamKey } from '$lib/api/connectors.js';
+	import BroadlinkDiscoveryPanel from './broadlink/DiscoveryPanel.svelte';
 
 	interface Props {
 		connectorId: string;
@@ -430,29 +431,6 @@
 		}
 	}
 
-	// ── BroadLink ──────────────────────────────────────────────────────────────
-	let broadlinkForm: BroadlinkConfig = $state({ enabled: false, host: '', port: 80 });
-	let broadlinkSaving = $state(false);
-	let broadlinkError = $state('');
-
-	$effect(() => {
-		if (connectorId === 'broadlink') broadlinkForm = { ...$broadlinkConfig };
-	});
-
-	async function saveBroadlink() {
-		broadlinkSaving = true;
-		broadlinkError = '';
-		try {
-			await invoke('save_broadlink_config', { config: broadlinkForm });
-			broadlinkConfig.set({ ...broadlinkForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			broadlinkError = String(e);
-		} finally {
-			broadlinkSaving = false;
-		}
-	}
-
 	// ── Discord ────────────────────────────────────────────────────────────────
 	let discordForm: DiscordConfig = $state({ enabled: false, webhookUrl: '' });
 	let discordSaving = $state(false);
@@ -473,6 +451,29 @@
 			discordError = String(e);
 		} finally {
 			discordSaving = false;
+		}
+	}
+
+	// ── Broadlink ──────────────────────────────────────────────────────────────
+	let broadlinkForm: BroadlinkConfig = $state({ enabled: false });
+	let broadlinkSaving = $state(false);
+	let broadlinkError = $state('');
+
+	$effect(() => {
+		if (connectorId === 'broadlink') broadlinkForm = { ...$broadlinkConfig };
+	});
+
+	async function saveBroadlink() {
+		broadlinkSaving = true;
+		broadlinkError = '';
+		try {
+			await invoke('save_broadlink_config', { config: broadlinkForm });
+			broadlinkConfig.set({ ...broadlinkForm });
+			onSaveSuccess?.();
+		} catch (e) {
+			broadlinkError = String(e);
+		} finally {
+			broadlinkSaving = false;
 		}
 	}
 </script>
@@ -944,26 +945,12 @@
 
 		<!-- ── BroadLink form ────────────────────────────────────────────────── -->
 		{:else if connectorId === 'broadlink'}
-			<p class="coming-soon-notice">{$_('appSettings.connectors.broadlink.comingSoon')}</p>
-
-			<fieldset disabled>
-				<div class="form-row">
-					<label class="checkbox-label">
-						<input type="checkbox" bind:checked={broadlinkForm.enabled} />
-						{$_('appSettings.connectors.broadlink.enabled')}
-					</label>
-				</div>
-				<div class="form-grid">
-					<div class="field">
-						<label for="broadlink-host">{$_('appSettings.connectors.broadlink.host')}</label>
-						<input id="broadlink-host" type="text" bind:value={broadlinkForm.host} />
-					</div>
-					<div class="field">
-						<label for="broadlink-port">{$_('appSettings.connectors.broadlink.port')}</label>
-						<input id="broadlink-port" type="number" min="1" max="65535" bind:value={broadlinkForm.port} />
-					</div>
-				</div>
-			</fieldset>
+			<div class="form-row">
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={broadlinkForm.enabled} />
+					{$_('appSettings.connectors.broadlink.enabled')}
+				</label>
+			</div>
 
 			{#if broadlinkError}
 				<p class="error" role="alert">{broadlinkError}</p>
@@ -976,6 +963,8 @@
 						: $_('appSettings.connectors.broadlink.save')}
 				</button>
 			</div>
+
+			<BroadlinkDiscoveryPanel />
 
 		<!-- ── Discord form ───────────────────────────────────────────────────── -->
 		{:else if connectorId === 'discord'}
@@ -1007,6 +996,7 @@
 						: $_('appSettings.connectors.discord.save')}
 				</button>
 			</div>
+
 		{/if}
 	</div>
 {/if}

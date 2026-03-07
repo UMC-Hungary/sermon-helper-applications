@@ -18,12 +18,17 @@
   }
 </script>
 
-<a class="card" href="/events/{event.id}">
+<a class="card" class:card--completed={event.isCompleted} href="/events/{event.id}">
   <div class="card__header">
     <h3>{event.title}</h3>
-    <span class="badge"
-      >{event.recordingCount} recording{event.recordingCount !== 1 ? 's' : ''}</span
-    >
+    <div class="card__badges">
+      {#if event.isCompleted}
+        <span class="badge badge--completed">Completed</span>
+      {/if}
+      <span class="badge"
+        >{event.recordingCount} recording{event.recordingCount !== 1 ? 's' : ''}</span
+      >
+    </div>
   </div>
   <p class="card__meta">
     {#if event.speaker}
@@ -48,6 +53,10 @@
     border-color: #93c5fd;
   }
 
+  .card--completed {
+    opacity: 0.65;
+  }
+
   .card__header {
     display: flex;
     align-items: center;
@@ -61,6 +70,12 @@
     font-size: 1rem;
   }
 
+  .card__badges {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+  }
+
   .badge {
     font-size: 0.75rem;
     padding: 0.125rem 0.5rem;
@@ -68,6 +83,11 @@
     background: #e0e7ff;
     color: #3730a3;
     white-space: nowrap;
+  }
+
+  .badge--completed {
+    background: #d1fae5;
+    color: #065f46;
   }
 
   .card__meta {
