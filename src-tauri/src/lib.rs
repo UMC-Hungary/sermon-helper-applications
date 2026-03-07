@@ -166,15 +166,29 @@ pub fn run() {
                 .get("mode")
                 .and_then(|v| v.as_str().map(String::from));
 
-            let auth_token = store
-                .get("auth_token")
-                .and_then(|v| v.as_str().map(String::from))
-                .unwrap_or_else(|| {
-                    let t = Uuid::new_v4().to_string();
-                    store.set("auth_token", serde_json::Value::String(t.clone()));
-                    let _ = store.save();
-                    t
-                });
+            let auth_token = match mode.as_deref() {
+                Some("client") => {
+                    // In client mode the token is whatever the user entered
+                    // during setup; complete_setup() saves it as "client_auth_token".
+                    store
+                        .get("client_auth_token")
+                        .and_then(|v| v.as_str().map(String::from))
+                        .unwrap_or_default()
+                }
+                _ => {
+                    // In server mode (or not yet configured) generate/load our
+                    // own auth token that incoming requests must present.
+                    store
+                        .get("auth_token")
+                        .and_then(|v| v.as_str().map(String::from))
+                        .unwrap_or_else(|| {
+                            let t = Uuid::new_v4().to_string();
+                            store.set("auth_token", serde_json::Value::String(t.clone()));
+                            let _ = store.save();
+                            t
+                        })
+                }
+            };
 
             let client_url = store
                 .get("server_url")
