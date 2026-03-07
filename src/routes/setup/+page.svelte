@@ -41,7 +41,7 @@
         // Ping the remote server before saving
         let response: Response;
         try {
-          response = await fetch(`${trimmedUrl}/events`, {
+          response = await fetch(`${trimmedUrl}/api/events`, {
             headers: { Authorization: `Bearer ${trimmedToken}` },
           });
         } catch {

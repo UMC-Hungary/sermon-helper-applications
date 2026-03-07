@@ -11,6 +11,7 @@ export const CONNECTORS: ConnectorDefinition<BaseConfig>[] = [
 	obsDefinition as ConnectorDefinition<BaseConfig>,
 	vmixDefinition as ConnectorDefinition<BaseConfig>,
 	atemDefinition as ConnectorDefinition<BaseConfig>,
+	broadlinkDefinition as ConnectorDefinition<BaseConfig>,
 	youtubeDefinition as ConnectorDefinition<BaseConfig>,
 	facebookDefinition as ConnectorDefinition<BaseConfig>,
 	discordDefinition as ConnectorDefinition<BaseConfig>,

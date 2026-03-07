@@ -801,6 +801,16 @@
 				"saving": "Mentés…",
 				"comingSoon": "Az ATEM integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
 			},
+			"broadlink": {
+				"title": "BroadLink",
+				"subtitle": "BroadLink hub támogatás hamarosan",
+				"host": "Gazdagép / IP",
+				"port": "Port",
+				"enabled": "BroadLink csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"comingSoon": "A BroadLink integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+			},
 			"discord": {
 				"title": "Discord",
 				"subtitle": "Discord webhook támogatás hamarosan",

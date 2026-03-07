@@ -35,3 +35,9 @@ impl BroadlinkConnector {
         let _ = self.status_tx.send(status);
     }
 }
+
+impl Default for BroadlinkConnector {
+    fn default() -> Self {
+        Self::new()
+    }
+}

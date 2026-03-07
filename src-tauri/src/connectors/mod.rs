@@ -184,4 +184,3 @@ impl ConnectorConfig for BroadlinkConfig {
         self.enabled
     }
 }
-

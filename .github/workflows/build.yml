@@ -479,7 +479,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           pnpm tauri android build \
-            --apk true \
+            --apk \
             -- \
             -Pandroid.injected.signing.store.file="$ANDROID_KEYSTORE_PATH" \
             -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
@@ -491,7 +491,7 @@ jobs:
         if: env.ANDROID_KEYSTORE == ''
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
-        run: pnpm tauri android build --apk true --debug
+        run: pnpm tauri android build --apk --debug
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4

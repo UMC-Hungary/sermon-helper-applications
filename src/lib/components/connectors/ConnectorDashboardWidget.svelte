@@ -6,16 +6,17 @@
 		vmixState,
 		atemConfig,
 		atemState,
+		broadlinkConfig,
+		broadlinkState,
 		youtubeConfig,
 		youtubeState,
 		facebookConfig,
 		facebookState,
 		discordConfig,
-		discordState,
-		broadlinkConfig,
-		broadlinkState
+		discordState
 	} from '$lib/stores/connectors.js';
 	import { authToken } from '$lib/stores/server-url.js';
+	import { appMode } from '$lib/stores/mode.js';
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorStatusBadge from './ConnectorStatusBadge.svelte';
 	import type { BaseConfig, ConnectorState } from '$lib/connectors/types.js';
@@ -50,10 +51,10 @@
 		if (connectorId === 'obs') return $obsConfig;
 		if (connectorId === 'vmix') return $vmixConfig;
 		if (connectorId === 'atem') return $atemConfig;
+		if (connectorId === 'broadlink') return $broadlinkConfig;
 		if (connectorId === 'youtube') return $youtubeConfig;
 		if (connectorId === 'facebook') return $facebookConfig;
 		if (connectorId === 'discord') return $discordConfig;
-		if (connectorId === 'broadlink') return $broadlinkConfig;
 		return { enabled: false };
 	});
 
@@ -61,19 +62,22 @@
 		if (connectorId === 'obs') return $obsState;
 		if (connectorId === 'vmix') return $vmixState;
 		if (connectorId === 'atem') return $atemState;
+		if (connectorId === 'broadlink') return $broadlinkState;
 		if (connectorId === 'youtube') return $youtubeState;
 		if (connectorId === 'facebook') return $facebookState;
 		if (connectorId === 'discord') return $discordState;
-		if (connectorId === 'broadlink') return $broadlinkState;
 		return { connection: 'disconnected' };
 	});
 
 	const isConfigured = $derived(def ? def.isConfigured(config) : false);
+	const isConnected = $derived(connState.connection === 'connected');
 
 	const hasFlags = $derived(
-		(def?.capabilities.streaming && connState.isStreaming !== undefined) ||
-		(def?.capabilities.recording && connState.isRecording !== undefined) ||
-		(def?.capabilities.live && connState.isLive !== undefined)
+		isConnected && (
+			!!def?.capabilities.streaming ||
+			!!def?.capabilities.recording ||
+			!!def?.capabilities.live
+		)
 	);
 
 	// ── Broadlink command panel ───────────────────────────────────────────────
@@ -139,23 +143,23 @@
 	});
 </script>
 
-{#if def && isConfigured}
+{#if def && (isConfigured || $appMode === 'client')}
 	<div class="widget" class:widget--compact={compact} class:widget--broadlink={connectorId === 'broadlink'}>
 		<ConnectorStatusBadge name={def.name} status={connState.connection} />
 
 		{#if hasFlags}
 			<div class="flag-row">
-				{#if def.capabilities.streaming && connState.isStreaming !== undefined}
+				{#if def.capabilities.streaming}
 					<span class="flag" class:flag--active={connState.isStreaming}>
 						{connState.isStreaming ? 'Streaming' : 'Not Streaming'}
 					</span>
 				{/if}
-				{#if def.capabilities.recording && connState.isRecording !== undefined}
+				{#if def.capabilities.recording}
 					<span class="flag" class:flag--active={connState.isRecording}>
 						{connState.isRecording ? 'Recording' : 'Not Recording'}
 					</span>
 				{/if}
-				{#if def.capabilities.live && connState.isLive !== undefined}
+				{#if def.capabilities.live}
 					<span class="flag" class:flag--active={connState.isLive}>
 						{connState.isLive ? 'Live' : 'Not Live'}
 					</span>

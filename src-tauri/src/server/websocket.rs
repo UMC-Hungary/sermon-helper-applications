@@ -209,6 +209,18 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
         let _ = tx.send(Message::Text(msg.into()));
     }
 
+    // Push current OBS streaming/recording state if OBS is connected.
+    if let Some(output) = state.obs_connector.get_output_state().await {
+        let msg = json!({
+            "type": "connector.state",
+            "connector": "obs",
+            "isStreaming": output.is_streaming,
+            "isRecording": output.is_recording,
+        })
+        .to_string();
+        let _ = tx.send(Message::Text(msg.into()));
+    }
+
     let (mut ws_sink, mut ws_stream) = socket.split();
 
     let send_task = tokio::spawn(async move {

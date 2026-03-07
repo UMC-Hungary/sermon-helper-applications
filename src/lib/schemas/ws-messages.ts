@@ -41,6 +41,12 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     status: ConnectorStatusPayloadSchema,
   }),
   z.object({
+    type: z.literal('connector.state'),
+    connector: z.enum(['obs', 'vmix', 'atem', 'broadlink', 'youtube', 'facebook', 'discord']),
+    isStreaming: z.boolean().optional(),
+    isRecording: z.boolean().optional(),
+  }),
+  z.object({
     type: z.literal('cron.youtube_pull'),
     hasLive: z.boolean(),
   }),

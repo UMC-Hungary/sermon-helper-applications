@@ -11,14 +11,14 @@ import {
 	vmixState,
 	atemStatus,
 	atemState,
+	broadlinkStatus,
+	broadlinkState,
 	youtubeStatus,
 	youtubeState,
 	facebookStatus,
 	facebookState,
 	discordStatus,
 	discordState,
-	broadlinkStatus,
-	broadlinkState,
 	youtubeLiveActive
 } from '$lib/stores/connectors.js';
 import { broadlinkDiscoveredDevices, broadlinkLearnResult } from '$lib/stores/broadlink.js';
@@ -30,6 +30,9 @@ import { toast } from 'svelte-sonner';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectDelay = 3000;
+const RECONNECT_DELAY_MIN = 3000;
+const RECONNECT_DELAY_MAX = 30000;
 
 export function connectWs(): void {
 	if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING))
@@ -52,6 +55,7 @@ export function connectWs(): void {
 
 	socket.addEventListener('open', () => {
 		wsStatus.set('connected');
+		reconnectDelay = RECONNECT_DELAY_MIN;
 		if (reconnectTimer !== null) {
 			clearTimeout(reconnectTimer);
 			reconnectTimer = null;
@@ -85,13 +89,15 @@ export function disconnectWs(): void {
 	}
 	socket?.close();
 	socket = null;
+	reconnectDelay = RECONNECT_DELAY_MIN;
 	wsStatus.set('disconnected');
 }
 
 function scheduleReconnect(): void {
 	reconnectTimer = setTimeout(() => {
 		connectWs();
-	}, 3000);
+	}, reconnectDelay);
+	reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_DELAY_MAX);
 }
 
 function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
@@ -153,6 +159,9 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 		} else if (msg.connector === 'atem') {
 			atemStatus.set(status);
 			atemState.update((s) => ({ ...s, connection: status }));
+		} else if (msg.connector === 'broadlink') {
+			broadlinkStatus.set(status);
+			broadlinkState.update((s) => ({ ...s, connection: status }));
 		} else if (msg.connector === 'youtube') {
 			youtubeStatus.set(status);
 			youtubeState.update((s) => ({ ...s, connection: status }));
@@ -162,9 +171,17 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 		} else if (msg.connector === 'discord') {
 			discordStatus.set(status);
 			discordState.update((s) => ({ ...s, connection: status }));
+		}
+	} else if (msg.type === 'connector.state') {
+		const patch: { isStreaming?: boolean; isRecording?: boolean } = {};
+		if (msg.isStreaming !== undefined) patch.isStreaming = msg.isStreaming;
+		if (msg.isRecording !== undefined) patch.isRecording = msg.isRecording;
+		if (msg.connector === 'obs') {
+			obsState.update((s) => ({ ...s, ...patch }));
+		} else if (msg.connector === 'vmix') {
+			vmixState.update((s) => ({ ...s, ...patch }));
 		} else if (msg.connector === 'broadlink') {
-			broadlinkStatus.set(status);
-			broadlinkState.update((s) => ({ ...s, connection: status }));
+			broadlinkState.update((s) => ({ ...s, ...patch }));
 		}
 	} else if (msg.type === 'broadlink.device.discovered') {
 		broadlinkDiscoveredDevices.update((list) => {
