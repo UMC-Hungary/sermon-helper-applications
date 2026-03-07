@@ -86,7 +86,7 @@ pub async fn create_badge_sources(
     let filter_request = obws::requests::filters::Create {
         source: "__caption-background".into(),
         filter: "LucidGlass",
-        kind: "user-defined-shader-filter",
+        kind: "user-defined_shader",
         settings: Some(serde_json::json!({
             "shader_file": shader_path_str,
         })),
