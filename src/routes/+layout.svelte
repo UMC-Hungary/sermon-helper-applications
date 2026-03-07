@@ -42,11 +42,15 @@
 	<FloatingStreamPlayer />
 {/if}
 
-<div class="app-shell">
-	<!-- Full-width drag strip at the top — no children so e.target is always this element -->
-	<div class="app-titlebar-drag" data-tauri-drag-region aria-hidden="true"></div>
+<div class="app-shell" class:glass={$glassSupported}>
+	<!-- Full-width drag strip at the top — macOS only -->
+	{#if $glassSupported}
+		<div class="app-titlebar-drag" data-tauri-drag-region aria-hidden="true"></div>
+	{/if}
 	<aside class="sidebar">
-		<div class="sidebar-traffic-spacer" data-tauri-drag-region></div>
+		{#if $glassSupported}
+			<div class="sidebar-traffic-spacer" data-tauri-drag-region></div>
+		{/if}
 		<nav class="sidebar-nav" data-tauri-drag-region>
 			<a href="/" class="nav-item" class:active={isActive('/')}>{$_('nav.dashboard')}</a>
 			<a href="/events" class="nav-item" class:active={isActive('/events')}
@@ -84,8 +88,10 @@
 		display: flex;
 		height: 100vh;
 		overflow: hidden;
-		/* Clip content to macOS window corner radius so backgrounds don't bleed
-		   into the rounded corners. macOS Sequoia/Tahoe ≈ 10–12 px. */
+	}
+
+	/* Clip to macOS window corner radius only when glass effect is active */
+	.app-shell.glass {
 		border-radius: 12px;
 	}
 
@@ -172,12 +178,4 @@
 		color: var(--nav-item-active-text);
 	}
 
-	:global([data-glass='false']) .app-shell {
-		border-radius: 0;
-	}
-
-	:global([data-glass='false']) .app-titlebar-drag,
-	:global([data-glass='false']) .sidebar-traffic-spacer {
-		display: none;
-	}
 </style>
