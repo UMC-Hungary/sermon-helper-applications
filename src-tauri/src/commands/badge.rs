@@ -51,6 +51,7 @@ pub async fn create_badge_sources(
     
     let scene_id = obws::requests::scenes::SceneId::Name(&scene_name);
     
+    // Create __caption source (ignore if already exists)
     let request = obws::requests::inputs::Create {
         scene: scene_id,
         input: "__caption",
@@ -62,11 +63,17 @@ pub async fn create_badge_sources(
         enabled: Some(true),
     };
     
-    let _ = client.inputs()
-        .create(request)
-        .await
-        .map_err(|e| format!("Failed to create __caption source: {}", e))?;
+    match client.inputs().create(request).await {
+        Ok(_) => {}
+        Err(e) => {
+            let error_msg = format!("{:?}", e);
+            if !error_msg.contains("ResourceAlreadyExists") {
+                return Err(format!("Failed to create __caption source: {}", e));
+            }
+        }
+    }
     
+    // Create __caption-background source (ignore if already exists)
     let request_bg = obws::requests::inputs::Create {
         scene: scene_id,
         input: "__caption-background",
@@ -78,11 +85,17 @@ pub async fn create_badge_sources(
         enabled: Some(true),
     };
     
-    let _ = client.inputs()
-        .create(request_bg)
-        .await
-        .map_err(|e| format!("Failed to create __caption-background source: {}", e))?;
+    match client.inputs().create(request_bg).await {
+        Ok(_) => {}
+        Err(e) => {
+            let error_msg = format!("{:?}", e);
+            if !error_msg.contains("ResourceAlreadyExists") {
+                return Err(format!("Failed to create __caption-background source: {}", e));
+            }
+        }
+    }
     
+    // Add shader filter to __caption-background (ignore if already exists)
     let filter_request = obws::requests::filters::Create {
         source: "__caption-background".into(),
         filter: "LucidGlass",
@@ -92,10 +105,15 @@ pub async fn create_badge_sources(
         })),
     };
     
-    let _ = client.filters()
-        .create(filter_request)
-        .await
-        .map_err(|e| format!("Failed to add shader filter: {}", e))?;
+    match client.filters().create(filter_request).await {
+        Ok(_) => {}
+        Err(e) => {
+            let error_msg = format!("{:?}", e);
+            if !error_msg.contains("ResourceAlreadyExists") && !error_msg.contains("not found") {
+                return Err(format!("Failed to add shader filter: {}", e));
+            }
+        }
+    }
     
     Ok(())
 }
