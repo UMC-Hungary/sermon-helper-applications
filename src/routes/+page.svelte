@@ -87,7 +87,7 @@
 
   .card {
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
   }
 
@@ -95,7 +95,7 @@
     margin: 0 0 0.75rem;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -110,7 +110,7 @@
 
   dt {
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     align-self: center;
     white-space: nowrap;
   }
@@ -126,39 +126,39 @@
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
     font-size: 0.8125rem;
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--content-bg);
+    color: var(--text-primary);
   }
 
   .badge--connected {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--status-ok-bg);
+    color: var(--status-ok-text);
   }
   .badge--connecting {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--status-warn-bg);
+    color: var(--status-warn-text);
   }
   .badge--disconnected,
   .badge--error {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
   }
 
   code {
     font-size: 0.8125rem;
     font-family: ui-monospace, monospace;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .url-secondary {
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .label {
     font-size: 0.7rem;
     padding: 0.1rem 0.4rem;
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--accent-subtle);
+    color: var(--accent);
     border-radius: 9999px;
     margin-left: 0.25rem;
     vertical-align: middle;
@@ -176,7 +176,7 @@
 
   .token-preview {
     padding: 1rem;
-    background: #eff6ff;
+    background: var(--accent-subtle);
     border-radius: 0.5rem;
   }
 </style>

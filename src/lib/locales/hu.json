@@ -679,7 +679,8 @@
 		"connect": "Kapcsolódás",
 		"settings": "Beállítások",
 		"liveEvents": "Élő Közvetítések & Videók",
-		"presentations": "Prezentációk"
+		"presentations": "Prezentációk",
+		"obsCaption": "OBS Felirat"
 	},
 	"presentations": {
 		"title": "Prezentációk",

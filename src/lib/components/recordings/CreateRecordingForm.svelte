@@ -87,20 +87,21 @@
   }
   .form__field input {
     padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--input-border);
     border-radius: 0.375rem;
     font-size: 1rem;
+    background: var(--input-bg);
   }
   .form__error {
     padding: 0.75rem;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
     border-radius: 0.375rem;
     font-size: 0.875rem;
   }
   button {
     padding: 0.625rem 1.25rem;
-    background: #2563eb;
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 0.375rem;

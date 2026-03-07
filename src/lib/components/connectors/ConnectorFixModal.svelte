@@ -39,7 +39,7 @@
 	}
 
 	.modal {
-		background: #fff;
+		background: var(--glass-card-bg);
 		border-radius: 0.5rem;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 		width: min(560px, calc(100vw - 2rem));
@@ -65,12 +65,12 @@
 		font-size: 1.5rem;
 		line-height: 1;
 		cursor: pointer;
-		color: #6b7280;
+		color: var(--text-secondary);
 		padding: 0.25rem;
 	}
 
 	.close-btn:hover {
-		color: #111827;
+		color: var(--text-primary);
 	}
 
 	.modal-body {

@@ -37,7 +37,7 @@
 <div style="padding:1.5rem; max-width:900px; margin:0 auto;">
 	<div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
 		<h1 style="margin:0;">RF/IR Remote Control</h1>
-		<span style="padding:0.2rem 0.6rem; border-radius:99px; font-size:0.8rem; background:{$broadlinkStatus === 'connected' ? '#d1fae5' : '#fee2e2'}; color:{$broadlinkStatus === 'connected' ? '#065f46' : '#991b1b'};">
+		<span style="padding:0.2rem 0.6rem; border-radius:99px; font-size:0.8rem; background:{$broadlinkStatus === 'connected' ? 'var(--status-ok-bg)' : 'var(--status-err-bg)'}; color:{$broadlinkStatus === 'connected' ? 'var(--status-ok-text)' : 'var(--status-err-text)'};">
 			{$broadlinkStatus}
 		</span>
 	</div>
@@ -45,7 +45,7 @@
 	<section style="margin-bottom:2rem;">
 		<h2>Devices</h2>
 		{#if error}
-			<p style="color:red">{error}</p>
+			<p style="color:var(--status-err-text)">{error}</p>
 		{:else}
 			<DeviceList />
 		{/if}
@@ -60,7 +60,7 @@
 				{#each devices as dev (dev.id)}
 					<button
 						onclick={() => (selectedDevice = dev)}
-						style="padding:0.4rem 0.8rem; border-radius:0.25rem; background:{selectedDevice?.id === dev.id ? '#1d4ed8' : '#e5e7eb'}; color:{selectedDevice?.id === dev.id ? '#fff' : '#111'};"
+						style="padding:0.4rem 0.8rem; border-radius:0.25rem; background:{selectedDevice?.id === dev.id ? 'var(--accent)' : 'var(--border)'}; color:{selectedDevice?.id === dev.id ? 'white' : 'var(--text-primary)'};"
 					>
 						{dev.name}
 					</button>

@@ -35,6 +35,6 @@
   }
 
   .empty {
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 </style>

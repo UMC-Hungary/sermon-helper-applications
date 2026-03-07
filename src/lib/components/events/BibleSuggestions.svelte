@@ -46,8 +46,8 @@
     margin-top: 0.25rem;
     max-height: 15rem;
     overflow-y: auto;
-    background: white;
-    border: 1px solid #d1d5db;
+    background: var(--glass-card-bg);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   }
@@ -56,8 +56,8 @@
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #6b7280;
-    border-bottom: 1px solid #f3f4f6;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
   }
 
   .suggestions__item {
@@ -76,7 +76,7 @@
 
   .suggestions__item:hover,
   .suggestions__item:focus {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
     outline: none;
   }
 </style>

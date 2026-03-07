@@ -73,8 +73,8 @@
 <style>
   .token-display {
     padding: 1.5rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--content-bg);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     max-width: 600px;
   }
@@ -85,8 +85,8 @@
 
   .token-display__value {
     padding: 0.75rem;
-    background: white;
-    border: 1px solid #d1d5db;
+    background: var(--glass-card-bg);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     margin-bottom: 0.75rem;
     word-break: break-all;
@@ -100,15 +100,15 @@
 
   .token-display__actions button {
     padding: 0.5rem 1rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
-    background: white;
+    background: var(--glass-card-bg);
     cursor: pointer;
     font-size: 0.875rem;
   }
 
   .token-display__actions button:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
   .token-display__actions button:disabled {
     opacity: 0.6;
@@ -118,13 +118,13 @@
   .token-display__warning {
     margin: 0.75rem 0 0;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .token-display__error {
     padding: 0.5rem;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
     border-radius: 0.25rem;
     font-size: 0.875rem;
     margin-bottom: 0.75rem;

@@ -296,40 +296,40 @@
   }
 
   .back {
-    color: #6b7280;
+    color: var(--text-secondary);
     text-decoration: none;
     font-size: 0.875rem;
   }
   .back:hover {
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .btn-edit {
     padding: 0.375rem 0.875rem;
     background: transparent;
-    color: #2563eb;
-    border: 1px solid #2563eb;
+    color: var(--accent);
+    border: 1px solid var(--accent);
     border-radius: 0.375rem;
     text-decoration: none;
     font-size: 0.875rem;
     font-weight: 500;
   }
   .btn-edit:hover {
-    background: #eff6ff;
+    background: var(--accent-subtle);
   }
 
   .btn-danger {
     padding: 0.375rem 0.875rem;
     background: transparent;
-    color: #dc2626;
-    border: 1px solid #dc2626;
+    color: var(--status-err-text);
+    border: 1px solid var(--status-err-text);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
   }
   .btn-danger:hover:not(:disabled) {
-    background: #fef2f2;
+    background: var(--status-err-bg);
   }
   .btn-danger:disabled {
     opacity: 0.6;
@@ -348,11 +348,11 @@
   }
   .meta dt {
     font-weight: 600;
-    color: #374151;
+    color: var(--text-primary);
   }
   .meta dd {
     margin: 0;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .recordings__header {
@@ -366,7 +366,7 @@
   }
   .recordings__header button {
     padding: 0.5rem 1rem;
-    background: #2563eb;
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 0.375rem;
@@ -374,20 +374,20 @@
     font-size: 0.875rem;
   }
   .recordings__header button:hover {
-    background: #1d4ed8;
+    filter: brightness(0.9);
   }
 
   .recordings__form {
     padding: 1rem;
-    background: #f9fafb;
+    background: var(--content-bg);
     border-radius: 0.5rem;
     margin-bottom: 1rem;
   }
 
   .error {
     padding: 0.75rem;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
     border-radius: 0.375rem;
   }
 
@@ -407,7 +407,7 @@
 
   .social-item {
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
@@ -422,7 +422,7 @@
 
   .social-item__name {
     font-weight: 600;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .badge {
@@ -433,23 +433,23 @@
   }
 
   .badge--scheduled {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--status-ok-bg);
+    color: var(--status-ok-text);
   }
 
   .badge--failed {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
   }
 
   .badge--none {
-    background: #f3f4f6;
-    color: #6b7280;
+    background: var(--content-bg);
+    color: var(--text-secondary);
   }
 
   .view-link {
     font-size: 0.875rem;
-    color: #2563eb;
+    color: var(--accent);
     text-decoration: none;
   }
 
@@ -459,9 +459,9 @@
 
   .past-warning {
     font-size: 0.75rem;
-    color: #92400e;
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
+    color: var(--status-warn-text);
+    background: var(--status-warn-bg);
+    border: 1px solid var(--status-warn-dot);
     border-radius: 0.25rem;
     padding: 0.25rem 0.5rem;
     margin: 0;
@@ -470,8 +470,8 @@
   .btn-secondary {
     padding: 0.375rem 0.875rem;
     background: transparent;
-    color: #2563eb;
-    border: 1px solid #2563eb;
+    color: var(--accent);
+    border: 1px solid var(--accent);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
@@ -479,7 +479,7 @@
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #eff6ff;
+    background: var(--accent-subtle);
   }
 
   .btn-secondary:disabled {
@@ -490,7 +490,7 @@
   .status-section {
     margin-bottom: 2rem;
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
   }
 
@@ -507,12 +507,12 @@
 
   .status-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .btn-status {
     padding: 0.375rem 0.875rem;
-    background: #2563eb;
+    background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -522,17 +522,17 @@
   }
 
   .btn-status:hover:not(:disabled) {
-    background: #1d4ed8;
+    filter: brightness(0.9);
   }
 
   .btn-status--undo {
     background: transparent;
-    color: #6b7280;
-    border: 1px solid #d1d5db;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
   }
 
   .btn-status--undo:hover:not(:disabled) {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   .btn-status:disabled {

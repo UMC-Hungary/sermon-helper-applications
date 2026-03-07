@@ -103,7 +103,7 @@
 
   .dep-desc {
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .dep-status {
@@ -121,18 +121,18 @@
   }
 
   .badge--ok {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--status-ok-bg);
+    color: var(--status-ok-text);
   }
 
   .badge--missing {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
   }
 
   .btn-download {
     padding: 0.375rem 0.75rem;
-    background: #1d4ed8;
+    background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -141,7 +141,7 @@
   }
 
   .btn-download:hover {
-    background: #1e40af;
+    filter: brightness(0.9);
   }
 
   .progress-wrap {
@@ -153,26 +153,26 @@
 
   .progress-bar {
     height: 6px;
-    background: #e5e7eb;
+    background: var(--border);
     border-radius: 3px;
     overflow: hidden;
   }
 
   .progress-fill {
     height: 100%;
-    background: #1d4ed8;
+    background: var(--accent);
     border-radius: 3px;
     transition: width 0.2s ease;
   }
 
   .progress-label {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .dep-error {
     font-size: 0.8125rem;
-    color: #dc2626;
+    color: var(--status-err-text);
     margin: 0.5rem 0 0;
   }
 </style>

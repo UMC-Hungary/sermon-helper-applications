@@ -57,8 +57,8 @@
 		border-radius: 9999px;
 		font-size: 0.8rem;
 		font-weight: 600;
-		background: #fee2e2;
-		color: #991b1b;
+		background: var(--status-err-bg);
+		color: var(--status-err-text);
 		letter-spacing: 0.02em;
 	}
 
@@ -66,7 +66,7 @@
 		width: 0.5rem;
 		height: 0.5rem;
 		border-radius: 50%;
-		background: #ef4444;
+		background: var(--status-err-dot);
 		flex-shrink: 0;
 		animation: live-pulse 1.2s ease-in-out infinite;
 	}

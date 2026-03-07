@@ -164,7 +164,7 @@
 <style>
 	.discovery-panel {
 		margin-top: 1rem;
-		border: 1px solid #e5e7eb;
+		border: 1px solid var(--border);
 		border-radius: 0.375rem;
 		overflow: hidden;
 	}
@@ -174,14 +174,14 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.625rem 0.875rem;
-		background: #f9fafb;
-		border-bottom: 1px solid #e5e7eb;
+		background: var(--content-bg);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.discovery-title {
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: #374151;
+		color: var(--text-primary);
 	}
 
 	.scan-active {
@@ -189,15 +189,15 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.8125rem;
-		color: #374151;
+		color: var(--text-primary);
 	}
 
 	.spinner {
 		display: inline-block;
 		width: 0.875rem;
 		height: 0.875rem;
-		border: 2px solid #d1d5db;
-		border-top-color: #2563eb;
+		border: 2px solid var(--border);
+		border-top-color: var(--accent);
 		border-radius: 50%;
 		animation: spin 0.75s linear infinite;
 	}
@@ -207,7 +207,7 @@
 	}
 
 	.done-mark {
-		color: #16a34a;
+		color: var(--status-ok-dot);
 		font-weight: 700;
 	}
 
@@ -215,9 +215,9 @@
 		margin: 0;
 		padding: 0.5rem 0.875rem;
 		font-size: 0.8125rem;
-		color: #dc2626;
-		background: #fef2f2;
-		border-bottom: 1px solid #fecaca;
+		color: var(--status-err-text);
+		background: var(--status-err-bg);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.device-list {
@@ -228,7 +228,7 @@
 		margin: 0;
 		padding: 0.75rem 0.875rem;
 		font-size: 0.8125rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 	}
 
 	.device-row {
@@ -237,7 +237,7 @@
 		justify-content: space-between;
 		gap: 0.75rem;
 		padding: 0.625rem 0.875rem;
-		border-bottom: 1px solid #f3f4f6;
+		border-bottom: 1px solid var(--content-bg);
 	}
 
 	.device-row:last-child {
@@ -254,7 +254,7 @@
 	.device-name {
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #111827;
+		color: var(--text-primary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -262,18 +262,18 @@
 
 	.device-meta {
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 		font-family: monospace;
 	}
 
 	.device-model {
 		font-size: 0.75rem;
-		color: #9ca3af;
+		color: var(--text-tertiary);
 	}
 
 	.device-error {
 		font-size: 0.75rem;
-		color: #dc2626;
+		color: var(--status-err-text);
 	}
 
 	.device-action {
@@ -289,13 +289,13 @@
 	}
 
 	.badge--added {
-		background: #d1fae5;
-		color: #065f46;
+		background: var(--status-ok-bg);
+		color: var(--status-ok-text);
 	}
 
 	.badge--saved {
-		background: #f3f4f6;
-		color: #6b7280;
+		background: var(--content-bg);
+		color: var(--text-secondary);
 	}
 
 	.btn-discover,
@@ -309,33 +309,33 @@
 	}
 
 	.btn-discover {
-		background: #1d4ed8;
-		color: #fff;
-		border-color: #1d4ed8;
+		background: var(--accent);
+		color: white;
+		border-color: var(--accent);
 	}
 
 	.btn-discover:hover {
-		background: #1e40af;
+		filter: brightness(0.9);
 	}
 
 	.btn-add {
-		background: #fff;
-		color: #1d4ed8;
-		border-color: #1d4ed8;
+		background: var(--glass-card-bg);
+		color: var(--accent);
+		border-color: var(--accent);
 	}
 
 	.btn-add:hover:not(:disabled) {
-		background: #eff6ff;
+		background: var(--accent-subtle);
 	}
 
 	.btn-stop {
-		background: #fff;
-		color: #6b7280;
-		border-color: #d1d5db;
+		background: var(--glass-card-bg);
+		color: var(--text-secondary);
+		border-color: var(--border);
 	}
 
 	.btn-stop:hover {
-		background: #f9fafb;
+		background: var(--content-bg);
 	}
 
 	button:disabled {

@@ -96,7 +96,7 @@
   }
 
   .dialog {
-    background: #fff;
+    background: var(--glass-card-bg);
     border-radius: 0.75rem;
     padding: 1.5rem;
     width: 100%;
@@ -114,13 +114,13 @@
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: 0.375rem;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .select {
     width: 100%;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     margin-bottom: 1rem;
@@ -135,20 +135,20 @@
   .btn-cancel {
     padding: 0.5rem 1rem;
     background: transparent;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
   }
 
   .btn-cancel:hover {
-    background: #f3f4f6;
+    background: var(--content-bg);
   }
 
   .btn-assign {
     padding: 0.5rem 1rem;
-    background: #2563eb;
-    color: #fff;
+    background: var(--accent);
+    color: white;
     border: none;
     border-radius: 0.375rem;
     font-size: 0.875rem;
@@ -156,7 +156,7 @@
   }
 
   .btn-assign:hover:not(:disabled) {
-    background: #1d4ed8;
+    filter: brightness(0.9);
   }
 
   .btn-assign:disabled {
@@ -166,15 +166,15 @@
 
   .error {
     padding: 0.5rem 0.75rem;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     margin-bottom: 1rem;
   }
 
   .hint {
-    color: #6b7280;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     margin-bottom: 1rem;
   }

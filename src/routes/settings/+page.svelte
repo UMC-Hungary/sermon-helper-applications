@@ -269,7 +269,7 @@
 
   section {
     padding: 1.25rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     margin-bottom: 1rem;
   }
@@ -298,7 +298,7 @@
   .field label,
   .checkbox-label {
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--text-primary);
     font-weight: 500;
   }
 
@@ -311,7 +311,7 @@
 
   input[type='text'] {
     padding: 0.375rem 0.625rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--input-border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     width: 100%;
@@ -319,9 +319,9 @@
   }
 
   input[type='text']:focus {
-    outline: 2px solid #2563eb;
+    outline: 2px solid var(--accent);
     outline-offset: 1px;
-    border-color: #2563eb;
+    border-color: var(--accent);
   }
 
   .button-row {
@@ -338,38 +338,38 @@
   .lang-btn {
     padding: 0.5rem 1rem;
     background: transparent;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
   }
 
   .lang-btn:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   .lang-btn.active {
-    background: #1d4ed8;
+    background: var(--accent);
     color: #fff;
-    border-color: #1d4ed8;
+    border-color: var(--accent);
   }
 
   .note {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     margin: 0.5rem 0 1rem;
   }
 
   .error {
-    color: #dc2626;
+    color: var(--status-err-text);
     font-size: 0.875rem;
     margin: 0 0 0.75rem;
   }
 
   .btn-primary {
     padding: 0.5rem 1rem;
-    background: #1d4ed8;
+    background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -378,26 +378,26 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1e40af;
+    filter: brightness(0.9);
   }
 
   .btn-secondary {
     padding: 0.5rem 1rem;
     background: transparent;
-    color: #1d4ed8;
-    border: 1px solid #1d4ed8;
+    color: var(--accent);
+    border: 1px solid var(--accent);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #eff6ff;
+    background: var(--accent-subtle);
   }
 
   .btn-danger {
     padding: 0.5rem 1rem;
-    background: #dc2626;
+    background: var(--status-err-dot);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -406,7 +406,7 @@
   }
 
   .btn-danger:hover:not(:disabled) {
-    background: #b91c1c;
+    filter: brightness(0.9);
   }
 
   button:disabled {
@@ -425,18 +425,18 @@
   .cron-table td {
     text-align: left;
     padding: 0.375rem 0.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
   }
 
   .cron-table th {
     font-weight: 600;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .cron-table code {
     font-family: ui-monospace, monospace;
     font-size: 0.8125rem;
-    background: #f3f4f6;
+    background: var(--content-bg);
     padding: 0.125rem 0.25rem;
     border-radius: 0.25rem;
   }

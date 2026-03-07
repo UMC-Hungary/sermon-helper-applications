@@ -78,20 +78,20 @@
 			{discovering ? 'Discovering…' : 'Discover Devices'}
 		</button>
 		{#if discoverError}
-			<span style="color:red">{discoverError}</span>
+			<span style="color:var(--status-err-text)">{discoverError}</span>
 		{/if}
 	</div>
 
 	{#if loading}
 		<p>Loading…</p>
 	{:else if error}
-		<p style="color:red">{error}</p>
+		<p style="color:var(--status-err-text)">{error}</p>
 	{:else if devices.length === 0}
 		<p>No devices. Discover or add manually below.</p>
 	{:else}
 		<ul style="list-style:none; padding:0; margin:0 0 0.75rem;">
 			{#each devices as dev (dev.id)}
-				<li style="display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid #eee;">
+				<li style="display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid var(--border);">
 					<span><strong>{dev.name}</strong> — {dev.host} ({dev.mac})</span>
 					<button onclick={() => handleRemove(dev.id)}>Remove</button>
 				</li>
@@ -107,7 +107,7 @@
 			<input placeholder="MAC (aa:bb:cc:dd:ee:ff)" bind:value={newMac} />
 			<input placeholder="Device type (e.g. 0x520b)" bind:value={newType} />
 			{#if addError}
-				<span style="color:red">{addError}</span>
+				<span style="color:var(--status-err-text)">{addError}</span>
 			{/if}
 			<button onclick={handleAdd} disabled={!newName || !newHost || !newMac}>Add Device</button>
 		</div>

@@ -78,7 +78,7 @@
 </script>
 
 <div role="dialog" aria-modal="true" aria-label="Learn IR/RF Code" style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;">
-	<div style="background:#fff;padding:1.5rem;border-radius:0.5rem;min-width:340px;max-width:90vw;">
+	<div style="background:var(--glass-card-bg);padding:1.5rem;border-radius:0.5rem;min-width:340px;max-width:90vw;">
 		<h2>Learn IR/RF Code — {device.name}</h2>
 
 		{#if !learnedCode}
@@ -97,7 +97,7 @@
 			{/if}
 
 			{#if learnError}
-				<p style="color:red">{learnError}</p>
+				<p style="color:var(--status-err-text)">{learnError}</p>
 			{/if}
 
 			<div style="display:flex;gap:0.5rem;margin-top:1rem;">
@@ -107,7 +107,7 @@
 				<button onclick={handleCancel}>{learning ? 'Cancel' : 'Close'}</button>
 			</div>
 		{:else}
-			<p style="color:green">Code captured! ({learnedCode.length / 2} bytes)</p>
+			<p style="color:var(--status-ok-text)">Code captured! ({learnedCode.length / 2} bytes)</p>
 
 			<div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem;">
 				<input placeholder="Command name" bind:value={commandName} />
@@ -121,7 +121,7 @@
 					</select>
 				</label>
 				{#if saveError}
-					<span style="color:red">{saveError}</span>
+					<span style="color:var(--status-err-text)">{saveError}</span>
 				{/if}
 			</div>
 

@@ -17,12 +17,12 @@
 		border-radius: 9999px;
 		font-size: 0.8rem;
 		font-weight: 600;
-		background: #fee2e2;
-		color: #991b1b;
+		background: var(--status-err-bg);
+		color: var(--status-err-text);
 		text-decoration: none;
 	}
 
 	.error-badge:hover {
-		background: #fecaca;
+		filter: brightness(0.95);
 	}
 </style>

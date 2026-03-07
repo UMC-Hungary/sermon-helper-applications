@@ -29,6 +29,9 @@ importers:
       svelte-sonner:
         specifier: ^1.0.7
         version: 1.0.7(svelte@5.53.2)
+      tauri-plugin-liquid-glass-api:
+        specifier: ^0.1.6
+        version: 0.1.6(@tauri-apps/api@2.10.1)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -1407,6 +1410,11 @@ packages:
     resolution: {integrity: sha512-yGONuIrcl/BMmqbm6/52Q/NYzfkta7uVlos5NSzGTfNJTTFtPPzra6rAQoQIwAqupeM3s9uuTf5PvioeiCdg9g==}
     engines: {node: '>=18'}
 
+  tauri-plugin-liquid-glass-api@0.1.6:
+    resolution: {integrity: sha512-93sppeXhn6WbzUheAFUWhqVICxZS6pNQzPBq2UcNFLdSP2icH94lDXmmHE9DhesxhiJiGITJ4bj8wNjWcQ/zCw==}
+    peerDependencies:
+      '@tauri-apps/api': ^2.0.0
+
   timers-ext@0.1.8:
     resolution: {integrity: sha512-wFH7+SEAcKfJpfLPkrgMPvvwnEtj8W4IurvEyrKsDleXnKLCDw71w8jltvfLa8Rm4qQxxT4jmDBYbJG/z7qoww==}
     engines: {node: '>=0.12'}
@@ -2702,6 +2710,10 @@ snapshots:
       locate-character: 3.0.0
       magic-string: 0.30.21
       zimmerframe: 1.1.4
+
+  tauri-plugin-liquid-glass-api@0.1.6(@tauri-apps/api@2.10.1):
+    dependencies:
+      '@tauri-apps/api': 2.10.1
 
   timers-ext@0.1.8:
     dependencies:

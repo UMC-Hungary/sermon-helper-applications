@@ -7,6 +7,6 @@ export default {
     strictPort: true,
   },
   ssr: {
-    noExternal: ['@tauri-apps/api', 'svelte-sonner'],
+    noExternal: ['@tauri-apps/api', 'svelte-sonner', 'tauri-plugin-liquid-glass-api'],
   },
 };

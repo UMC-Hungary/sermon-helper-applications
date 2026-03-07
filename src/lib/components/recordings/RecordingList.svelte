@@ -119,7 +119,7 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 0.75rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     flex-wrap: wrap;
   }
@@ -134,12 +134,12 @@
   .item__name {
     font-weight: 500;
     font-size: 0.875rem;
-    color: #111827;
+    color: var(--text-primary);
   }
 
   .item__meta {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .item__actions {
@@ -152,17 +152,17 @@
 
   .confirm-label {
     font-size: 0.8rem;
-    color: #92400e;
+    color: var(--status-warn-text);
   }
 
   .badge--uploaded {
-    color: #065f46;
+    color: var(--status-ok-text);
     font-weight: 500;
   }
 
   .btn-assign {
     padding: 0.375rem 0.875rem;
-    background: #2563eb;
+    background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -173,14 +173,14 @@
   }
 
   .btn-assign:hover {
-    background: #1d4ed8;
+    filter: brightness(0.9);
   }
 
   .btn-delete {
     padding: 0.375rem 0.875rem;
     background: transparent;
-    color: #dc2626;
-    border: 1px solid #dc2626;
+    color: var(--status-err-text);
+    border: 1px solid var(--status-err-text);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
@@ -188,12 +188,12 @@
   }
 
   .btn-delete:hover {
-    background: #fef2f2;
+    background: var(--status-err-bg);
   }
 
   .btn-danger {
     padding: 0.375rem 0.875rem;
-    background: #dc2626;
+    background: var(--status-err-dot);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -203,7 +203,7 @@
   }
 
   .btn-danger:hover:not(:disabled) {
-    background: #b91c1c;
+    filter: brightness(0.9);
   }
 
   .btn-danger:disabled {
@@ -214,8 +214,8 @@
   .btn-secondary {
     padding: 0.375rem 0.875rem;
     background: transparent;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
@@ -223,7 +223,7 @@
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   .btn-secondary:disabled {
@@ -234,7 +234,7 @@
   .btn-cancel {
     padding: 0.375rem 0.875rem;
     background: transparent;
-    color: #6b7280;
+    color: var(--text-secondary);
     border: none;
     border-radius: 0.375rem;
     font-size: 0.875rem;
@@ -243,7 +243,7 @@
   }
 
   .btn-cancel:hover:not(:disabled) {
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .btn-cancel:disabled {
@@ -252,6 +252,6 @@
   }
 
   .empty {
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 </style>

@@ -329,7 +329,7 @@
 
 	.overlay-text {
 		font-size: 0.75rem;
-		color: #9ca3af;
+		color: var(--text-tertiary);
 		text-align: center;
 		padding: 0 16px;
 	}
@@ -379,16 +379,16 @@
 
 	/* Shared dot colours */
 	.dot-loading {
-		background: #fbbf24;
+		background: var(--status-warn-dot);
 		animation: pulse 1.2s ease-in-out infinite;
 	}
 
 	.dot-playing {
-		background: #34d399;
+		background: var(--status-ok-dot);
 	}
 
 	.dot-offline {
-		background: #6b7280;
+		background: var(--text-secondary);
 	}
 
 	@keyframes pulse {

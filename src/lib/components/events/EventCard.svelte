@@ -42,7 +42,7 @@
   .card {
     display: block;
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     text-decoration: none;
     color: inherit;
@@ -50,7 +50,7 @@
   }
 
   .card:hover {
-    border-color: #93c5fd;
+    border-color: var(--accent);
   }
 
   .card--completed {
@@ -80,19 +80,19 @@
     font-size: 0.75rem;
     padding: 0.125rem 0.5rem;
     border-radius: 9999px;
-    background: #e0e7ff;
-    color: #3730a3;
+    background: var(--accent-subtle);
+    color: var(--accent);
     white-space: nowrap;
   }
 
   .badge--completed {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--status-ok-bg);
+    color: var(--status-ok-text);
   }
 
   .card__meta {
     margin: 0;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 </style>

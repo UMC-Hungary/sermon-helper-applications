@@ -259,7 +259,7 @@
   .page-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #0f0f0f;
+    color: var(--text-primary);
     margin: 0;
   }
 
@@ -267,7 +267,7 @@
   .platform-tabs {
     display: flex;
     gap: 0.25rem;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--border);
   }
 
   .platform-tab {
@@ -277,7 +277,7 @@
     padding: 0.5rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #606060;
+    color: var(--text-secondary);
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
@@ -286,11 +286,11 @@
     transition: color 0.15s, border-color 0.15s;
   }
 
-  .platform-tab:hover { color: #0f0f0f; }
+  .platform-tab:hover { color: var(--text-primary); }
 
   .platform-tab.active {
-    color: #0f0f0f;
-    border-bottom-color: #0f0f0f;
+    color: var(--text-primary);
+    border-bottom-color: var(--text-primary);
   }
 
   .platform-icon {
@@ -313,8 +313,8 @@
     padding: 0.375rem 1rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #606060;
-    background: #f2f2f2;
+    color: var(--text-secondary);
+    background: var(--content-bg);
     border: none;
     border-radius: 9999px;
     cursor: pointer;
@@ -322,13 +322,13 @@
   }
 
   .content-tab:hover {
-    background: #e5e5e5;
-    color: #0f0f0f;
+    background: var(--nav-item-hover);
+    color: var(--text-primary);
   }
 
   .content-tab.active {
-    background: #0f0f0f;
-    color: #fff;
+    background: var(--text-primary);
+    color: white;
   }
 
   .tab-count {
@@ -346,19 +346,19 @@
     gap: 0.75rem;
     padding: 4rem 2rem;
     text-align: center;
-    color: #606060;
+    color: var(--text-secondary);
   }
 
   .not-connected-icon {
     width: 3rem;
     height: 3rem;
-    color: #aaa;
+    color: var(--text-tertiary);
   }
 
   .not-connected-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #0f0f0f;
+    color: var(--text-primary);
     margin: 0;
   }
 
@@ -372,16 +372,16 @@
     display: inline-block;
     margin-top: 0.5rem;
     padding: 0.5rem 1.25rem;
-    background: #0f0f0f;
-    color: #fff;
+    background: var(--text-primary);
+    color: white;
     border-radius: 9999px;
     font-size: 0.875rem;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.15s;
+    transition: filter 0.15s;
   }
 
-  .settings-link:hover { background: #272727; }
+  .settings-link:hover { filter: brightness(0.8); }
 
   /* ── Error ── */
   .error-state {
@@ -396,13 +396,13 @@
   .error-msg {
     font-size: 1rem;
     font-weight: 600;
-    color: #0f0f0f;
+    color: var(--text-primary);
     margin: 0;
   }
 
   .error-detail {
     font-size: 0.8125rem;
-    color: #606060;
+    color: var(--text-secondary);
     max-width: 32rem;
     margin: 0;
   }
@@ -410,17 +410,17 @@
   .pill-btn {
     margin-top: 0.75rem;
     padding: 0.5rem 1.25rem;
-    background: #0f0f0f;
-    color: #fff;
+    background: var(--text-primary);
+    color: white;
     border: none;
     border-radius: 9999px;
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: filter 0.15s;
   }
 
-  .pill-btn:hover { background: #272727; }
+  .pill-btn:hover { filter: brightness(0.8); }
 
   /* ── Empty ── */
   .empty-state {
@@ -428,7 +428,7 @@
   }
 
   .empty-msg {
-    color: #606060;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     margin: 0;
   }
@@ -487,7 +487,7 @@
     aspect-ratio: 16 / 9;
     border-radius: 0.5rem;
     overflow: hidden;
-    background: #e5e7eb;
+    background: var(--border);
   }
 
   .thumbnail {
@@ -500,7 +500,7 @@
   .thumbnail-placeholder {
     width: 100%;
     height: 100%;
-    background: #d1d5db;
+    background: var(--border);
   }
 
   /* ── Badges ── */
@@ -517,7 +517,7 @@
   }
 
   .badge-live { background: #ff0000; }
-  .badge-upcoming { background: #374151; }
+  .badge-upcoming { background: var(--text-primary); }
 
   .duration-badge {
     position: absolute;
@@ -544,7 +544,7 @@
   .video-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #0f0f0f;
+    color: var(--text-primary);
     margin: 0;
     line-height: 1.4;
     display: -webkit-box;
@@ -560,11 +560,11 @@
     flex-wrap: wrap;
     gap: 0.25rem;
     font-size: 0.75rem;
-    color: #606060;
+    color: var(--text-secondary);
     margin: 0;
   }
 
-  .meta-sep { color: #aaa; }
+  .meta-sep { color: var(--text-tertiary); }
 
   /* ── Privacy badge ── */
   .privacy-badge {
@@ -586,18 +586,18 @@
   }
 
   .privacy-private {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
   }
 
   .privacy-unlisted {
-    background: #fef9c3;
-    color: #854d0e;
+    background: var(--status-warn-bg);
+    color: var(--status-warn-text);
   }
 
   /* ── Skeleton ── */
   .skeleton {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(90deg, var(--border) 25%, var(--content-bg) 50%, var(--border) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 0.25rem;

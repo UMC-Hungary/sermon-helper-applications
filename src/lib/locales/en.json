@@ -679,7 +679,8 @@
 		"connect": "Connect",
 		"settings": "Settings",
 		"liveEvents": "Live Events & Videos",
-		"presentations": "Presentations"
+		"presentations": "Presentations",
+		"obsCaption": "OBS Caption"
 	},
 	"presentations": {
 		"title": "Presentations",

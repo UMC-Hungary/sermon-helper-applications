@@ -224,7 +224,7 @@
 <style>
 	.widget {
 		padding: 0.875rem 1rem;
-		border: 1px solid #e5e7eb;
+		border: 1px solid var(--border);
 		border-radius: 0.5rem;
 		display: flex;
 		flex-direction: column;
@@ -249,13 +249,13 @@
 		border-radius: 9999px;
 		font-size: 0.75rem;
 		font-weight: 500;
-		background: #f3f4f6;
-		color: #6b7280;
+		background: var(--content-bg);
+		color: var(--text-secondary);
 	}
 
 	.flag--active {
-		background: #d1fae5;
-		color: #065f46;
+		background: var(--status-ok-bg);
+		color: var(--status-ok-text);
 	}
 
 	/* ── Broadlink ── */
@@ -263,22 +263,22 @@
 	.bl-device-select {
 		font-size: 0.8125rem;
 		padding: 0.25rem 0.5rem;
-		border: 1px solid #d1d5db;
+		border: 1px solid var(--input-border);
 		border-radius: 0.3rem;
-		background: #fff;
-		color: #374151;
+		background: var(--input-bg);
+		color: var(--text-primary);
 		cursor: pointer;
 		width: 100%;
 	}
 
 	.bl-device-name {
 		font-size: 0.8125rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 	}
 
 	.bl-hint {
 		font-size: 0.8125rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 		margin: 0;
 	}
 
@@ -298,7 +298,7 @@
 	.bl-category-label {
 		font-size: 0.6875rem;
 		font-weight: 600;
-		color: #9ca3af;
+		color: var(--text-tertiary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
@@ -312,23 +312,23 @@
 	.bl-cmd-btn {
 		padding: 0.3rem 0.65rem;
 		font-size: 0.8125rem;
-		border: 1px solid #d1d5db;
+		border: 1px solid var(--border);
 		border-radius: 0.3rem;
-		background: #fff;
-		color: #111827;
+		background: var(--glass-card-bg);
+		color: var(--text-primary);
 		cursor: pointer;
 		white-space: nowrap;
 	}
 
 	.bl-cmd-btn:hover:not(:disabled) {
-		background: #f3f4f6;
-		border-color: #9ca3af;
+		background: var(--nav-item-hover);
+		border-color: var(--border);
 	}
 
 	.bl-cmd-btn--sending {
-		background: #eff6ff;
-		border-color: #93c5fd;
-		color: #1d4ed8;
+		background: var(--accent-subtle);
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 
 	.bl-cmd-btn:disabled {
@@ -338,19 +338,19 @@
 
 	.bl-error {
 		font-size: 0.8125rem;
-		color: #dc2626;
+		color: var(--status-err-text);
 		margin: 0;
 	}
 
 	.bl-manage-link {
 		font-size: 0.8125rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 		text-decoration: none;
 		align-self: flex-end;
 	}
 
 	.bl-manage-link:hover {
-		color: #374151;
+		color: var(--text-primary);
 		text-decoration: underline;
 	}
 </style>

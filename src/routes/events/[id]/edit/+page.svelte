@@ -48,8 +48,8 @@
   }
   .error {
     padding: 0.75rem;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
     border-radius: 0.375rem;
   }
 </style>

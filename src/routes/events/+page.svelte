@@ -79,7 +79,7 @@
 
   .btn {
     padding: 0.5rem 1rem;
-    background: #2563eb;
+    background: var(--accent);
     color: white;
     text-decoration: none;
     border-radius: 0.375rem;
@@ -87,10 +87,14 @@
     font-weight: 500;
   }
 
+  .btn:hover {
+    filter: brightness(0.9);
+  }
+
   .untracked {
     margin-top: 2.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border);
   }
 
   .untracked h2 {
@@ -100,7 +104,7 @@
 
   .hint {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     margin: 0 0 1rem;
   }
 

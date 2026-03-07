@@ -30,24 +30,34 @@ use crate::server::AppState;
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum WsCommand {
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.open")]
     KeynoteOpen { file_path: String },
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.next")]
     KeynoteNext,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.prev")]
     KeynotePrev,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.first")]
     KeynoteFirst,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.last")]
     KeynoteLast,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.goto")]
     KeynoteGoto { slide: u32 },
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.start")]
     KeynoteStart,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.stop")]
     KeynoteStop,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.close_all")]
     KeynoteCloseAll,
+    #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.status")]
     KeynoteStatus,
     #[serde(rename = "ppt.search")]
@@ -107,9 +117,6 @@ async fn handle_ws_command(
             let msg = json!({ "type": "ppt.search_results", "files": files }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
-        // Non-macOS fallthrough: ignore keynote commands silently
-        #[cfg(not(target_os = "macos"))]
-        _ => {}
     }
 }
 

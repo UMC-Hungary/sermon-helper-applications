@@ -41,7 +41,7 @@
 </script>
 
 <div role="dialog" aria-modal="true" aria-label="Enter IR/RF Code" style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;">
-	<div style="background:#fff;padding:1.5rem;border-radius:0.5rem;min-width:340px;max-width:90vw;">
+	<div style="background:var(--glass-card-bg);padding:1.5rem;border-radius:0.5rem;min-width:340px;max-width:90vw;">
 		<h2>Enter Code Manually — {device.name}</h2>
 
 		<div style="display:flex;flex-direction:column;gap:0.5rem;">
@@ -64,7 +64,7 @@
 				</select>
 			</label>
 			{#if saveError}
-				<span style="color:red">{saveError}</span>
+				<span style="color:var(--status-err-text)">{saveError}</span>
 			{/if}
 		</div>
 

@@ -475,8 +475,8 @@
 
   .form__error {
     padding: 0.75rem;
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
     border-radius: 0.375rem;
     font-size: 0.875rem;
   }
@@ -484,8 +484,8 @@
   /* Title preview */
   .title-preview {
     padding: 0.875rem 1rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--content-bg);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
   }
 
@@ -501,29 +501,29 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .title-preview__counter {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
   }
 
   .title-preview__counter.over {
-    color: #dc2626;
+    color: var(--status-err-dot);
     font-weight: 600;
   }
 
   .title-preview__value {
     font-size: 0.875rem;
-    color: #374151;
+    color: var(--text-primary);
     line-height: 1.5;
     word-break: break-word;
   }
 
   .title-preview__value.over {
-    color: #dc2626;
+    color: var(--status-err-dot);
   }
 
   /* Two-column layout */
@@ -541,7 +541,7 @@
 
   .form__section {
     padding: 1.25rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
@@ -579,27 +579,28 @@
   .form__field select,
   .form__field textarea {
     padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--input-border);
     border-radius: 0.375rem;
     font-size: 0.9375rem;
     font-family: inherit;
     width: 100%;
     box-sizing: border-box;
+    background: var(--input-bg);
   }
 
   .form__field input:focus,
   .form__field select:focus,
   .form__field textarea:focus {
     outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgb(37 99 235 / 0.15);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent);
   }
 
   /* Tabs */
   .tabs {
     display: flex;
     gap: 0.25rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
     padding-bottom: 0;
     margin-bottom: 1rem;
   }
@@ -612,7 +613,7 @@
     margin-bottom: -1px;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #6b7280;
+    color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -620,15 +621,15 @@
   }
 
   .tabs__tab.active {
-    color: #2563eb;
-    border-bottom-color: #2563eb;
+    color: var(--accent);
+    border-bottom-color: var(--accent);
   }
 
   .tabs__badge {
     font-size: 0.6875rem;
     padding: 0.1rem 0.375rem;
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: var(--accent-subtle);
+    color: var(--accent);
     border-radius: 9999px;
     max-width: 8rem;
     white-space: nowrap;
@@ -652,7 +653,7 @@
 
   .bible-panel__fetch-btn {
     padding: 0.5rem 1rem;
-    background: #2563eb;
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 0.375rem;
@@ -669,12 +670,12 @@
   }
 
   .bible-panel__fetch-btn:not(:disabled):hover {
-    background: #1d4ed8;
+    filter: brightness(0.9);
   }
 
   /* Verses */
   .verses {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     overflow: hidden;
     font-size: 0.875rem;
@@ -685,29 +686,29 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--content-bg);
+    border-bottom: 1px solid var(--border);
   }
 
   .verses__label {
     font-weight: 600;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .verses__clear {
     background: transparent;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.125rem 0.5rem;
     font-size: 0.75rem;
     cursor: pointer;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .verses__clear:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #991b1b;
+    background: var(--status-err-bg);
+    border-color: var(--border);
+    color: var(--status-err-text);
   }
 
   .verse {
@@ -715,7 +716,7 @@
     align-items: flex-start;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--border);
   }
 
   .verse:last-child {
@@ -726,9 +727,9 @@
     flex-shrink: 0;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--text-secondary);
     padding: 0.125rem 0.375rem;
-    background: #f3f4f6;
+    background: var(--content-bg);
     border-radius: 0.25rem;
     margin-top: 0.125rem;
   }
@@ -737,13 +738,13 @@
     flex: 1;
     margin: 0;
     line-height: 1.5;
-    color: #374151;
+    color: var(--text-primary);
   }
 
   .verse__edit {
     flex: 1;
     padding: 0.375rem 0.5rem;
-    border: 1px solid #93c5fd;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     font-size: 0.875rem;
     font-family: inherit;
@@ -754,13 +755,13 @@
   .verse__toggle {
     flex-shrink: 0;
     background: transparent;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     width: 1.75rem;
     height: 1.75rem;
     cursor: pointer;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -768,7 +769,7 @@
   }
 
   .verse__toggle:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   /* Actions */
@@ -782,8 +783,8 @@
   .btn-cancel {
     padding: 0.625rem 1.25rem;
     background: transparent;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 1rem;
     text-decoration: none;
@@ -791,17 +792,21 @@
   }
 
   .btn-cancel:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   button[type='submit'] {
     padding: 0.625rem 1.25rem;
-    background: #2563eb;
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 0.375rem;
     font-size: 1rem;
     cursor: pointer;
+  }
+
+  button[type='submit']:not(:disabled):hover {
+    filter: brightness(0.9);
   }
 
   button[type='submit']:disabled {

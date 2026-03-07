@@ -11,13 +11,16 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Sermon Helper",
         "width": 1280,
         "height": 800,
-        "transparent": false,
-        "decorations": true
+        "transparent": true,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {

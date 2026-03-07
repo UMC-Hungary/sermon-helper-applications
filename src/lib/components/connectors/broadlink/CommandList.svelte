@@ -75,13 +75,13 @@
 	{#if loading}
 		<p>Loading commands…</p>
 	{:else if error}
-		<p style="color:red">{error}</p>
+		<p style="color:var(--status-err-text)">{error}</p>
 	{:else if commands.length === 0}
 		<p>No commands yet.</p>
 	{:else}
 		<ul style="list-style:none; padding:0; margin:0;">
 			{#each commands as cmd (cmd.id)}
-				<li style="display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid #eee;">
+				<li style="display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0; border-bottom:1px solid var(--border);">
 					<span><strong>{cmd.name}</strong> <em>({cmd.category})</em> [{cmd.codeType}]</span>
 					<div style="display:flex; gap:0.25rem;">
 						<button onclick={() => handleSend(cmd.id)}>Send</button>

@@ -215,18 +215,18 @@
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .hint {
     margin: 0 0 0.5rem;
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   pre {
     padding: 0.75rem;
-    background: #f3f4f6;
+    background: var(--content-bg);
     border-radius: 0.375rem;
     overflow-x: auto;
     font-size: 0.875rem;
@@ -235,15 +235,15 @@
 
   button {
     padding: 0.5rem 1rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
-    background: white;
+    background: var(--glass-card-bg);
     cursor: pointer;
     font-size: 0.875rem;
   }
 
   button:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   table {
@@ -256,7 +256,7 @@
   td {
     padding: 0.5rem;
     text-align: left;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
   }
 
   th {

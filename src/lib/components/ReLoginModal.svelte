@@ -75,7 +75,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 101;
-    background: #fff;
+    background: var(--glass-card-bg);
     border-radius: 0.75rem;
     padding: 2rem;
     max-width: 400px;
@@ -87,18 +87,18 @@
     font-size: 1.125rem;
     font-weight: 600;
     margin: 0 0 0.75rem;
-    color: #111827;
+    color: var(--text-primary);
   }
 
   .modal__body {
     font-size: 0.9rem;
-    color: #4b5563;
+    color: var(--text-secondary);
     margin: 0 0 1.25rem;
     line-height: 1.5;
   }
 
   .modal__error {
-    color: #dc2626;
+    color: var(--status-err-text);
     font-size: 0.875rem;
     margin: 0 0 0.75rem;
   }
@@ -111,8 +111,8 @@
 
   .btn-primary {
     padding: 0.5rem 1rem;
-    background: #1d4ed8;
-    color: #fff;
+    background: var(--accent);
+    color: white;
     border: none;
     border-radius: 0.375rem;
     font-size: 0.875rem;
@@ -120,7 +120,7 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1e40af;
+    filter: brightness(0.9);
   }
 
   .btn-primary:disabled {
@@ -131,14 +131,14 @@
   .btn-secondary {
     padding: 0.5rem 1rem;
     background: transparent;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     cursor: pointer;
   }
 
   .btn-secondary:hover {
-    background: #f3f4f6;
+    background: var(--content-bg);
   }
 </style>

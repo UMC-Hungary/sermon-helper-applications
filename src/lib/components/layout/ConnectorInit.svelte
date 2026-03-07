@@ -4,7 +4,7 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { listen } from '@tauri-apps/api/event';
 	import { appMode } from '$lib/stores/mode.js';
-	import { serverUrl, serverPort, authToken, localNetworkUrl } from '$lib/stores/server-url.js';
+	import { serverUrl, serverPort, authToken, localNetworkUrl, appReady } from '$lib/stores/server-url.js';
 	import { connectWs, disconnectWs } from '$lib/ws/client.js';
 	import type { AppMode } from '$lib/stores/mode.js';
 	import {
@@ -112,6 +112,7 @@
 				}
 				authToken.set(token);
 			}
+			appReady.set(true);
 		} catch (e) {
 			console.error('Layout init error:', e);
 		}

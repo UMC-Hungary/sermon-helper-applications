@@ -154,7 +154,7 @@
     max-width: 480px;
     margin: 4rem auto;
     padding: 2rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
   }
 
@@ -165,7 +165,7 @@
 
   .subtitle {
     margin: 0 0 1.5rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   fieldset {
@@ -202,7 +202,7 @@
 
   .description {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .client-fields {
@@ -221,7 +221,7 @@
   .client-fields textarea {
     width: 100%;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--input-border);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     font-family: inherit;
@@ -234,7 +234,7 @@
   }
 
   .error {
-    color: #dc2626;
+    color: var(--status-err-text);
     font-size: 0.875rem;
     margin: 0 0 1rem;
   }
@@ -242,7 +242,7 @@
   button {
     width: 100%;
     padding: 0.625rem 1rem;
-    background: #1d4ed8;
+    background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -256,6 +256,6 @@
   }
 
   button:not(:disabled):hover {
-    background: #1e40af;
+    filter: brightness(0.9);
   }
 </style>

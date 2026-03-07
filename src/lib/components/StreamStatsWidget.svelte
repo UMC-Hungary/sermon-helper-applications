@@ -106,7 +106,7 @@
 <style>
 	.widget {
 		padding: 1rem;
-		border: 1px solid #e5e7eb;
+		border: 1px solid var(--border);
 		border-radius: 0.5rem;
 	}
 
@@ -121,7 +121,7 @@
 		margin: 0;
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: #6b7280;
+		color: var(--text-secondary);
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 	}
@@ -138,13 +138,13 @@
 	}
 
 	.badge--live {
-		background: #d1fae5;
-		color: #065f46;
+		background: var(--status-ok-bg);
+		color: var(--status-ok-text);
 	}
 
 	.badge--offline {
-		background: #f3f4f6;
-		color: #9ca3af;
+		background: var(--content-bg);
+		color: var(--text-tertiary);
 		font-weight: 500;
 	}
 
@@ -153,7 +153,7 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: #10b981;
+		background: var(--status-ok-dot);
 		animation: pulse 2s ease-in-out infinite;
 	}
 
@@ -165,7 +165,7 @@
 	.tracks {
 		margin: 0 0 0.75rem;
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 	}
 
 	.stats-dl {
@@ -178,14 +178,14 @@
 
 	.label {
 		font-size: 0.8125rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 		align-self: baseline;
 		white-space: nowrap;
 		font-weight: 500;
 	}
 
-	.label--in  { color: #2563eb; }
-	.label--out { color: #7c3aed; }
+	.label--in  { color: var(--accent); }
+	.label--out { color: var(--accent); }
 
 	.stats-dl dd {
 		margin: 0;
@@ -198,17 +198,17 @@
 		font-size: 0.9375rem;
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
-		color: #111827;
+		color: var(--text-primary);
 	}
 
 	.total {
 		font-size: 0.75rem;
-		color: #9ca3af;
+		color: var(--text-tertiary);
 	}
 
 	.offline-msg {
 		margin: 0;
 		font-size: 0.8125rem;
-		color: #9ca3af;
+		color: var(--text-tertiary);
 	}
 </style>

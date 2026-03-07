@@ -69,8 +69,8 @@
 
   .info-card {
     padding: 1.25rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: var(--content-bg);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     max-width: 600px;
   }
@@ -83,16 +83,16 @@
 
   .url-cell button {
     padding: 0.2rem 0.6rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
-    background: white;
+    background: var(--glass-card-bg);
     cursor: pointer;
     font-size: 0.8rem;
     white-space: nowrap;
   }
 
   .url-cell button:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   .meta {

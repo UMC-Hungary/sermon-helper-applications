@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { pptFilter, pptResults, pptFolders, keynoteStatus } from '$lib/stores/presentations.js';
+	import { appReady } from '$lib/stores/server-url.js';
 	import { sendWsCommand } from '$lib/ws/client.js';
 	import {
 		listFolders,
@@ -21,10 +21,13 @@
 
 	let loading = $state(false);
 	let addingFolder = $state(false);
+	let foldersFetched = $state(false);
 
-	onMount(async () => {
-		const folders = await listFolders();
-		pptFolders.set(folders);
+	$effect(() => {
+		if ($appReady && !foldersFetched) {
+			foldersFetched = true;
+			listFolders().then((folders) => pptFolders.set(folders));
+		}
 	});
 
 	async function handleAddFolder() {
@@ -219,7 +222,7 @@
 		font-size: 1.1rem;
 		font-weight: 600;
 		margin-bottom: 0.75rem;
-		color: #374151;
+		color: var(--text-primary);
 	}
 
 	.folder-list {
@@ -236,7 +239,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.5rem 0.75rem;
-		background: #f3f4f6;
+		background: var(--content-bg);
 		border-radius: 0.375rem;
 	}
 
@@ -247,7 +250,7 @@
 
 	.folder-path {
 		flex: 1;
-		color: #6b7280;
+		color: var(--text-secondary);
 		font-size: 0.875rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -256,7 +259,7 @@
 
 	.folder-item button {
 		padding: 0.25rem 0.5rem;
-		background: #ef4444;
+		background: var(--status-err-dot);
 		color: white;
 		border: none;
 		border-radius: 0.25rem;
@@ -266,7 +269,7 @@
 
 	.btn-primary {
 		padding: 0.5rem 1rem;
-		background: #3b82f6;
+		background: var(--accent);
 		color: white;
 		border: none;
 		border-radius: 0.375rem;
@@ -281,8 +284,8 @@
 
 	.filter-display {
 		padding: 0.5rem 0.75rem;
-		background: #111827;
-		color: #f9fafb;
+		background: var(--text-primary);
+		color: white;
 		border-radius: 0.375rem;
 		font-size: 1.5rem;
 		font-family: monospace;
@@ -302,7 +305,7 @@
 		padding: 0.75rem;
 		font-size: 1.25rem;
 		font-weight: 600;
-		background: #3b82f6;
+		background: var(--accent);
 		color: white;
 		border: none;
 		border-radius: 0.375rem;
@@ -310,11 +313,11 @@
 	}
 
 	.backspace-btn {
-		background: #ef4444;
+		background: var(--status-err-dot);
 	}
 
 	.clear-btn {
-		background: #f59e0b;
+		background: var(--status-warn-dot);
 	}
 
 	.result-slots {
@@ -325,7 +328,7 @@
 
 	.slot-btn {
 		padding: 0.75rem 1rem;
-		background: #6b7280;
+		background: var(--text-secondary);
 		color: white;
 		border: none;
 		border-radius: 0.375rem;
@@ -338,7 +341,7 @@
 	}
 
 	.slot-btn.slot-filled {
-		background: #059669;
+		background: var(--status-ok-dot);
 	}
 
 	.slot-btn:disabled {
@@ -354,14 +357,14 @@
 
 	.status-item {
 		padding: 0.75rem;
-		background: #f3f4f6;
+		background: var(--content-bg);
 		border-radius: 0.375rem;
 	}
 
 	.status-label {
 		display: block;
 		font-size: 0.75rem;
-		color: #6b7280;
+		color: var(--text-secondary);
 		margin-bottom: 0.25rem;
 	}
 
@@ -371,7 +374,7 @@
 	}
 
 	.status-value.active {
-		color: #059669;
+		color: var(--status-ok-dot);
 	}
 
 	.control-bar {
@@ -382,7 +385,7 @@
 
 	.ctrl-btn {
 		padding: 0.5rem 0.75rem;
-		background: #3b82f6;
+		background: var(--accent);
 		color: white;
 		border: none;
 		border-radius: 0.375rem;
@@ -391,14 +394,14 @@
 	}
 
 	.play-btn {
-		background: #059669;
+		background: var(--status-ok-dot);
 	}
 
 	.stop-btn {
-		background: #9a3412;
+		background: var(--status-err-dot);
 	}
 
 	.close-btn {
-		background: #7f1d1d;
+		background: var(--status-err-dot);
 	}
 </style>

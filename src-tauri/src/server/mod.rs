@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod caption;
 pub mod openapi;
 pub mod ppt;
 pub mod routes;
@@ -449,6 +450,8 @@ pub async fn build_and_serve(
     // only adds response headers and never modifies request headers, so it is
     // safe to apply to all routes including /ws.
     let mut app = Router::new()
+        .route("/caption", get(caption::caption_handler))
+        .route("/caption/logo", get(caption::caption_logo_handler))
         .route("/openapi.json", get(openapi::serve_spec))
         .route("/docs", get(openapi::serve_docs))
         .route("/ws", get(websocket::ws_handler))

@@ -144,7 +144,7 @@
   }
 
   .no-errors {
-    color: #6b7280;
+    color: var(--text-secondary);
     font-size: 0.9375rem;
   }
 
@@ -156,10 +156,10 @@
   }
 
   .error-card {
-    border: 1px solid #fca5a5;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 1rem;
-    background: #fff;
+    background: var(--glass-card-bg);
   }
 
   .error-header {
@@ -178,7 +178,7 @@
 
   .error-message {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 
   .error-actions {
@@ -191,7 +191,7 @@
   .info-panel {
     margin-top: 1rem;
     padding: 0.75rem;
-    background: #f9fafb;
+    background: var(--content-bg);
     border-radius: 0.375rem;
     font-size: 0.875rem;
     line-height: 1.6;
@@ -214,7 +214,7 @@
 
   .btn-primary {
     padding: 0.375rem 0.75rem;
-    background: #1d4ed8;
+    background: var(--accent);
     color: #fff;
     border: none;
     border-radius: 0.375rem;
@@ -223,35 +223,35 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1e40af;
+    filter: brightness(0.9);
   }
 
   .btn-secondary {
     padding: 0.375rem 0.75rem;
     background: transparent;
-    color: #1d4ed8;
-    border: 1px solid #1d4ed8;
+    color: var(--accent);
+    border: 1px solid var(--accent);
     border-radius: 0.375rem;
     font-size: 0.8125rem;
     cursor: pointer;
   }
 
   .btn-secondary:hover:not(:disabled) {
-    background: #eff6ff;
+    background: var(--accent-subtle);
   }
 
   .btn-info {
     padding: 0.375rem 0.75rem;
     background: transparent;
-    color: #374151;
-    border: 1px solid #d1d5db;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
     border-radius: 0.375rem;
     font-size: 0.8125rem;
     cursor: pointer;
   }
 
   .btn-info:hover {
-    background: #f3f4f6;
+    background: var(--nav-item-hover);
   }
 
   .btn-sm {
