@@ -99,6 +99,23 @@ body {
 	--status-err-dot: #f87171;
 }
 
+/* ── Non-glass platforms (Windows / Linux) — 5% transparency ── */
+[data-glass='false'] {
+	--titlebar-height: 0px;
+	--glass-sidebar-bg: rgba(246, 246, 246, 0.95);
+	--glass-card-bg: rgba(255, 255, 255, 0.95);
+	--glass-sidebar-blur: none;
+	--glass-card-blur: none;
+	--content-bg: rgba(242, 242, 247, 0.95);
+	background: rgba(242, 242, 247, 0.95);
+}
+[data-glass='false'][data-theme='dark'] {
+	--glass-sidebar-bg: rgba(28, 28, 30, 0.95);
+	--glass-card-bg: rgba(44, 44, 46, 0.95);
+	--content-bg: rgba(18, 18, 20, 0.95);
+	background: rgba(18, 18, 20, 0.95);
+}
+
 /* ── Reduce transparency fallback ── */
 @media (prefers-reduced-transparency: reduce) {
 	:root {

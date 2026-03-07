@@ -5,7 +5,7 @@
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { initSystemAppearance, systemTheme } from '$lib/stores/system-appearance.js';
+	import { glassSupported, initSystemAppearance, systemTheme } from '$lib/stores/system-appearance.js';
 	import ConnectorInit from '$lib/components/layout/ConnectorInit.svelte';
 	import ReLoginHandler from '$lib/components/layout/ReLoginHandler.svelte';
 	import NavConnectors from '$lib/components/layout/NavConnectors.svelte';
@@ -21,6 +21,10 @@
 
 	$effect(() => {
 		document.documentElement.setAttribute('data-theme', $systemTheme);
+	});
+
+	$effect(() => {
+		document.documentElement.setAttribute('data-glass', $glassSupported ? 'true' : 'false');
 	});
 
 	function isActive(href: string): boolean {
@@ -166,5 +170,14 @@
 	.nav-item.active {
 		background: var(--nav-item-active-bg);
 		color: var(--nav-item-active-text);
+	}
+
+	:global([data-glass='false']) .app-shell {
+		border-radius: 0;
+	}
+
+	:global([data-glass='false']) .app-titlebar-drag,
+	:global([data-glass='false']) .sidebar-traffic-spacer {
+		display: none;
 	}
 </style>
