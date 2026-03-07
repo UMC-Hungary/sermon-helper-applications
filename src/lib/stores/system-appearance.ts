@@ -19,7 +19,7 @@ export async function initSystemAppearance(): Promise<void> {
 	mq.addEventListener('change', (e) => reduceTransparency.set(e.matches));
 
 	try {
-		const { isGlassSupported, setLiquidGlassEffect } = await import('tauri-plugin-liquid-glass-api');
+		const { isGlassSupported, setLiquidGlassEffect } = await import(/* @vite-ignore */ 'tauri-plugin-liquid-glass-api');
 		const supported = await isGlassSupported();
 		glassSupported.set(supported);
 		if (supported) {
