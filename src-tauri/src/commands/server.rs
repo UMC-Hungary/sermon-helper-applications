@@ -84,17 +84,34 @@ pub async fn complete_setup(
             let vmix = Arc::clone(&rt.vmix_connector);
             let yt = Arc::clone(&rt.youtube_connector);
             let fb = Arc::clone(&rt.facebook_connector);
+            let bl = Arc::clone(&rt.broadlink_connector);
             // Use the shared config Arcs from AppRuntime so that any config
             // saved via Tauri commands is immediately visible to Axum routes.
             let yt_cfg = Arc::clone(&rt.youtube_config);
             let fb_cfg = Arc::clone(&rt.facebook_config);
             let oauth = Arc::clone(&rt.oauth_states);
+            #[cfg(target_os = "macos")]
+            let kn = Arc::clone(&rt.keynote_connector);
             drop(rt);
 
             let handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) =
-                    crate::start_server(handle, auth_token_arc, port, obs, vmix, yt, fb, yt_cfg, fb_cfg, oauth).await
+                if let Err(e) = crate::start_server(
+                    handle,
+                    auth_token_arc,
+                    port,
+                    obs,
+                    vmix,
+                    yt,
+                    fb,
+                    bl,
+                    yt_cfg,
+                    fb_cfg,
+                    oauth,
+                    #[cfg(target_os = "macos")]
+                    kn,
+                )
+                .await
                 {
                     tracing::error!("Backend startup failed: {e}");
                 }

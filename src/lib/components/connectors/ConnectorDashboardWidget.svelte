@@ -11,11 +11,31 @@
 		facebookConfig,
 		facebookState,
 		discordConfig,
-		discordState
+		discordState,
+		broadlinkConfig,
+		broadlinkState
 	} from '$lib/stores/connectors.js';
+	import { authToken } from '$lib/stores/server-url.js';
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorStatusBadge from './ConnectorStatusBadge.svelte';
 	import type { BaseConfig, ConnectorState } from '$lib/connectors/types.js';
+	import {
+		fetchDevices,
+		fetchCommands,
+		sendCommand,
+		type BroadlinkDevice,
+		type BroadlinkCommand
+	} from '$lib/api/broadlink.js';
+
+	const CATEGORY_LABELS: Record<string, string> = {
+		projector: 'Projector',
+		screen: 'Screen',
+		hvac: 'HVAC',
+		lighting: 'Lighting',
+		audio: 'Audio',
+		other: 'Other'
+	};
+	const CATEGORY_ORDER = ['projector', 'screen', 'lighting', 'audio', 'hvac', 'other'];
 
 	interface Props {
 		connectorId: string;
@@ -33,56 +53,166 @@
 		if (connectorId === 'youtube') return $youtubeConfig;
 		if (connectorId === 'facebook') return $facebookConfig;
 		if (connectorId === 'discord') return $discordConfig;
+		if (connectorId === 'broadlink') return $broadlinkConfig;
 		return { enabled: false };
 	});
 
-	const state = $derived.by((): ConnectorState => {
+	const connState = $derived.by((): ConnectorState => {
 		if (connectorId === 'obs') return $obsState;
 		if (connectorId === 'vmix') return $vmixState;
 		if (connectorId === 'atem') return $atemState;
 		if (connectorId === 'youtube') return $youtubeState;
 		if (connectorId === 'facebook') return $facebookState;
 		if (connectorId === 'discord') return $discordState;
+		if (connectorId === 'broadlink') return $broadlinkState;
 		return { connection: 'disconnected' };
 	});
 
 	const isConfigured = $derived(def ? def.isConfigured(config) : false);
 
 	const hasFlags = $derived(
-		(def?.capabilities.streaming && state.isStreaming !== undefined) ||
-		(def?.capabilities.recording && state.isRecording !== undefined) ||
-		(def?.capabilities.live && state.isLive !== undefined)
+		(def?.capabilities.streaming && connState.isStreaming !== undefined) ||
+		(def?.capabilities.recording && connState.isRecording !== undefined) ||
+		(def?.capabilities.live && connState.isLive !== undefined)
 	);
+
+	// ── Broadlink command panel ───────────────────────────────────────────────
+
+	let blDevices = $state<BroadlinkDevice[]>([]);
+	let blCommands = $state<BroadlinkCommand[]>([]);
+	let blSelectedId = $state<string | null>(null);
+	let blLoading = $state(false);
+	let blSendingId = $state<string | null>(null);
+	let blSendError = $state('');
+
+	$effect(() => {
+		if (connectorId === 'broadlink' && $authToken && $broadlinkConfig.enabled) {
+			loadBroadlink();
+		}
+	});
+
+	async function loadBroadlink() {
+		blLoading = true;
+		try {
+			blDevices = await fetchDevices();
+			const first = blDevices.find((d) => d.isDefault) ?? blDevices.find(() => true);
+			if (first && blSelectedId === null) blSelectedId = first.id;
+			blCommands = await fetchCommands(blSelectedId ?? undefined);
+		} catch {
+			// server may not be ready yet
+		} finally {
+			blLoading = false;
+		}
+	}
+
+	async function onDeviceChange(id: string) {
+		blSelectedId = id;
+		try {
+			blCommands = await fetchCommands(id);
+		} catch {
+			blCommands = [];
+		}
+	}
+
+	async function blSend(cmd: BroadlinkCommand) {
+		blSendingId = cmd.id;
+		blSendError = '';
+		try {
+			await sendCommand(cmd.id);
+		} catch (e) {
+			blSendError = String(e);
+		} finally {
+			blSendingId = null;
+		}
+	}
+
+	const blGrouped = $derived.by(() => {
+		const map = new Map<string, BroadlinkCommand[]>();
+		for (const cmd of blCommands) {
+			const cat = cmd.category || 'other';
+			if (!map.has(cat)) map.set(cat, []);
+			map.get(cat)!.push(cmd);
+		}
+		return CATEGORY_ORDER
+			.filter((cat) => map.has(cat))
+			.map((cat) => ({ category: cat, label: CATEGORY_LABELS[cat] ?? cat, cmds: map.get(cat)! }));
+	});
 </script>
 
 {#if def && isConfigured}
-	<div class="widget" class:widget--compact={compact}>
-		<ConnectorStatusBadge name={def.name} status={state.connection} />
+	<div class="widget" class:widget--compact={compact} class:widget--broadlink={connectorId === 'broadlink'}>
+		<ConnectorStatusBadge name={def.name} status={connState.connection} />
 
 		{#if hasFlags}
 			<div class="flag-row">
-				{#if def.capabilities.streaming && state.isStreaming !== undefined}
-					<span class="flag" class:flag--active={state.isStreaming}>
-						{state.isStreaming ? 'Streaming' : 'Not Streaming'}
+				{#if def.capabilities.streaming && connState.isStreaming !== undefined}
+					<span class="flag" class:flag--active={connState.isStreaming}>
+						{connState.isStreaming ? 'Streaming' : 'Not Streaming'}
 					</span>
 				{/if}
-				{#if def.capabilities.recording && state.isRecording !== undefined}
-					<span class="flag" class:flag--active={state.isRecording}>
-						{state.isRecording ? 'Recording' : 'Not Recording'}
+				{#if def.capabilities.recording && connState.isRecording !== undefined}
+					<span class="flag" class:flag--active={connState.isRecording}>
+						{connState.isRecording ? 'Recording' : 'Not Recording'}
 					</span>
 				{/if}
-				{#if def.capabilities.live && state.isLive !== undefined}
-					<span class="flag" class:flag--active={state.isLive}>
-						{state.isLive ? 'Live' : 'Not Live'}
+				{#if def.capabilities.live && connState.isLive !== undefined}
+					<span class="flag" class:flag--active={connState.isLive}>
+						{connState.isLive ? 'Live' : 'Not Live'}
 					</span>
 				{/if}
 			</div>
 		{/if}
 
-		{#if !compact}
-			<div class="widget-detail">
-				<!-- Detail/actions layout — reserved for future iteration -->
-			</div>
+		{#if connectorId === 'broadlink'}
+			{#if blDevices.length > 1}
+				<select
+					class="bl-device-select"
+					value={blSelectedId}
+					onchange={(e) => onDeviceChange((e.currentTarget as HTMLSelectElement).value)}
+					aria-label="Select device"
+				>
+					{#each blDevices as dev (dev.id)}
+						<option value={dev.id}>{dev.name}</option>
+					{/each}
+				</select>
+			{:else if blDevices.length === 1}
+				<span class="bl-device-name">{blDevices.at(0)?.name}</span>
+			{/if}
+
+			{#if blLoading}
+				<p class="bl-hint">Loading…</p>
+			{:else if blCommands.length === 0 && blDevices.length === 0}
+				<p class="bl-hint">No devices. <a href="/settings">Add one →</a></p>
+			{:else if blCommands.length === 0}
+				<p class="bl-hint">No commands. <a href="/rf-ir">Add one →</a></p>
+			{:else}
+				<div class="bl-categories">
+					{#each blGrouped as group (group.category)}
+						<div class="bl-category">
+							<span class="bl-category-label">{group.label}</span>
+							<div class="bl-cmd-row">
+								{#each group.cmds as cmd (cmd.id)}
+									<button
+										class="bl-cmd-btn"
+										class:bl-cmd-btn--sending={blSendingId === cmd.id}
+										onclick={() => blSend(cmd)}
+										disabled={blSendingId !== null}
+										title={cmd.name}
+									>
+										{cmd.name}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			{#if blSendError}
+				<p class="bl-error" role="alert">{blSendError}</p>
+			{/if}
+
+			<a href="/rf-ir" class="bl-manage-link">Manage →</a>
 		{/if}
 	</div>
 {/if}
@@ -96,6 +226,10 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		align-items: flex-start;
+	}
+
+	.widget--broadlink {
+		align-items: stretch;
 	}
 
 	.flag-row {
@@ -118,5 +252,101 @@
 	.flag--active {
 		background: #d1fae5;
 		color: #065f46;
+	}
+
+	/* ── Broadlink ── */
+
+	.bl-device-select {
+		font-size: 0.8125rem;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 0.3rem;
+		background: #fff;
+		color: #374151;
+		cursor: pointer;
+		width: 100%;
+	}
+
+	.bl-device-name {
+		font-size: 0.8125rem;
+		color: #6b7280;
+	}
+
+	.bl-hint {
+		font-size: 0.8125rem;
+		color: #6b7280;
+		margin: 0;
+	}
+
+	.bl-categories {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.bl-category {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.bl-category-label {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: #9ca3af;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.bl-cmd-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+	}
+
+	.bl-cmd-btn {
+		padding: 0.3rem 0.65rem;
+		font-size: 0.8125rem;
+		border: 1px solid #d1d5db;
+		border-radius: 0.3rem;
+		background: #fff;
+		color: #111827;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.bl-cmd-btn:hover:not(:disabled) {
+		background: #f3f4f6;
+		border-color: #9ca3af;
+	}
+
+	.bl-cmd-btn--sending {
+		background: #eff6ff;
+		border-color: #93c5fd;
+		color: #1d4ed8;
+	}
+
+	.bl-cmd-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.bl-error {
+		font-size: 0.8125rem;
+		color: #dc2626;
+		margin: 0;
+	}
+
+	.bl-manage-link {
+		font-size: 0.8125rem;
+		color: #6b7280;
+		text-decoration: none;
+		align-self: flex-end;
+	}
+
+	.bl-manage-link:hover {
+		color: #374151;
+		text-decoration: underline;
 	}
 </style>

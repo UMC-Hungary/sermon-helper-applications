@@ -1,15 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { listEvents } from '$lib/api/events.js';
-  import { events, eventsLoading } from '$lib/stores/events.js';
+  import { listUntrackedRecordings, deleteUntrackedRecording } from '$lib/api/untracked-recordings.js';
+  import { events, eventsLoading, untrackedRecordings } from '$lib/stores/events.js';
   import { lastWsMessage } from '$lib/stores/ws.js';
   import EventList from '$lib/components/events/EventList.svelte';
+  import RecordingList from '$lib/components/recordings/RecordingList.svelte';
+  import AssignRecordingDialog from '$lib/components/recordings/AssignRecordingDialog.svelte';
+
+  let assigningId = $state<string | null>(null);
 
   onMount(async () => {
     eventsLoading.set(true);
     try {
-      const data = await listEvents();
+      const [data, untracked] = await Promise.all([listEvents(), listUntrackedRecordings()]);
       events.set(data);
+      untrackedRecordings.set(untracked);
     } finally {
       eventsLoading.set(false);
     }
@@ -17,10 +23,16 @@
 
   $effect(() => {
     const msg = $lastWsMessage;
-    if (msg?.type === 'event.changed' && msg.data.operation === 'INSERT') {
-      // EventList will re-render from the ws/client.ts store update
+    if (msg?.type === 'recording.detected' && msg.eventTitle === null) {
+      // Reload untracked list when an untracked recording arrives
+      listUntrackedRecordings().then((data) => untrackedRecordings.set(data));
     }
   });
+
+  async function handleDelete(id: string, deleteFile: boolean) {
+    await deleteUntrackedRecording(id, deleteFile);
+    untrackedRecordings.update((list) => list.filter((r) => r.id !== id));
+  }
 </script>
 
 <svelte:head>
@@ -33,6 +45,25 @@
 </div>
 
 <EventList events={$events} loading={$eventsLoading} />
+
+{#if $untrackedRecordings.length > 0}
+  <section class="untracked">
+    <h2>Untracked Recordings</h2>
+    <p class="hint">These recordings were captured by OBS but could not be matched to an event.</p>
+    <RecordingList
+      recordings={$untrackedRecordings}
+      onassign={(id) => (assigningId = id)}
+      ondelete={handleDelete}
+    />
+  </section>
+{/if}
+
+{#if assigningId !== null}
+  <AssignRecordingDialog
+    untrackedId={assigningId}
+    onclose={() => (assigningId = null)}
+  />
+{/if}
 
 <style>
   .page-header {
@@ -55,4 +86,22 @@
     font-size: 0.875rem;
     font-weight: 500;
   }
+
+  .untracked {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .untracked h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.125rem;
+  }
+
+  .hint {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0 0 1rem;
+  }
+
 </style>

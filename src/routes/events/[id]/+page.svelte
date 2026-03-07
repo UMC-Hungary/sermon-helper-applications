@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { getEvent } from '$lib/api/events.js';
-  import { listRecordings } from '$lib/api/recordings.js';
+  import { goto } from '$app/navigation';
+  import { getEvent, deleteEvent } from '$lib/api/events.js';
+  import { listRecordings, deleteRecording } from '$lib/api/recordings.js';
   import { triggerYouTubeSchedule, triggerFacebookSchedule } from '$lib/api/connectors.js';
-  import type { Event } from '$lib/schemas/event.js';
+  import { listActivities, createActivity, deleteActivity } from '$lib/api/activities.js';
+  import type { Event, EventActivity } from '$lib/schemas/event.js';
   import type { Recording } from '$lib/schemas/recording.js';
   import RecordingList from '$lib/components/recordings/RecordingList.svelte';
   import CreateRecordingForm from '$lib/components/recordings/CreateRecordingForm.svelte';
@@ -12,6 +14,7 @@
 
   let event = $state<Event | null>(null);
   let recordings = $state<Recording[]>([]);
+  let activities = $state<EventActivity[]>([]);
   let loadingEvent = $state(true);
   let loadingRecordings = $state(true);
   let error = $state('');
@@ -19,10 +22,14 @@
   let schedulingYt = $state(false);
   let schedulingFb = $state(false);
   let scheduleError = $state('');
+  let togglingCompletion = $state(false);
+  let deletingEvent = $state(false);
 
   const id = page.params.id ?? '';
 
   const isPast = $derived(event ? new Date(event.dateTime) <= new Date() : false);
+  const isCompleted = $derived(activities.some((a) => a.activityType === 'completed'));
+  const completedActivity = $derived(activities.find((a) => a.activityType === 'completed'));
 
   function conn(platform: string) {
     return event?.connections.find((c) => c.platform === platform);
@@ -30,7 +37,11 @@
 
   onMount(async () => {
     try {
-      [event, recordings] = await Promise.all([getEvent(id), listRecordings(id)]);
+      [event, recordings, activities] = await Promise.all([
+        getEvent(id),
+        listRecordings(id),
+        listActivities(id),
+      ]);
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     } finally {
@@ -82,6 +93,40 @@
       schedulingFb = false;
     }
   }
+
+  async function toggleCompletion() {
+    togglingCompletion = true;
+    try {
+      if (isCompleted && completedActivity) {
+        await deleteActivity(id, completedActivity.id);
+        activities = activities.filter((a) => a.id !== completedActivity!.id);
+      } else {
+        const act = await createActivity(id, { activity_type: 'completed' });
+        activities = [...activities, act];
+      }
+    } catch (e) {
+      scheduleError = e instanceof Error ? e.message : String(e);
+    } finally {
+      togglingCompletion = false;
+    }
+  }
+
+  async function handleDeleteEvent() {
+    if (!confirm('Delete this event and all its recordings? This cannot be undone.')) return;
+    deletingEvent = true;
+    try {
+      await deleteEvent(id);
+      await goto('/events');
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+      deletingEvent = false;
+    }
+  }
+
+  async function handleDeleteRecording(recordingId: string, deleteFile: boolean) {
+    await deleteRecording(id, recordingId, deleteFile);
+    recordings = recordings.filter((r) => r.id !== recordingId);
+  }
 </script>
 
 <svelte:head>
@@ -91,7 +136,12 @@
 <div class="nav">
   <a href="/events" class="back">&larr; Events</a>
   {#if event}
-    <a href="/events/{id}/edit" class="btn-edit">Edit</a>
+    <div class="nav__actions">
+      <a href="/events/{id}/edit" class="btn-edit">Edit</a>
+      <button class="btn-danger" onclick={handleDeleteEvent} disabled={deletingEvent}>
+        {deletingEvent ? 'Deleting…' : 'Delete Event'}
+      </button>
+    </div>
   {/if}
 </div>
 
@@ -186,6 +236,29 @@
     </div>
   </section>
 
+  <section class="status-section">
+    <h2>Event Status</h2>
+    <div class="status-row">
+      <span class="status-label">
+        {isCompleted ? 'This event is marked as completed.' : 'This event is not yet completed.'}
+      </span>
+      <button
+        class="btn-status"
+        class:btn-status--undo={isCompleted}
+        onclick={toggleCompletion}
+        disabled={togglingCompletion}
+      >
+        {#if togglingCompletion}
+          …
+        {:else if isCompleted}
+          Undo Completion
+        {:else}
+          Mark as Completed
+        {/if}
+      </button>
+    </div>
+  </section>
+
   <section class="recordings">
     <div class="recordings__header">
       <h2>Recordings</h2>
@@ -204,7 +277,7 @@
       </div>
     {/if}
 
-    <RecordingList {recordings} loading={loadingRecordings} />
+    <RecordingList {recordings} loading={loadingRecordings} ondelete={handleDeleteRecording} />
   </section>
 {/if}
 
@@ -214,6 +287,12 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1rem;
+  }
+
+  .nav__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .back {
@@ -237,6 +316,24 @@
   }
   .btn-edit:hover {
     background: #eff6ff;
+  }
+
+  .btn-danger {
+    padding: 0.375rem 0.875rem;
+    background: transparent;
+    color: #dc2626;
+    border: 1px solid #dc2626;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: #fef2f2;
+  }
+  .btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   h1 {
@@ -386,6 +483,59 @@
   }
 
   .btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .status-section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+  }
+
+  .status-section h2 {
+    margin: 0 0 0.75rem;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .status-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .btn-status {
+    padding: 0.375rem 0.875rem;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-status:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  .btn-status--undo {
+    background: transparent;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+  }
+
+  .btn-status--undo:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+
+  .btn-status:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }

@@ -24,3 +24,7 @@ export function createEvent(payload: CreateEventPayload): Promise<Event> {
 export function updateEvent(id: string, payload: UpdateEventPayload): Promise<Event> {
   return apiFetch(`/api/events/${id}`, EventSchema, { method: 'PUT', body: payload });
 }
+
+export function deleteEvent(id: string): Promise<void> {
+  return apiFetch(`/api/events/${id}`, z.void(), { method: 'DELETE' });
+}

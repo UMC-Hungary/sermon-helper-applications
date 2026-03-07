@@ -3,8 +3,27 @@ import type { z } from 'zod';
 import { serverUrl, authToken } from '$lib/stores/server-url.js';
 
 type RequestOptions = Omit<RequestInit, 'headers' | 'body'> & {
-  body?: unknown;
+  body?: object;
 };
+
+function waitForToken(): Promise<string> {
+  const current = get(authToken);
+  if (current) return Promise.resolve(current);
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      unsub();
+      reject(new Error('Timed out waiting for auth token'));
+    }, 10_000);
+    const unsub = authToken.subscribe((token) => {
+      if (token) {
+        clearTimeout(timeout);
+        unsub();
+        resolve(token);
+      }
+    });
+  });
+}
 
 export async function apiFetch<S extends z.ZodType>(
   path: string,
@@ -12,7 +31,7 @@ export async function apiFetch<S extends z.ZodType>(
   options: RequestOptions = {},
 ): Promise<z.infer<S>> {
   const base = get(serverUrl);
-  const token = get(authToken);
+  const token = await waitForToken();
   const { body, ...restOptions } = options;
 
   const init: RequestInit = {
@@ -35,6 +54,6 @@ export async function apiFetch<S extends z.ZodType>(
   if (res.status === 204) {
     return schema.parse(undefined) as z.infer<S>;
   }
-  const data: unknown = await res.json();
+  const data = await res.json();
   return schema.parse(data) as z.infer<S>;
 }

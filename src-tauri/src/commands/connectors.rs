@@ -9,8 +9,8 @@ use uuid::Uuid;
 
 use crate::{
     connectors::{
-        AtemConfig, ConnectorStatus, DiscordConfig, FacebookConfig, ObsConfig, VmixConfig,
-        YouTubeConfig,
+        AtemConfig, BroadlinkConfig, ConnectorStatus, DiscordConfig, FacebookConfig, ObsConfig,
+        VmixConfig, YouTubeConfig,
     },
     server::OAUTH_REDIRECT_URI,
     AppRuntime,
@@ -391,4 +391,92 @@ pub async fn facebook_logout(
     };
     fb_connector.stop().await;
     Ok(())
+}
+
+// ── Broadlink ─────────────────────────────────────────────────────────────────
+
+fn load_broadlink_config(app: &AppHandle) -> Result<BroadlinkConfig, String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    Ok(store
+        .get("broadlink_config")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn get_broadlink_config(app: AppHandle) -> Result<BroadlinkConfig, String> {
+    load_broadlink_config(&app)
+}
+
+#[tauri::command]
+pub fn save_broadlink_config(config: BroadlinkConfig, app: AppHandle) -> Result<(), String> {
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set(
+        "broadlink_config",
+        serde_json::to_value(&config).map_err(|e| e.to_string())?,
+    );
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_broadlink_status(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<ConnectorStatus, String> {
+    let connector = {
+        let rt = runtime.read().await;
+        Arc::clone(&rt.broadlink_connector)
+    };
+    Ok(connector.get_status().await)
+}
+
+#[tauri::command]
+pub async fn broadlink_discover(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<Vec<crate::broadlink::DiscoveredDevice>, String> {
+    let config = {
+        let rt = runtime.read().await;
+        let _ = Arc::clone(&rt.broadlink_connector);
+        5u32 // default timeout
+    };
+    crate::broadlink::discover_devices(config).await
+}
+
+#[tauri::command]
+pub async fn broadlink_learn(
+    host: String,
+    mac: String,
+    devtype: String,
+    signal_type: String,
+) -> Result<crate::broadlink::LearnResult, String> {
+    crate::broadlink::learn_code(&host, &mac, &devtype, &signal_type).await
+}
+
+#[tauri::command]
+pub async fn broadlink_cancel_learn() {
+    crate::broadlink::cancel_learn().await;
+}
+
+#[tauri::command]
+pub async fn broadlink_send(
+    host: String,
+    mac: String,
+    devtype: String,
+    code: String,
+) -> Result<crate::broadlink::SendResult, String> {
+    crate::broadlink::send_code(&host, &mac, &devtype, &code).await
+}
+
+#[tauri::command]
+pub async fn broadlink_test_device(
+    host: String,
+    mac: String,
+    devtype: String,
+) -> Result<bool, String> {
+    crate::broadlink::test_device(&host, &mac, &devtype).await
+}
+
+#[tauri::command]
+pub async fn broadlink_list_interfaces() -> Result<Vec<(String, String)>, String> {
+    crate::broadlink::list_network_interfaces().await
 }

@@ -14,7 +14,9 @@
 		facebookConfig,
 		facebookStatus,
 		discordConfig,
-		discordStatus
+		discordStatus,
+		broadlinkConfig,
+		broadlinkStatus
 	} from '$lib/stores/connectors.js';
 	import type {
 		ObsConfig,
@@ -22,11 +24,13 @@
 		AtemConfig,
 		YouTubeConfig,
 		FacebookConfig,
-		DiscordConfig
+		DiscordConfig,
+		BroadlinkConfig
 	} from '$lib/stores/connectors.js';
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorStatusBadge from './ConnectorStatusBadge.svelte';
 	import { youtubeLogout, facebookLogout } from '$lib/api/connectors.js';
+	import BroadlinkDiscoveryPanel from './broadlink/DiscoveryPanel.svelte';
 
 	interface Props {
 		connectorId: string;
@@ -240,6 +244,29 @@
 			discordSaving = false;
 		}
 	}
+
+	// ── Broadlink ──────────────────────────────────────────────────────────────
+	let broadlinkForm: BroadlinkConfig = $state({ enabled: false });
+	let broadlinkSaving = $state(false);
+	let broadlinkError = $state('');
+
+	$effect(() => {
+		if (connectorId === 'broadlink') broadlinkForm = { ...$broadlinkConfig };
+	});
+
+	async function saveBroadlink() {
+		broadlinkSaving = true;
+		broadlinkError = '';
+		try {
+			await invoke('save_broadlink_config', { config: broadlinkForm });
+			broadlinkConfig.set({ ...broadlinkForm });
+			onSaveSuccess?.();
+		} catch (e) {
+			broadlinkError = String(e);
+		} finally {
+			broadlinkSaving = false;
+		}
+	}
 </script>
 
 {#if def}
@@ -260,6 +287,8 @@
 					<p class="note">{$_('appSettings.connectors.facebook.subtitle')}</p>
 				{:else if connectorId === 'discord'}
 					<p class="note">{$_('appSettings.connectors.discord.subtitle')}</p>
+				{:else if connectorId === 'broadlink'}
+					<p class="note">{$_('appSettings.connectors.broadlink.subtitle')}</p>
 				{/if}
 			</div>
 			{#if connectorId === 'obs'}
@@ -274,6 +303,8 @@
 				<ConnectorStatusBadge name="Facebook" status={$facebookStatus} />
 			{:else if connectorId === 'discord'}
 				<ConnectorStatusBadge name="Discord" status={$discordStatus} />
+			{:else if connectorId === 'broadlink'}
+				<ConnectorStatusBadge name="Broadlink" status={$broadlinkStatus} />
 			{/if}
 		</div>
 
@@ -521,6 +552,29 @@
 						: $_('appSettings.connectors.discord.save')}
 				</button>
 			</div>
+
+		<!-- ── Broadlink form ──────────────────────────────────────────────── -->
+		{:else if connectorId === 'broadlink'}
+			<div class="form-row">
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={broadlinkForm.enabled} />
+					{$_('appSettings.connectors.broadlink.enabled')}
+				</label>
+			</div>
+
+			{#if broadlinkError}
+				<p class="error" role="alert">{broadlinkError}</p>
+			{/if}
+
+			<div class="button-row">
+				<button class="btn-primary" onclick={saveBroadlink} disabled={broadlinkSaving}>
+					{broadlinkSaving
+						? $_('appSettings.connectors.broadlink.saving')
+						: $_('appSettings.connectors.broadlink.save')}
+				</button>
+			</div>
+
+			<BroadlinkDiscoveryPanel />
 		{/if}
 	</div>
 {/if}

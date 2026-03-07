@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 pub mod atem;
+pub mod broadlink;
 pub mod discord;
 pub mod facebook;
+#[cfg(target_os = "macos")]
+pub mod keynote;
 pub mod obs;
 pub mod vmix;
 pub mod youtube;
@@ -169,3 +172,16 @@ impl ConnectorConfig for DiscordConfig {
         self.enabled && !self.webhook_url.is_empty()
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BroadlinkConfig {
+    pub enabled: bool,
+}
+
+impl ConnectorConfig for BroadlinkConfig {
+    fn is_configured(&self) -> bool {
+        self.enabled
+    }
+}
+

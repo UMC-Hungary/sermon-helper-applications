@@ -31,12 +31,12 @@ export function facebookLogout(): Promise<void> {
   return apiFetch('/api/auth/facebook/logout', z.void(), { method: 'POST' });
 }
 
-export function triggerYouTubeSchedule(eventId: string): Promise<unknown> {
-  return apiFetch(`/api/connectors/youtube/schedule/${eventId}`, z.unknown(), { method: 'POST' });
+export function triggerYouTubeSchedule(eventId: string): Promise<void> {
+  return apiFetch(`/api/connectors/youtube/schedule/${eventId}`, z.void(), { method: 'POST' });
 }
 
-export function triggerFacebookSchedule(eventId: string): Promise<unknown> {
-  return apiFetch(`/api/connectors/facebook/schedule/${eventId}`, z.unknown(), { method: 'POST' });
+export function triggerFacebookSchedule(eventId: string): Promise<void> {
+  return apiFetch(`/api/connectors/facebook/schedule/${eventId}`, z.void(), { method: 'POST' });
 }
 
 export function fetchYouTubeContent(): Promise<ChannelContent> {

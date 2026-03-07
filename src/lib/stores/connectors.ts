@@ -40,6 +40,10 @@ export interface DiscordConfig {
 	webhookUrl: string;
 }
 
+export interface BroadlinkConfig {
+	enabled: boolean;
+}
+
 /** Payload shape emitted by the Rust backend. */
 interface ConnectorStatusPayload {
 	type: ConnectorStatus;
@@ -59,6 +63,7 @@ export const atemStatus = writable<ConnectorStatus>('disconnected');
 export const youtubeStatus = writable<ConnectorStatus>('disconnected');
 export const facebookStatus = writable<ConnectorStatus>('disconnected');
 export const discordStatus = writable<ConnectorStatus>('disconnected');
+export const broadlinkStatus = writable<ConnectorStatus>('disconnected');
 
 // ── Config stores ─────────────────────────────────────────────────────────────
 
@@ -99,16 +104,21 @@ export const discordConfig = writable<DiscordConfig>({
 	webhookUrl: ''
 });
 
+export const broadlinkConfig = writable<BroadlinkConfig>({
+	enabled: false
+});
+
 // ── Extended state stores (status + boolean capability flags) ─────────────────
 // These are updated alongside the status stores. The boolean flags (isStreaming,
 // isRecording, isLive) will be populated when WS messages for them arrive.
 
-export const obsState = writable<ConnectorState>({ connection: 'disconnected' });
+export const obsState = writable<ConnectorState>({ connection: 'disconnected', isStreaming: false, isRecording: false });
 export const vmixState = writable<ConnectorState>({ connection: 'disconnected' });
 export const atemState = writable<ConnectorState>({ connection: 'disconnected' });
 export const youtubeState = writable<ConnectorState>({ connection: 'disconnected' });
 export const facebookState = writable<ConnectorState>({ connection: 'disconnected' });
 export const discordState = writable<ConnectorState>({ connection: 'disconnected' });
+export const broadlinkState = writable<ConnectorState>({ connection: 'disconnected' });
 
 /** True when the cron.youtube_pull message reports at least one live broadcast. */
 export const youtubeLiveActive = writable<boolean>(false);

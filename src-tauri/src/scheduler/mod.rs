@@ -326,10 +326,8 @@ async fn pull_youtube_live(
                         .execute(&mut *tx)
                         .await?;
                     let event_id: Uuid = sqlx::query_scalar(
-                        r#"INSERT INTO events (
-                            title, date_time, speaker, description, textus, leckio,
-                            textus_translation, leckio_translation, auto_upload_enabled
-                        ) VALUES ($1, $2, '', '', '', '', 'UF', 'UF', false)
+                        r#"INSERT INTO events (title, date_time, speaker, description, auto_upload_enabled)
+                        VALUES ($1, $2, '', '', false)
                         RETURNING id"#,
                     )
                     .bind(&title)

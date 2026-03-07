@@ -55,32 +55,45 @@ pub fn spec() -> Value {
                 }
             },
             "schemas": {
+                "BibleReference": {
+                    "type": "object",
+                    "required": ["type", "reference", "translation", "verses"],
+                    "properties": {
+                        "type":        { "type": "string", "enum": ["textus", "leckio"] },
+                        "reference":   { "type": "string", "example": "John 3:16" },
+                        "translation": { "type": "string", "example": "UF" },
+                        "verses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["chapter", "verse", "text"],
+                                "properties": {
+                                    "chapter": { "type": "integer" },
+                                    "verse":   { "type": "integer" },
+                                    "text":    { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                },
                 "Event": {
                     "type": "object",
-                    "description": "Full event record including all text and metadata fields.",
+                    "description": "Full event record including platform connections and bible references.",
                     "required": [
                         "id", "title", "dateTime", "speaker", "description",
-                        "textus", "leckio", "textusTranslation", "leckioTranslation",
-                        "youtubePrivacyStatus", "autoUploadEnabled", "createdAt", "updatedAt"
+                        "autoUploadEnabled", "connections", "bibleReferences", "createdAt", "updatedAt"
                     ],
                     "properties": {
-                        "id":                   { "type": "string", "format": "uuid" },
-                        "title":                { "type": "string", "example": "Sunday Morning Service" },
-                        "dateTime":             { "type": "string", "format": "date-time", "description": "Scheduled date and time (ISO 8601 / UTC)" },
-                        "speaker":              { "type": "string", "example": "Pastor Smith" },
-                        "description":          { "type": "string" },
-                        "textus":               { "type": "string", "description": "Main Bible text reference", "example": "John 3:16" },
-                        "leckio":               { "type": "string", "description": "Lectio reading reference", "example": "Psalm 23" },
-                        "textusTranslation":    { "type": "string", "description": "Bible translation abbreviation", "example": "UF" },
-                        "leckioTranslation":    { "type": "string", "description": "Lectio translation abbreviation", "example": "UF" },
-                        "youtubePrivacyStatus": {
-                            "type": "string",
-                            "enum": ["public", "unlisted", "private"],
-                            "description": "YouTube upload privacy setting"
-                        },
-                        "autoUploadEnabled":    { "type": "boolean", "description": "Automatically upload recordings to YouTube when whitelisted" },
-                        "createdAt":            { "type": "string", "format": "date-time" },
-                        "updatedAt":            { "type": "string", "format": "date-time" }
+                        "id":               { "type": "string", "format": "uuid" },
+                        "title":            { "type": "string", "example": "Sunday Morning Service" },
+                        "dateTime":         { "type": "string", "format": "date-time", "description": "Scheduled date and time (ISO 8601 / UTC)" },
+                        "speaker":          { "type": "string", "example": "Pastor Smith" },
+                        "description":      { "type": "string" },
+                        "autoUploadEnabled":{ "type": "boolean" },
+                        "connections":      { "type": "array", "items": { "$ref": "#/components/schemas/EventConnection" } },
+                        "bibleReferences":  { "type": "array", "items": { "$ref": "#/components/schemas/BibleReference" } },
+                        "createdAt":        { "type": "string", "format": "date-time" },
+                        "updatedAt":        { "type": "string", "format": "date-time" }
                     }
                 },
                 "EventSummary": {
@@ -99,23 +112,39 @@ pub fn spec() -> Value {
                 },
                 "CreateEventRequest": {
                     "type": "object",
-                    "description": "Request body for creating or fully replacing an event. Field names are **snake_case**. Omitted optional fields default to empty string, `\"UF\"`, `\"private\"`, or `false` as appropriate.",
+                    "description": "Request body for creating or fully replacing an event. Field names are **snake_case**.",
                     "required": ["title", "date_time"],
                     "properties": {
-                        "title":                   { "type": "string", "example": "Sunday Morning Service" },
-                        "date_time":               { "type": "string", "format": "date-time", "description": "Scheduled date and time" },
-                        "speaker":                 { "type": "string", "default": "" },
-                        "description":             { "type": "string", "default": "" },
-                        "textus":                  { "type": "string", "default": "" },
-                        "leckio":                  { "type": "string", "default": "" },
-                        "textus_translation":      { "type": "string", "default": "UF", "description": "Bible translation abbreviation" },
-                        "leckio_translation":      { "type": "string", "default": "UF" },
-                        "youtube_privacy_status":  {
-                            "type": "string",
-                            "enum": ["public", "unlisted", "private"],
-                            "default": "private"
+                        "title":             { "type": "string", "example": "Sunday Morning Service" },
+                        "date_time":         { "type": "string", "format": "date-time", "description": "Scheduled date and time" },
+                        "speaker":           { "type": "string", "default": "" },
+                        "description":       { "type": "string", "default": "" },
+                        "auto_upload_enabled": { "type": "boolean", "default": false },
+                        "bible_references":  {
+                            "type": "array",
+                            "description": "Bible readings for the event. Each entry has a type (textus or leckio). An empty reference string removes the existing entry.",
+                            "items": {
+                                "type": "object",
+                                "required": ["type"],
+                                "properties": {
+                                    "type":        { "type": "string", "enum": ["textus", "leckio"] },
+                                    "reference":   { "type": "string" },
+                                    "translation": { "type": "string", "default": "UF" },
+                                    "verses":      { "type": "array", "items": { "$ref": "#/components/schemas/BibleReference/properties/verses/items" } }
+                                }
+                            }
                         },
-                        "auto_upload_enabled":     { "type": "boolean", "default": false }
+                        "connections": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["platform"],
+                                "properties": {
+                                    "platform":       { "type": "string" },
+                                    "privacy_status": { "type": "string" }
+                                }
+                            }
+                        }
                     }
                 },
                 "Recording": {
@@ -297,8 +326,9 @@ pub fn spec() -> Value {
                                     "title": "Sunday Service",
                                     "date_time": "2025-01-19T10:00:00Z",
                                     "speaker": "Pastor Smith",
-                                    "textus": "John 3:16",
-                                    "youtube_privacy_status": "private"
+                                    "bible_references": [
+                                        { "type": "textus", "reference": "John 3:16", "translation": "UF" }
+                                    ]
                                 }
                             }
                         }

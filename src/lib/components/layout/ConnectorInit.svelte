@@ -26,6 +26,9 @@
 		discordStatus,
 		discordConfig,
 		discordState,
+		broadlinkStatus,
+		broadlinkConfig,
+		broadlinkState,
 		youtubeLiveActive,
 		mapConnectorStatus
 	} from '$lib/stores/connectors.js';
@@ -36,6 +39,7 @@
 		YouTubeConfig,
 		FacebookConfig,
 		DiscordConfig,
+		BroadlinkConfig,
 		ConnectorStatus
 	} from '$lib/stores/connectors.js';
 	import { apiFetch } from '$lib/api/client.js';
@@ -192,6 +196,19 @@
 				discordState.update((s) => ({ ...s, connection: mapped }));
 			} catch (e) {
 				console.error('Discord connector init error:', e);
+			}
+
+			try {
+				const [cfg, status] = await Promise.all([
+					invoke<BroadlinkConfig>('get_broadlink_config'),
+					invoke<{ type: string }>('get_broadlink_status')
+				]);
+				broadlinkConfig.set(cfg);
+				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
+				broadlinkStatus.set(mapped);
+				broadlinkState.update((s) => ({ ...s, connection: mapped }));
+			} catch (e) {
+				console.error('Broadlink connector init error:', e);
 			}
 
 			unlistenObs = await listen<{ type: string }>('connector://obs-status', (event) => {

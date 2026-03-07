@@ -254,6 +254,7 @@
 		},
 		"form": {
 			"basicInfo": "Alapadatok",
+			"defaultTitle": "(Vasárnapi) istentisztelet",
 			"title": "Esemény Címe",
 			"titlePlaceholder": "Vasárnapi Istentisztelet - Isten Szeretete",
 			"date": "Dátum",
@@ -677,7 +678,40 @@
 		"events": "Események",
 		"connect": "Kapcsolódás",
 		"settings": "Beállítások",
-		"liveEvents": "Élő Közvetítések & Videók"
+		"liveEvents": "Élő Közvetítések & Videók",
+		"presentations": "Prezentációk"
+	},
+	"presentations": {
+		"title": "Prezentációk",
+		"folders": {
+			"title": "Prezentáció Mappák",
+			"add": "Mappa Hozzáadása",
+			"remove": "Mappa eltávolítása"
+		},
+		"search": {
+			"title": "Fájl Keresés"
+		},
+		"results": {
+			"title": "Eredmények"
+		},
+		"status": {
+			"title": "Keynote Állapot",
+			"slideshow": "Diavetítés",
+			"slide": "Dia",
+			"document": "Dokumentum",
+			"on": "BE",
+			"off": "KI"
+		},
+		"controls": {
+			"title": "Vezérlők",
+			"first": "Első Dia",
+			"prev": "Előző Dia",
+			"next": "Következő Dia",
+			"last": "Utolsó Dia",
+			"play": "Lejátszás",
+			"stop": "Megállítás",
+			"closeAll": "Összes Bezárása"
+		}
 	},
 	"liveEvents": {
 		"title": "Élő Közvetítések & Videók",
@@ -775,6 +809,13 @@
 				"save": "Mentés",
 				"saving": "Mentés…",
 				"comingSoon": "A Discord integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+			},
+			"broadlink": {
+				"title": "Broadlink RF/IR",
+				"subtitle": "Vetítők, kijelzők és AV eszközök vezérlése IR és RF jelekkel",
+				"enabled": "Broadlink csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…"
 			},
 			"statusLabels": {
 				"connected": "Csatlakozva",
