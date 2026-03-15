@@ -10,6 +10,7 @@ export interface CaptionSettings {
 	lightText: string;
 	color: string;
 	showLogo: boolean;
+	logoAlt: string;
 	svgLogo: string;
 	resolution: Resolution;
 }
@@ -40,6 +41,7 @@ const DEFAULT_SETTINGS: CaptionSettings = {
 	lightText: '',
 	color: 'black',
 	showLogo: true,
+	logoAlt: '',
 	svgLogo: '',
 	resolution: '1080p',
 };
@@ -65,11 +67,13 @@ class CaptionSettingsStore {
 				const color = ((await store.get('color')) as string | null) ?? DEFAULT_SETTINGS.color;
 				const showLogo =
 					((await store.get('showLogo')) as boolean | null) ?? DEFAULT_SETTINGS.showLogo;
+				const logoAlt =
+					((await store.get('logoAlt')) as string | null) ?? DEFAULT_SETTINGS.logoAlt;
 				const svgLogo =
 					((await store.get('svgLogo')) as string | null) ?? DEFAULT_SETTINGS.svgLogo;
 				const resolution =
 					((await store.get('resolution')) as Resolution | null) ?? DEFAULT_SETTINGS.resolution;
-				return { type, title, boldText, lightText, color, showLogo, svgLogo, resolution };
+				return { type, title, boldText, lightText, color, showLogo, logoAlt, svgLogo, resolution };
 			}
 		} catch (error) {
 			console.warn('Failed to load caption settings from Tauri store:', error);
@@ -103,6 +107,7 @@ class CaptionSettingsStore {
 				await store.set('lightText', merged.lightText);
 				await store.set('color', merged.color);
 				await store.set('showLogo', merged.showLogo);
+				await store.set('logoAlt', merged.logoAlt);
 				await store.set('svgLogo', merged.svgLogo);
 				await store.set('resolution', merged.resolution);
 				await store.save();
