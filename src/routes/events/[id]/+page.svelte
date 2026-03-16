@@ -10,6 +10,7 @@
   import type { Recording } from '$lib/schemas/recording.js';
   import RecordingList from '$lib/components/recordings/RecordingList.svelte';
   import CreateRecordingForm from '$lib/components/recordings/CreateRecordingForm.svelte';
+  import UploadModal from '$lib/components/recordings/UploadModal.svelte';
   import { youtubeStatus, facebookStatus } from '$lib/stores/connectors.js';
 
   let event = $state<Event | null>(null);
@@ -24,6 +25,7 @@
   let scheduleError = $state('');
   let togglingCompletion = $state(false);
   let deletingEvent = $state(false);
+  let showUploadModal = $state(false);
 
   const id = page.params.id ?? '';
 
@@ -103,12 +105,20 @@
       } else {
         const act = await createActivity(id, { activity_type: 'completed' });
         activities = [...activities, act];
+        // Open upload modal if there are recordings and upload platforms are connected
+        if (recordings.length > 0 && ($youtubeStatus === 'connected' || $facebookStatus === 'connected')) {
+          showUploadModal = true;
+        }
       }
     } catch (e) {
       scheduleError = e instanceof Error ? e.message : String(e);
     } finally {
       togglingCompletion = false;
     }
+  }
+
+  function handleUploadFlagged(updated: Recording[]) {
+    recordings = updated;
   }
 
   async function handleDeleteEvent() {
@@ -279,6 +289,15 @@
 
     <RecordingList {recordings} loading={loadingRecordings} ondelete={handleDeleteRecording} />
   </section>
+{/if}
+
+{#if showUploadModal && event}
+  <UploadModal
+    {event}
+    {recordings}
+    onclose={() => (showUploadModal = false)}
+    onuploaded={handleUploadFlagged}
+  />
 {/if}
 
 <style>
