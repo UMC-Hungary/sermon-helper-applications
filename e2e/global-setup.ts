@@ -37,7 +37,7 @@ async function isServerReady(): Promise<boolean> {
 }
 
 async function waitForServer(): Promise<void> {
-  const retries = 30;
+  const retries = 120; // up to 2 minutes — embedded PostgreSQL can be slow on first CI run
   const delayMs = 1000;
   for (let i = 0; i < retries; i++) {
     if (await isServerReady()) return;

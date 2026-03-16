@@ -82,10 +82,22 @@ jobs:
       - name: Build test server
         run: pnpm build:test-server
 
+      - name: Cache embedded PostgreSQL binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/postgresql-embedded
+          key: postgresql-embedded-${{ runner.os }}-v1
+
+      - name: Cache test server data directory
+        uses: actions/cache@v4
+        with:
+          path: test-server-data
+          key: test-server-data-${{ runner.os }}-v1
+
       - name: Run E2E tests
-        # globalSetup (e2e/global-setup.ts) spawns and tears down the server automatically.
-        env:
-          TAURI_TEST_TOKEN: ${{ secrets.TAURI_AUTH_TOKEN }}
+        # TAURI_TEST_TOKEN comes from .env.test (loaded by vitest.config.ts via dotenv).
+        # Both the server (started in globalSetup) and test workers use the same
+        # hardcoded test token from .env.test — no CI secret needed here.
         run: pnpm test:e2e
 
   # ──────────────────────────────────────────────
