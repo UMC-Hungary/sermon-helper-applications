@@ -60,5 +60,3 @@ coverage
 .claude
 gemini.md
 
-# OBS shader — provide via LUCID_GLASS_SHADER_CONTENT env var in CI
-LucidGlass.shader

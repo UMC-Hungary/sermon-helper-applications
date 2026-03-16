@@ -11,6 +11,7 @@ name = "sermon_helper_tauri_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
+base64 = "0.22.1"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
