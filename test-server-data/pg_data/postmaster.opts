@@ -1,0 +1,1 @@
+/Users/aron/workspace/tauri/sermon-helper-applications/test-server-data/pg_install/18.3.0/bin/postgres "-D" "test-server-data/pg_data" "-F" "-p" "15432"
