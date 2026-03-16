@@ -70,6 +70,10 @@ body {
 	--nav-item-active-bg: var(--accent-subtle);
 	--nav-item-active-text: var(--accent);
 	--nav-item-text: #374151;
+
+	/* Modal backdrop + card */
+	--modal-backdrop: rgba(0, 0, 0, 0.4);
+	--modal-card-bg: rgb(255, 255, 255);
 }
 
 /* ── Dark mode ── */
@@ -88,6 +92,8 @@ body {
 	--input-border: rgba(255, 255, 255, 0.12);
 	--nav-item-hover: rgba(255, 255, 255, 0.06);
 	--nav-item-text: #ebebf5;
+	--modal-backdrop: rgba(0, 0, 0, 0.5);
+	--modal-card-bg: rgb(44, 44, 46);
 	--status-ok-bg: rgba(16, 185, 129, 0.15);
 	--status-ok-text: #34d399;
 	--status-ok-dot: #34d399;

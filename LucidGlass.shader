@@ -52,12 +52,7 @@ uniform float LensPositionY <
     float step=1.0;
 > = 540.0;
 
-uniform bool TransparentBackground <
-    string label = "Transparent Background Outside Shape";
-    string tooltip = "Enables a transparent background outside the defined shape.";
-    string widget_type = "checkbox";
-    string group = "Global Settings";
-> = false;
+uniform bool TransparentBackground = true;
 
 // =============================================================================
 // SHAPE DEFINITION
@@ -136,12 +131,7 @@ uniform float FrostStrength <
     float step = 0.01;
 > = 0.2;
 
-uniform float4 TintColor <
-    string label = "Tint Colour";
-    string tooltip = "Colour to tint the shape.";
-    string widget_type = "color";
-    string group = "Glass Effects";
->;
+uniform float4 TintColor = {1.0, 1.0, 1.0, 1.0};
 
 uniform float TintStrength <
     string label = "Tint Strength";
@@ -200,17 +190,9 @@ uniform float MagnificationAmount <
 // OUTER GLOW EFFECTS
 // =============================================================================
 
-uniform bool EnableGlow <
-    string label = "Enable Outer Glow";
-    string widget_type = "checkbox";
-    string group = "Outer Glow Effects";
-> = true;
+uniform bool EnableGlow = true;
 
-uniform float4 GlowColor <
-    string label = "Glow Colour";
-    string widget_type = "color";
-    string group = "Outer Glow Effects";
->;
+uniform float4 GlowColor = {0.8, 0.9, 1.0, 0.8};
 
 uniform float GlowBaseSpreadPx <
     string label = "Outer Glow Spread (px)";
@@ -232,12 +214,7 @@ uniform float GlowFalloffPower <
     float step = 0.01;
 > = 1.0;
 
-uniform bool EnableDirectionalGlow <
-    string label = "Enable Directional Glow";
-    string tooltip = "Enables directional glow that appears only on specific sides of the shape.";
-    string widget_type = "checkbox";
-    string group = "Outer Glow Effects";
-> = false;
+uniform bool EnableDirectionalGlow;
 
 uniform float GlowDirectionAngle <
     string label = "Glow Direction (degrees)";

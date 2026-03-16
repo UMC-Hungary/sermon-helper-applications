@@ -7,6 +7,7 @@
   import EventList from '$lib/components/events/EventList.svelte';
   import RecordingList from '$lib/components/recordings/RecordingList.svelte';
   import AssignRecordingDialog from '$lib/components/recordings/AssignRecordingDialog.svelte';
+  import RecordingsBlock from '$lib/components/recordings/RecordingsBlock.svelte';
 
   let assigningId = $state<string | null>(null);
 
@@ -45,6 +46,11 @@
 </div>
 
 <EventList events={$events} loading={$eventsLoading} />
+
+<section class="recordings-section">
+  <h2>Recordings</h2>
+  <RecordingsBlock />
+</section>
 
 {#if $untrackedRecordings.length > 0}
   <section class="untracked">
@@ -89,6 +95,17 @@
 
   .btn:hover {
     filter: brightness(0.9);
+  }
+
+  .recordings-section {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .recordings-section h2 {
+    margin: 0 0 1rem;
+    font-size: 1.125rem;
   }
 
   .untracked {

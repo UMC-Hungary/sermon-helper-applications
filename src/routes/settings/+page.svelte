@@ -21,14 +21,16 @@
 
   // Cron Jobs state
   let cronJobs: CronJob[] = $state([]);
-  let cronForm = $state({ name: '', cronExpression: '', enabled: true, pullYoutube: false });
+  let cronForm = $state({ name: '', cronExpression: '', enabled: true, pullYoutube: false, autoUpload: false });
   let editingCronId: string | null = $state(null);
   let cronSaving = $state(false);
   let cronError = $state('');
 
   // OBS Badge state
+  let badgeInstalling = $state(false);
   let badgeSaving = $state(false);
   let badgeError = $state('');
+  let badgeSuccess = $state(false);
   let badgeScenes: { name: string }[] = $state([]);
   let badgeLoadingScenes = $state(false);
   let badgeInstallResult = $state<{
@@ -86,12 +88,13 @@
       cronExpression: job.cronExpression,
       enabled: job.enabled,
       pullYoutube: job.pullYoutube,
+      autoUpload: job.autoUpload,
     };
   }
 
   function cancelEditCron() {
     editingCronId = null;
-    cronForm = { name: '', cronExpression: '', enabled: true, pullYoutube: false };
+    cronForm = { name: '', cronExpression: '', enabled: true, pullYoutube: false, autoUpload: false };
     cronError = '';
   }
 
@@ -175,9 +178,9 @@
   </section>
 
   <!-- ── Dependencies ────────────────────────────────────────────── -->
-  <h2 class="section-heading">Dependencies</h2>
+  <h2 class="section-heading">{$_('appSettings.dependencies.title')}</h2>
   <section>
-    <p class="note">Optional packages needed for stream preview and multi-stream relay.</p>
+    <p class="note">{$_('appSettings.dependencies.note')}</p>
     <MediamtxDownloadManager />
   </section>
 
@@ -193,94 +196,107 @@
   <ConnectorSettingsBlock connectorId="discord" />
 
   <!-- OBS Badge -->
-  <h2 class="section-heading">OBS Badge</h2>
-  <section class="card">
-    <p class="help-text">
-      Create a liquid glass badge in OBS using the LucidGlass shader. Requires OBS to be connected
-      first.
-    </p>
+  <h2 class="section-heading">{$_('appSettings.obsBadge.title')}</h2>
+  <section>
+    <p class="note">{$_('appSettings.obsBadge.description')}</p>
 
     {#if $obsState.connection !== 'connected'}
-      <p class="error-text">OBS must be connected first. Please configure and connect OBS.</p>
+      <p class="error" role="alert">{$_('appSettings.obsBadge.obsNotConnected')}</p>
     {:else}
+      <!-- Step 1: Install plugin & shader -->
       <button
-        class="btn btn--primary"
+        class="btn-primary"
         onclick={async () => {
-          badgeSaving = true;
+          badgeInstalling = true;
           badgeError = '';
           try {
             badgeInstallResult = await installBadge();
           } catch (e) {
             badgeError = String(e);
           } finally {
-            badgeSaving = false;
+            badgeInstalling = false;
           }
         }}
-        disabled={badgeSaving}
+        disabled={badgeInstalling}
       >
-        {badgeSaving ? 'Installing...' : 'Install Plugin & Shader'}
+        {badgeInstalling ? $_('appSettings.obsBadge.installing') : $_('appSettings.obsBadge.installButton')}
       </button>
 
       {#if badgeInstallResult}
-        <p class="success-text">
-          Plugin: {badgeInstallResult.shaderfilter_installed ? 'Installed' : 'Already exists'}<br />
-          Shader: {badgeInstallResult.shader_installed ? 'Installed' : 'Already exists'}
+        <p class="note" style="margin-top: 0.5rem;">
+          {badgeInstallResult.shaderfilter_installed ? $_('appSettings.obsBadge.pluginInstalled') : $_('appSettings.obsBadge.pluginNotInstalled')}<br />
+          {badgeInstallResult.shader_installed ? $_('appSettings.obsBadge.shaderInstalled') : $_('appSettings.obsBadge.shaderNotInstalled')}
         </p>
       {/if}
 
-      <hr />
+      <hr style="margin: 1rem 0;" />
 
+      <!-- Step 2: Create OBS sources -->
       <label class="field">
-        <span>Target Scene</span>
+        <span>{$_('appSettings.obsBadge.targetScene')}</span>
         <select bind:value={$obsBadgeConfig.sceneName}>
-          <option value="">Select a scene...</option>
+          <option value="">{$_('appSettings.obsBadge.selectScene')}</option>
           {#each badgeScenes as scene}
             <option value={scene.name}>{scene.name}</option>
           {/each}
         </select>
+        {#if badgeLoadingScenes}
+          <span class="note">{$_('appSettings.obsBadge.loadingScenes')}</span>
+        {/if}
       </label>
 
-      <button
-        class="btn btn--primary"
-        onclick={async () => {
-          if (!$obsBadgeConfig.sceneName) {
-            badgeError = 'Please select a scene';
-            return;
-          }
-          badgeSaving = true;
-          badgeError = '';
-          try {
-            await createBadgeSources($obsBadgeConfig.sceneName);
-            $obsBadgeConfig.enabled = true;
-          } catch (e) {
-            badgeError = String(e);
-          } finally {
-            badgeSaving = false;
-          }
-        }}
-        disabled={badgeSaving || !$obsBadgeConfig.sceneName}
-      >
-        {badgeSaving ? 'Creating...' : 'Create Badge Sources'}
-      </button>
+      <div class="button-row" style="margin-top: 0.5rem;">
+        <button
+          class="btn-primary"
+          onclick={async () => {
+            if (!$obsBadgeConfig.sceneName) {
+              badgeError = $_('appSettings.obsBadge.selectSceneError');
+              return;
+            }
+            badgeSaving = true;
+            badgeError = '';
+            badgeSuccess = false;
+            try {
+              await createBadgeSources($obsBadgeConfig.sceneName);
+              $obsBadgeConfig.enabled = true;
+              badgeSuccess = true;
+            } catch (e) {
+              badgeError = String(e);
+            } finally {
+              badgeSaving = false;
+            }
+          }}
+          disabled={badgeSaving || !$obsBadgeConfig.sceneName}
+        >
+          {badgeSaving ? $_('appSettings.obsBadge.creating') : $_('appSettings.obsBadge.createButton')}
+        </button>
+      </div>
+    {/if}
+
+    {#if badgeSuccess}
+      <p class="note" role="status" style="margin-top: 0.5rem; color: var(--status-ok-text, green);">
+        {$_('appSettings.obsBadge.sourcesCreated', { values: { sceneName: $obsBadgeConfig.sceneName } })}
+      </p>
     {/if}
 
     {#if badgeError}
-      <p class="error-text" role="alert">{badgeError}</p>
+      <p class="error" role="alert">{badgeError}</p>
     {/if}
   </section>
 
   <!-- Cron Jobs -->
-  <h2 class="section-heading">Cron Jobs</h2>
+  <h2 class="section-heading">{$_('appSettings.cronJobs.title')}</h2>
   <section>
     {#if cronJobs.length > 0}
       <table class="cron-table">
         <thead>
           <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Expression</th>
-            <th scope="col">Enabled</th>
-            <th scope="col">Pull YouTube</th>
-            <th scope="col"><span class="sr-only">Actions</span></th>
+            <th scope="col">{$_('appSettings.cronJobs.colName')}</th>
+            <th scope="col">{$_('appSettings.cronJobs.colExpression')}</th>
+            <th scope="col">{$_('appSettings.cronJobs.colEnabled')}</th>
+            <th scope="col">{$_('appSettings.cronJobs.colPullYoutube')}</th>
+            <th scope="col">Auto Upload</th>
+            <th scope="col"><span class="sr-only">{$_('appSettings.cronJobs.colActions')}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -290,11 +306,12 @@
               <td><code>{job.cronExpression}</code></td>
               <td>{job.enabled ? '✓' : '✗'}</td>
               <td>{job.pullYoutube ? '✓' : '✗'}</td>
+              <td>{job.autoUpload ? '✓' : '✗'}</td>
               <td class="cron-actions">
-                <button class="btn-secondary btn-sm" onclick={() => startEditCron(job)}>Edit</button
+                <button class="btn-secondary btn-sm" onclick={() => startEditCron(job)}>{$_('appSettings.cronJobs.editButton')}</button
                 >
                 <button class="btn-danger btn-sm" onclick={() => removeCronJob(job.id)}
-                  >Delete</button
+                  >{$_('appSettings.cronJobs.deleteButton')}</button
                 >
               </td>
             </tr>
@@ -302,28 +319,28 @@
         </tbody>
       </table>
     {:else}
-      <p class="note">No cron jobs configured yet.</p>
+      <p class="note">{$_('appSettings.cronJobs.noneConfigured')}</p>
     {/if}
 
-    <h3 class="cron-form-title">{editingCronId ? 'Edit' : 'Add'} Cron Job</h3>
+    <h3 class="cron-form-title">{editingCronId ? $_('appSettings.cronJobs.editTitle') : $_('appSettings.cronJobs.addTitle')}</h3>
 
     <div class="form-grid">
       <div class="field field--full">
-        <label for="cron-name">Name</label>
+        <label for="cron-name">{$_('appSettings.cronJobs.colName')}</label>
         <input
           id="cron-name"
           type="text"
           bind:value={cronForm.name}
-          placeholder="e.g. YouTube poll"
+          placeholder={$_('appSettings.cronJobs.namePlaceholder')}
         />
       </div>
       <div class="field field--full">
-        <label for="cron-expr">Cron Expression</label>
+        <label for="cron-expr">{$_('appSettings.cronJobs.expressionLabel')}</label>
         <input
           id="cron-expr"
           type="text"
           bind:value={cronForm.cronExpression}
-          placeholder="e.g. 0 */5 * * * * (every 5 min)"
+          placeholder={$_('appSettings.cronJobs.expressionPlaceholder')}
         />
       </div>
     </div>
@@ -331,13 +348,19 @@
     <div class="form-row">
       <label class="checkbox-label">
         <input type="checkbox" bind:checked={cronForm.enabled} />
-        Enabled
+        {$_('appSettings.cronJobs.enabledLabel')}
       </label>
     </div>
     <div class="form-row">
       <label class="checkbox-label">
         <input type="checkbox" bind:checked={cronForm.pullYoutube} />
-        Pull YouTube Live Events
+        {$_('appSettings.cronJobs.pullYoutubeLabel')}
+      </label>
+    </div>
+    <div class="form-row">
+      <label class="checkbox-label">
+        <input type="checkbox" bind:checked={cronForm.autoUpload} />
+        Auto-upload flagged recordings
       </label>
     </div>
 
@@ -351,10 +374,10 @@
         onclick={saveCronJob}
         disabled={cronSaving || !cronForm.name || !cronForm.cronExpression}
       >
-        {cronSaving ? 'Saving…' : 'Save'}
+        {cronSaving ? $_('appSettings.cronJobs.saving') : $_('appSettings.cronJobs.save')}
       </button>
       {#if editingCronId}
-        <button class="btn-secondary" onclick={cancelEditCron}>Cancel</button>
+        <button class="btn-secondary" onclick={cancelEditCron}>{$_('appSettings.cronJobs.cancel')}</button>
       {/if}
     </div>
   </section>

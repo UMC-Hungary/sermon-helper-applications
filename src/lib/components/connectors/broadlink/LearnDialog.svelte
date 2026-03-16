@@ -77,8 +77,8 @@
 	}
 </script>
 
-<div role="dialog" aria-modal="true" aria-label="Learn IR/RF Code" style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;">
-	<div style="background:var(--glass-card-bg);padding:1.5rem;border-radius:0.5rem;min-width:340px;max-width:90vw;">
+<div role="dialog" aria-modal="true" aria-label="Learn IR/RF Code" style="position:fixed;inset:0;background:var(--modal-backdrop);display:flex;align-items:center;justify-content:center;z-index:100;">
+	<div style="background:var(--modal-card-bg);padding:1.5rem;border-radius:0.5rem;min-width:340px;max-width:90vw;">
 		<h2>Learn IR/RF Code — {device.name}</h2>
 
 		{#if !learnedCode}

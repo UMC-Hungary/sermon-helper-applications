@@ -189,7 +189,7 @@
 	.backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.45);
+		background: var(--modal-backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -197,7 +197,7 @@
 	}
 
 	.dialog {
-		background: var(--glass-card-bg);
+		background: var(--modal-card-bg);
 		border-radius: 0.5rem;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 		width: min(520px, calc(100vw - 2rem));
