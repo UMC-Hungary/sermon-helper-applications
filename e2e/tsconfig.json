@@ -13,5 +13,5 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["e2e/**/*.ts"]
+  "include": ["./**/*.ts"]
 }

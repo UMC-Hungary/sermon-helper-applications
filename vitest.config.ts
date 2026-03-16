@@ -8,24 +8,6 @@ import { config } from 'dotenv';
 const { parsed: envFile = {} } = config({ path: '.env.test' });
 
 export default defineConfig({
-  esbuild: {
-    tsconfigRaw: {
-      compilerOptions: {
-        target: 'ES2022',
-        module: 'ESNext',
-        moduleResolution: 'bundler',
-        allowJs: true,
-        esModuleInterop: true,
-        forceConsistentCasingInFileNames: true,
-        resolveJsonModule: true,
-        skipLibCheck: true,
-        strict: true,
-        noUncheckedIndexedAccess: true,
-        noImplicitOverride: true,
-        exactOptionalPropertyTypes: true,
-      },
-    },
-  },
   test: {
     include: ['e2e/**/*.test.ts'],
     testTimeout: 15000,
