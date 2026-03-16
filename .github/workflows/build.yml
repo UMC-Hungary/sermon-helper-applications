@@ -21,9 +21,74 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────
+  # E2E tests — must pass before any build starts
+  # Runs on Linux only; builds the headless test_server binary,
+  # starts it, runs pnpm test:e2e, then shuts it down.
+  # ──────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-22.04
+    name: E2E Tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: Linux-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: Linux-pnpm-store-
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: test-server
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build test server
+        run: pnpm build:test-server
+
+      - name: Run E2E tests
+        # globalSetup (e2e/global-setup.ts) spawns and tears down the server automatically.
+        env:
+          TAURI_TEST_TOKEN: ${{ secrets.TAURI_AUTH_TOKEN }}
+        run: pnpm test:e2e
+
+  # ──────────────────────────────────────────────
   # Desktop builds (macOS, Windows, Linux)
   # ──────────────────────────────────────────────
   build:
+    needs: test
     permissions:
       contents: write
     strategy:
