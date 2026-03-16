@@ -15,7 +15,7 @@ use crate::models::{
     activity::{self, CreateEventActivity},
     cron_job::{self, CreateCronJob, UpdateCronJob},
     event::{fetch_event, CreateBibleReference, CreateEvent, EventSummary, UpdateEvent},
-    recording::{CreateRecording, Recording},
+    recording::{CreateRecording, FlagUploadRequest, Recording, RecordingUpload},
     untracked_recording,
 };
 use crate::server::websocket::{
@@ -70,6 +70,13 @@ const OAUTH_ERROR_HTML: &str = r#"<!DOCTYPE html>
 </html>"#;
 
 // ── Connector statuses ────────────────────────────────────────────────────────
+
+pub async fn get_connector_state(State(state): State<AppState>) -> impl IntoResponse {
+    let obs_state = state.obs_connector.get_output_state().await;
+    Json(json!({
+        "obs": obs_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording}))
+    }))
+}
 
 pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoResponse {
     let obs = state.obs_connector.get_status().await;
@@ -137,7 +144,9 @@ pub async fn oauth_callback(
             let config = state.youtube_config.read().await.clone();
             match youtube::exchange_code(&state.pool, &config, &code, OAUTH_REDIRECT_URI).await {
                 Ok(_) => {
-                    state.youtube_connector.start(state.pool.clone(), config, state.app_handle.clone()).await;
+                    if let Some(handle) = state.app_handle.clone() {
+                        state.youtube_connector.start(state.pool.clone(), config, handle).await;
+                    }
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
                 Err(e) => {
@@ -150,7 +159,9 @@ pub async fn oauth_callback(
             let config = state.facebook_config.read().await.clone();
             match facebook::exchange_code(&state.pool, &config, &code, OAUTH_REDIRECT_URI).await {
                 Ok(_) => {
-                    state.facebook_connector.start(state.pool.clone(), state.app_handle.clone()).await;
+                    if let Some(handle) = state.app_handle.clone() {
+                        state.facebook_connector.start(state.pool.clone(), handle).await;
+                    }
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
                 Err(e) => {
@@ -894,24 +905,131 @@ pub async fn update_event(
     }
 }
 
+#[derive(Deserialize)]
+pub struct AllRecordingsQuery {
+    filter: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingWithEvent {
+    #[serde(flatten)]
+    recording: Recording,
+    event_title: String,
+}
+
+pub async fn list_all_recordings(
+    State(state): State<AppState>,
+    Query(params): Query<AllRecordingsQuery>,
+) -> impl IntoResponse {
+    let where_clause = match params.filter.as_deref().unwrap_or("") {
+        // Never flagged and no upload history at all
+        "not_flagged" => "r.uploadable = false AND NOT EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id)",
+        // Flagged for upload but no active or completed upload yet
+        "flagged" => "r.uploadable = true AND NOT EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id AND state IN ('uploading','paused','completed','failed'))",
+        // Upload started and currently active/failed
+        "in_progress" => "EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id AND state IN ('uploading','paused','failed'))",
+        // At least one platform upload completed (r.uploaded may not be set)
+        "uploaded" => "EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id AND state = 'completed')",
+        _ => "true",
+    };
+    let sql = format!(
+        "SELECT r.*, e.title AS _event_title \
+         FROM recordings r JOIN events e ON e.id = r.event_id \
+         WHERE {where_clause} \
+         ORDER BY r.detected_at DESC LIMIT 100"
+    );
+
+    #[derive(sqlx::FromRow)]
+    struct RecordingRow {
+        #[sqlx(flatten)]
+        recording: Recording,
+        _event_title: String,
+    }
+
+    let rows = match sqlx::query_as::<_, RecordingRow>(&sql)
+        .fetch_all(&state.pool)
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("list_all_recordings: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let mut results: Vec<RecordingWithEvent> = rows
+        .into_iter()
+        .map(|row| RecordingWithEvent {
+            event_title: row._event_title.clone(),
+            recording: row.recording,
+        })
+        .collect();
+
+    if !results.is_empty() {
+        let ids: Vec<Uuid> = results.iter().map(|r| r.recording.id).collect();
+        let uploads = sqlx::query_as::<_, RecordingUpload>(
+            "SELECT recording_id, platform, state, progress_bytes, total_bytes, \
+             visibility, video_id, video_url, error, started_at, completed_at, updated_at \
+             FROM recording_uploads WHERE recording_id = ANY($1)",
+        )
+        .bind(&ids)
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+        for item in &mut results {
+            item.recording.uploads = uploads
+                .iter()
+                .filter(|u| u.recording_id == item.recording.id)
+                .cloned()
+                .collect();
+        }
+    }
+
+    (StatusCode::OK, Json(results)).into_response()
+}
+
 pub async fn list_recordings(
     State(state): State<AppState>,
     Path(event_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let result = sqlx::query_as::<_, Recording>(
+    let mut recordings = match sqlx::query_as::<_, Recording>(
         "SELECT * FROM recordings WHERE event_id = $1 ORDER BY detected_at DESC",
     )
     .bind(event_id)
     .fetch_all(&state.pool)
-    .await;
-
-    match result {
-        Ok(recordings) => (StatusCode::OK, Json(recordings)).into_response(),
+    .await
+    {
+        Ok(r) => r,
         Err(e) => {
             tracing::error!("list_recordings: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    if !recordings.is_empty() {
+        let ids: Vec<Uuid> = recordings.iter().map(|r| r.id).collect();
+        let uploads = sqlx::query_as::<_, RecordingUpload>(
+            "SELECT recording_id, platform, state, progress_bytes, total_bytes, \
+             visibility, video_id, video_url, error, started_at, completed_at, updated_at \
+             FROM recording_uploads WHERE recording_id = ANY($1)",
+        )
+        .bind(&ids)
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+
+        for rec in &mut recordings {
+            rec.uploads = uploads
+                .iter()
+                .filter(|u| u.recording_id == rec.id)
+                .cloned()
+                .collect();
         }
     }
+
+    (StatusCode::OK, Json(recordings)).into_response()
 }
 
 pub async fn create_recording(
@@ -922,8 +1040,9 @@ pub async fn create_recording(
     let result = sqlx::query_as::<_, Recording>(
         r#"
         INSERT INTO recordings (
-            event_id, file_path, file_name, file_size, duration_seconds, custom_title, detected_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            event_id, file_path, file_name, file_size, duration_seconds,
+            custom_title, custom_description, detected_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
         "#,
     )
@@ -933,6 +1052,7 @@ pub async fn create_recording(
     .bind(body.file_size.unwrap_or(0))
     .bind(body.duration_seconds.unwrap_or(0.0))
     .bind(body.custom_title.as_deref())
+    .bind(body.custom_description.as_deref())
     .bind(Utc::now())
     .fetch_one(&state.pool)
     .await;
@@ -1067,7 +1187,7 @@ pub async fn create_cron_job(
         .fetch_one(&mut *tx)
         .await?;
 
-        cron_job::sync_features(&mut tx, row.0, body.pull_youtube).await?;
+        cron_job::sync_features(&mut tx, row.0, body.pull_youtube, body.auto_upload).await?;
         tx.commit().await?;
 
         Ok(cron_job::CronJob {
@@ -1076,6 +1196,7 @@ pub async fn create_cron_job(
             cron_expression: row.2,
             enabled: row.3,
             pull_youtube: body.pull_youtube,
+            auto_upload: body.auto_upload,
             created_at: row.4,
             updated_at: row.5,
         })
@@ -1088,8 +1209,9 @@ pub async fn create_cron_job(
             let clients = state.ws_clients.clone();
             let yt = state.youtube_connector.clone();
             let sched = state.cron_scheduler.clone();
+            let us = state.upload_service.clone();
             tokio::spawn(async move {
-                sched.reload(pool, clients, yt).await;
+                sched.reload(pool, clients, yt, us).await;
             });
             (StatusCode::CREATED, Json(job)).into_response()
         }
@@ -1139,7 +1261,7 @@ pub async fn update_cron_job(
             return Ok(None);
         };
 
-        cron_job::sync_features(&mut tx, row.0, body.pull_youtube).await?;
+        cron_job::sync_features(&mut tx, row.0, body.pull_youtube, body.auto_upload).await?;
         tx.commit().await?;
 
         Ok(Some(cron_job::CronJob {
@@ -1148,6 +1270,7 @@ pub async fn update_cron_job(
             cron_expression: row.2,
             enabled: row.3,
             pull_youtube: body.pull_youtube,
+            auto_upload: body.auto_upload,
             created_at: row.4,
             updated_at: row.5,
         }))
@@ -1160,8 +1283,9 @@ pub async fn update_cron_job(
             let clients = state.ws_clients.clone();
             let yt = state.youtube_connector.clone();
             let sched = state.cron_scheduler.clone();
+            let us = state.upload_service.clone();
             tokio::spawn(async move {
-                sched.reload(pool, clients, yt).await;
+                sched.reload(pool, clients, yt, us).await;
             });
             Json(job).into_response()
         }
@@ -1189,8 +1313,9 @@ pub async fn delete_cron_job(
             let clients = state.ws_clients.clone();
             let yt = state.youtube_connector.clone();
             let sched = state.cron_scheduler.clone();
+            let us = state.upload_service.clone();
             tokio::spawn(async move {
-                sched.reload(pool, clients, yt).await;
+                sched.reload(pool, clients, yt, us).await;
             });
             StatusCode::NO_CONTENT.into_response()
         }
@@ -1200,6 +1325,81 @@ pub async fn delete_cron_job(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+// ── Upload flag & trigger ─────────────────────────────────────────────────────
+
+pub async fn flag_upload(
+    State(state): State<AppState>,
+    Path(event_id): Path<Uuid>,
+    Json(body): Json<FlagUploadRequest>,
+) -> impl IntoResponse {
+    let result: anyhow::Result<()> = async {
+        for item in &body.recordings {
+            // Mark the recording as uploadable, optionally update custom title/description.
+            sqlx::query(
+                "UPDATE recordings SET uploadable = true, \
+                 custom_title = COALESCE($1, custom_title), \
+                 custom_description = COALESCE($2, custom_description), \
+                 updated_at = NOW() \
+                 WHERE id = $3 AND event_id = $4",
+            )
+            .bind(item.custom_title.as_deref())
+            .bind(item.custom_description.as_deref())
+            .bind(item.recording_id)
+            .bind(event_id)
+            .execute(&state.pool)
+            .await?;
+
+            // Insert/update upload rows for each requested platform.
+            for platform in &item.platforms {
+                let visibility = if platform == "youtube" {
+                    item.youtube_visibility
+                        .as_deref()
+                        .unwrap_or("private")
+                        .to_string()
+                } else {
+                    item.facebook_visibility
+                        .as_deref()
+                        .unwrap_or("ONLY_ME")
+                        .to_string()
+                };
+
+                sqlx::query(
+                    "INSERT INTO recording_uploads (recording_id, platform, state, visibility, updated_at) \
+                     VALUES ($1, $2, 'pending', $3, NOW()) \
+                     ON CONFLICT (recording_id, platform) DO UPDATE SET \
+                         state = CASE WHEN recording_uploads.state = 'completed' \
+                                      THEN 'completed' ELSE 'pending' END, \
+                         visibility = EXCLUDED.visibility, \
+                         updated_at = NOW()",
+                )
+                .bind(item.recording_id)
+                .bind(platform)
+                .bind(&visibility)
+                .execute(&state.pool)
+                .await?;
+            }
+        }
+        Ok(())
+    }
+    .await;
+
+    match result {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => {
+            tracing::error!("flag_upload: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn trigger_upload_cycle(State(state): State<AppState>) -> impl IntoResponse {
+    let us = state.upload_service.clone();
+    tokio::spawn(async move {
+        us.run_cycle().await;
+    });
+    StatusCode::NO_CONTENT.into_response()
 }
 
 // ── Untracked recordings ───────────────────────────────────────────────────────
