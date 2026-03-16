@@ -31,7 +31,7 @@
 	.overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
+		background: var(--modal-backdrop);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -39,7 +39,7 @@
 	}
 
 	.modal {
-		background: var(--glass-card-bg);
+		background: var(--modal-card-bg);
 		border-radius: 0.5rem;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 		width: min(560px, calc(100vw - 2rem));

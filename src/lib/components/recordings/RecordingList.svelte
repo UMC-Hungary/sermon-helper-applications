@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { uploadProgress, type UploadProgressEntry } from '$lib/stores/uploads.js';
+  import type { RecordingUpload } from '$lib/schemas/recording.js';
+
   interface RecordingItem {
     id: string;
     fileName: string;
@@ -9,6 +12,7 @@
     uploaded?: boolean;
     videoUrl?: string | null | undefined;
     detectedAt?: string;
+    uploads?: RecordingUpload[];
   }
 
   interface Props {
@@ -19,6 +23,41 @@
   }
 
   let { recordings, loading = false, ondelete, onassign }: Props = $props();
+
+  function getUploadBadge(rec: RecordingItem): { label: string; variant: 'ok' | 'warn' | 'err' | 'info' | 'none' } | null {
+    // Check live WS progress first
+    const liveKeys = Object.keys($uploadProgress).filter((k) => k.startsWith(`${rec.id}:`));
+    if (liveKeys.length > 0) {
+      // Combine statuses from all platforms
+      const entries = liveKeys
+        .map((k) => $uploadProgress[k])
+        .filter((e): e is UploadProgressEntry => e !== undefined);
+      const uploading = entries.find((e) => e.state === 'uploading');
+      if (uploading) {
+        const pct = uploading.totalBytes > 0
+          ? Math.round((uploading.progressBytes / uploading.totalBytes) * 100)
+          : 0;
+        return { label: `Uploading ${pct}%`, variant: 'info' };
+      }
+      if (entries.some((e) => e.state === 'failed')) return { label: 'Failed', variant: 'err' };
+      if (entries.some((e) => e.state === 'paused')) return { label: 'Paused', variant: 'warn' };
+      if (entries.every((e) => e.state === 'completed')) return { label: 'Uploaded', variant: 'ok' };
+    }
+
+    // Fall back to uploads field from API
+    const uploads = rec.uploads ?? [];
+    if (uploads.length === 0) return null;
+    if (uploads.some((u) => u.state === 'uploading')) {
+      const u = uploads.find((u) => u.state === 'uploading')!;
+      const pct = u.totalBytes > 0 ? Math.round((u.progressBytes / u.totalBytes) * 100) : 0;
+      return { label: `Uploading ${pct}%`, variant: 'info' };
+    }
+    if (uploads.some((u) => u.state === 'failed')) return { label: 'Upload Failed', variant: 'err' };
+    if (uploads.some((u) => u.state === 'paused')) return { label: 'Upload Paused', variant: 'warn' };
+    if (uploads.some((u) => u.state === 'pending')) return { label: 'Upload Pending', variant: 'info' };
+    if (uploads.every((u) => u.state === 'completed')) return { label: 'Uploaded', variant: 'ok' };
+    return null;
+  }
 
   let confirmingDeleteId = $state<string | null>(null);
   let deletingId = $state<string | null>(null);
@@ -64,6 +103,10 @@
             {/if}
             {#if rec.videoUrl}
               &middot; <a href={rec.videoUrl} target="_blank" rel="noopener noreferrer">Watch</a>
+            {/if}
+            {#if getUploadBadge(rec)}
+              {@const badge = getUploadBadge(rec)!}
+              &middot; <span class="upload-badge upload-badge--{badge.variant}">{badge.label}</span>
             {/if}
           </span>
         </div>
@@ -159,6 +202,15 @@
     color: var(--status-ok-text);
     font-weight: 500;
   }
+
+  .upload-badge {
+    font-weight: 500;
+  }
+  .upload-badge--ok { color: var(--status-ok-text); }
+  .upload-badge--info { color: var(--accent); }
+  .upload-badge--warn { color: var(--status-warn-text); }
+  .upload-badge--err { color: var(--status-err-text); }
+  .upload-badge--none { color: var(--text-secondary); }
 
   .btn-assign {
     padding: 0.375rem 0.875rem;

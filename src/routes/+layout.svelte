@@ -35,52 +35,56 @@
 	}
 </script>
 
-<Toaster richColors position="top-right" />
-<ConnectorInit />
-<ReLoginHandler />
-{#if $streamPreviewEnabled}
-	<FloatingStreamPlayer />
-{/if}
-
-<div class="app-shell" class:glass={$glassSupported}>
-	<!-- Full-width drag strip at the top — macOS only -->
-	{#if $glassSupported}
-		<div class="app-titlebar-drag" data-tauri-drag-region aria-hidden="true"></div>
+{#if $page.url.pathname.startsWith('/caption')}
+	{@render children()}
+{:else}
+	<Toaster richColors position="top-right" />
+	<ConnectorInit />
+	<ReLoginHandler />
+	{#if $streamPreviewEnabled}
+		<FloatingStreamPlayer />
 	{/if}
-	<aside class="sidebar">
+
+	<div class="app-shell" class:glass={$glassSupported}>
+		<!-- Full-width drag strip at the top — macOS only -->
 		{#if $glassSupported}
-			<div class="sidebar-traffic-spacer" data-tauri-drag-region></div>
+			<div class="app-titlebar-drag" data-tauri-drag-region aria-hidden="true"></div>
 		{/if}
-		<nav class="sidebar-nav" data-tauri-drag-region>
-			<a href="/" class="nav-item" class:active={isActive('/')}>{$_('nav.dashboard')}</a>
-			<a href="/events" class="nav-item" class:active={isActive('/events')}
-				>{$_('nav.events')}</a
-			>
-			<a href="/live-events" class="nav-item" class:active={isActive('/live-events')}
-				>{$_('nav.liveEvents')}</a
-			>
-			<a href="/presentations" class="nav-item" class:active={isActive('/presentations')}
-				>{$_('nav.presentations')}</a
-			>
-			<a href="/obs-caption" class="nav-item" class:active={isActive('/obs-caption')}
-				>{$_('nav.obsCaption')}</a
-			>
-			<a href="/connect" class="nav-item" class:active={isActive('/connect')}
-				>{$_('nav.connect')}</a
-			>
-			<a href="/settings" class="nav-item" class:active={isActive('/settings')}
-				>{$_('nav.settings')}</a
-			>
-		</nav>
-		<div class="sidebar-footer">
-			<NavErrorBadge />
-			<NavConnectors />
-		</div>
-	</aside>
-	<main class="content-pane">
-		{@render children()}
-	</main>
-</div>
+		<aside class="sidebar">
+			{#if $glassSupported}
+				<div class="sidebar-traffic-spacer" data-tauri-drag-region></div>
+			{/if}
+			<nav class="sidebar-nav" data-tauri-drag-region>
+				<a href="/" class="nav-item" class:active={isActive('/')}>{$_('nav.dashboard')}</a>
+				<a href="/events" class="nav-item" class:active={isActive('/events')}
+					>{$_('nav.events')}</a
+				>
+				<a href="/live-events" class="nav-item" class:active={isActive('/live-events')}
+					>{$_('nav.liveEvents')}</a
+				>
+				<a href="/presentations" class="nav-item" class:active={isActive('/presentations')}
+					>{$_('nav.presentations')}</a
+				>
+				<a href="/obs-caption" class="nav-item" class:active={isActive('/obs-caption')}
+					>{$_('nav.obsCaption')}</a
+				>
+				<a href="/connect" class="nav-item" class:active={isActive('/connect')}
+					>{$_('nav.connect')}</a
+				>
+				<a href="/settings" class="nav-item" class:active={isActive('/settings')}
+					>{$_('nav.settings')}</a
+				>
+			</nav>
+			<div class="sidebar-footer">
+				<NavErrorBadge />
+				<NavConnectors />
+			</div>
+		</aside>
+		<main class="content-pane">
+			{@render children()}
+		</main>
+	</div>
+{/if}
 
 <style>
 	.app-shell {

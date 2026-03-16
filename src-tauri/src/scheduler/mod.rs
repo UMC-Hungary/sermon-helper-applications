@@ -11,6 +11,7 @@ use uuid::Uuid;
 use crate::connectors::youtube;
 use crate::models::cron_job;
 use crate::models::event::{fetch_event, Event};
+use crate::uploader::UploadService;
 
 pub struct CronScheduler {
     scheduler: Arc<RwLock<Option<JobScheduler>>>,
@@ -30,6 +31,7 @@ impl CronScheduler {
         pool: PgPool,
         ws_clients: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
         youtube_connector: Arc<crate::connectors::youtube::YouTubeConnector>,
+        upload_service: Arc<UploadService>,
     ) {
         // Shut down the existing scheduler if any.
         {
@@ -66,6 +68,7 @@ impl CronScheduler {
             let pool_c = pool.clone();
             let clients_c = Arc::clone(&ws_clients);
             let yt_c = Arc::clone(&youtube_connector);
+            let us_c = Arc::clone(&upload_service);
             let expr = job.cron_expression.clone();
             let job_name = job.name.clone();
 
@@ -73,10 +76,11 @@ impl CronScheduler {
                 let pool_i = pool_c.clone();
                 let clients_i = Arc::clone(&clients_c);
                 let yt_i = Arc::clone(&yt_c);
+                let us_i = Arc::clone(&us_c);
                 let job_i = job.clone();
                 Box::pin(async move {
                     tracing::info!("Cron job '{}' fired", job_i.name);
-                    run_job(job_i, pool_i, clients_i, yt_i).await;
+                    run_job(job_i, pool_i, clients_i, yt_i, us_i).await;
                 })
             }) {
                 Ok(t) => t,
@@ -116,9 +120,13 @@ async fn run_job(
     pool: PgPool,
     ws_clients: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
     youtube_connector: Arc<crate::connectors::youtube::YouTubeConnector>,
+    upload_service: Arc<UploadService>,
 ) {
     if job.pull_youtube {
         pull_youtube_live(pool, ws_clients, youtube_connector).await;
+    }
+    if job.auto_upload {
+        upload_service.run_cycle().await;
     }
 }
 

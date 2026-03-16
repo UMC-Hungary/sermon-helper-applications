@@ -2,8 +2,11 @@ import { z } from 'zod';
 import { apiFetch } from './client.js';
 import {
   RecordingSchema,
+  RecordingWithEventSchema,
   type Recording,
+  type RecordingWithEvent,
   type CreateRecordingPayload,
+  type FlagUploadItem,
 } from '$lib/schemas/recording.js';
 
 export function deleteRecording(
@@ -29,4 +32,21 @@ export function createRecording(
     method: 'POST',
     body: payload,
   });
+}
+
+export function flagRecordingsForUpload(
+  eventId: string,
+  items: FlagUploadItem[],
+): Promise<void> {
+  return apiFetch(`/api/events/${eventId}/recordings/flag-upload`, z.void(), {
+    method: 'POST',
+    body: { recordings: items },
+  });
+}
+
+export function listAllRecordings(
+  filter?: 'not_flagged' | 'flagged' | 'in_progress' | 'uploaded',
+): Promise<RecordingWithEvent[]> {
+  const qs = filter ? `?filter=${filter}` : '';
+  return apiFetch(`/api/recordings${qs}`, z.array(RecordingWithEventSchema));
 }

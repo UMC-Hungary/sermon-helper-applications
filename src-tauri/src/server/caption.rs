@@ -360,14 +360,11 @@ pub async fn caption_handler(Query(params): Query<CaptionQuery>) -> Html<String>
 }
 
 pub async fn caption_logo_handler(State(state): State<AppState>) -> impl IntoResponse {
-    let store_result = state.app_handle.store("caption-settings.json");
-    let svg = store_result
-        .ok()
-        .and_then(|store| {
-            store
-                .get("svgLogo")
-                .and_then(|v| v.as_str().map(String::from))
-        })
+    let svg = state
+        .app_handle
+        .as_ref()
+        .and_then(|handle| handle.store("caption-settings.json").ok())
+        .and_then(|store| store.get("svgLogo").and_then(|v| v.as_str().map(String::from)))
         .unwrap_or_default();
 
     if svg.is_empty() {

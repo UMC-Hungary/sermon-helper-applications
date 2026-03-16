@@ -65,7 +65,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: var(--modal-backdrop);
     z-index: 100;
   }
 
@@ -75,7 +75,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 101;
-    background: var(--glass-card-bg);
+    background: var(--modal-card-bg);
     border-radius: 0.75rem;
     padding: 2rem;
     max-width: 400px;

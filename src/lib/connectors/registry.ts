@@ -17,7 +17,6 @@ export const CONNECTORS: ConnectorDefinition<BaseConfig>[] = [
   youtubeDefinition as ConnectorDefinition<BaseConfig>,
   facebookDefinition as ConnectorDefinition<BaseConfig>,
   discordDefinition as ConnectorDefinition<BaseConfig>,
-  broadlinkDefinition as ConnectorDefinition<BaseConfig>,
 ];
 
 export function findConnector(id: string): ConnectorDefinition<BaseConfig> | undefined {

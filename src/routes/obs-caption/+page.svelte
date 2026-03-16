@@ -47,6 +47,7 @@
 		if (settings.lightText) params.set('light', settings.lightText);
 		params.set('color', settings.color);
 		params.set('showLogo', settings.showLogo ? 'true' : 'false');
+		if (settings.logoAlt) params.set('alt', settings.logoAlt);
 		return `${baseUrl}/caption?${params.toString()}`;
 	});
 
@@ -163,6 +164,18 @@
 						Show Logo
 					</label>
 				</div>
+
+				{#if settings.showLogo}
+					<div class="field">
+						<label for="logo-alt">Logo Alt Text</label>
+						<input
+							id="logo-alt"
+							type="text"
+							bind:value={settings.logoAlt}
+							placeholder="e.g. Church name"
+						/>
+					</div>
+				{/if}
 
 				<div class="field">
 					<label for="svg-logo">SVG Logo</label>
