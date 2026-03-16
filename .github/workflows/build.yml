@@ -1,7 +1,11 @@
 name: Build and Release
 
 on:
-  # Build on push to main or version tags
+  # Run tests on every pull request targeting main
+  pull_request:
+    branches:
+      - main
+  # Build and release on push to main or version tags
   push:
     branches:
       - main
@@ -89,6 +93,7 @@ jobs:
   # ──────────────────────────────────────────────
   build:
     needs: test
+    if: github.event_name != 'pull_request'
     permissions:
       contents: write
     strategy:
@@ -299,6 +304,7 @@ jobs:
   # src-tauri/gen/apple/ to the repository.
   # ──────────────────────────────────────────────
   build-ios:
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
     name: Build (iOS)
     permissions:
@@ -438,6 +444,7 @@ jobs:
   # src-tauri/gen/android/ to the repository.
   # ──────────────────────────────────────────────
   build-android:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     name: Build (Android)
     permissions:
