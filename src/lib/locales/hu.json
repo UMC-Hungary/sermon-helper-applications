@@ -834,6 +834,49 @@
 				"disconnected": "Nincs kapcsolat",
 				"error": "Hiba"
 			}
+		},
+		"dependencies": {
+			"title": "Függőségek",
+			"note": "Opcionális csomagok a stream előnézethez és a multi-stream relayhez."
+		},
+		"obsBadge": {
+			"title": "OBS Jelvény",
+			"description": "Liquid glass jelvény létrehozása OBS-ben a LucidGlass shader segítségével. Az OBS-nek csatlakoztatva kell lennie.",
+			"obsNotConnected": "Az OBS-t először csatlakoztatni kell. Kérjük, konfigurálja és csatlakoztassa az OBS-t fent.",
+			"installButton": "Plugin és Shader telepítése",
+			"installing": "Telepítés…",
+			"pluginInstalled": "Plugin: ✓ Telepítve",
+			"pluginNotInstalled": "Plugin: ✗ Nem telepítve — kérjük, telepítse az obs-shaderfilter-t manuálisan",
+			"shaderInstalled": "Shader: ✓ Telepítve",
+			"shaderNotInstalled": "Shader: ✗ A shader fájl írása sikertelen",
+			"targetScene": "Céljelenet",
+			"selectScene": "Válasszon jelenetet…",
+			"loadingScenes": "Jelenetek betöltése…",
+			"selectSceneError": "Kérjük, válasszon jelenetet",
+			"createButton": "Jelvény források létrehozása",
+			"creating": "Létrehozás…",
+			"sourcesCreated": "✓ Jelvény források létrehozva: \u201e{sceneName}\u201d"
+		},
+		"cronJobs": {
+			"title": "Időzített feladatok",
+			"colName": "Név",
+			"colExpression": "Kifejezés",
+			"colEnabled": "Engedélyezve",
+			"colPullYoutube": "YouTube húzás",
+			"colActions": "Műveletek",
+			"noneConfigured": "Még nincsenek időzített feladatok beállítva.",
+			"editTitle": "Időzített feladat szerkesztése",
+			"addTitle": "Időzített feladat hozzáadása",
+			"namePlaceholder": "pl. YouTube lekérdezés",
+			"expressionLabel": "Cron kifejezés",
+			"expressionPlaceholder": "pl. 0 */5 * * * * (minden 5 percben)",
+			"enabledLabel": "Engedélyezve",
+			"pullYoutubeLabel": "YouTube élő események lekérése",
+			"saving": "Mentés…",
+			"save": "Mentés",
+			"cancel": "Mégse",
+			"editButton": "Szerkesztés",
+			"deleteButton": "Törlés"
 		}
 	},
 	"errorsPage": {
