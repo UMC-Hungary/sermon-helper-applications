@@ -25,6 +25,7 @@ pub struct CronJob {
     pub cron_expression: String,
     pub enabled: bool,
     pub pull_youtube: bool,
+    pub auto_upload: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -38,6 +39,7 @@ pub struct CreateCronJob {
     pub cron_expression: String,
     pub enabled: bool,
     pub pull_youtube: bool,
+    pub auto_upload: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +49,7 @@ pub struct UpdateCronJob {
     pub cron_expression: String,
     pub enabled: bool,
     pub pull_youtube: bool,
+    pub auto_upload: bool,
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
@@ -85,12 +88,16 @@ pub async fn list_all(pool: &PgPool) -> anyhow::Result<Vec<CronJob>> {
             let pull_youtube = features
                 .iter()
                 .any(|f| f.cron_job_id == r.id && f.feature == "pull_youtube");
+            let auto_upload = features
+                .iter()
+                .any(|f| f.cron_job_id == r.id && f.feature == "auto_upload");
             CronJob {
                 id: r.id,
                 name: r.name,
                 cron_expression: r.cron_expression,
                 enabled: r.enabled,
                 pull_youtube,
+                auto_upload,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             }
@@ -98,11 +105,12 @@ pub async fn list_all(pool: &PgPool) -> anyhow::Result<Vec<CronJob>> {
         .collect())
 }
 
-/// Upsert the feature rows for a job based on the boolean flags in `pull_youtube`.
+/// Upsert the feature rows for a job based on the boolean flags.
 pub async fn sync_features(
     executor: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     job_id: Uuid,
     pull_youtube: bool,
+    auto_upload: bool,
 ) -> anyhow::Result<()> {
     sqlx::query("DELETE FROM cron_job_features WHERE cron_job_id = $1")
         .bind(job_id)
@@ -112,6 +120,15 @@ pub async fn sync_features(
     if pull_youtube {
         sqlx::query(
             "INSERT INTO cron_job_features (cron_job_id, feature) VALUES ($1, 'pull_youtube')",
+        )
+        .bind(job_id)
+        .execute(&mut **executor)
+        .await?;
+    }
+
+    if auto_upload {
+        sqlx::query(
+            "INSERT INTO cron_job_features (cron_job_id, feature) VALUES ($1, 'auto_upload')",
         )
         .bind(job_id)
         .execute(&mut **executor)

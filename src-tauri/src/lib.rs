@@ -6,17 +6,19 @@ mod commands;
 #[cfg(desktop)]
 mod models;
 #[cfg(desktop)]
-mod database;
+pub mod database;
 #[cfg(desktop)]
-mod server;
+pub mod server;
 #[cfg(desktop)]
-mod connectors;
+pub mod connectors;
 #[cfg(desktop)]
 mod mediamtx;
 #[cfg(desktop)]
-mod scheduler;
+pub mod scheduler;
 #[cfg(desktop)]
 mod broadlink;
+#[cfg(desktop)]
+pub(crate) mod uploader;
 
 use std::sync::Arc;
 use tauri::Manager;
@@ -171,27 +173,34 @@ pub fn run() {
                 .get("mode")
                 .and_then(|v| v.as_str().map(String::from));
 
-            let auth_token = match mode.as_deref() {
-                Some("client") => {
-                    // In client mode the token is whatever the user entered
-                    // during setup; complete_setup() saves it as "client_auth_token".
-                    store
-                        .get("client_auth_token")
-                        .and_then(|v| v.as_str().map(String::from))
-                        .unwrap_or_default()
-                }
-                _ => {
-                    // In server mode (or not yet configured) generate/load our
-                    // own auth token that incoming requests must present.
-                    store
-                        .get("auth_token")
-                        .and_then(|v| v.as_str().map(String::from))
-                        .unwrap_or_else(|| {
-                            let t = Uuid::new_v4().to_string();
-                            store.set("auth_token", serde_json::Value::String(t.clone()));
-                            let _ = store.save();
-                            t
-                        })
+            // TAURI_AUTH_TOKEN env var overrides the stored token — used in CI
+            // and local E2E testing so the token is predictable without needing
+            // to read it from the Tauri store.
+            let auth_token = if let Ok(env_token) = std::env::var("TAURI_AUTH_TOKEN") {
+                env_token
+            } else {
+                match mode.as_deref() {
+                    Some("client") => {
+                        // In client mode the token is whatever the user entered
+                        // during setup; complete_setup() saves it as "client_auth_token".
+                        store
+                            .get("client_auth_token")
+                            .and_then(|v| v.as_str().map(String::from))
+                            .unwrap_or_default()
+                    }
+                    _ => {
+                        // In server mode (or not yet configured) generate/load our
+                        // own auth token that incoming requests must present.
+                        store
+                            .get("auth_token")
+                            .and_then(|v| v.as_str().map(String::from))
+                            .unwrap_or_else(|| {
+                                let t = Uuid::new_v4().to_string();
+                                store.set("auth_token", serde_json::Value::String(t.clone()));
+                                let _ = store.save();
+                                t
+                            })
+                    }
                 }
             };
 
@@ -475,7 +484,7 @@ pub(crate) async fn start_server(
         youtube_config,
         facebook_config,
         oauth_states,
-        app.clone(),
+        Some(app.clone()),
         cron_scheduler,
         #[cfg(target_os = "macos")]
         keynote_connector,

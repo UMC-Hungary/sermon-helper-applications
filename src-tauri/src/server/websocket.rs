@@ -11,17 +11,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::future::poll_fn;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio_postgres::AsyncMessage;
 use chrono::Utc;
 use uuid::Uuid;
 
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 use crate::connectors::{facebook, youtube, ConnectorStatus};
-use crate::models::event::{fetch_event, Event};
-use crate::models::recording::Recording;
+use crate::models::{
+    activity,
+    cron_job::{self, CreateCronJob, UpdateCronJob},
+    event::{fetch_event, CreateBibleReference, CreateConnection, CreateEvent, Event, EventSummary, UpdateEvent},
+    recording::{CreateRecording, FlagUploadItem, Recording, RecordingUpload},
+    untracked_recording,
+};
 use crate::server::ppt;
 use crate::server::AppState;
 
@@ -30,6 +36,7 @@ use crate::server::AppState;
 #[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum WsCommand {
+    // ── Keynote (macOS only) ─────────────────────────────────────────────────
     #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.open")]
     KeynoteOpen { file_path: String },
@@ -60,8 +67,235 @@ enum WsCommand {
     #[cfg(target_os = "macos")]
     #[serde(rename = "keynote.status")]
     KeynoteStatus,
+    // ── PPT ──────────────────────────────────────────────────────────────────
     #[serde(rename = "ppt.search")]
     PptSearch { filter: String },
+    #[serde(rename = "ppt.folders.list")]
+    PptFoldersList,
+    #[serde(rename = "ppt.folders.add")]
+    PptFoldersAdd { path: String, name: String },
+    #[serde(rename = "ppt.folders.remove")]
+    PptFoldersRemove { id: Uuid },
+    // ── Events ───────────────────────────────────────────────────────────────
+    #[serde(rename = "events.list")]
+    EventsList,
+    #[serde(rename = "events.get")]
+    EventsGet { id: Uuid },
+    #[serde(rename = "events.create")]
+    EventsCreate {
+        title: String,
+        date_time: chrono::DateTime<Utc>,
+        speaker: Option<String>,
+        description: Option<String>,
+        auto_upload_enabled: Option<bool>,
+        connections: Option<Vec<CreateConnection>>,
+        bible_references: Option<Vec<CreateBibleReference>>,
+    },
+    #[serde(rename = "events.update")]
+    EventsUpdate {
+        id: Uuid,
+        title: String,
+        date_time: chrono::DateTime<Utc>,
+        speaker: Option<String>,
+        description: Option<String>,
+        auto_upload_enabled: Option<bool>,
+        connections: Option<Vec<CreateConnection>>,
+        bible_references: Option<Vec<CreateBibleReference>>,
+    },
+    #[serde(rename = "events.delete")]
+    EventsDelete { id: Uuid },
+    // ── Recordings ───────────────────────────────────────────────────────────
+    #[serde(rename = "recordings.list")]
+    RecordingsList { event_id: Uuid },
+    #[serde(rename = "recordings.list_all")]
+    RecordingsListAll { filter: Option<String> },
+    #[serde(rename = "recordings.create")]
+    RecordingsCreate {
+        event_id: Uuid,
+        file_path: String,
+        file_name: String,
+        file_size: Option<i64>,
+        duration_seconds: Option<f64>,
+        custom_title: Option<String>,
+        custom_description: Option<String>,
+    },
+    #[serde(rename = "recordings.delete")]
+    RecordingsDelete {
+        event_id: Uuid,
+        recording_id: Uuid,
+        delete_file: Option<bool>,
+    },
+    #[serde(rename = "recordings.flag_upload")]
+    RecordingsFlagUpload {
+        event_id: Uuid,
+        recordings: Vec<FlagUploadItem>,
+    },
+    // ── Untracked recordings ─────────────────────────────────────────────────
+    #[serde(rename = "recordings.untracked.list")]
+    RecordingsUntrackedList,
+    #[serde(rename = "recordings.untracked.assign")]
+    RecordingsUntrackedAssign { id: Uuid, event_id: Uuid },
+    #[serde(rename = "recordings.untracked.delete")]
+    RecordingsUntrackedDelete { id: Uuid, delete_file: Option<bool> },
+    // ── Activities ───────────────────────────────────────────────────────────
+    #[serde(rename = "activities.list")]
+    ActivitiesList { event_id: Uuid },
+    #[serde(rename = "activities.create")]
+    ActivitiesCreate {
+        event_id: Uuid,
+        activity_type: String,
+        message: Option<String>,
+    },
+    #[serde(rename = "activities.delete")]
+    ActivitiesDelete { event_id: Uuid, activity_id: Uuid },
+    // ── Cron jobs ────────────────────────────────────────────────────────────
+    #[serde(rename = "cron_jobs.list")]
+    CronJobsList,
+    #[serde(rename = "cron_jobs.create")]
+    CronJobsCreate {
+        name: String,
+        cron_expression: String,
+        enabled: bool,
+        pull_youtube: bool,
+        auto_upload: bool,
+    },
+    #[serde(rename = "cron_jobs.update")]
+    CronJobsUpdate {
+        id: Uuid,
+        name: String,
+        cron_expression: String,
+        enabled: bool,
+        pull_youtube: bool,
+        auto_upload: bool,
+    },
+    #[serde(rename = "cron_jobs.delete")]
+    CronJobsDelete { id: Uuid },
+    // ── Uploads ──────────────────────────────────────────────────────────────
+    #[serde(rename = "uploads.trigger")]
+    UploadsTrigger,
+    // ── Connectors ───────────────────────────────────────────────────────────
+    #[serde(rename = "connectors.status")]
+    ConnectorsStatus,
+    #[serde(rename = "connectors.state")]
+    ConnectorsState,
+    #[serde(rename = "connectors.youtube.schedule")]
+    ConnectorsYoutubeSchedule { event_id: Uuid },
+    #[serde(rename = "connectors.facebook.schedule")]
+    ConnectorsFacebookSchedule { event_id: Uuid },
+    #[serde(rename = "connectors.youtube.stream_key")]
+    ConnectorsYoutubeStreamKey,
+    #[serde(rename = "connectors.facebook.stream_key")]
+    ConnectorsFacebookStreamKey,
+    #[serde(rename = "connectors.youtube.content")]
+    ConnectorsYoutubeContent,
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    #[serde(rename = "auth.youtube.url")]
+    AuthYoutubeUrl,
+    #[serde(rename = "auth.youtube.logout")]
+    AuthYoutubeLogout,
+    #[serde(rename = "auth.facebook.url")]
+    AuthFacebookUrl,
+    #[serde(rename = "auth.facebook.logout")]
+    AuthFacebookLogout,
+    // ── Stream ───────────────────────────────────────────────────────────────
+    #[serde(rename = "stream.stats")]
+    StreamStats,
+    // ── Broadlink ────────────────────────────────────────────────────────────
+    #[serde(rename = "broadlink.status")]
+    BroadlinkStatus,
+    #[serde(rename = "broadlink.devices.list")]
+    BroadlinkDevicesList,
+    #[serde(rename = "broadlink.devices.add")]
+    BroadlinkDevicesAdd {
+        name: String,
+        host: String,
+        mac: String,
+        device_type: String,
+        model: Option<String>,
+    },
+    #[serde(rename = "broadlink.devices.remove")]
+    BroadlinkDevicesRemove { id: Uuid },
+    #[serde(rename = "broadlink.discover")]
+    BroadlinkDiscover,
+    #[serde(rename = "broadlink.commands.list")]
+    BroadlinkCommandsList {
+        device_id: Option<Uuid>,
+        category: Option<String>,
+    },
+    #[serde(rename = "broadlink.commands.add")]
+    BroadlinkCommandsAdd {
+        device_id: Option<Uuid>,
+        name: String,
+        slug: String,
+        code: String,
+        code_type: String,
+        category: Option<String>,
+    },
+    #[serde(rename = "broadlink.commands.update")]
+    BroadlinkCommandsUpdate {
+        id: Uuid,
+        name: Option<String>,
+        slug: Option<String>,
+        code: Option<String>,
+        code_type: Option<String>,
+        category: Option<String>,
+    },
+    #[serde(rename = "broadlink.commands.remove")]
+    BroadlinkCommandsRemove { id: Uuid },
+    #[serde(rename = "broadlink.learn.start")]
+    BroadlinkLearnStart {
+        device_id: Uuid,
+        signal_type: Option<String>,
+    },
+    #[serde(rename = "broadlink.learn.cancel")]
+    BroadlinkLearnCancel,
+    #[serde(rename = "broadlink.commands.send")]
+    BroadlinkCommandsSend { id: Uuid },
+}
+
+/// Upsert or delete bible references inside an open transaction (mirrors routes.rs logic).
+async fn ws_upsert_bible_references(
+    event_id: Uuid,
+    refs: &Option<Vec<CreateBibleReference>>,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+) -> anyhow::Result<()> {
+    let Some(refs) = refs else { return Ok(()) };
+    for br in refs {
+        let reference = br.reference.as_deref().unwrap_or("").trim();
+        if reference.is_empty() {
+            sqlx::query("DELETE FROM event_bible_references WHERE event_id = $1 AND type = $2")
+                .bind(event_id)
+                .bind(&br.r#type)
+                .execute(&mut **tx)
+                .await?;
+        } else {
+            let translation = br.translation.as_deref().unwrap_or("UF");
+            let verses = br.verses.clone().unwrap_or_else(|| serde_json::json!([]));
+            sqlx::query(
+                "INSERT INTO event_bible_references (event_id, type, reference, translation, verses) \
+                 VALUES ($1, $2, $3, $4, $5) \
+                 ON CONFLICT (event_id, type) DO UPDATE SET \
+                   reference = EXCLUDED.reference, translation = EXCLUDED.translation, \
+                   verses = EXCLUDED.verses, updated_at = NOW()",
+            )
+            .bind(event_id)
+            .bind(&br.r#type)
+            .bind(reference)
+            .bind(translation)
+            .bind(verses)
+            .execute(&mut **tx)
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+fn ws_ok(tx: &mpsc::UnboundedSender<Message>) {
+    let _ = tx.send(Message::Text(json!({"type":"ok"}).to_string().into()));
+}
+
+fn ws_error(tx: &mpsc::UnboundedSender<Message>, msg: &str) {
+    let _ = tx.send(Message::Text(json!({"type":"error","message":msg}).to_string().into()));
 }
 
 async fn handle_ws_command(
@@ -70,6 +304,7 @@ async fn handle_ws_command(
     client_tx: &mpsc::UnboundedSender<Message>,
 ) {
     match cmd {
+        // ── Keynote (macOS only) ─────────────────────────────────────────────
         #[cfg(target_os = "macos")]
         WsCommand::KeynoteOpen { file_path } => {
             let _ = state.keynote_connector.open_file(&file_path).await;
@@ -112,10 +347,1350 @@ async fn handle_ws_command(
             let msg = json!({ "type": "keynote.status", "status": status }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
+        // ── PPT ──────────────────────────────────────────────────────────────
         WsCommand::PptSearch { filter } => {
             let files = ppt::search_files_internal(&state.pool, &filter).await;
             let msg = json!({ "type": "ppt.search_results", "files": files }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::PptFoldersList => {
+            match sqlx::query_as::<_, ppt::PptFolder>(
+                "SELECT id, path, name, sort_order FROM ppt_folders ORDER BY sort_order, name",
+            )
+            .fetch_all(&state.pool)
+            .await
+            {
+                Ok(folders) => {
+                    let msg = json!({ "type": "ppt.folders.list", "folders": folders }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::PptFoldersAdd { path, name } => {
+            let result = sqlx::query_as::<_, ppt::PptFolder>(
+                "INSERT INTO ppt_folders (path, name) VALUES ($1, $2) \
+                 ON CONFLICT (path) DO UPDATE SET name = EXCLUDED.name \
+                 RETURNING id, path, name, sort_order",
+            )
+            .bind(&path)
+            .bind(&name)
+            .fetch_optional(&state.pool)
+            .await;
+            match result {
+                Ok(folder) => {
+                    broadcast_ppt_folders_changed(&state.ws_clients).await;
+                    let msg = json!({ "type": "ppt.folders.add", "folder": folder }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::PptFoldersRemove { id } => {
+            match sqlx::query("DELETE FROM ppt_folders WHERE id = $1")
+                .bind(id)
+                .execute(&state.pool)
+                .await
+            {
+                Ok(_) => {
+                    broadcast_ppt_folders_changed(&state.ws_clients).await;
+                    ws_ok(client_tx);
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Events ───────────────────────────────────────────────────────────
+        WsCommand::EventsList => {
+            let result = sqlx::query_as::<_, EventSummary>(
+                r#"SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
+                          COUNT(r.id) AS recording_count,
+                          EXISTS (
+                              SELECT 1 FROM event_activities ea
+                              WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
+                          ) AS is_completed
+                   FROM events e
+                   LEFT JOIN recordings r ON r.event_id = e.id
+                   GROUP BY e.id
+                   ORDER BY e.date_time DESC"#,
+            )
+            .fetch_all(&state.pool)
+            .await;
+            match result {
+                Ok(events) => {
+                    let msg = json!({ "type": "events.list", "events": events }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::EventsGet { id } => {
+            match fetch_event(id, &state.pool).await {
+                Ok(Some(event)) => {
+                    let msg = json!({ "type": "events.get", "event": event }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::EventsCreate {
+            title,
+            date_time,
+            speaker,
+            description,
+            auto_upload_enabled,
+            connections,
+            bible_references,
+        } => {
+            let body = CreateEvent {
+                title,
+                date_time,
+                speaker,
+                description,
+                auto_upload_enabled,
+                connections,
+                bible_references,
+            };
+            let result: anyhow::Result<Event> = async {
+                let mut tx = state.pool.begin().await?;
+                sqlx::query("SET LOCAL app.skip_sync_notify = 'true'")
+                    .execute(&mut *tx)
+                    .await?;
+                let event_id: Uuid = sqlx::query_scalar(
+                    "INSERT INTO events (title, date_time, speaker, description, auto_upload_enabled) \
+                     VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                )
+                .bind(&body.title)
+                .bind(body.date_time)
+                .bind(body.speaker.unwrap_or_default())
+                .bind(body.description.unwrap_or_default())
+                .bind(body.auto_upload_enabled.unwrap_or(false))
+                .fetch_one(&mut *tx)
+                .await?;
+                let mut conn_map: Vec<(String, String)> = vec![
+                    ("youtube".to_string(), "private".to_string()),
+                    ("facebook".to_string(), "EVERYONE".to_string()),
+                ];
+                if let Some(req_conns) = &body.connections {
+                    for c in req_conns {
+                        if let Some(entry) = conn_map.iter_mut().find(|(p, _)| p == &c.platform) {
+                            if let Some(ps) = &c.privacy_status {
+                                entry.1 = ps.clone();
+                            }
+                        } else {
+                            conn_map.push((
+                                c.platform.clone(),
+                                c.privacy_status.clone().unwrap_or_default(),
+                            ));
+                        }
+                    }
+                }
+                for (platform, privacy) in &conn_map {
+                    sqlx::query(
+                        "INSERT INTO event_connections (event_id, platform, privacy_status) VALUES ($1, $2, $3)",
+                    )
+                    .bind(event_id)
+                    .bind(platform)
+                    .bind(privacy)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+                ws_upsert_bible_references(event_id, &body.bible_references, &mut tx).await?;
+                tx.commit().await?;
+                fetch_event(event_id, &state.pool)
+                    .await?
+                    .ok_or_else(|| anyhow::anyhow!("event not found after create"))
+            }
+            .await;
+            match result {
+                Ok(event) => {
+                    let msg = json!({ "type": "events.create", "event": event }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                    broadcast_event_changed(state, "INSERT", &event).await;
+                    spawn_scheduling_tasks(event, state.clone());
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::EventsUpdate {
+            id,
+            title,
+            date_time,
+            speaker,
+            description,
+            auto_upload_enabled,
+            connections,
+            bible_references,
+        } => {
+            let body = UpdateEvent {
+                title,
+                date_time,
+                speaker,
+                description,
+                auto_upload_enabled,
+                connections,
+                bible_references,
+            };
+            let result: anyhow::Result<Option<Event>> = async {
+                let mut tx = state.pool.begin().await?;
+                sqlx::query("SET LOCAL app.skip_sync_notify = 'true'")
+                    .execute(&mut *tx)
+                    .await?;
+                let updated_id: Option<Uuid> = sqlx::query_scalar(
+                    "UPDATE events SET title=$1, date_time=$2, speaker=$3, description=$4, \
+                     auto_upload_enabled=$5, updated_at=NOW() WHERE id=$6 RETURNING id",
+                )
+                .bind(&body.title)
+                .bind(body.date_time)
+                .bind(body.speaker.unwrap_or_default())
+                .bind(body.description.unwrap_or_default())
+                .bind(body.auto_upload_enabled.unwrap_or(false))
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await?;
+                if updated_id.is_none() {
+                    tx.rollback().await?;
+                    return Ok(None);
+                }
+                if let Some(conns) = &body.connections {
+                    for conn in conns {
+                        if let Some(ps) = &conn.privacy_status {
+                            sqlx::query(
+                                "UPDATE event_connections SET privacy_status=$1, updated_at=NOW() \
+                                 WHERE event_id=$2 AND platform=$3",
+                            )
+                            .bind(ps)
+                            .bind(id)
+                            .bind(&conn.platform)
+                            .execute(&mut *tx)
+                            .await?;
+                        }
+                    }
+                }
+                ws_upsert_bible_references(id, &body.bible_references, &mut tx).await?;
+                tx.commit().await?;
+                Ok(fetch_event(id, &state.pool).await?)
+            }
+            .await;
+            match result {
+                Ok(Some(event)) => {
+                    let msg = json!({ "type": "events.update", "event": event }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                    broadcast_event_changed(state, "UPDATE", &event).await;
+                    spawn_scheduling_tasks(event, state.clone());
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::EventsDelete { id } => {
+            let event = match fetch_event(id, &state.pool).await {
+                Ok(Some(e)) => e,
+                Ok(None) => {
+                    ws_error(client_tx, "not_found");
+                    return;
+                }
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
+            };
+            let result = sqlx::query("DELETE FROM events WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&state.pool)
+                .await;
+            match result {
+                Ok(Some(_)) => {
+                    broadcast_event_changed(state, "DELETE", &event).await;
+                    ws_ok(client_tx);
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Recordings ───────────────────────────────────────────────────────
+        WsCommand::RecordingsList { event_id } => {
+            let mut recordings = match sqlx::query_as::<_, crate::models::recording::Recording>(
+                "SELECT * FROM recordings WHERE event_id = $1 ORDER BY detected_at DESC",
+            )
+            .bind(event_id)
+            .fetch_all(&state.pool)
+            .await
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
+            };
+            if !recordings.is_empty() {
+                let ids: Vec<Uuid> = recordings.iter().map(|r| r.id).collect();
+                let uploads = sqlx::query_as::<_, RecordingUpload>(
+                    "SELECT recording_id, platform, state, progress_bytes, total_bytes, \
+                     visibility, video_id, video_url, error, started_at, completed_at, updated_at \
+                     FROM recording_uploads WHERE recording_id = ANY($1)",
+                )
+                .bind(&ids)
+                .fetch_all(&state.pool)
+                .await
+                .unwrap_or_default();
+                for rec in &mut recordings {
+                    rec.uploads = uploads.iter().filter(|u| u.recording_id == rec.id).cloned().collect();
+                }
+            }
+            let msg = json!({ "type": "recordings.list", "recordings": recordings }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::RecordingsListAll { filter } => {
+            let where_clause = match filter.as_deref().unwrap_or("") {
+                "not_flagged" => "r.uploadable = false AND NOT EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id)",
+                "flagged" => "r.uploadable = true AND NOT EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id AND state IN ('uploading','paused','completed','failed'))",
+                "in_progress" => "EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id AND state IN ('uploading','paused','failed'))",
+                "uploaded" => "EXISTS (SELECT 1 FROM recording_uploads WHERE recording_id = r.id AND state = 'completed')",
+                _ => "true",
+            };
+            let sql = format!(
+                "SELECT r.*, e.title AS _event_title FROM recordings r \
+                 JOIN events e ON e.id = r.event_id WHERE {where_clause} \
+                 ORDER BY r.detected_at DESC LIMIT 100"
+            );
+            #[derive(sqlx::FromRow)]
+            struct RecordingRow {
+                #[sqlx(flatten)]
+                recording: crate::models::recording::Recording,
+                _event_title: String,
+            }
+            #[derive(serde::Serialize)]
+            #[serde(rename_all = "camelCase")]
+            struct RecordingWithEvent {
+                #[serde(flatten)]
+                recording: crate::models::recording::Recording,
+                event_title: String,
+            }
+            let rows = match sqlx::query_as::<_, RecordingRow>(&sql)
+                .fetch_all(&state.pool)
+                .await
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
+            };
+            let mut results: Vec<RecordingWithEvent> = rows
+                .into_iter()
+                .map(|row| RecordingWithEvent {
+                    event_title: row._event_title.clone(),
+                    recording: row.recording,
+                })
+                .collect();
+            if !results.is_empty() {
+                let ids: Vec<Uuid> = results.iter().map(|r| r.recording.id).collect();
+                let uploads = sqlx::query_as::<_, RecordingUpload>(
+                    "SELECT recording_id, platform, state, progress_bytes, total_bytes, \
+                     visibility, video_id, video_url, error, started_at, completed_at, updated_at \
+                     FROM recording_uploads WHERE recording_id = ANY($1)",
+                )
+                .bind(&ids)
+                .fetch_all(&state.pool)
+                .await
+                .unwrap_or_default();
+                for item in &mut results {
+                    item.recording.uploads = uploads
+                        .iter()
+                        .filter(|u| u.recording_id == item.recording.id)
+                        .cloned()
+                        .collect();
+                }
+            }
+            let msg = json!({ "type": "recordings.list_all", "recordings": results }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::RecordingsCreate {
+            event_id,
+            file_path,
+            file_name,
+            file_size,
+            duration_seconds,
+            custom_title,
+            custom_description,
+        } => {
+            let body = CreateRecording {
+                file_path,
+                file_name,
+                file_size,
+                duration_seconds,
+                custom_title,
+                custom_description,
+            };
+            let result = sqlx::query_as::<_, crate::models::recording::Recording>(
+                "INSERT INTO recordings (event_id, file_path, file_name, file_size, duration_seconds, \
+                 custom_title, custom_description, detected_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+            )
+            .bind(event_id)
+            .bind(&body.file_path)
+            .bind(&body.file_name)
+            .bind(body.file_size.unwrap_or(0))
+            .bind(body.duration_seconds.unwrap_or(0.0))
+            .bind(body.custom_title.as_deref())
+            .bind(body.custom_description.as_deref())
+            .bind(Utc::now())
+            .fetch_one(&state.pool)
+            .await;
+            match result {
+                Ok(recording) => {
+                    let msg = json!({ "type": "recordings.create", "recording": recording }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::RecordingsDelete { event_id, recording_id, delete_file } => {
+            let row = sqlx::query_as::<_, crate::models::recording::Recording>(
+                "SELECT * FROM recordings WHERE id = $1 AND event_id = $2",
+            )
+            .bind(recording_id)
+            .bind(event_id)
+            .fetch_optional(&state.pool)
+            .await;
+            match row {
+                Ok(Some(rec)) => {
+                    let del = sqlx::query("DELETE FROM recordings WHERE id = $1")
+                        .bind(recording_id)
+                        .execute(&state.pool)
+                        .await;
+                    match del {
+                        Ok(_) => {
+                            if delete_file.unwrap_or(false) {
+                                let _ = tokio::fs::remove_file(&rec.file_path).await;
+                            }
+                            ws_ok(client_tx);
+                        }
+                        Err(e) => ws_error(client_tx, &e.to_string()),
+                    }
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::RecordingsFlagUpload { event_id, recordings } => {
+            let result: anyhow::Result<()> = async {
+                for item in &recordings {
+                    sqlx::query(
+                        "UPDATE recordings SET uploadable=true, \
+                         custom_title=COALESCE($1, custom_title), \
+                         custom_description=COALESCE($2, custom_description), \
+                         updated_at=NOW() WHERE id=$3 AND event_id=$4",
+                    )
+                    .bind(item.custom_title.as_deref())
+                    .bind(item.custom_description.as_deref())
+                    .bind(item.recording_id)
+                    .bind(event_id)
+                    .execute(&state.pool)
+                    .await?;
+                    for platform in &item.platforms {
+                        let visibility = if platform == "youtube" {
+                            item.youtube_visibility.as_deref().unwrap_or("private").to_string()
+                        } else {
+                            item.facebook_visibility.as_deref().unwrap_or("ONLY_ME").to_string()
+                        };
+                        sqlx::query(
+                            "INSERT INTO recording_uploads (recording_id, platform, state, visibility, updated_at) \
+                             VALUES ($1, $2, 'pending', $3, NOW()) \
+                             ON CONFLICT (recording_id, platform) DO UPDATE SET \
+                                 state = CASE WHEN recording_uploads.state = 'completed' \
+                                              THEN 'completed' ELSE 'pending' END, \
+                                 visibility = EXCLUDED.visibility, updated_at = NOW()",
+                        )
+                        .bind(item.recording_id)
+                        .bind(platform)
+                        .bind(&visibility)
+                        .execute(&state.pool)
+                        .await?;
+                    }
+                }
+                Ok(())
+            }
+            .await;
+            match result {
+                Ok(()) => ws_ok(client_tx),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Untracked recordings ─────────────────────────────────────────────
+        WsCommand::RecordingsUntrackedList => {
+            match untracked_recording::list_untracked(&state.pool).await {
+                Ok(recordings) => {
+                    let msg = json!({ "type": "recordings.untracked.list", "recordings": recordings }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::RecordingsUntrackedAssign { id, event_id } => {
+            let result: anyhow::Result<crate::models::recording::Recording> = async {
+                let untracked = sqlx::query_as::<_, untracked_recording::UntrackedRecording>(
+                    "SELECT * FROM untracked_recordings WHERE id = $1",
+                )
+                .bind(id)
+                .fetch_optional(&state.pool)
+                .await?
+                .ok_or_else(|| anyhow::anyhow!("NOT_FOUND"))?;
+                let event_exists: bool =
+                    sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)")
+                        .bind(event_id)
+                        .fetch_one(&state.pool)
+                        .await?;
+                if !event_exists {
+                    return Err(anyhow::anyhow!("EVENT_NOT_FOUND"));
+                }
+                let mut tx = state.pool.begin().await?;
+                let recording = sqlx::query_as::<_, crate::models::recording::Recording>(
+                    "INSERT INTO recordings (event_id, file_path, file_name, file_size, duration_seconds, detected_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+                )
+                .bind(event_id)
+                .bind(&untracked.file_path)
+                .bind(&untracked.file_name)
+                .bind(untracked.file_size)
+                .bind(untracked.duration_seconds)
+                .bind(untracked.detected_at)
+                .fetch_one(&mut *tx)
+                .await?;
+                sqlx::query("DELETE FROM untracked_recordings WHERE id = $1")
+                    .bind(id)
+                    .execute(&mut *tx)
+                    .await?;
+                tx.commit().await?;
+                Ok(recording)
+            }
+            .await;
+            match result {
+                Ok(recording) => {
+                    let clients = state.ws_clients.clone();
+                    tokio::spawn(async move {
+                        broadcast_untracked_removed(&clients, id).await;
+                    });
+                    let msg = json!({ "type": "recordings.untracked.assign", "recording": recording }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) if e.to_string() == "NOT_FOUND" => ws_error(client_tx, "not_found"),
+                Err(e) if e.to_string() == "EVENT_NOT_FOUND" => ws_error(client_tx, "event_not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::RecordingsUntrackedDelete { id, delete_file } => {
+            let row = sqlx::query_as::<_, untracked_recording::UntrackedRecording>(
+                "SELECT * FROM untracked_recordings WHERE id = $1",
+            )
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await;
+            match row {
+                Ok(Some(rec)) => {
+                    let del = sqlx::query("DELETE FROM untracked_recordings WHERE id = $1")
+                        .bind(id)
+                        .execute(&state.pool)
+                        .await;
+                    match del {
+                        Ok(_) => {
+                            if delete_file.unwrap_or(false) {
+                                let _ = tokio::fs::remove_file(&rec.file_path).await;
+                            }
+                            let clients = state.ws_clients.clone();
+                            tokio::spawn(async move {
+                                broadcast_untracked_removed(&clients, id).await;
+                            });
+                            ws_ok(client_tx);
+                        }
+                        Err(e) => ws_error(client_tx, &e.to_string()),
+                    }
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Activities ───────────────────────────────────────────────────────
+        WsCommand::ActivitiesList { event_id } => {
+            match activity::list_activities(event_id, &state.pool).await {
+                Ok(activities) => {
+                    let msg = json!({ "type": "activities.list", "activities": activities }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::ActivitiesCreate { event_id, activity_type, message } => {
+            let event_exists: Result<bool, _> =
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)")
+                    .bind(event_id)
+                    .fetch_one(&state.pool)
+                    .await;
+            match event_exists {
+                Ok(false) | Err(_) => {
+                    ws_error(client_tx, "event_not_found");
+                    return;
+                }
+                Ok(true) => {}
+            }
+            let result = sqlx::query_as::<_, activity::EventActivity>(
+                "INSERT INTO event_activities (event_id, activity_type, message) VALUES ($1, $2, $3) RETURNING *",
+            )
+            .bind(event_id)
+            .bind(&activity_type)
+            .bind(&message)
+            .fetch_one(&state.pool)
+            .await;
+            match result {
+                Ok(act) => {
+                    let msg = json!({ "type": "activities.create", "activity": act }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::ActivitiesDelete { event_id, activity_id } => {
+            let result = sqlx::query(
+                "DELETE FROM event_activities WHERE id = $1 AND event_id = $2 RETURNING id",
+            )
+            .bind(activity_id)
+            .bind(event_id)
+            .fetch_optional(&state.pool)
+            .await;
+            match result {
+                Ok(Some(_)) => ws_ok(client_tx),
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Cron jobs ────────────────────────────────────────────────────────
+        WsCommand::CronJobsList => {
+            match cron_job::list_all(&state.pool).await {
+                Ok(jobs) => {
+                    let msg = json!({ "type": "cron_jobs.list", "jobs": jobs }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::CronJobsCreate { name, cron_expression, enabled, pull_youtube, auto_upload } => {
+            if tokio_cron_scheduler::Job::new_async(cron_expression.as_str(), |_, _| {
+                Box::pin(async {})
+            })
+            .is_err()
+            {
+                ws_error(client_tx, "invalid_cron_expression");
+                return;
+            }
+            let body = CreateCronJob { name, cron_expression, enabled, pull_youtube, auto_upload };
+            let result: anyhow::Result<cron_job::CronJob> = async {
+                let mut tx = state.pool.begin().await?;
+                let row = sqlx::query_as::<_, (Uuid, String, String, bool, chrono::DateTime<Utc>, chrono::DateTime<Utc>)>(
+                    "INSERT INTO cron_jobs (name, cron_expression, enabled) \
+                     VALUES ($1, $2, $3) \
+                     RETURNING id, name, cron_expression, enabled, created_at, updated_at",
+                )
+                .bind(&body.name)
+                .bind(&body.cron_expression)
+                .bind(body.enabled)
+                .fetch_one(&mut *tx)
+                .await?;
+                cron_job::sync_features(&mut tx, row.0, body.pull_youtube, body.auto_upload).await?;
+                tx.commit().await?;
+                Ok(cron_job::CronJob {
+                    id: row.0,
+                    name: row.1,
+                    cron_expression: row.2,
+                    enabled: row.3,
+                    pull_youtube: body.pull_youtube,
+                    auto_upload: body.auto_upload,
+                    created_at: row.4,
+                    updated_at: row.5,
+                })
+            }
+            .await;
+            match result {
+                Ok(job) => {
+                    let pool = state.pool.clone();
+                    let clients = state.ws_clients.clone();
+                    let yt = state.youtube_connector.clone();
+                    let sched = state.cron_scheduler.clone();
+                    let us = state.upload_service.clone();
+                    tokio::spawn(async move {
+                        sched.reload(pool, clients, yt, us).await;
+                    });
+                    let msg = json!({ "type": "cron_jobs.create", "job": job }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::CronJobsUpdate { id, name, cron_expression, enabled, pull_youtube, auto_upload } => {
+            if tokio_cron_scheduler::Job::new_async(cron_expression.as_str(), |_, _| {
+                Box::pin(async {})
+            })
+            .is_err()
+            {
+                ws_error(client_tx, "invalid_cron_expression");
+                return;
+            }
+            let body = UpdateCronJob { name, cron_expression, enabled, pull_youtube, auto_upload };
+            let result: anyhow::Result<Option<cron_job::CronJob>> = async {
+                let mut tx = state.pool.begin().await?;
+                let row = sqlx::query_as::<_, (Uuid, String, String, bool, chrono::DateTime<Utc>, chrono::DateTime<Utc>)>(
+                    "UPDATE cron_jobs SET name=$1, cron_expression=$2, enabled=$3, updated_at=NOW() \
+                     WHERE id=$4 RETURNING id, name, cron_expression, enabled, created_at, updated_at",
+                )
+                .bind(&body.name)
+                .bind(&body.cron_expression)
+                .bind(body.enabled)
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await?;
+                let Some(row) = row else {
+                    tx.rollback().await?;
+                    return Ok(None);
+                };
+                cron_job::sync_features(&mut tx, row.0, body.pull_youtube, body.auto_upload).await?;
+                tx.commit().await?;
+                Ok(Some(cron_job::CronJob {
+                    id: row.0,
+                    name: row.1,
+                    cron_expression: row.2,
+                    enabled: row.3,
+                    pull_youtube: body.pull_youtube,
+                    auto_upload: body.auto_upload,
+                    created_at: row.4,
+                    updated_at: row.5,
+                }))
+            }
+            .await;
+            match result {
+                Ok(Some(job)) => {
+                    let pool = state.pool.clone();
+                    let clients = state.ws_clients.clone();
+                    let yt = state.youtube_connector.clone();
+                    let sched = state.cron_scheduler.clone();
+                    let us = state.upload_service.clone();
+                    tokio::spawn(async move {
+                        sched.reload(pool, clients, yt, us).await;
+                    });
+                    let msg = json!({ "type": "cron_jobs.update", "job": job }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::CronJobsDelete { id } => {
+            let result = sqlx::query("DELETE FROM cron_jobs WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&state.pool)
+                .await;
+            match result {
+                Ok(Some(_)) => {
+                    let pool = state.pool.clone();
+                    let clients = state.ws_clients.clone();
+                    let yt = state.youtube_connector.clone();
+                    let sched = state.cron_scheduler.clone();
+                    let us = state.upload_service.clone();
+                    tokio::spawn(async move {
+                        sched.reload(pool, clients, yt, us).await;
+                    });
+                    ws_ok(client_tx);
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Uploads ──────────────────────────────────────────────────────────
+        WsCommand::UploadsTrigger => {
+            let us = state.upload_service.clone();
+            tokio::spawn(async move {
+                us.run_cycle().await;
+            });
+            ws_ok(client_tx);
+        }
+        // ── Connectors ───────────────────────────────────────────────────────
+        WsCommand::ConnectorsStatus => {
+            let obs = state.obs_connector.get_status().await;
+            let vmix = state.vmix_connector.get_status();
+            let yt = state.youtube_connector.get_status().await;
+            let fb = state.facebook_connector.get_status().await;
+            let msg = json!({
+                "type": "connectors.status",
+                "obs": obs,
+                "vmix": vmix,
+                "youtube": yt,
+                "facebook": fb,
+            })
+            .to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::ConnectorsState => {
+            let obs_output = state.obs_connector.get_output_state().await;
+            let msg = json!({
+                "type": "connectors.state",
+                "obs": obs_output.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
+            })
+            .to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::ConnectorsYoutubeSchedule { event_id } => {
+            let event = match fetch_event(event_id, &state.pool).await {
+                Ok(Some(e)) => e,
+                Ok(None) => { ws_error(client_tx, "not_found"); return; }
+                Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+            };
+            let token = match youtube::load_tokens(&state.pool).await {
+                Some(t) => t,
+                None => { ws_error(client_tx, "not_authenticated"); return; }
+            };
+            let yt_conn = event.connection("youtube");
+            let existing_id = yt_conn.and_then(|c| c.external_id.as_deref());
+            let privacy_status = yt_conn.and_then(|c| c.privacy_status.as_deref()).unwrap_or("private");
+            match youtube::schedule_event(
+                &event.id.to_string(), &event.title, &event.date_time,
+                &token.access_token, existing_id, privacy_status,
+            )
+            .await
+            {
+                Ok(result) => {
+                    match write_youtube_result(state, event_id, &result).await {
+                        Ok(updated) => {
+                            broadcast_event_changed(state, "UPDATE", &updated).await;
+                            ws_ok(client_tx);
+                        }
+                        Err(e) => ws_error(client_tx, &e.to_string()),
+                    }
+                }
+                Err(e) => {
+                    let _ = write_youtube_status(&state.pool, event_id, "failed").await;
+                    ws_error(client_tx, &e.to_string());
+                }
+            }
+        }
+        WsCommand::ConnectorsFacebookSchedule { event_id } => {
+            let event = match fetch_event(event_id, &state.pool).await {
+                Ok(Some(e)) => e,
+                Ok(None) => { ws_error(client_tx, "not_found"); return; }
+                Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+            };
+            let token = match facebook::load_tokens(&state.pool).await {
+                Some(t) => t,
+                None => { ws_error(client_tx, "not_authenticated"); return; }
+            };
+            let config = state.facebook_config.read().await.clone();
+            if config.page_id.is_empty() {
+                ws_error(client_tx, "facebook_page_id_not_configured");
+                return;
+            }
+            let fb_conn = event.connection("facebook");
+            let privacy_status = fb_conn.and_then(|c| c.privacy_status.as_deref()).unwrap_or("EVERYONE");
+            match facebook::schedule_event(
+                &event.title, &event.date_time, &token.access_token, &config.page_id, privacy_status,
+            )
+            .await
+            {
+                Ok(result) => {
+                    match write_facebook_result(state, event_id, &result).await {
+                        Ok(updated) => {
+                            broadcast_event_changed(state, "UPDATE", &updated).await;
+                            ws_ok(client_tx);
+                        }
+                        Err(e) => ws_error(client_tx, &e.to_string()),
+                    }
+                }
+                Err(e) => {
+                    let _ = write_facebook_status(&state.pool, event_id, "failed").await;
+                    ws_error(client_tx, &e.to_string());
+                }
+            }
+        }
+        WsCommand::ConnectorsYoutubeStreamKey => {
+            let token = match youtube::load_tokens(&state.pool).await {
+                Some(t) => t,
+                None => { ws_error(client_tx, "not_authenticated"); return; }
+            };
+            #[derive(serde::Deserialize)]
+            struct IngestionInfo {
+                #[serde(rename = "ingestionAddress")]
+                ingestion_address: String,
+                #[serde(rename = "streamName")]
+                stream_name: String,
+            }
+            #[derive(serde::Deserialize)]
+            struct Cdn {
+                #[serde(rename = "ingestionInfo")]
+                ingestion_info: IngestionInfo,
+            }
+            #[derive(serde::Deserialize)]
+            struct StreamItem { cdn: Cdn }
+            #[derive(serde::Deserialize)]
+            struct StreamList { items: Option<Vec<StreamItem>> }
+            let client = reqwest::Client::new();
+            let resp = client
+                .get("https://www.googleapis.com/youtube/v3/liveStreams")
+                .query(&[("part", "cdn"), ("mine", "true")])
+                .bearer_auth(&token.access_token)
+                .send()
+                .await;
+            match resp {
+                Ok(r) if r.status().is_success() => {
+                    match r.json::<StreamList>().await {
+                        Ok(list) => {
+                            match list.items.and_then(|items| items.into_iter().next()) {
+                                Some(item) => {
+                                    let rtmp_url = format!(
+                                        "{}/{}",
+                                        item.cdn.ingestion_info.ingestion_address,
+                                        item.cdn.ingestion_info.stream_name,
+                                    );
+                                    let msg = json!({ "type": "connectors.youtube.stream_key", "rtmpUrl": rtmp_url }).to_string();
+                                    let _ = client_tx.send(Message::Text(msg.into()));
+                                }
+                                None => ws_error(client_tx, "no_stream_found"),
+                            }
+                        }
+                        Err(e) => ws_error(client_tx, &e.to_string()),
+                    }
+                }
+                Ok(r) => ws_error(client_tx, &format!("youtube_api_{}", r.status())),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::ConnectorsFacebookStreamKey => {
+            let token = match facebook::load_tokens(&state.pool).await {
+                Some(t) => t,
+                None => { ws_error(client_tx, "not_authenticated"); return; }
+            };
+            let config = state.facebook_config.read().await.clone();
+            if config.page_id.is_empty() {
+                ws_error(client_tx, "facebook_page_id_not_configured");
+                return;
+            }
+            #[derive(serde::Deserialize)]
+            struct FbLiveVideo {
+                #[serde(rename = "stream_url")]
+                stream_url: Option<String>,
+                #[serde(rename = "secure_stream_url")]
+                secure_stream_url: Option<String>,
+            }
+            #[derive(serde::Deserialize)]
+            struct FbList { data: Vec<FbLiveVideo> }
+            let client = reqwest::Client::new();
+            let resp = client
+                .get(format!("https://graph.facebook.com/v19.0/{}/live_videos", config.page_id))
+                .query(&[
+                    ("status", "SCHEDULED_UNPUBLISHED"),
+                    ("fields", "stream_url,secure_stream_url"),
+                    ("access_token", token.access_token.as_str()),
+                ])
+                .send()
+                .await;
+            match resp {
+                Ok(r) if r.status().is_success() => {
+                    match r.json::<FbList>().await {
+                        Ok(list) => {
+                            match list.data.into_iter().next() {
+                                Some(video) => {
+                                    let rtmp_url = video.secure_stream_url
+                                        .or(video.stream_url)
+                                        .unwrap_or_default();
+                                    let msg = json!({ "type": "connectors.facebook.stream_key", "rtmpUrl": rtmp_url }).to_string();
+                                    let _ = client_tx.send(Message::Text(msg.into()));
+                                }
+                                None => ws_error(client_tx, "no_live_video_found"),
+                            }
+                        }
+                        Err(e) => ws_error(client_tx, &e.to_string()),
+                    }
+                }
+                Ok(r) => ws_error(client_tx, &format!("facebook_api_{}", r.status())),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::ConnectorsYoutubeContent => {
+            let config = state.youtube_config.read().await.clone();
+            match youtube::fetch_channel_content(&state.pool, &config).await {
+                Ok(content) => {
+                    let msg = json!({ "type": "connectors.youtube.content", "content": content }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Auth ─────────────────────────────────────────────────────────────
+        WsCommand::AuthYoutubeUrl => {
+            let config = state.youtube_config.read().await.clone();
+            if config.client_id.is_empty() {
+                ws_error(client_tx, "youtube_not_configured");
+                return;
+            }
+            let state_token = Uuid::new_v4().to_string();
+            {
+                let mut states = state.oauth_states.write().await;
+                states.insert(state_token.clone(), ("youtube".to_string(), std::time::Instant::now()));
+            }
+            let url = format!(
+                "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=https://www.googleapis.com/auth/youtube&access_type=offline&prompt=consent&state={}",
+                urlencoding::encode(&config.client_id),
+                urlencoding::encode(crate::server::OAUTH_REDIRECT_URI),
+                urlencoding::encode(&state_token),
+            );
+            let msg = json!({ "type": "auth.youtube.url", "url": url }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::AuthYoutubeLogout => {
+            match youtube::delete_tokens(&state.pool).await {
+                Ok(_) => {
+                    state.youtube_connector.stop().await;
+                    ws_ok(client_tx);
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::AuthFacebookUrl => {
+            let config = state.facebook_config.read().await.clone();
+            if config.app_id.is_empty() {
+                ws_error(client_tx, "facebook_not_configured");
+                return;
+            }
+            let state_token = Uuid::new_v4().to_string();
+            {
+                let mut states = state.oauth_states.write().await;
+                states.insert(state_token.clone(), ("facebook".to_string(), std::time::Instant::now()));
+            }
+            let url = format!(
+                "https://www.facebook.com/v19.0/dialog/oauth?client_id={}&redirect_uri={}&scope=pages_manage_posts,pages_read_engagement,publish_video&state={}",
+                urlencoding::encode(&config.app_id),
+                urlencoding::encode(crate::server::OAUTH_REDIRECT_URI),
+                urlencoding::encode(&state_token),
+            );
+            let msg = json!({ "type": "auth.facebook.url", "url": url }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::AuthFacebookLogout => {
+            match facebook::delete_tokens(&state.pool).await {
+                Ok(_) => {
+                    state.facebook_connector.stop().await;
+                    ws_ok(client_tx);
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Stream ───────────────────────────────────────────────────────────
+        WsCommand::StreamStats => {
+            #[derive(serde::Deserialize)]
+            struct MtxPath {
+                ready: bool,
+                #[serde(rename = "bytesReceived")]
+                bytes_received: u64,
+                #[serde(rename = "bytesSent")]
+                bytes_sent: u64,
+                tracks: Vec<String>,
+                readers: Vec<serde_json::Value>,
+            }
+            #[derive(serde::Deserialize)]
+            struct MtxList { items: Vec<MtxPath> }
+            let http = reqwest::Client::new();
+            let url = format!("http://localhost:{}/v3/paths/list", crate::mediamtx::API_PORT);
+            let offline = json!({
+                "ready": false, "bytesReceived": 0u64, "bytesSent": 0u64,
+                "readers": 0u32, "tracks": serde_json::Value::Array(vec![]),
+            });
+            let result = http.get(&url).timeout(std::time::Duration::from_secs(2)).send().await;
+            let stats = match result {
+                Ok(r) if r.status().is_success() => match r.json::<MtxList>().await {
+                    Ok(list) => match list.items.into_iter().find(|p| p.ready) {
+                        Some(p) => json!({
+                            "ready": true,
+                            "bytesReceived": p.bytes_received,
+                            "bytesSent": p.bytes_sent,
+                            "readers": p.readers.len() as u32,
+                            "tracks": p.tracks,
+                        }),
+                        None => offline,
+                    },
+                    Err(_) => offline,
+                },
+                _ => offline,
+            };
+            let msg = json!({ "type": "stream.stats", "stats": stats }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        // ── Broadlink ────────────────────────────────────────────────────────
+        WsCommand::BroadlinkStatus => {
+            let status = state.broadlink_connector.get_status().await;
+            let msg = json!({ "type": "broadlink.status", "status": status }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::BroadlinkDevicesList => {
+            let rows = sqlx::query_as::<_, (Uuid, String, String, Option<String>, String, String, bool)>(
+                "SELECT id, name, device_type, model, host, mac, is_default FROM broadlink_devices ORDER BY created_at",
+            )
+            .fetch_all(&state.pool)
+            .await;
+            match rows {
+                Ok(devices) => {
+                    let list: Vec<serde_json::Value> = devices
+                        .into_iter()
+                        .map(|(id, name, device_type, model, host, mac, is_default)| {
+                            json!({ "id": id, "name": name, "deviceType": device_type, "model": model, "host": host, "mac": mac, "isDefault": is_default })
+                        })
+                        .collect();
+                    let msg = json!({ "type": "broadlink.devices.list", "devices": list }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkDevicesAdd { name, host, mac, device_type, model } => {
+            let result = sqlx::query_as::<_, (Uuid,)>(
+                "INSERT INTO broadlink_devices (name, device_type, model, host, mac) \
+                 VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            )
+            .bind(&name)
+            .bind(&device_type)
+            .bind(&model)
+            .bind(&host)
+            .bind(&mac)
+            .fetch_one(&state.pool)
+            .await;
+            match result {
+                Ok((id,)) => {
+                    state.broadlink_connector.set_status(ConnectorStatus::Connected).await;
+                    let device = json!({ "id": id, "name": name, "deviceType": device_type, "model": model, "host": host, "mac": mac, "isDefault": false });
+                    let msg = json!({ "type": "broadlink.devices.add", "device": device }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkDevicesRemove { id } => {
+            let result = sqlx::query("DELETE FROM broadlink_devices WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&state.pool)
+                .await;
+            match result {
+                Ok(Some(_)) => ws_ok(client_tx),
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkDiscover => {
+            let pool = state.pool.clone();
+            let connector = state.broadlink_connector.clone();
+            tokio::spawn(async move {
+                match crate::broadlink::discover_devices(5).await {
+                    Ok(devices) => {
+                        for dev in &devices {
+                            let _ = sqlx::query(
+                                "INSERT INTO broadlink_devices (name, device_type, model, host, mac, last_seen_at) \
+                                 VALUES ($1, $2, $3, $4, $5, NOW()) \
+                                 ON CONFLICT (mac) DO UPDATE SET host = EXCLUDED.host, last_seen_at = NOW()",
+                            )
+                            .bind(&dev.name)
+                            .bind(&dev.device_type)
+                            .bind(&dev.model)
+                            .bind(&dev.host)
+                            .bind(&dev.mac)
+                            .execute(&pool)
+                            .await;
+                        }
+                        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
+                            .fetch_one(&pool)
+                            .await
+                            .unwrap_or(0);
+                        let new_status = if count > 0 {
+                            ConnectorStatus::Connected
+                        } else {
+                            ConnectorStatus::Disconnected
+                        };
+                        connector.set_status(new_status).await;
+                    }
+                    Err(e) => tracing::error!("BroadlinkDiscover WS: {e}"),
+                }
+            });
+            ws_ok(client_tx);
+        }
+        WsCommand::BroadlinkCommandsList { device_id, category } => {
+            let rows = if let Some(did) = device_id {
+                if let Some(cat) = category {
+                    sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
+                        "SELECT id, device_id, name, slug, code, code_type, category \
+                         FROM broadlink_commands WHERE device_id=$1 AND category=$2 ORDER BY created_at",
+                    )
+                    .bind(did)
+                    .bind(cat)
+                    .fetch_all(&state.pool)
+                    .await
+                } else {
+                    sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
+                        "SELECT id, device_id, name, slug, code, code_type, category \
+                         FROM broadlink_commands WHERE device_id=$1 ORDER BY created_at",
+                    )
+                    .bind(did)
+                    .fetch_all(&state.pool)
+                    .await
+                }
+            } else {
+                sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
+                    "SELECT id, device_id, name, slug, code, code_type, category \
+                     FROM broadlink_commands ORDER BY created_at",
+                )
+                .fetch_all(&state.pool)
+                .await
+            };
+            match rows {
+                Ok(commands) => {
+                    let list: Vec<serde_json::Value> = commands
+                        .into_iter()
+                        .map(|(id, did, name, slug, code, code_type, category)| {
+                            json!({ "id": id, "deviceId": did, "name": name, "slug": slug, "code": code, "codeType": code_type, "category": category })
+                        })
+                        .collect();
+                    let msg = json!({ "type": "broadlink.commands.list", "commands": list }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkCommandsAdd { device_id, name, slug, code, code_type, category } => {
+            let cat = category.unwrap_or_else(|| "other".to_string());
+            let result = sqlx::query_as::<_, (Uuid,)>(
+                "INSERT INTO broadlink_commands (device_id, name, slug, code, code_type, category) \
+                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+            )
+            .bind(device_id)
+            .bind(&name)
+            .bind(&slug)
+            .bind(&code)
+            .bind(&code_type)
+            .bind(&cat)
+            .fetch_one(&state.pool)
+            .await;
+            match result {
+                Ok((id,)) => {
+                    let cmd = json!({ "id": id, "deviceId": device_id, "name": name, "slug": slug, "code": code, "codeType": code_type, "category": cat });
+                    let msg = json!({ "type": "broadlink.commands.add", "command": cmd }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkCommandsUpdate { id, name, slug, code, code_type, category } => {
+            let result = sqlx::query(
+                "UPDATE broadlink_commands SET \
+                 name=COALESCE($2,name), slug=COALESCE($3,slug), code=COALESCE($4,code), \
+                 code_type=COALESCE($5,code_type), category=COALESCE($6,category), updated_at=NOW() \
+                 WHERE id=$1 RETURNING id, device_id, name, slug, code, code_type, category",
+            )
+            .bind(id)
+            .bind(&name)
+            .bind(&slug)
+            .bind(&code)
+            .bind(&code_type)
+            .bind(&category)
+            .fetch_optional(&state.pool)
+            .await;
+            match result {
+                Ok(Some(row)) => {
+                    let cmd = json!({
+                        "id": row.get::<Uuid, _>("id"),
+                        "deviceId": row.get::<Option<Uuid>, _>("device_id"),
+                        "name": row.get::<String, _>("name"),
+                        "slug": row.get::<String, _>("slug"),
+                        "code": row.get::<String, _>("code"),
+                        "codeType": row.get::<String, _>("code_type"),
+                        "category": row.get::<String, _>("category"),
+                    });
+                    let msg = json!({ "type": "broadlink.commands.update", "command": cmd }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkCommandsRemove { id } => {
+            let result = sqlx::query("DELETE FROM broadlink_commands WHERE id=$1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&state.pool)
+                .await;
+            match result {
+                Ok(Some(_)) => ws_ok(client_tx),
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BroadlinkLearnStart { device_id, signal_type } => {
+            if state
+                .broadlink_learn_active
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                .is_err()
+            {
+                ws_error(client_tx, "learn_already_active");
+                return;
+            }
+            let sig_type = signal_type.unwrap_or_else(|| "ir".to_string());
+            let device = sqlx::query_as::<_, (String, String, String)>(
+                "SELECT host, mac, device_type FROM broadlink_devices WHERE id = $1",
+            )
+            .bind(device_id)
+            .fetch_optional(&state.pool)
+            .await;
+            let (host, mac, devtype) = match device {
+                Ok(Some(row)) => row,
+                Ok(None) => {
+                    state.broadlink_learn_active.store(false, Ordering::SeqCst);
+                    ws_error(client_tx, "device_not_found");
+                    return;
+                }
+                Err(e) => {
+                    state.broadlink_learn_active.store(false, Ordering::SeqCst);
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
+            };
+            let learn_active = state.broadlink_learn_active.clone();
+            let learn_tx = state.broadlink_connector.learn_tx.clone();
+            tokio::spawn(async move {
+                let result = crate::broadlink::learn_code(&host, &mac, &devtype, &sig_type).await;
+                let event = match result {
+                    Ok(lr) => crate::connectors::broadlink::BroadlinkLearnEvent { code: lr.code, error: lr.error },
+                    Err(e) => crate::connectors::broadlink::BroadlinkLearnEvent { code: None, error: Some(e) },
+                };
+                let _ = learn_tx.send(event);
+                learn_active.store(false, Ordering::SeqCst);
+            });
+            ws_ok(client_tx);
+        }
+        WsCommand::BroadlinkLearnCancel => {
+            crate::broadlink::cancel_learn().await;
+            state.broadlink_learn_active.store(false, Ordering::SeqCst);
+            ws_ok(client_tx);
+        }
+        WsCommand::BroadlinkCommandsSend { id } => {
+            let row = sqlx::query_as::<_, (String, String, String, String)>(
+                "SELECT bc.code, bd.host, bd.mac, bd.device_type \
+                 FROM broadlink_commands bc \
+                 JOIN broadlink_devices bd ON bc.device_id = bd.id \
+                 WHERE bc.id = $1",
+            )
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await;
+            let (code, host, mac, devtype) = match row {
+                Ok(Some(r)) => r,
+                Ok(None) => { ws_error(client_tx, "not_found"); return; }
+                Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+            };
+            match crate::broadlink::send_code(&host, &mac, &devtype, &code).await {
+                Ok(r) if r.success => ws_ok(client_tx),
+                Ok(r) => ws_error(client_tx, &r.error.unwrap_or_default()),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
         }
     }
 }
@@ -473,6 +2048,88 @@ pub fn spawn_scheduling_tasks(event: Event, state: AppState) {
             }
         }
     });
+}
+
+/// Broadcast `upload.progress` to all connected WebSocket clients.
+pub async fn broadcast_upload_progress(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    recording_id: Uuid,
+    platform: &str,
+    progress_bytes: i64,
+    total_bytes: i64,
+) {
+    let msg = json!({
+        "type": "upload.progress",
+        "recordingId": recording_id,
+        "platform": platform,
+        "progressBytes": progress_bytes,
+        "totalBytes": total_bytes,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast `upload.completed` to all connected WebSocket clients.
+pub async fn broadcast_upload_completed(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    recording_id: Uuid,
+    platform: &str,
+    video_id: &str,
+    video_url: &str,
+) {
+    let msg = json!({
+        "type": "upload.completed",
+        "recordingId": recording_id,
+        "platform": platform,
+        "videoId": video_id,
+        "videoUrl": video_url,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast `upload.failed` to all connected WebSocket clients.
+pub async fn broadcast_upload_failed(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    recording_id: Uuid,
+    platform: &str,
+    error: &str,
+) {
+    let msg = json!({
+        "type": "upload.failed",
+        "recordingId": recording_id,
+        "platform": platform,
+        "error": error,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast `upload.paused` to all connected WebSocket clients.
+pub async fn broadcast_upload_paused(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    recording_id: Uuid,
+    reason: &str,
+) {
+    let msg = json!({
+        "type": "upload.paused",
+        "recordingId": recording_id,
+        "reason": reason,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
 }
 
 pub async fn write_youtube_result(

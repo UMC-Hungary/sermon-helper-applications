@@ -23,6 +23,7 @@ import {
 } from '$lib/stores/connectors.js';
 import { broadlinkDiscoveredDevices, broadlinkLearnResult } from '$lib/stores/broadlink.js';
 import { keynoteStatus, pptResults, pptFolders } from '$lib/stores/presentations.js';
+import { uploadProgress } from '$lib/stores/uploads.js';
 import { listFolders } from '$lib/api/presentations.js';
 import { WsMessageSchema } from '$lib/schemas/ws-messages.js';
 import type { EventSummary } from '$lib/schemas/event.js';
@@ -199,6 +200,54 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 		pptResults.set(msg.files);
 	} else if (msg.type === 'ppt.folders_changed') {
 		listFolders().then((folders) => pptFolders.set(folders));
+	} else if (msg.type === 'upload.progress') {
+		uploadProgress.update((map) => ({
+			...map,
+			[`${msg.recordingId}:${msg.platform}`]: {
+				platform: msg.platform,
+				progressBytes: msg.progressBytes,
+				totalBytes: msg.totalBytes,
+				state: 'uploading' as const,
+			},
+		}));
+	} else if (msg.type === 'upload.completed') {
+		uploadProgress.update((map) => ({
+			...map,
+			[`${msg.recordingId}:${msg.platform}`]: {
+				platform: msg.platform,
+				progressBytes: 0,
+				totalBytes: 0,
+				state: 'completed' as const,
+				videoId: msg.videoId,
+				videoUrl: msg.videoUrl,
+			},
+		}));
+		toast.success(`Recording uploaded to ${msg.platform}`);
+	} else if (msg.type === 'upload.failed') {
+		uploadProgress.update((map) => ({
+			...map,
+			[`${msg.recordingId}:${msg.platform}`]: {
+				platform: msg.platform,
+				progressBytes: 0,
+				totalBytes: 0,
+				state: 'failed' as const,
+				error: msg.error,
+			},
+		}));
+		toast.error(`Upload to ${msg.platform} failed: ${msg.error}`);
+	} else if (msg.type === 'upload.paused') {
+		uploadProgress.update((map) => {
+			const updated = { ...map };
+			for (const key of Object.keys(updated)) {
+				if (key.startsWith(`${msg.recordingId}:`)) {
+					const existing = updated[key];
+					if (existing) {
+						updated[key] = { ...existing, state: 'paused' as const };
+					}
+				}
+			}
+			return updated;
+		});
 	}
 }
 

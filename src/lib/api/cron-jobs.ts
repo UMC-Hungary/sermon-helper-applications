@@ -7,6 +7,7 @@ export const CronJobSchema = z.object({
   cronExpression: z.string(),
   enabled: z.boolean(),
   pullYoutube: z.boolean(),
+  autoUpload: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -24,13 +25,14 @@ export function createCronJob(body: {
   cronExpression: string;
   enabled: boolean;
   pullYoutube: boolean;
+  autoUpload: boolean;
 }): Promise<CronJob> {
   return apiFetch('/api/cron-jobs', CronJobSchema, { method: 'POST', body });
 }
 
 export function updateCronJob(
   id: string,
-  body: { name: string; cronExpression: string; enabled: boolean; pullYoutube: boolean },
+  body: { name: string; cronExpression: string; enabled: boolean; pullYoutube: boolean; autoUpload: boolean },
 ): Promise<CronJob> {
   return apiFetch(`/api/cron-jobs/${id}`, CronJobSchema, { method: 'PUT', body });
 }

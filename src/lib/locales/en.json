@@ -834,6 +834,49 @@
 				"disconnected": "Disconnected",
 				"error": "Error"
 			}
+		},
+		"dependencies": {
+			"title": "Dependencies",
+			"note": "Optional packages needed for stream preview and multi-stream relay."
+		},
+		"obsBadge": {
+			"title": "OBS Badge",
+			"description": "Create a liquid glass badge in OBS using the LucidGlass shader. Requires OBS to be connected first.",
+			"obsNotConnected": "OBS must be connected first. Please configure and connect OBS above.",
+			"installButton": "Install Plugin & Shader",
+			"installing": "Installing…",
+			"pluginInstalled": "Plugin: ✓ Installed",
+			"pluginNotInstalled": "Plugin: ✗ Not installed — please install obs-shaderfilter manually",
+			"shaderInstalled": "Shader: ✓ Installed",
+			"shaderNotInstalled": "Shader: ✗ Failed to write shader file",
+			"targetScene": "Target Scene",
+			"selectScene": "Select a scene…",
+			"loadingScenes": "Loading scenes…",
+			"selectSceneError": "Please select a scene",
+			"createButton": "Create Badge Sources",
+			"creating": "Creating…",
+			"sourcesCreated": "✓ Badge sources created in \"{sceneName}\""
+		},
+		"cronJobs": {
+			"title": "Cron Jobs",
+			"colName": "Name",
+			"colExpression": "Expression",
+			"colEnabled": "Enabled",
+			"colPullYoutube": "Pull YouTube",
+			"colActions": "Actions",
+			"noneConfigured": "No cron jobs configured yet.",
+			"editTitle": "Edit Cron Job",
+			"addTitle": "Add Cron Job",
+			"namePlaceholder": "e.g. YouTube poll",
+			"expressionLabel": "Cron Expression",
+			"expressionPlaceholder": "e.g. 0 */5 * * * * (every 5 min)",
+			"enabledLabel": "Enabled",
+			"pullYoutubeLabel": "Pull YouTube Live Events",
+			"saving": "Saving…",
+			"save": "Save",
+			"cancel": "Cancel",
+			"editButton": "Edit",
+			"deleteButton": "Delete"
 		}
 	},
 	"errorsPage": {

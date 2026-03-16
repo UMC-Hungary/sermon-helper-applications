@@ -16,84 +16,165 @@ pub fn get_obs_plugin_dir() -> PathBuf {
 }
 
 pub fn check_shaderfilter_installed() -> bool {
-    let plugin_dir = get_obs_plugin_dir();
-    
+    // Only check the user plugins path — that is the only path OBS searches at runtime.
+    // The system-wide /Library path is where the .pkg installer writes, but OBS does
+    // not load from there; we copy to the user path in extract_shaderfilter().
+    let user_base = get_obs_plugin_dir();
+    user_base.join("obs-shaderfilter.plugin").exists()
+        || user_base.join("obs-shaderfilter").exists()
+}
+
+async fn resolve_latest_download_url(client: &reqwest::Client) -> Result<(String, String), String> {
     #[cfg(target_os = "macos")]
-    let shaderfilter_path = plugin_dir.join("obs-shaderfilter.dylib");
-    
+    let asset_suffix = "-macos-universal.pkg";
     #[cfg(not(target_os = "macos"))]
-    let shaderfilter_path = plugin_dir.join("obs-shaderfilter.so");
-    
-    shaderfilter_path.exists()
+    let asset_suffix = "-windows.zip";
+
+    let api_url = "https://api.github.com/repos/exeldro/obs-shaderfilter/releases/latest";
+    let response = client
+        .get(api_url)
+        .header("User-Agent", "sermon-helper-tauri")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch latest release info: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "GitHub API returned HTTP {} when checking for the latest release",
+            response.status()
+        ));
+    }
+
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+
+    let tag = body["tag_name"]
+        .as_str()
+        .ok_or("Release response missing tag_name")?;
+
+    let assets = body["assets"]
+        .as_array()
+        .ok_or("Release response missing assets")?;
+
+    let asset = assets
+        .iter()
+        .find(|a| {
+            a["name"]
+                .as_str()
+                .map(|n| n.ends_with(asset_suffix))
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| format!("No {asset_suffix} asset found in release {tag}"))?;
+
+    let download_url = asset["browser_download_url"]
+        .as_str()
+        .ok_or("Asset missing browser_download_url")?
+        .to_string();
+
+    let file_name = asset["name"]
+        .as_str()
+        .ok_or("Asset missing name")?
+        .to_string();
+
+    Ok((download_url, file_name))
 }
 
 pub async fn download_shaderfilter() -> Result<PathBuf, String> {
-    use reqwest::Client;
     use std::fs;
-    
+
     let plugin_dir = get_obs_plugin_dir();
-    fs::create_dir_all(&plugin_dir).map_err(|e| format!("Failed to create plugin directory: {}", e))?;
-    
-    #[cfg(target_os = "macos")]
-    let url = "https://github.com/exeldro/obs-shaderfilter/releases/download/2.4.3/obs-shaderfilter-2.4.3-macos-universal.pkg";
-    
-    #[cfg(not(target_os = "macos"))]
-    let url = "https://github.com/exeldro/obs-shaderfilter/releases/download/2.4.3/obs-shaderfilter-2.4.3-windows.zip";
-    
-    let client = Client::new();
-    let response = client.get(url)
+    fs::create_dir_all(&plugin_dir)
+        .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
+
+    let client = reqwest::Client::new();
+
+    let (url, file_name) = resolve_latest_download_url(&client).await?;
+
+    let response = client
+        .get(&url)
         .send()
         .await
         .map_err(|e| format!("Failed to download shaderfilter: {}", e))?;
-    
-    let bytes = response.bytes()
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Download failed: HTTP {} for {}",
+            response.status(),
+            url
+        ));
+    }
+
+    let bytes = response
+        .bytes()
         .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
-    
-    #[cfg(target_os = "macos")]
-    let pkg_path = plugin_dir.join("obs-shaderfilter.pkg");
-    
-    #[cfg(not(target_os = "macos"))]
-    let pkg_path = plugin_dir.join("obs-shaderfilter.zip");
-    
+        .map_err(|e| format!("Failed to read download: {}", e))?;
+
+    let pkg_path = plugin_dir.join(&file_name);
     fs::write(&pkg_path, &bytes).map_err(|e| format!("Failed to save file: {}", e))?;
-    
+
     Ok(pkg_path)
 }
 
 #[cfg(target_os = "macos")]
 pub fn extract_shaderfilter(pkg_path: &PathBuf) -> Result<(), String> {
     use std::process::Command;
-    
-    let plugin_dir = get_obs_plugin_dir();
-    let extract_dir = plugin_dir.join("extracted");
-    
-    std::fs::create_dir_all(&extract_dir).map_err(|e| format!("Failed to create extract dir: {}", e))?;
-    
-    let output = Command::new("xar")
-        .arg("-xf")
-        .arg(pkg_path)
-        .arg("-C")
-        .arg(&extract_dir)
+
+    // Run the .pkg installer with administrator privileges.
+    // This puts the plugin into /Library/Application Support/obs-studio/plugins/
+    // (the system-wide path), NOT the user path that OBS actually searches.
+    let pkg_str = pkg_path.to_string_lossy();
+    let pkg_escaped = pkg_str.replace('\'', "'\"'\"'");
+    let script = format!(
+        "do shell script \"/usr/sbin/installer -pkg '{}' -target /\" with administrator privileges",
+        pkg_escaped
+    );
+
+    let output = Command::new("osascript")
+        .args(["-e", &script])
         .output()
-        .map_err(|e| format!("Failed to extract pkg: {}", e))?;
-    
+        .map_err(|e| format!("Failed to run osascript: {}", e))?;
+
     if !output.status.success() {
-        return Err(format!("xar extraction failed: {:?}", String::from_utf8_lossy(&output.stderr)));
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(format!(
+            "Plugin installation failed (exit {}): {}",
+            output.status.code().unwrap_or(-1),
+            if !stderr.is_empty() { stderr.as_ref() } else { stdout.as_ref() }
+        ));
     }
-    
-    let payload_dir = extract_dir.join("Payload");
-    if payload_dir.exists() {
-        for entry in std::fs::read_dir(&payload_dir).map_err(|e| format!("Failed to read payload: {}", e))? {
-            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
-            let path = entry.path();
-            if path.is_file() && path.to_string_lossy().ends_with(".so") || path.to_string_lossy().ends_with(".dylib") {
-                let dest = plugin_dir.join(path.file_name().unwrap());
-                std::fs::copy(&path, &dest).map_err(|e| format!("Failed to copy plugin: {}", e))?;
-            }
+
+    // OBS 28+ on macOS only loads plugins from ~/Library/Application Support/obs-studio/plugins/,
+    // not from the system-wide /Library path where the installer writes.
+    // Copy the freshly installed bundle to the user path so OBS finds it.
+    let system_plugin = PathBuf::from(
+        "/Library/Application Support/obs-studio/plugins/obs-shaderfilter.plugin",
+    );
+    let user_plugin_dir = get_obs_plugin_dir();
+
+    if system_plugin.exists() {
+        std::fs::create_dir_all(&user_plugin_dir)
+            .map_err(|e| format!("Failed to create user plugin dir: {}", e))?;
+
+        let cp = Command::new("cp")
+            .args([
+                "-Rf",
+                &system_plugin.to_string_lossy().to_string(),
+                &user_plugin_dir.to_string_lossy().to_string(),
+            ])
+            .output()
+            .map_err(|e| format!("Failed to copy plugin to user path: {}", e))?;
+
+        if !cp.status.success() {
+            return Err(format!(
+                "Plugin installed but failed to copy to ~/Library path: {}",
+                String::from_utf8_lossy(&cp.stderr)
+            ));
         }
     }
-    
+
     Ok(())
 }
 
@@ -137,17 +218,15 @@ pub fn install_shader() -> Result<PathBuf, String> {
 }
 
 pub async fn install_badge() -> Result<BadgeInstallResult, String> {
-    let shaderfilter_installed = check_shaderfilter_installed();
-    
-    if !shaderfilter_installed {
-        let zip_path = download_shaderfilter().await?;
-        extract_shaderfilter(&zip_path)?;
-        std::fs::remove_file(zip_path).ok();
-    }
-    
+    // Always download and run the installer so that stale/outdated plugin
+    // versions (e.g. 2.4.3 built against an older OBS API) are upgraded.
+    let pkg_path = download_shaderfilter().await?;
+    extract_shaderfilter(&pkg_path)?;
+    std::fs::remove_file(pkg_path).ok();
+
     let shader_path = install_shader()?;
     let shader_installed = shader_path.exists();
-    
+
     Ok(BadgeInstallResult {
         shaderfilter_installed: check_shaderfilter_installed(),
         shader_installed,

@@ -1,3 +1,5 @@
+include!(concat!(env!("OUT_DIR"), "/shader_content.rs"));
+
 pub fn get_shader_content() -> Result<String, String> {
-    Ok(include_str!("../../../LucidGlass.shader").to_string())
+    Ok(SHADER_CONTENT.to_string())
 }

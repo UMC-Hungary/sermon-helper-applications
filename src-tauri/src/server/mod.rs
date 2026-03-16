@@ -33,6 +33,7 @@ use crate::connectors::{
 use crate::connectors::keynote::KeynoteConnector;
 use crate::models::event::find_current_event;
 use crate::scheduler::CronScheduler;
+use crate::uploader::UploadService;
 
 /// Fixed port for OAuth callbacks — must match Google/Facebook Cloud Console configuration.
 pub(crate) const OAUTH_CALLBACK_PORT: u16 = 8766;
@@ -55,8 +56,9 @@ pub struct AppState {
     pub facebook_config: Arc<RwLock<FacebookConfig>>,
     /// Pending OAuth state tokens: state_string → (connector_name, created_at)
     pub oauth_states: Arc<RwLock<HashMap<String, (String, Instant)>>>,
-    pub app_handle: tauri::AppHandle,
+    pub app_handle: Option<tauri::AppHandle>,
     pub cron_scheduler: Arc<CronScheduler>,
+    pub upload_service: Arc<UploadService>,
     #[cfg(target_os = "macos")]
     pub keynote_connector: Arc<KeynoteConnector>,
 }
@@ -75,7 +77,7 @@ pub async fn build_and_serve(
     youtube_config: Arc<RwLock<YouTubeConfig>>,
     facebook_config: Arc<RwLock<FacebookConfig>>,
     oauth_states: Arc<RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
-    app_handle: tauri::AppHandle,
+    app_handle: Option<tauri::AppHandle>,
     cron_scheduler: Arc<CronScheduler>,
     #[cfg(target_os = "macos")] keynote_connector: Arc<KeynoteConnector>,
 ) -> anyhow::Result<()> {
@@ -83,14 +85,25 @@ pub async fn build_and_serve(
         Arc::new(RwLock::new(HashMap::new()));
     let server_id = Uuid::new_v4().to_string();
 
+    // Create the upload service here so it shares the ws_clients Arc.
+    let upload_service = Arc::new(UploadService::new(
+        pool.clone(),
+        Arc::clone(&youtube_connector),
+        Arc::clone(&facebook_connector),
+        Arc::clone(&obs_connector),
+        Arc::clone(&facebook_config),
+        Arc::clone(&ws_clients),
+    ));
+
     // Initial scheduler load — runs with the real ws_clients so broadcasts reach clients.
     {
         let pool_c = pool.clone();
         let clients_c = ws_clients.clone();
         let yt_c = youtube_connector.clone();
         let sched_c = cron_scheduler.clone();
+        let us_c = upload_service.clone();
         tokio::spawn(async move {
-            sched_c.reload(pool_c, clients_c, yt_c).await;
+            sched_c.reload(pool_c, clients_c, yt_c, us_c).await;
         });
     }
 
@@ -110,6 +123,7 @@ pub async fn build_and_serve(
         oauth_states,
         app_handle,
         cron_scheduler,
+        upload_service: upload_service.clone(),
         #[cfg(target_os = "macos")]
         keynote_connector: keynote_connector.clone(),
     };
@@ -371,6 +385,7 @@ pub async fn build_and_serve(
             "/events/{id}/activities/{activity_id}",
             delete(routes::delete_event_activity),
         )
+        .route("/recordings", get(routes::list_all_recordings))
         .route(
             "/recordings/untracked",
             get(routes::list_untracked_recordings),
@@ -416,6 +431,7 @@ pub async fn build_and_serve(
             "/connectors/broadlink/commands/{id}/send",
             post(routes::broadlink_send_command),
         )
+        .route("/connectors/state", get(routes::get_connector_state))
         .route("/connectors/status", get(routes::get_connector_statuses))
         .route("/stream/stats", get(routes::get_stream_stats))
         .route("/connectors/youtube/content", get(routes::get_youtube_content))
@@ -437,6 +453,11 @@ pub async fn build_and_serve(
             "/cron-jobs/{id}",
             put(routes::update_cron_job).delete(routes::delete_cron_job),
         )
+        .route(
+            "/events/{id}/recordings/flag-upload",
+            post(routes::flag_upload),
+        )
+        .route("/uploads/trigger", post(routes::trigger_upload_cycle))
         .merge(ppt_routes)
         .merge(keynote_routes)
         .route_layer(middleware::from_fn_with_state(
@@ -450,6 +471,7 @@ pub async fn build_and_serve(
     // only adds response headers and never modifies request headers, so it is
     // safe to apply to all routes including /ws.
     let mut app = Router::new()
+        .route("/health", get(|| async { axum::http::StatusCode::OK }))
         .route("/caption", get(caption::caption_handler))
         .route("/caption/logo", get(caption::caption_logo_handler))
         .route("/openapi.json", get(openapi::serve_spec))
