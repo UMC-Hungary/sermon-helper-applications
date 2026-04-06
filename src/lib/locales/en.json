@@ -671,7 +671,32 @@
 		"errors": {
 			"obsNotConnected": "OBS is not connected. Please connect to OBS first.",
 			"fillAllFields": "Please fill in all required fields"
-		}
+		},
+		"availableDevices": "Available Devices",
+		"listeners": "Device Listeners",
+		"scanNow": "Scan Now",
+		"addListener": "Add Listener",
+		"connectorPlaceholder": "OBS Studio",
+		"notConnected": "Connect OBS to scan devices",
+		"categories": {
+			"display": "Display",
+			"audioInput": "Audio Input",
+			"audioOutput": "Audio Output",
+			"videoInput": "Video Input",
+			"captureCard": "Capture Card"
+		},
+		"listenerForm": {
+			"category": "Category",
+			"device": "Device",
+			"name": "Friendly Name",
+			"save": "Save",
+			"cancel": "Cancel"
+		},
+		"status": {
+			"available": "Available",
+			"unavailable": "Unavailable"
+		},
+		"manageDeviceMonitors": "Manage Device Monitors →"
 	},
 	"nav": {
 		"dashboard": "Dashboard",
@@ -680,7 +705,8 @@
 		"settings": "Settings",
 		"liveEvents": "Live Events & Videos",
 		"presentations": "Presentations",
-		"obsCaption": "OBS Caption"
+		"obsCaption": "OBS Caption",
+		"obsDevices": "Device Monitor"
 	},
 	"presentations": {
 		"title": "Presentations",
@@ -721,6 +747,8 @@
 		},
 		"loading": "Loading…",
 		"error": "Failed to load content",
+		"sessionExpired": "YouTube session expired — please re-login",
+		"reLogin": "Re-login with YouTube",
 		"retry": "Retry",
 		"notConnected": "Not connected",
 		"connectFirst": "Connect your YouTube account in Settings to view your channel content.",
@@ -856,6 +884,21 @@
 			"createButton": "Create Badge Sources",
 			"creating": "Creating…",
 			"sourcesCreated": "✓ Badge sources created in \"{sceneName}\""
+		},
+		"updater": {
+			"title": "Application Version",
+			"currentVersion": "Current Version",
+			"checkForUpdates": "Check for Updates",
+			"checking": "Checking…",
+			"upToDate": "You're up to date",
+			"updateAvailable": "Update available: v{version}",
+			"download": "Download",
+			"lastChecked": "Last checked",
+			"errorChecking": "Failed to check for updates",
+			"toast": {
+				"title": "Update Available",
+				"description": "Version {version} is available"
+			}
 		},
 		"cronJobs": {
 			"title": "Cron Jobs",
