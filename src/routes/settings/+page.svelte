@@ -6,6 +6,8 @@
   import AppModeSettings from '$lib/components/settings/AppModeSettings.svelte';
   import ObsBadgeSettings from '$lib/components/settings/ObsBadgeSettings.svelte';
   import CronJobsSettings from '$lib/components/settings/CronJobsSettings.svelte';
+  import AppVersionSettings from '$lib/components/settings/AppVersionSettings.svelte';
+  import { useWebPresenter } from '$lib/stores/presenter.js';
 </script>
 
 <div class="settings-container">
@@ -29,9 +31,22 @@
   <ConnectorSettingsBlock connectorId="broadlink" />
   <ConnectorSettingsBlock connectorId="discord" />
 
+  <h2 class="section-heading">Presentations</h2>
+  <section>
+    <p class="note">
+      Use the built-in web presenter to parse and display slides in the browser
+      instead of opening Keynote or PowerPoint. Only <code>.pptx</code> files are supported.
+    </p>
+    <label class="toggle-label">
+      <input type="checkbox" bind:checked={$useWebPresenter} />
+      Use web presenter
+    </label>
+  </section>
+
   <ObsBadgeSettings />
 
   <CronJobsSettings />
+  <AppVersionSettings />
 </div>
 
 <style>
@@ -64,5 +79,27 @@
     font-size: 0.875rem;
     color: var(--text-secondary);
     margin: 0.5rem 0 1rem;
+  }
+
+  code {
+    font-family: monospace;
+    font-size: 0.875em;
+    background: var(--content-bg);
+    padding: 0.1em 0.3em;
+    border-radius: 0.25rem;
+  }
+
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .toggle-label input[type='checkbox'] {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
   }
 </style>
