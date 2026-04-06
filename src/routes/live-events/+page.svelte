@@ -2,6 +2,7 @@
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { youtubeStatus } from '$lib/stores/connectors.js';
   import { fetchYouTubeContent, type ChannelVideoItem } from '$lib/api/connectors.js';
+  import { ApiError } from '$lib/api/client.js';
   import { _ } from 'svelte-i18n';
 
   type PlatformId = 'youtube';
@@ -13,6 +14,7 @@
   let selectedTab = $state<ContentTab>('videos');
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let isAuthError = $state(false);
   let broadcasts = $state<ChannelVideoItem[]>([]);
   let videos = $state<ChannelVideoItem[]>([]);
   let hasFetched = $state(false);
@@ -27,12 +29,16 @@
     if (!isYouTubeConnected()) return;
     loading = true;
     error = null;
+    isAuthError = false;
     hasFetched = true;
     try {
       const content = await fetchYouTubeContent();
       broadcasts = content.liveBroadcasts;
       videos = content.videos;
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        isAuthError = true;
+      }
       error = e instanceof Error ? e.message : String(e);
     } finally {
       loading = false;
@@ -41,6 +47,7 @@
 
   async function retry() {
     hasFetched = false;
+    isAuthError = false;
     await load();
   }
 
@@ -171,9 +178,15 @@
       <!-- Error -->
       {:else if error}
         <div class="error-state">
-          <p class="error-msg">{$_('liveEvents.error')}</p>
-          <p class="error-detail">{error}</p>
-          <button class="pill-btn" onclick={retry}>{$_('liveEvents.retry')}</button>
+          <p class="error-msg">{isAuthError ? $_('liveEvents.sessionExpired') : $_('liveEvents.error')}</p>
+          {#if !isAuthError}
+            <p class="error-detail">{error}</p>
+          {/if}
+          {#if isAuthError}
+            <a href="/settings" class="pill-btn">{$_('liveEvents.reLogin')}</a>
+          {:else}
+            <button class="pill-btn" onclick={retry}>{$_('liveEvents.retry')}</button>
+          {/if}
         </div>
 
       <!-- Empty -->
