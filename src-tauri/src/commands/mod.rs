@@ -4,5 +4,7 @@ pub mod badge;
 pub mod collections;
 #[cfg(desktop)]
 pub mod connectors;
+#[cfg(desktop)]
+pub mod updater;
 pub mod server;
 pub mod token;

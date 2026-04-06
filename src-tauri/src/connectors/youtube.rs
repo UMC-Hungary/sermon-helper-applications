@@ -25,6 +25,13 @@ struct TokenResponse {
     expires_in: Option<u64>,
 }
 
+// ── Error types ───────────────────────────────────────────────────────────────
+
+/// Returned when Google rejects the refresh token (HTTP 400) — the user must re-authenticate.
+#[derive(Debug, thiserror::Error)]
+#[error("YouTube authentication required — please re-login")]
+pub struct AuthRequired;
+
 // ── API response types ────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -180,7 +187,7 @@ pub async fn refresh_tokens(
         .ok_or_else(|| anyhow::anyhow!("No refresh token available"))?;
 
     let client = reqwest::Client::new();
-    let resp = client
+    let raw = client
         .post("https://oauth2.googleapis.com/token")
         .form(&[
             ("client_id", config.client_id.as_str()),
@@ -189,10 +196,15 @@ pub async fn refresh_tokens(
             ("grant_type", "refresh_token"),
         ])
         .send()
-        .await?
-        .error_for_status()?
-        .json::<TokenResponse>()
         .await?;
+
+    // A 400 from Google's token endpoint means the refresh token is invalid or
+    // revoked — re-authentication is required (not just a transient error).
+    if raw.status() == reqwest::StatusCode::BAD_REQUEST {
+        return Err(AuthRequired.into());
+    }
+
+    let resp = raw.error_for_status()?.json::<TokenResponse>().await?;
 
     let expires_at = resp
         .expires_in
@@ -261,6 +273,39 @@ async fn run_token_loop(
         }
     };
 
+    // Eagerly refresh on startup so we detect an invalid token before ever
+    // setting the status to Connected. Without this, the page could load while
+    // the connector appears connected, then fail with a 500 when the actual
+    // refresh happens inside fetch_channel_content.
+    let needs_initial_refresh = token.expires_at.map_or(false, |exp| {
+        exp - Utc::now() < chrono::Duration::minutes(10)
+    });
+
+    if needs_initial_refresh {
+        match refresh_tokens(&pool, &config, &token).await {
+            Ok(new_token) => {
+                tracing::info!("YouTube token refreshed on startup");
+                token = new_token;
+            }
+            Err(e) => {
+                tracing::error!("YouTube startup token refresh failed: {e}");
+                if e.is::<AuthRequired>() {
+                    let _ = delete_tokens(&pool).await;
+                }
+                set_status(
+                    &status,
+                    &status_tx,
+                    &app,
+                    ConnectorStatus::Error {
+                        message: "Re-login required".to_string(),
+                    },
+                )
+                .await;
+                return;
+            }
+        }
+    }
+
     set_status(&status, &status_tx, &app, ConnectorStatus::Connected).await;
 
     loop {
@@ -290,6 +335,9 @@ async fn run_token_loop(
                 }
                 Err(e) => {
                     tracing::error!("YouTube token refresh failed: {e}");
+                    if e.is::<AuthRequired>() {
+                        let _ = delete_tokens(&pool).await;
+                    }
                     set_status(
                         &status,
                         &status_tx,
@@ -578,7 +626,17 @@ pub async fn fetch_channel_content(
     });
 
     if needs_refresh {
-        token = refresh_tokens(pool, config, &token).await?;
+        token = match refresh_tokens(pool, config, &token).await {
+            Ok(t) => t,
+            Err(e) => {
+                // Tokens are now invalid — remove them so the connector won't
+                // appear connected on the next startup.
+                if e.is::<AuthRequired>() {
+                    let _ = delete_tokens(pool).await;
+                }
+                return Err(e);
+            }
+        };
     }
 
     let client = reqwest::Client::new();

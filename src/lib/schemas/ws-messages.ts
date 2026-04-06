@@ -3,6 +3,44 @@ import { EventSchema, EventSummarySchema, EventActivitySchema } from './event.js
 import { RecordingSchema, RecordingWithEventSchema } from './recording.js';
 import { UntrackedRecordingSchema } from './untracked-recording.js';
 
+// ── OBS Device types ──────────────────────────────────────────────────────────
+
+export const ObsDeviceItemSchema = z.object({
+  itemName: z.string(),
+  itemValue: z.string(),
+});
+
+export const ObsAvailableDevicesSchema = z.object({
+  displays: z.array(ObsDeviceItemSchema),
+  audioInputs: z.array(ObsDeviceItemSchema),
+  audioOutputs: z.array(ObsDeviceItemSchema),
+  videoInputs: z.array(ObsDeviceItemSchema),
+  captureCards: z.array(ObsDeviceItemSchema),
+  scannedAt: z.string(),
+});
+
+export const DeviceListenerSchema = z.object({
+  id: z.string().uuid(),
+  connectorType: z.string(),
+  category: z.string(),
+  deviceItemValue: z.string(),
+  deviceItemName: z.string(),
+  friendlyName: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const DeviceListenerStatusSchema = z.object({
+  listenerId: z.string().uuid(),
+  available: z.boolean(),
+  lastChecked: z.string(),
+});
+
+export type ObsDeviceItem = z.infer<typeof ObsDeviceItemSchema>;
+export type ObsAvailableDevices = z.infer<typeof ObsAvailableDevicesSchema>;
+export type DeviceListener = z.infer<typeof DeviceListenerSchema>;
+export type DeviceListenerStatus = z.infer<typeof DeviceListenerStatusSchema>;
+
 const ConnectorStatusPayloadSchema = z.object({
   type: z.enum(['disconnected', 'connecting', 'connected', 'error']),
   message: z.string().optional(),
@@ -59,6 +97,28 @@ export const BroadlinkDeviceSchema = z.object({
   isDefault: z.boolean(),
 });
 
+export const WsClientInfoSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string(),
+  userAgent: z.string().nullable(),
+  connectedAt: z.string(),
+  lastPongAt: z.string().nullable(),
+  latencyMs: z.number().int().nullable(),
+});
+
+export const SlideContentSchema = z.object({
+  index: z.number().int().positive(),
+  texts: z.array(z.string()),
+});
+
+export const PresenterStateSchema = z.object({
+  loaded: z.boolean(),
+  filePath: z.string().nullable(),
+  currentSlide: z.number().int().nonnegative(),
+  totalSlides: z.number().int().nonnegative(),
+  slides: z.array(SlideContentSchema),
+});
+
 export const BroadlinkCommandSchema = z.object({
   id: z.string().uuid(),
   deviceId: z.string().uuid().nullable(),
@@ -72,6 +132,9 @@ export const BroadlinkCommandSchema = z.object({
 export type KeynoteStatus = z.infer<typeof KeynoteStatusSchema>;
 export type PptFile = z.infer<typeof PptFileSchema>;
 export type PptFolder = z.infer<typeof PptFolderSchema>;
+export type SlideContent = z.infer<typeof SlideContentSchema>;
+export type PresenterState = z.infer<typeof PresenterStateSchema>;
+export type WsClientInfo = z.infer<typeof WsClientInfoSchema>;
 export type CronJob = z.infer<typeof CronJobSchema>;
 export type StreamStats = z.infer<typeof StreamStatsSchema>;
 export type BroadlinkDevice = z.infer<typeof BroadlinkDeviceSchema>;
@@ -192,6 +255,17 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   // ── PPT (WS command responses) ─────────────────────────────────────────────
   z.object({ type: z.literal('ppt.folders.list'), folders: z.array(PptFolderSchema) }),
   z.object({ type: z.literal('ppt.folders.add'), folder: PptFolderSchema.nullable() }),
+  // ── Presenter (push + command responses) ───────────────────────────────────
+  z.object({ type: z.literal('presenter.state'), state: PresenterStateSchema }),
+  z.object({
+    type: z.literal('presenter.slide_changed'),
+    currentSlide: z.number().int().nonnegative(),
+    totalSlides: z.number().int().nonnegative(),
+  }),
+  // ── Connected clients ───────────────────────────────────────────────────────
+  z.object({ type: z.literal('clients.updated'), clients: z.array(WsClientInfoSchema) }),
+  z.object({ type: z.literal('clients.list'), clients: z.array(WsClientInfoSchema) }),
+  z.object({ type: z.literal('ping'), pingId: z.number().int() }),
   // ── Connectors (WS command responses) ──────────────────────────────────────
   z.object({
     type: z.literal('connectors.status'),
@@ -249,6 +323,20 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('broadlink.commands.list'), commands: z.array(BroadlinkCommandSchema) }),
   z.object({ type: z.literal('broadlink.commands.add'), command: BroadlinkCommandSchema }),
   z.object({ type: z.literal('broadlink.commands.update'), command: BroadlinkCommandSchema }),
+  // ── OBS Devices ────────────────────────────────────────────────────────────
+  z.object({
+    type: z.literal('obs.devices.available'),
+    devices: ObsAvailableDevicesSchema,
+    listenerStatuses: z.array(DeviceListenerStatusSchema),
+  }),
+  z.object({
+    type: z.literal('obs.listeners.list'),
+    listeners: z.array(DeviceListenerSchema),
+    statuses: z.array(DeviceListenerStatusSchema),
+  }),
+  z.object({ type: z.literal('obs.listeners.create'), listener: DeviceListenerSchema }),
+  z.object({ type: z.literal('obs.listeners.update'), listener: DeviceListenerSchema }),
+  z.object({ type: z.literal('obs.listeners.delete'), id: z.string().uuid() }),
 ]);
 
 export type WsMessage = z.infer<typeof WsMessageSchema>;

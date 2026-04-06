@@ -44,6 +44,7 @@ pub fn spec() -> Value {
             { "name": "Events",     "description": "Sermon / service events" },
             { "name": "Recordings", "description": "Video recording files linked to events" },
             { "name": "Connectors", "description": "Streaming software connector status (OBS, VMix)" },
+            { "name": "Presenter",  "description": "Web presenter — parse .pptx files and push slide changes to all connected browsers" },
             { "name": "WebSocket",  "description": "Real-time push stream — requires a WebSocket client, not HTTP" }
         ],
         "components": {
@@ -55,6 +56,32 @@ pub fn spec() -> Value {
                 }
             },
             "schemas": {
+                "SlideContent": {
+                    "type": "object",
+                    "description": "Text content extracted from a single slide.",
+                    "required": ["index", "texts"],
+                    "properties": {
+                        "index": { "type": "integer", "minimum": 1, "description": "1-based slide number" },
+                        "texts": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "All non-empty text paragraphs found on the slide"
+                        }
+                    }
+                },
+                "ParsedPresentation": {
+                    "type": "object",
+                    "description": "Structured content extracted from a parsed .pptx file.",
+                    "required": ["filePath", "totalSlides", "slides"],
+                    "properties": {
+                        "filePath":    { "type": "string", "example": "/Users/admin/Presentations/sunday-service.pptx" },
+                        "totalSlides": { "type": "integer", "minimum": 0 },
+                        "slides": {
+                            "type": "array",
+                            "items": { "$ref": "#/components/schemas/SlideContent" }
+                        }
+                    }
+                },
                 "BibleReference": {
                     "type": "object",
                     "required": ["type", "reference", "translation", "verses"],
@@ -468,6 +495,46 @@ pub fn spec() -> Value {
                     }
                 }
             },
+            "/api/presenter/parse": {
+                "post": {
+                    "tags": ["Presenter"],
+                    "summary": "Parse a .pptx file",
+                    "description": "Opens a `.pptx` file from the local filesystem, extracts text content from every slide, and returns the structured data. Only Open XML (`.pptx`) format is supported; legacy binary `.ppt` files must be re-saved as `.pptx` first.",
+                    "operationId": "parsePresentation",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["filePath"],
+                                    "properties": {
+                                        "filePath": { "type": "string", "example": "/Users/admin/Presentations/sunday-service.pptx" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Parsed presentation data",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean", "example": true },
+                                            "data": { "$ref": "#/components/schemas/ParsedPresentation" }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized" },
+                        "422": { "description": "File not found, not a valid .pptx, or no slides found" }
+                    }
+                }
+            },
             "/api/connectors/status": {
                 "get": {
                     "tags": ["Connectors"],
@@ -495,7 +562,7 @@ pub fn spec() -> Value {
                 "get": {
                     "tags": ["WebSocket"],
                     "summary": "WebSocket live stream",
-                    "description": "**This endpoint performs a WebSocket upgrade — it cannot be tested with the HTTP \"Send\" button.**\n\nUse a dedicated WebSocket client instead:\n- [Hoppscotch](https://hoppscotch.io) → New request → WebSocket\n- [websocat](https://github.com/vi/websocat): `websocat 'ws://<host>/ws?token=<token>'`\n- Bruno: add a request with type `socket`\n\n---\n\n**Connection URL:** `ws://<host>/ws?token=<token>`\n\nAuthentication uses the same bearer token passed as a **query parameter** (the `Authorization` header is not available during the WebSocket handshake).\n\n### Initial messages (pushed immediately on connect)\n\n```json\n{ \"type\": \"connected\", \"serverId\": \"<uuid>\" }\n{ \"type\": \"connector.status\", \"connector\": \"obs\",  \"status\": { \"type\": \"connected\" } }\n{ \"type\": \"connector.status\", \"connector\": \"vmix\", \"status\": { \"type\": \"disconnected\" } }\n```\n\n### Broadcast messages (sent when data changes)\n\n| `type` | Trigger | Schema |\n|---|---|---|\n| `connector.status` | OBS or VMix connection state changes | `WsConnectorStatusMessage` |\n| `event.changed` | Event created, updated, or deleted | `WsEventChangedMessage` |\n| `recording.changed` | Recording created or updated | `WsRecordingChangedMessage` |",
+                    "description": "**This endpoint performs a WebSocket upgrade — it cannot be tested with the HTTP \"Send\" button.**\n\nUse a dedicated WebSocket client instead:\n- [Hoppscotch](https://hoppscotch.io) → New request → WebSocket\n- [websocat](https://github.com/vi/websocat): `websocat 'ws://<host>/ws?token=<token>'`\n- Bruno: add a request with type `socket`\n\n---\n\n**Connection URL:** `ws://<host>/ws?token=<token>`\n\nAuthentication uses the same bearer token passed as a **query parameter** (the `Authorization` header is not available during the WebSocket handshake).\n\n### Initial messages (pushed immediately on connect)\n\n```json\n{ \"type\": \"connected\", \"serverId\": \"<uuid>\" }\n{ \"type\": \"connector.status\", \"connector\": \"obs\",  \"status\": { \"type\": \"connected\" } }\n{ \"type\": \"connector.status\", \"connector\": \"vmix\", \"status\": { \"type\": \"disconnected\" } }\n```\n\n### Broadcast messages (sent when data changes)\n\n| `type` | Trigger | Schema |\n|---|---|---|\n| `connector.status` | OBS or VMix connection state changes | `WsConnectorStatusMessage` |\n| `event.changed` | Event created, updated, or deleted | `WsEventChangedMessage` |\n| `recording.changed` | Recording created or updated | `WsRecordingChangedMessage` |\n| `presenter.state` | Presentation loaded or unloaded | `{ type, state: { loaded, filePath, currentSlide, totalSlides, slides } }` |\n| `presenter.slide_changed` | Slide navigation | `{ type, currentSlide, totalSlides }` |\n\n### Presenter WS commands\n\n| Command | Fields | Description |\n|---|---|---|\n| `presenter.load` | `file_path` | Parse .pptx and load into presenter; broadcasts `presenter.state` |\n| `presenter.unload` | — | Clear the active presentation |\n| `presenter.next` | — | Advance one slide |\n| `presenter.prev` | — | Go back one slide |\n| `presenter.first` | — | Jump to slide 1 |\n| `presenter.last` | — | Jump to last slide |\n| `presenter.goto` | `slide` | Jump to a specific slide number |\n| `presenter.status` | — | Reply to requesting client with `presenter.state` |",
                     "operationId": "connectWebSocket",
                     "security": [],
                     "parameters": [

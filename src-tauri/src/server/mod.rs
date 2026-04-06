@@ -2,6 +2,7 @@ pub mod auth;
 pub mod caption;
 pub mod openapi;
 pub mod ppt;
+pub mod presenter;
 pub mod routes;
 pub mod websocket;
 
@@ -29,6 +30,7 @@ use crate::connectors::{
     broadlink::BroadlinkConnector, facebook::FacebookConnector, obs::ObsConnector,
     vmix::VmixConnector, youtube::YouTubeConnector, FacebookConfig, YouTubeConfig,
 };
+use crate::obs_devices::ObsAvailableDevices;
 #[cfg(target_os = "macos")]
 use crate::connectors::keynote::KeynoteConnector;
 use crate::models::event::find_current_event;
@@ -59,6 +61,12 @@ pub struct AppState {
     pub app_handle: Option<tauri::AppHandle>,
     pub cron_scheduler: Arc<CronScheduler>,
     pub upload_service: Arc<UploadService>,
+    /// Cached result of the last OBS device scan; `None` until first scan completes.
+    pub obs_available_devices: Arc<tokio::sync::RwLock<Option<ObsAvailableDevices>>>,
+    /// In-memory state for the active web-presenter session.
+    pub presenter_state: Arc<tokio::sync::RwLock<presenter::PresenterState>>,
+    /// Metadata for every currently-connected WebSocket client.
+    pub ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>>,
     #[cfg(target_os = "macos")]
     pub keynote_connector: Arc<KeynoteConnector>,
 }
@@ -107,6 +115,15 @@ pub async fn build_and_serve(
         });
     }
 
+    let obs_available_devices: Arc<tokio::sync::RwLock<Option<ObsAvailableDevices>>> =
+        Arc::new(tokio::sync::RwLock::new(None));
+
+    let presenter_state: Arc<tokio::sync::RwLock<presenter::PresenterState>> =
+        Arc::new(tokio::sync::RwLock::new(presenter::PresenterState::empty()));
+
+    let ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>> =
+        Arc::new(tokio::sync::RwLock::new(HashMap::new()));
+
     let state = AppState {
         pool,
         auth_token,
@@ -124,6 +141,9 @@ pub async fn build_and_serve(
         app_handle,
         cron_scheduler,
         upload_service: upload_service.clone(),
+        obs_available_devices: obs_available_devices.clone(),
+        presenter_state: presenter_state.clone(),
+        ws_client_info: ws_client_info.clone(),
         #[cfg(target_os = "macos")]
         keynote_connector: keynote_connector.clone(),
     };
@@ -312,6 +332,44 @@ pub async fn build_and_serve(
         });
     }
 
+    // Rescan OBS devices whenever devices_tx fires (input added/removed/changed or initial connect).
+    {
+        let pool_c = state.pool.clone();
+        let obs_c = obs_connector.clone();
+        let devices_cache = obs_available_devices.clone();
+        let clients_c = ws_clients.clone();
+        let mut devices_rx = obs_connector.devices_tx.subscribe();
+        tokio::spawn(async move {
+            loop {
+                match devices_rx.recv().await {
+                    Ok(()) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+                let client_opt = obs_c.client.lock().await.clone();
+                let Some(client) = client_opt else { continue };
+                let scanned = crate::obs_devices::scan_obs_devices(&client).await;
+                let listeners: Vec<crate::models::device_listener::DeviceListener> =
+                    sqlx::query_as("SELECT * FROM device_listeners ORDER BY created_at")
+                        .fetch_all(&pool_c)
+                        .await
+                        .unwrap_or_default();
+                let statuses = crate::obs_devices::compute_listener_statuses(&scanned, &listeners);
+                *devices_cache.write().await = Some(scanned.clone());
+                let msg = serde_json::json!({
+                    "type": "obs.devices.available",
+                    "devices": scanned,
+                    "listenerStatuses": statuses,
+                })
+                .to_string();
+                let guard = clients_c.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(axum::extract::ws::Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -460,6 +518,7 @@ pub async fn build_and_serve(
         .route("/uploads/trigger", post(routes::trigger_upload_cycle))
         .merge(ppt_routes)
         .merge(keynote_routes)
+        .route("/presenter/parse", post(presenter::parse_presentation))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::auth_middleware,
@@ -482,7 +541,7 @@ pub async fn build_and_serve(
 
     if let Some(dir) = static_dir {
         let fallback = ServeFile::new(format!("{dir}/index.html"));
-        app = app.fallback_service(ServeDir::new(&dir).not_found_service(fallback));
+        app = app.fallback_service(ServeDir::new(&dir).fallback(fallback));
     }
 
     let app = app.layer(cors);

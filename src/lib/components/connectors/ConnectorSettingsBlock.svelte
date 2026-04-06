@@ -783,6 +783,8 @@
 				</button>
 			</div>
 
+		<a href="/obs-devices" class="device-monitor-link">{$_('obsDevices.manageDeviceMonitors')}</a>
+
 		<!-- ── VMix form ─────────────────────────────────────────────────────── -->
 		{:else if connectorId === 'vmix'}
 			<p class="coming-soon-notice">{$_('appSettings.connectors.vmix.comingSoon')}</p>
@@ -1518,5 +1520,17 @@
 	button:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+	}
+
+	.device-monitor-link {
+		display: inline-block;
+		margin-top: 1rem;
+		font-size: 0.8125rem;
+		color: var(--accent);
+		text-decoration: none;
+	}
+
+	.device-monitor-link:hover {
+		text-decoration: underline;
 	}
 </style>

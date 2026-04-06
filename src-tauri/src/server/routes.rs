@@ -323,6 +323,16 @@ pub async fn get_youtube_content(State(state): State<AppState>) -> impl IntoResp
         Ok(content) => Json(content).into_response(),
         Err(e) => {
             tracing::error!("fetch_channel_content failed: {e}");
+            if e.is::<youtube::AuthRequired>() {
+                // Tokens were already deleted by fetch_channel_content; stop
+                // the connector loop so the frontend sees the status change.
+                state.youtube_connector.stop().await;
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({ "error": "auth_required", "message": "Re-login required" })),
+                )
+                    .into_response();
+            }
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),

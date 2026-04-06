@@ -671,7 +671,32 @@
 		"errors": {
 			"obsNotConnected": "Az OBS nincs csatlakoztatva. Kérjük, először csatlakozzon az OBS-hez.",
 			"fillAllFields": "Kérjük, töltse ki az összes kötelező mezőt"
-		}
+		},
+		"availableDevices": "Elérhető Eszközök",
+		"listeners": "Eszközfigyelők",
+		"scanNow": "Szkennelés Most",
+		"addListener": "Figyelő Hozzáadása",
+		"connectorPlaceholder": "OBS Studio",
+		"notConnected": "Csatlakoztassa az OBS-t az eszközök szkenneléséhez",
+		"categories": {
+			"display": "Kijelző",
+			"audioInput": "Audio Bemenet",
+			"audioOutput": "Audio Kimenet",
+			"videoInput": "Video Bemenet",
+			"captureCard": "Rögzítő Kártya"
+		},
+		"listenerForm": {
+			"category": "Kategória",
+			"device": "Eszköz",
+			"name": "Barátságos Név",
+			"save": "Mentés",
+			"cancel": "Mégse"
+		},
+		"status": {
+			"available": "Elérhető",
+			"unavailable": "Nem elérhető"
+		},
+		"manageDeviceMonitors": "Eszközfigyelők Kezelése →"
 	},
 	"nav": {
 		"dashboard": "Főoldal",
@@ -680,7 +705,8 @@
 		"settings": "Beállítások",
 		"liveEvents": "Élő Közvetítések & Videók",
 		"presentations": "Prezentációk",
-		"obsCaption": "OBS Felirat"
+		"obsCaption": "OBS Felirat",
+		"obsDevices": "Eszközfigyelő"
 	},
 	"presentations": {
 		"title": "Prezentációk",
@@ -721,6 +747,8 @@
 		},
 		"loading": "Betöltés…",
 		"error": "A tartalom betöltése sikertelen",
+		"sessionExpired": "A YouTube munkamenet lejárt — kérjük, jelentkezzen be újra",
+		"reLogin": "Újra bejelentkezés YouTube-ra",
 		"retry": "Újra",
 		"notConnected": "Nincs kapcsolat",
 		"connectFirst": "Csatlakoztassa YouTube-fiókját a Beállításokban a csatorna tartalmának megtekintéséhez.",
@@ -856,6 +884,21 @@
 			"createButton": "Jelvény források létrehozása",
 			"creating": "Létrehozás…",
 			"sourcesCreated": "✓ Jelvény források létrehozva: \u201e{sceneName}\u201d"
+		},
+		"updater": {
+			"title": "Alkalmazás verziója",
+			"currentVersion": "Jelenlegi verzió",
+			"checkForUpdates": "Frissítések keresése",
+			"checking": "Keresés…",
+			"upToDate": "Az alkalmazás naprakész",
+			"updateAvailable": "Elérhető frissítés: v{version}",
+			"download": "Letöltés",
+			"lastChecked": "Utoljára ellenőrizve",
+			"errorChecking": "Nem sikerült ellenőrizni a frissítéseket",
+			"toast": {
+				"title": "Frissítés elérhető",
+				"description": "A {version} verzió letölthető"
+			}
 		},
 		"cronJobs": {
 			"title": "Időzített feladatok",

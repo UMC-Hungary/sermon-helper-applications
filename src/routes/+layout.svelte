@@ -8,6 +8,7 @@
 	import { glassSupported, initSystemAppearance, systemTheme } from '$lib/stores/system-appearance.js';
 	import ConnectorInit from '$lib/components/layout/ConnectorInit.svelte';
 	import ReLoginHandler from '$lib/components/layout/ReLoginHandler.svelte';
+	import UpdateChecker from '$lib/components/layout/UpdateChecker.svelte';
 	import NavConnectors from '$lib/components/layout/NavConnectors.svelte';
 	import NavErrorBadge from '$lib/components/layout/NavErrorBadge.svelte';
 	import FloatingStreamPlayer from '$lib/components/FloatingStreamPlayer.svelte';
@@ -35,12 +36,13 @@
 	}
 </script>
 
-{#if $page.url.pathname.startsWith('/caption')}
+{#if $page.url.pathname.startsWith('/caption') || $page.url.pathname.startsWith('/presenter')}
 	{@render children()}
 {:else}
-	<Toaster richColors position="top-right" />
+	<Toaster richColors position="top-right" closeButton />
 	<ConnectorInit />
 	<ReLoginHandler />
+	<UpdateChecker />
 	{#if $streamPreviewEnabled}
 		<FloatingStreamPlayer />
 	{/if}
@@ -67,6 +69,9 @@
 				>
 				<a href="/obs-caption" class="nav-item" class:active={isActive('/obs-caption')}
 					>{$_('nav.obsCaption')}</a
+				>
+				<a href="/obs-devices" class="nav-item" class:active={isActive('/obs-devices')}
+					>{$_('nav.obsDevices')}</a
 				>
 				<a href="/connect" class="nav-item" class:active={isActive('/connect')}
 					>{$_('nav.connect')}</a

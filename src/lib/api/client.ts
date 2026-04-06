@@ -2,6 +2,16 @@ import { get } from 'svelte/store';
 import type { z } from 'zod';
 import { serverUrl, authToken } from '$lib/stores/server-url.js';
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 type RequestOptions = Omit<RequestInit, 'headers' | 'body'> & {
   body?: object;
 };
@@ -48,7 +58,7 @@ export async function apiFetch<S extends z.ZodType>(
   const res = await fetch(`${base}${path}`, init);
 
   if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${await res.text()}`);
+    throw new ApiError(res.status, `API error ${res.status}: ${await res.text()}`);
   }
 
   if (res.status === 204) {

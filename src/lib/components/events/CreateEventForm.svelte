@@ -407,6 +407,17 @@
                 >
                   {loading ? '…' : 'Fetch'}
                 </button>
+
+                {#if query || label || verses.length > 0}
+                  <button
+                    type="button"
+                    class="bible-panel__remove-btn"
+                    onclick={() => clearField(field)}
+                    aria-label="Remove {field} reference"
+                  >
+                    ✕
+                  </button>
+                {/if}
               </div>
 
               <!-- Verse list -->
@@ -671,6 +682,25 @@
 
   .bible-panel__fetch-btn:not(:disabled):hover {
     filter: brightness(0.9);
+  }
+
+  .bible-panel__remove-btn {
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: flex-end;
+    height: 2.375rem;
+  }
+
+  .bible-panel__remove-btn:hover {
+    background: var(--status-err-bg);
+    color: var(--status-err-text);
+    border-color: var(--border);
   }
 
   /* Verses */

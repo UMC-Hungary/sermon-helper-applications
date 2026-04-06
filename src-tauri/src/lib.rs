@@ -19,6 +19,8 @@ pub mod scheduler;
 mod broadlink;
 #[cfg(desktop)]
 pub(crate) mod uploader;
+#[cfg(desktop)]
+mod obs_devices;
 
 use std::sync::Arc;
 use tauri::Manager;
@@ -136,6 +138,7 @@ pub fn run() {
         commands::badge::install_badge,
         commands::badge::get_obs_scenes,
         commands::badge::create_badge_sources,
+        commands::updater::check_for_updates,
     ]);
 
     // Mobile is client-only — no server or Bruno collection commands.
@@ -461,11 +464,29 @@ pub(crate) async fn start_server(
         }
     }
 
-    let static_dir = app
-        .path()
-        .resource_dir()
-        .ok()
-        .map(|p| p.join("_up_").to_string_lossy().into_owned());
+    let static_dir = {
+        #[cfg(debug_assertions)]
+        {
+            // In dev mode, serve from the sibling `build/` directory produced by `pnpm build`.
+            let build_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .unwrap()
+                .join("build");
+            if build_dir.is_dir() {
+                Some(build_dir.to_string_lossy().into_owned())
+            } else {
+                None
+            }
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            // In production, Tauri bundles frontendDist into the resource directory under `_up_`.
+            app.path()
+                .resource_dir()
+                .ok()
+                .map(|p| p.join("_up_").to_string_lossy().into_owned())
+        }
+    };
 
     let cron_scheduler = Arc::new(scheduler::CronScheduler::new());
 
