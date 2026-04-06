@@ -1,0 +1,5 @@
+target/
+presenter-receiver-macos-arm64
+presenter-receiver-macos-x86_64
+presenter-receiver-linux-arm64
+presenter-receiver-linux-x86_64
