@@ -42,6 +42,8 @@ pub struct ObsConnector {
     pub state_tx: broadcast::Sender<ObsStateEvent>,
     /// Broadcast channel — subscribe to receive streaming/recording state changes (connector.state).
     pub output_state_tx: broadcast::Sender<ObsOutputState>,
+    /// Broadcast channel — fires when a device rescan should be triggered.
+    pub devices_tx: broadcast::Sender<()>,
     stop_tx: Mutex<Option<watch::Sender<bool>>>,
 }
 
@@ -51,6 +53,7 @@ impl ObsConnector {
         let (recording_tx, _) = broadcast::channel(16);
         let (state_tx, _) = broadcast::channel(16);
         let (output_state_tx, _) = broadcast::channel(16);
+        let (devices_tx, _) = broadcast::channel(8);
         Self {
             status: Arc::new(RwLock::new(ConnectorStatus::Disconnected)),
             output_state: Arc::new(RwLock::new(None)),
@@ -59,6 +62,7 @@ impl ObsConnector {
             recording_tx,
             state_tx,
             output_state_tx,
+            devices_tx,
             stop_tx: Mutex::new(None),
         }
     }
@@ -76,8 +80,9 @@ impl ObsConnector {
         let recording_tx = self.recording_tx.clone();
         let state_tx = self.state_tx.clone();
         let output_state_tx = self.output_state_tx.clone();
+        let devices_tx = self.devices_tx.clone();
         tauri::async_runtime::spawn(async move {
-            run_obs_loop(config, app, status, output_state, client_arc, status_tx, recording_tx, state_tx, output_state_tx, stop_rx).await;
+            run_obs_loop(config, app, status, output_state, client_arc, status_tx, recording_tx, state_tx, output_state_tx, devices_tx, stop_rx).await;
         });
     }
 
@@ -131,6 +136,7 @@ async fn run_obs_loop(
     recording_tx: broadcast::Sender<ObsRecordingEvent>,
     state_tx: broadcast::Sender<ObsStateEvent>,
     output_state_tx: broadcast::Sender<ObsOutputState>,
+    devices_tx: broadcast::Sender<()>,
     mut stop_rx: watch::Receiver<bool>,
 ) {
     loop {
@@ -160,6 +166,8 @@ async fn run_obs_loop(
                 *output_state.write().await = Some(initial);
                 let _ = output_state_tx.send(initial);
                 let _ = state_tx.send(ObsStateEvent { is_streaming: initial.is_streaming, is_recording: initial.is_recording });
+                // Trigger initial device scan now that OBS is connected.
+                let _ = devices_tx.send(());
                 let current_output = Arc::clone(&output_state);
 
                 match client.events() {
@@ -206,6 +214,11 @@ async fn run_obs_loop(
                                                         }
                                                         _ => {}
                                                     }
+                                                }
+                                                obws::events::Event::InputCreated { .. }
+                                                | obws::events::Event::InputRemoved { .. }
+                                                | obws::events::Event::InputSettingsChanged { .. } => {
+                                                    let _ = devices_tx.send(());
                                                 }
                                                 _ => {}
                                             }
