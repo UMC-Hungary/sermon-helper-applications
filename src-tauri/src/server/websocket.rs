@@ -24,12 +24,32 @@ use crate::connectors::{facebook, youtube, ConnectorStatus};
 use crate::models::{
     activity,
     cron_job::{self, CreateCronJob, UpdateCronJob},
+    device_listener::DeviceListener,
     event::{fetch_event, CreateBibleReference, CreateConnection, CreateEvent, Event, EventSummary, UpdateEvent},
     recording::{CreateRecording, FlagUploadItem, Recording, RecordingUpload},
     untracked_recording,
 };
 use crate::server::ppt;
+use crate::server::presenter;
 use crate::server::AppState;
+
+// ── Connected client registry ─────────────────────────────────────────────────
+
+/// Metadata about a single connected WebSocket client.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WsClientInfo {
+    pub id: Uuid,
+    /// Human-readable label set by the client via `presenter.register`.
+    pub label: String,
+    pub user_agent: Option<String>,
+    pub connected_at: chrono::DateTime<Utc>,
+    pub last_pong_at: Option<chrono::DateTime<Utc>>,
+    pub latency_ms: Option<i64>,
+    /// Timestamp when the last ping was sent — not serialised.
+    #[serde(skip)]
+    pub ping_sent_at: Option<chrono::DateTime<Utc>>,
+}
 
 // ── Incoming WebSocket command types ─────────────────────────────────────────
 
@@ -251,6 +271,54 @@ enum WsCommand {
     BroadlinkLearnCancel,
     #[serde(rename = "broadlink.commands.send")]
     BroadlinkCommandsSend { id: Uuid },
+    // ── Presenter ────────────────────────────────────────────────────────────
+    /// Register a human-readable label for this connection (shown in the UI).
+    #[serde(rename = "presenter.register")]
+    PresenterRegister { label: String },
+    /// Request the list of currently connected clients (reply to sender only).
+    #[serde(rename = "clients.list")]
+    ClientsList,
+    /// Send a ping to a specific connected client.
+    #[serde(rename = "clients.ping")]
+    ClientsPing { client_id: Uuid },
+    /// Pong reply from a client in response to a `ping` message.
+    #[serde(rename = "pong")]
+    Pong { ping_id: i64 },
+    #[serde(rename = "presenter.load")]
+    PresenterLoad { file_path: String },
+    #[serde(rename = "presenter.unload")]
+    PresenterUnload,
+    #[serde(rename = "presenter.next")]
+    PresenterNext,
+    #[serde(rename = "presenter.prev")]
+    PresenterPrev,
+    #[serde(rename = "presenter.first")]
+    PresenterFirst,
+    #[serde(rename = "presenter.last")]
+    PresenterLast,
+    #[serde(rename = "presenter.goto")]
+    PresenterGoto { slide: u32 },
+    #[serde(rename = "presenter.status")]
+    PresenterStatus,
+    // ── OBS Devices ──────────────────────────────────────────────────────────
+    #[serde(rename = "obs.devices.scan")]
+    ObsDevicesScan,
+    #[serde(rename = "obs.devices.available")]
+    ObsDevicesAvailable,
+    #[serde(rename = "obs.listeners.list")]
+    ObsListenersList,
+    #[serde(rename = "obs.listeners.create")]
+    ObsListenersCreate {
+        connector_type: String,
+        category: String,
+        device_item_value: String,
+        device_item_name: String,
+        friendly_name: String,
+    },
+    #[serde(rename = "obs.listeners.update")]
+    ObsListenersUpdate { id: Uuid, friendly_name: String },
+    #[serde(rename = "obs.listeners.delete")]
+    ObsListenersDelete { id: Uuid },
 }
 
 /// Upsert or delete bible references inside an open transaction (mirrors routes.rs logic).
@@ -302,6 +370,7 @@ async fn handle_ws_command(
     cmd: WsCommand,
     state: &AppState,
     client_tx: &mpsc::UnboundedSender<Message>,
+    client_id: Uuid,
 ) {
     match cmd {
         // ── Keynote (macOS only) ─────────────────────────────────────────────
@@ -398,6 +467,95 @@ async fn handle_ws_command(
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
+        }
+        // ── Client registry & ping ───────────────────────────────────────────
+        WsCommand::PresenterRegister { label } => {
+            {
+                let mut info = state.ws_client_info.write().await;
+                if let Some(client) = info.get_mut(&client_id) {
+                    client.label = label;
+                }
+            }
+            broadcast_clients_updated(state).await;
+        }
+        WsCommand::ClientsList => {
+            let clients_vec = {
+                let info = state.ws_client_info.read().await;
+                let mut v: Vec<WsClientInfo> = info.values().cloned().collect();
+                v.sort_by_key(|c| c.connected_at);
+                v
+            };
+            let msg = json!({ "type": "clients.list", "clients": clients_vec }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::ClientsPing { client_id: target_id } => {
+            let ping_sent_at = Utc::now();
+            let ping_id = ping_sent_at.timestamp_millis();
+            {
+                let mut info = state.ws_client_info.write().await;
+                if let Some(client) = info.get_mut(&target_id) {
+                    client.ping_sent_at = Some(ping_sent_at);
+                }
+            }
+            let clients = state.ws_clients.read().await;
+            if let Some(target_tx) = clients.get(&target_id) {
+                let ping_msg = json!({ "type": "ping", "pingId": ping_id }).to_string();
+                let _ = target_tx.send(Message::Text(ping_msg.into()));
+            }
+        }
+        WsCommand::Pong { ping_id } => {
+            let now = Utc::now();
+            {
+                let mut info = state.ws_client_info.write().await;
+                if let Some(client) = info.get_mut(&client_id) {
+                    client.latency_ms = Some(now.timestamp_millis() - ping_id);
+                    client.last_pong_at = Some(now);
+                    client.ping_sent_at = None;
+                }
+            }
+            broadcast_clients_updated(state).await;
+        }
+        // ── Presenter ────────────────────────────────────────────────────────
+        WsCommand::PresenterLoad { file_path } => {
+            let result = tokio::task::spawn_blocking(move || presenter::parse_pptx(&file_path)).await;
+            match result {
+                Ok(Ok(parsed)) => {
+                    let new_state = presenter::PresenterState::from_parsed(parsed);
+                    *state.presenter_state.write().await = new_state;
+                    broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                }
+                Ok(Err(e)) => ws_error(client_tx, &e),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::PresenterUnload => {
+            *state.presenter_state.write().await = presenter::PresenterState::empty();
+            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        WsCommand::PresenterNext => {
+            state.presenter_state.write().await.go_next();
+            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        WsCommand::PresenterPrev => {
+            state.presenter_state.write().await.go_prev();
+            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        WsCommand::PresenterFirst => {
+            state.presenter_state.write().await.go_first();
+            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        WsCommand::PresenterLast => {
+            state.presenter_state.write().await.go_last();
+            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        WsCommand::PresenterGoto { slide } => {
+            state.presenter_state.write().await.go_to(slide);
+            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        WsCommand::PresenterStatus => {
+            let ps = state.presenter_state.read().await;
+            let msg = serde_json::json!({ "type": "presenter.state", "state": &*ps }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
         }
         // ── Events ───────────────────────────────────────────────────────────
         WsCommand::EventsList => {
@@ -1692,6 +1850,139 @@ async fn handle_ws_command(
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
+        // ── OBS Devices ───────────────────────────────────────────────────────
+        WsCommand::ObsDevicesScan => {
+            let _ = state.obs_connector.devices_tx.send(());
+            ws_ok(client_tx);
+        }
+        WsCommand::ObsDevicesAvailable => {
+            let devices_guard = state.obs_available_devices.read().await;
+            if let Some(scanned) = devices_guard.as_ref() {
+                let listeners: Vec<DeviceListener> =
+                    sqlx::query_as("SELECT * FROM device_listeners ORDER BY created_at")
+                        .fetch_all(&state.pool)
+                        .await
+                        .unwrap_or_default();
+                let statuses =
+                    crate::obs_devices::compute_listener_statuses(scanned, &listeners);
+                let msg = serde_json::json!({
+                    "type": "obs.devices.available",
+                    "devices": scanned,
+                    "listenerStatuses": statuses,
+                })
+                .to_string();
+                let _ = client_tx.send(axum::extract::ws::Message::Text(msg.into()));
+            } else {
+                ws_error(client_tx, "no_scan_data");
+            }
+        }
+        WsCommand::ObsListenersList => {
+            let listeners: Vec<DeviceListener> =
+                match sqlx::query_as("SELECT * FROM device_listeners ORDER BY created_at")
+                    .fetch_all(&state.pool)
+                    .await
+                {
+                    Ok(l) => l,
+                    Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+                };
+            let statuses = {
+                let devices_guard = state.obs_available_devices.read().await;
+                devices_guard
+                    .as_ref()
+                    .map(|d| crate::obs_devices::compute_listener_statuses(d, &listeners))
+                    .unwrap_or_default()
+            };
+            let msg = serde_json::json!({
+                "type": "obs.listeners.list",
+                "listeners": listeners,
+                "statuses": statuses,
+            })
+            .to_string();
+            let _ = client_tx.send(axum::extract::ws::Message::Text(msg.into()));
+        }
+        WsCommand::ObsListenersCreate {
+            connector_type,
+            category,
+            device_item_value,
+            device_item_name,
+            friendly_name,
+        } => {
+            let result = sqlx::query_as::<_, DeviceListener>(
+                "INSERT INTO device_listeners \
+                 (connector_type, category, device_item_value, device_item_name, friendly_name) \
+                 VALUES ($1, $2, $3, $4, $5) RETURNING *",
+            )
+            .bind(&connector_type)
+            .bind(&category)
+            .bind(&device_item_value)
+            .bind(&device_item_name)
+            .bind(&friendly_name)
+            .fetch_one(&state.pool)
+            .await;
+            match result {
+                Ok(listener) => {
+                    let broadcast_msg = serde_json::json!({
+                        "type": "obs.listeners.create",
+                        "listener": listener,
+                    })
+                    .to_string();
+                    let clients = state.ws_clients.read().await;
+                    for tx in clients.values() {
+                        let _ = tx.send(axum::extract::ws::Message::Text(broadcast_msg.clone().into()));
+                    }
+                    ws_ok(client_tx);
+                }
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::ObsListenersUpdate { id, friendly_name } => {
+            let result = sqlx::query_as::<_, DeviceListener>(
+                "UPDATE device_listeners SET friendly_name=$1, updated_at=NOW() \
+                 WHERE id=$2 RETURNING *",
+            )
+            .bind(&friendly_name)
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await;
+            match result {
+                Ok(Some(listener)) => {
+                    let broadcast_msg = serde_json::json!({
+                        "type": "obs.listeners.update",
+                        "listener": listener,
+                    })
+                    .to_string();
+                    let clients = state.ws_clients.read().await;
+                    for tx in clients.values() {
+                        let _ = tx.send(axum::extract::ws::Message::Text(broadcast_msg.clone().into()));
+                    }
+                    ws_ok(client_tx);
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::ObsListenersDelete { id } => {
+            let result = sqlx::query("DELETE FROM device_listeners WHERE id=$1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&state.pool)
+                .await;
+            match result {
+                Ok(Some(_)) => {
+                    let broadcast_msg = serde_json::json!({
+                        "type": "obs.listeners.delete",
+                        "id": id,
+                    })
+                    .to_string();
+                    let clients = state.ws_clients.read().await;
+                    for tx in clients.values() {
+                        let _ = tx.send(axum::extract::ws::Message::Text(broadcast_msg.clone().into()));
+                    }
+                    ws_ok(client_tx);
+                }
+                Ok(None) => ws_error(client_tx, "not_found"),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
     }
 }
 
@@ -1703,7 +1994,7 @@ struct PgNotify<T> {
 
 #[derive(Deserialize)]
 pub struct WsQuery {
-    token: String,
+    token: Option<String>,
 }
 
 pub async fn ws_handler(State(state): State<AppState>, req: Request) -> Response {
@@ -1737,9 +2028,7 @@ pub async fn ws_handler(State(state): State<AppState>, req: Request) -> Response
     };
 
     let current_token = state.auth_token.read().await.clone();
-    if query.token != current_token {
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
+    let is_authenticated = query.token.as_deref() == Some(current_token.as_str());
 
     let ws = match WebSocketUpgrade::from_request_parts(&mut parts, &state).await {
         Ok(ws) => ws,
@@ -1748,10 +2037,24 @@ pub async fn ws_handler(State(state): State<AppState>, req: Request) -> Response
 
     drop(body); // WebSocket requests have no body; release it explicitly.
     let server_id = state.server_id.clone();
-    ws.on_upgrade(move |socket| handle_socket(socket, state, server_id))
+    let user_agent = parts
+        .headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    ws.on_upgrade(move |socket| handle_socket(socket, state, server_id, user_agent, is_authenticated))
 }
 
-async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
+/// WS commands that read-only (unauthenticated) clients are permitted to send.
+const READONLY_ALLOWED: &[&str] = &["presenter.register", "presenter.status", "pong"];
+
+async fn handle_socket(
+    socket: WebSocket,
+    state: AppState,
+    server_id: String,
+    user_agent: Option<String>,
+    is_authenticated: bool,
+) {
     let client_id = Uuid::new_v4();
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
 
@@ -1759,6 +2062,22 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
         let mut clients = state.ws_clients.write().await;
         clients.insert(client_id, tx.clone());
     }
+    {
+        let mut info = state.ws_client_info.write().await;
+        info.insert(
+            client_id,
+            WsClientInfo {
+                id: client_id,
+                label: "Browser".to_string(),
+                user_agent,
+                connected_at: Utc::now(),
+                last_pong_at: None,
+                latency_ms: None,
+                ping_sent_at: None,
+            },
+        );
+    }
+    broadcast_clients_updated(&state).await;
 
     let connected_msg = json!({ "type": "connected", "serverId": server_id }).to_string();
     let _ = tx.send(Message::Text(connected_msg.into()));
@@ -1803,6 +2122,27 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
         let _ = tx.send(Message::Text(msg.into()));
     }
 
+    // Push cached OBS device scan result if available.
+    {
+        let devices_guard = state.obs_available_devices.read().await;
+        if let Some(scanned) = devices_guard.as_ref() {
+            let listeners: Vec<DeviceListener> =
+                sqlx::query_as("SELECT * FROM device_listeners ORDER BY created_at")
+                    .fetch_all(&state.pool)
+                    .await
+                    .unwrap_or_default();
+            let statuses =
+                crate::obs_devices::compute_listener_statuses(scanned, &listeners);
+            let msg = json!({
+                "type": "obs.devices.available",
+                "devices": scanned,
+                "listenerStatuses": statuses,
+            })
+            .to_string();
+            let _ = tx.send(Message::Text(msg.into()));
+        }
+    }
+
     let (mut ws_sink, mut ws_stream) = socket.split();
 
     let send_task = tokio::spawn(async move {
@@ -1818,8 +2158,21 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
     let recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = ws_stream.next().await {
             if let Message::Text(text) = msg {
+                if !is_authenticated {
+                    // Peek at the `type` field before full deserialisation.
+                    let cmd_type = serde_json::from_str::<serde_json::Value>(&text)
+                        .ok()
+                        .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_owned))
+                        .unwrap_or_default();
+                    if !READONLY_ALLOWED.contains(&cmd_type.as_str()) {
+                        let _ = tx_recv.send(Message::Text(
+                            r#"{"type":"error","message":"unauthorized"}"#.into(),
+                        ));
+                        continue;
+                    }
+                }
                 if let Ok(cmd) = serde_json::from_str::<WsCommand>(&text) {
-                    handle_ws_command(cmd, &state_recv, &tx_recv).await;
+                    handle_ws_command(cmd, &state_recv, &tx_recv, client_id).await;
                 }
             }
         }
@@ -1830,8 +2183,15 @@ async fn handle_socket(socket: WebSocket, state: AppState, server_id: String) {
         _ = recv_task => {}
     }
 
-    let mut clients = state.ws_clients.write().await;
-    clients.remove(&client_id);
+    {
+        let mut clients = state.ws_clients.write().await;
+        clients.remove(&client_id);
+    }
+    {
+        let mut info = state.ws_client_info.write().await;
+        info.remove(&client_id);
+    }
+    broadcast_clients_updated(&state).await;
 }
 
 pub async fn start_notify_listener(
@@ -1903,6 +2263,50 @@ pub async fn start_notify_listener(
         for tx in clients.values() {
             let _ = tx.send(Message::Text(msg_text.clone().into()));
         }
+    }
+}
+
+/// Broadcast a `clients.updated` message containing all connected client info.
+pub async fn broadcast_clients_updated(state: &AppState) {
+    let clients_vec = {
+        let info = state.ws_client_info.read().await;
+        let mut v: Vec<WsClientInfo> = info.values().cloned().collect();
+        v.sort_by_key(|c| c.connected_at);
+        v
+    };
+    let msg = json!({ "type": "clients.updated", "clients": clients_vec }).to_string();
+    let guard = state.ws_clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast a `presenter.state` message to all WebSocket clients.
+pub async fn broadcast_presenter_state(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    state: &presenter::PresenterState,
+) {
+    let msg = json!({ "type": "presenter.state", "state": state }).to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+/// Broadcast a `presenter.slide_changed` message to all WebSocket clients.
+pub async fn broadcast_presenter_slide_changed(
+    clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    state: &presenter::PresenterState,
+) {
+    let msg = json!({
+        "type": "presenter.slide_changed",
+        "currentSlide": state.current_slide,
+        "totalSlides": state.total_slides,
+    })
+    .to_string();
+    let guard = clients.read().await;
+    for tx in guard.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
     }
 }
 
