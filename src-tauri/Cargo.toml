@@ -32,6 +32,7 @@ regex = "1.12.3"
 urlencoding = "2.1.3"
 tauri-plugin-opener = "2.5.3"
 tauri-plugin-liquid-glass = "0.1.6"
+semver = "1.0.27"
 
 # Desktop-only dependencies (server + database — not available on iOS/Android)
 [target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
@@ -49,6 +50,7 @@ postgresql_embedded = { version = "0.20", features = ["tokio"] }
 tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-chrono-0_4"] }
 tauri-plugin-dialog = "2.6.0"
 tokio-cron-scheduler = "0.15.1"
+quick-xml = "0.39.2"
 
 [lints.rust]
 unsafe_code = "forbid"

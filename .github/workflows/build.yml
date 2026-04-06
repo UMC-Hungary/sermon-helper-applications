@@ -587,10 +587,82 @@ jobs:
           if-no-files-found: warn
 
   # ──────────────────────────────────────────────
+  # Presenter Receiver — standalone CLI binary
+  # Builds for: macOS arm64/x86_64, Linux arm64 (RPi), Linux x86_64
+  # No Node/pnpm needed — pure Rust + Cairo/Pango system libs.
+  # Note: linux-arm64 uses GitHub's hosted ubuntu-24.04-arm runner.
+  # ──────────────────────────────────────────────
+  build-receiver:
+    needs: test
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            artifact: presenter-receiver-macos-arm64
+
+          - runner: macos-13
+            artifact: presenter-receiver-macos-x86_64
+
+          - runner: ubuntu-22.04
+            artifact: presenter-receiver-linux-x86_64
+
+          - runner: ubuntu-24.04-arm
+            artifact: presenter-receiver-linux-arm64
+
+    runs-on: ${{ matrix.runner }}
+    name: Receiver (${{ matrix.artifact }})
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install macOS dependencies (Cairo + Pango via Homebrew)
+        if: runner.os == 'macOS'
+        run: brew install cairo pango pkg-config
+
+      - name: Install Linux dependencies (Cairo + Pango via apt)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev pkg-config
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './presenter-receiver -> target'
+          shared-key: ${{ matrix.artifact }}
+
+      - name: Build release binary
+        working-directory: presenter-receiver
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
+          fi
+          cargo build --release
+
+      - name: Rename binary with platform suffix
+        shell: bash
+        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  # ──────────────────────────────────────────────
   # Release (version tags only)
   # ──────────────────────────────────────────────
   release:
-    needs: [build, build-ios, build-android]
+    needs: [build, build-ios, build-android, build-receiver]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -713,6 +785,28 @@ jobs:
             ### Android
             Install the `.apk` directly (enable "Install from unknown sources").
 
+            ---
+
+            ## Presenter Receiver
+
+            A standalone terminal binary that connects to the Sermon Helper WebSocket
+            and renders the active presentation slide on-screen.
+            - **macOS**: opens a native window (Helvetica Neue, Cairo-rendered)
+            - **Linux / Raspberry Pi**: writes directly to the framebuffer (`/dev/fb0`) — no desktop needed
+
+            ### One-line install (auto-detects platform)
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws
+            ```
+            Detects macOS/Linux and arm64/x86_64 automatically, downloads the right binary, and starts it.
+
+            To install without running:
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
+            ```
+
+            > **Auto-start on RPi** — add to `/etc/rc.local` or create a systemd service pointing to the installed binary.
+
           files: |
             latest.json
             artifacts/**/*.exe
@@ -731,3 +825,7 @@ jobs:
             artifacts/**/*.ipa
             artifacts/**/*.apk
             artifacts/**/*.aab
+            artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64
+            artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
+            artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
+            artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
