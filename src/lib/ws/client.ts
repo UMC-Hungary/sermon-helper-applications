@@ -23,10 +23,13 @@ import {
 } from '$lib/stores/connectors.js';
 import { broadlinkDiscoveredDevices, broadlinkLearnResult } from '$lib/stores/broadlink.js';
 import { keynoteStatus, pptResults, pptFolders } from '$lib/stores/presentations.js';
+import { presenterState, connectedClients } from '$lib/stores/presenter.js';
 import { uploadProgress } from '$lib/stores/uploads.js';
+import { handleObsDevicesMessage, obsDeviceListeners, obsDeviceListenerStatuses } from '$lib/stores/obs-devices.js';
 import { listFolders } from '$lib/api/presentations.js';
 import { WsMessageSchema } from '$lib/schemas/ws-messages.js';
 import type { EventSummary } from '$lib/schemas/event.js';
+import { pushError, clearErrors } from '$lib/stores/errors.js';
 import { toast } from 'svelte-sonner';
 
 let socket: WebSocket | null = null;
@@ -61,6 +64,7 @@ export function connectWs(): void {
 			clearTimeout(reconnectTimer);
 			reconnectTimer = null;
 		}
+		socket?.send(JSON.stringify({ type: 'presenter.register', label: 'Tauri App' }));
 	});
 
 	socket.addEventListener('message', (ev) => {
@@ -194,6 +198,14 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 	} else if (msg.type === 'cron.youtube_pull') {
 		youtubeLiveActive.set(msg.hasLive);
 		youtubeState.update((s) => ({ ...s, isLive: msg.hasLive }));
+	} else if (msg.type === 'presenter.state') {
+		presenterState.set(msg.state);
+	} else if (msg.type === 'presenter.slide_changed') {
+		presenterState.update((s) => ({ ...s, currentSlide: msg.currentSlide, totalSlides: msg.totalSlides }));
+	} else if (msg.type === 'clients.updated' || msg.type === 'clients.list') {
+		connectedClients.set(msg.clients);
+	} else if (msg.type === 'ping') {
+		socket?.send(JSON.stringify({ type: 'pong', ping_id: msg.pingId }));
 	} else if (msg.type === 'keynote.status') {
 		keynoteStatus.set(msg.status);
 	} else if (msg.type === 'ppt.search_results') {
@@ -248,6 +260,33 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 			}
 			return updated;
 		});
+	} else if (
+		msg.type === 'obs.devices.available' ||
+		msg.type === 'obs.listeners.list' ||
+		msg.type === 'obs.listeners.create' ||
+		msg.type === 'obs.listeners.update' ||
+		msg.type === 'obs.listeners.delete'
+	) {
+		handleObsDevicesMessage(msg);
+		syncDeviceListenerErrors();
+	}
+}
+
+function syncDeviceListenerErrors(): void {
+	const listeners = get(obsDeviceListeners);
+	const statuses = get(obsDeviceListenerStatuses);
+	for (const listener of listeners) {
+		const connectorId = `device:${listener.id}`;
+		const status = statuses.find((s) => s.listenerId === listener.id);
+		if (status && !status.available) {
+			pushError({
+				connectorId,
+				connectorName: listener.friendlyName,
+				message: 'Device unavailable',
+			});
+		} else {
+			clearErrors(connectorId);
+		}
 	}
 }
 
