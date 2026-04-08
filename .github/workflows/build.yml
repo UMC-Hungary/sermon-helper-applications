@@ -603,7 +603,7 @@ jobs:
           - runner: macos-latest
             artifact: presenter-receiver-macos-arm64
 
-          - runner: macos-13
+          - runner: macos-12
             artifact: presenter-receiver-macos-x86_64
 
           - runner: ubuntu-22.04
@@ -621,7 +621,7 @@ jobs:
 
       - name: Install macOS dependencies (Cairo + Pango via Homebrew)
         if: runner.os == 'macOS'
-        run: brew install cairo pango pkg-config
+        run: brew install cairo pango harfbuzz pkg-config
 
       - name: Install Linux dependencies (Cairo + Pango via apt)
         if: runner.os == 'Linux'
