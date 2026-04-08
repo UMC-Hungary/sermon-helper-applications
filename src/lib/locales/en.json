@@ -254,6 +254,7 @@
 		},
 		"form": {
 			"basicInfo": "Basic Information",
+			"defaultTitle": "(Sunday) Worship Service",
 			"title": "Event Title",
 			"titlePlaceholder": "Sunday Service - The Love of God",
 			"date": "Date",
@@ -670,6 +671,264 @@
 		"errors": {
 			"obsNotConnected": "OBS is not connected. Please connect to OBS first.",
 			"fillAllFields": "Please fill in all required fields"
+		},
+		"availableDevices": "Available Devices",
+		"listeners": "Device Listeners",
+		"scanNow": "Scan Now",
+		"addListener": "Add Listener",
+		"connectorPlaceholder": "OBS Studio",
+		"notConnected": "Connect OBS to scan devices",
+		"categories": {
+			"display": "Display",
+			"audioInput": "Audio Input",
+			"audioOutput": "Audio Output",
+			"videoInput": "Video Input",
+			"captureCard": "Capture Card"
+		},
+		"listenerForm": {
+			"category": "Category",
+			"device": "Device",
+			"name": "Friendly Name",
+			"save": "Save",
+			"cancel": "Cancel"
+		},
+		"status": {
+			"available": "Available",
+			"unavailable": "Unavailable"
+		},
+		"manageDeviceMonitors": "Manage Device Monitors →"
+	},
+	"nav": {
+		"dashboard": "Dashboard",
+		"events": "Events",
+		"connect": "Connect",
+		"settings": "Settings",
+		"liveEvents": "Live Events & Videos",
+		"presentations": "Presentations",
+		"obsCaption": "OBS Caption",
+		"obsDevices": "Device Monitor"
+	},
+	"presentations": {
+		"title": "Presentations",
+		"folders": {
+			"title": "Presentation Folders",
+			"add": "Add Folder",
+			"remove": "Remove folder"
+		},
+		"search": {
+			"title": "File Search"
+		},
+		"results": {
+			"title": "Results"
+		},
+		"status": {
+			"title": "Keynote Status",
+			"slideshow": "Slideshow",
+			"slide": "Slide",
+			"document": "Document",
+			"on": "ON",
+			"off": "OFF"
+		},
+		"controls": {
+			"title": "Controls",
+			"first": "First Slide",
+			"prev": "Previous Slide",
+			"next": "Next Slide",
+			"last": "Last Slide",
+			"play": "Play",
+			"stop": "Stop",
+			"closeAll": "Close All"
 		}
+	},
+	"liveEvents": {
+		"title": "Live Events & Videos",
+		"platform": {
+			"youtube": "YouTube"
+		},
+		"loading": "Loading…",
+		"error": "Failed to load content",
+		"sessionExpired": "YouTube session expired — please re-login",
+		"reLogin": "Re-login with YouTube",
+		"retry": "Retry",
+		"notConnected": "Not connected",
+		"connectFirst": "Connect your YouTube account in Settings to view your channel content.",
+		"broadcasts": "Live Broadcasts",
+		"videos": "Uploaded Videos",
+		"noContent": "No content found",
+		"views": "{count} views",
+		"live": "LIVE",
+		"upcoming": "UPCOMING"
+	},
+	"appSettings": {
+		"title": "Settings",
+		"language": "Language",
+		"appMode": {
+			"title": "App Mode",
+			"current": "Current mode",
+			"changeMode": "Change mode",
+			"changing": "Resetting…",
+			"note": "Changing the mode will re-show the setup screen. If this device is running as a server, the embedded database will continue until you restart the app."
+		},
+		"connectors": {
+			"title": "Connectors",
+			"obs": {
+				"title": "OBS Studio",
+				"subtitle": "Connect to OBS Studio via WebSocket (v5)",
+				"host": "Host",
+				"port": "Port",
+				"password": "Password",
+				"passwordPlaceholder": "OBS WebSocket password",
+				"enabled": "Enable OBS connector",
+				"save": "Save & Reconnect",
+				"saving": "Saving…",
+				"connect": "Connect",
+				"disconnect": "Disconnect",
+				"status": "Status"
+			},
+			"vmix": {
+				"title": "VMix",
+				"subtitle": "VMix support coming soon",
+				"host": "Host",
+				"port": "Port",
+				"enabled": "Enable VMix connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"comingSoon": "VMix integration is not yet implemented. Configuration is saved for future use."
+			},
+			"youtube": {
+				"title": "YouTube",
+				"subtitle": "Schedule live broadcasts via YouTube Data API v3",
+				"clientId": "Client ID",
+				"clientSecret": "Client Secret",
+				"enabled": "Enable YouTube connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"login": "Login with YouTube",
+				"logout": "Logout",
+				"loggingIn": "Opening browser…"
+			},
+			"facebook": {
+				"title": "Facebook",
+				"subtitle": "Create Facebook Page events and live streams",
+				"appId": "App ID",
+				"appSecret": "App Secret",
+				"pageId": "Page ID",
+				"enabled": "Enable Facebook connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"login": "Login with Facebook",
+				"logout": "Logout",
+				"loggingIn": "Opening browser…"
+			},
+			"atem": {
+				"title": "Blackmagic ATEM",
+				"subtitle": "ATEM switcher support coming soon",
+				"host": "Host / IP",
+				"port": "Port",
+				"enabled": "Enable ATEM connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"comingSoon": "ATEM integration is not yet implemented. Configuration is saved for future use."
+			},
+			"broadlink": {
+				"title": "BroadLink",
+				"subtitle": "BroadLink hub support coming soon",
+				"host": "Host / IP",
+				"port": "Port",
+				"enabled": "Enable BroadLink connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"comingSoon": "BroadLink integration is not yet implemented. Configuration is saved for future use."
+			},
+			"discord": {
+				"title": "Discord",
+				"subtitle": "Discord webhook support coming soon",
+				"webhookUrl": "Webhook URL",
+				"enabled": "Enable Discord connector",
+				"save": "Save",
+				"saving": "Saving…",
+				"comingSoon": "Discord integration is not yet implemented. Configuration is saved for future use."
+			},
+			"broadlink": {
+				"title": "Broadlink RF/IR",
+				"subtitle": "Control projectors, screens, and AV equipment via IR and RF",
+				"enabled": "Enable Broadlink connector",
+				"save": "Save",
+				"saving": "Saving…"
+			},
+			"statusLabels": {
+				"connected": "Connected",
+				"connecting": "Connecting…",
+				"disconnected": "Disconnected",
+				"error": "Error"
+			}
+		},
+		"dependencies": {
+			"title": "Dependencies",
+			"note": "Optional packages needed for stream preview and multi-stream relay."
+		},
+		"obsBadge": {
+			"title": "OBS Badge",
+			"description": "Create a liquid glass badge in OBS using the LucidGlass shader. Requires OBS to be connected first.",
+			"obsNotConnected": "OBS must be connected first. Please configure and connect OBS above.",
+			"installButton": "Install Plugin & Shader",
+			"installing": "Installing…",
+			"pluginInstalled": "Plugin: ✓ Installed",
+			"pluginNotInstalled": "Plugin: ✗ Not installed — please install obs-shaderfilter manually",
+			"shaderInstalled": "Shader: ✓ Installed",
+			"shaderNotInstalled": "Shader: ✗ Failed to write shader file",
+			"targetScene": "Target Scene",
+			"selectScene": "Select a scene…",
+			"loadingScenes": "Loading scenes…",
+			"selectSceneError": "Please select a scene",
+			"createButton": "Create Badge Sources",
+			"creating": "Creating…",
+			"sourcesCreated": "✓ Badge sources created in \"{sceneName}\""
+		},
+		"updater": {
+			"title": "Application Version",
+			"currentVersion": "Current Version",
+			"checkForUpdates": "Check for Updates",
+			"checking": "Checking…",
+			"upToDate": "You're up to date",
+			"updateAvailable": "Update available: v{version}",
+			"download": "Download",
+			"lastChecked": "Last checked",
+			"errorChecking": "Failed to check for updates",
+			"toast": {
+				"title": "Update Available",
+				"description": "Version {version} is available"
+			}
+		},
+		"cronJobs": {
+			"title": "Cron Jobs",
+			"colName": "Name",
+			"colExpression": "Expression",
+			"colEnabled": "Enabled",
+			"colPullYoutube": "Pull YouTube",
+			"colActions": "Actions",
+			"noneConfigured": "No cron jobs configured yet.",
+			"editTitle": "Edit Cron Job",
+			"addTitle": "Add Cron Job",
+			"namePlaceholder": "e.g. YouTube poll",
+			"expressionLabel": "Cron Expression",
+			"expressionPlaceholder": "e.g. 0 */5 * * * * (every 5 min)",
+			"enabledLabel": "Enabled",
+			"pullYoutubeLabel": "Pull YouTube Live Events",
+			"saving": "Saving…",
+			"save": "Save",
+			"cancel": "Cancel",
+			"editButton": "Edit",
+			"deleteButton": "Delete"
+		}
+	},
+	"errorsPage": {
+		"title": "Connector Errors",
+		"noErrors": "No connector errors",
+		"recheck": "Re-check",
+		"fix": "Fix",
+		"info": "Info",
+		"closeInfo": "Close Info",
+		"rechecking": "Checking…"
 	}
 }

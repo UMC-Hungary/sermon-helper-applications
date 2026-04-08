@@ -1,131 +1,64 @@
 <script lang="ts">
-	import Card from '$lib/components/ui/card.svelte';
-	import Button from '$lib/components/ui/button.svelte';
-	import Input from '$lib/components/ui/input.svelte';
-	import Label from '$lib/components/ui/label.svelte';
-	import Textarea from '$lib/components/ui/textarea.svelte';
-	import { toast } from '$lib/utils/toast';
+	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { _ } from 'svelte-i18n';
+	import { serverUrl, localNetworkUrl } from '$lib/stores/server-url.js';
 	import {
 		captionSettingsStore,
-		type CaptionSettings,
-		type Resolution,
-		type AspectRatio,
 		RESOLUTION_DIMENSIONS,
-		getExportDimensions,
-		getCaptionHeight
-	} from '$lib/utils/caption-store';
-	import { discoveryServerStatus } from '$lib/stores/discovery-server-store';
-	import { appSettings } from '$lib/utils/app-settings-store';
-	import { appSettingsStore } from '$lib/utils/app-settings-store';
-	import { saveFile, pickOutputFolder, openFolder } from '$lib/utils/file-saver';
-	import { isTauriApp } from '$lib/utils/storage-helpers';
-	import {
-		Subtitles,
-		Copy,
-		Check,
-		Save,
-		RotateCcw,
-		Eye,
-		EyeOff,
-		Download,
-		Monitor,
-		Image,
-		Loader2,
-		FolderOpen
-	} from 'lucide-svelte';
-	import { onMount } from 'svelte';
+		getCaptionHeight,
+		type CaptionSettings,
+		type CaptionType,
+		type Resolution,
+	} from '$lib/utils/caption-store.js';
 
-	const isTauri = isTauriApp();
-
-	let settings: CaptionSettings = captionSettingsStore.getDefaultSettings();
-	let isLoading = true;
-	let isSaving = false;
-	let urlCopied = false;
-	let isExporting = false;
+	let settings: CaptionSettings = $state(captionSettingsStore.getDefaultSettings());
+	let isLoading = $state(true);
+	let isSaving = $state(false);
+	let urlCopied = $state(false);
 
 	onMount(async () => {
 		try {
 			settings = await captionSettingsStore.getSettings();
 		} catch (error) {
 			console.error('Failed to load caption settings:', error);
-			toast({
-				title: 'Error',
-				description: 'Failed to load caption settings',
-				variant: 'error'
-			});
+			toast.error('Failed to load caption settings');
 		} finally {
 			isLoading = false;
 		}
 	});
 
-	// Get text color based on color setting (matching reference: color changes text, bg is always white)
-	function getTextColor(color: string): string {
-		return color === 'red' ? '#EA0029' : '#000000';
-	}
-
-	// Get dimensions for current settings
-	$: exportDimensions = getExportDimensions(settings.resolution, settings.aspectRatio);
-	$: captionHeight = getCaptionHeight(settings.type, settings.resolution);
-	$: previewWidth = exportDimensions.width;
-	$: previewHeight = settings.type === 'preview' ? exportDimensions.height : captionHeight;
-
-	// Reactive caption URL — depends on all settings fields so iframe updates live
-	$: captionUrl = $discoveryServerStatus.running
-		? (() => {
-				const baseUrl = $discoveryServerStatus.addresses.length > 0
-					? `http://${$discoveryServerStatus.addresses[0]}:${$discoveryServerStatus.port}`
-					: `http://localhost:${$discoveryServerStatus.port}`;
-				const params = new URLSearchParams();
-				params.set('type', settings.type);
-				params.set('resolution', settings.resolution);
-				if (settings.title) params.set('title', settings.title);
-				if (settings.boldText) params.set('bold', settings.boldText);
-				if (settings.lightText) params.set('light', settings.lightText);
-				params.set('color', settings.color);
-				params.set('showLogo', settings.showLogo ? 'true' : 'false');
-				return `${baseUrl}/caption?${params.toString()}`;
-			})()
-		: '';
-
-
-	async function handleCopyUrl() {
-		if (!captionUrl) {
-			toast({
-				title: 'Server Not Running',
-				description: 'Start the discovery server first',
-				variant: 'error'
-			});
-			return;
+	function getOBSDimensions(): { width: number; height: number } {
+		const base = RESOLUTION_DIMENSIONS[settings.resolution];
+		if (settings.type === 'caption') {
+			return { width: base.width, height: getCaptionHeight('caption', settings.resolution) };
 		}
-
-		await navigator.clipboard.writeText(captionUrl);
-		urlCopied = true;
-		toast({
-			title: 'URL Copied',
-			description: 'Caption URL copied to clipboard',
-			variant: 'success'
-		});
-		setTimeout(() => {
-			urlCopied = false;
-		}, 2000);
+		return { width: base.width, height: base.height };
 	}
+
+	const baseUrl = $derived($localNetworkUrl || $serverUrl);
+
+	const captionUrl = $derived(() => {
+		const params = new URLSearchParams();
+		params.set('type', settings.type);
+		params.set('resolution', settings.resolution);
+		if (settings.title) params.set('title', settings.title);
+		if (settings.boldText) params.set('bold', settings.boldText);
+		if (settings.lightText) params.set('light', settings.lightText);
+		params.set('color', settings.color);
+		params.set('showLogo', settings.showLogo ? 'true' : 'false');
+		if (settings.logoAlt) params.set('alt', settings.logoAlt);
+		return `${baseUrl}/caption?${params.toString()}`;
+	});
 
 	async function handleSave() {
 		isSaving = true;
 		try {
 			await captionSettingsStore.saveSettings(settings);
-			toast({
-				title: 'Settings Saved',
-				description: 'Caption settings have been saved',
-				variant: 'success'
-			});
+			toast.success('Caption settings saved');
 		} catch (error) {
 			console.error('Failed to save caption settings:', error);
-			toast({
-				title: 'Error',
-				description: 'Failed to save caption settings',
-				variant: 'error'
-			});
+			toast.error('Failed to save caption settings');
 		} finally {
 			isSaving = false;
 		}
@@ -136,600 +69,356 @@
 		await handleSave();
 	}
 
-	// Export to PNG using canvas (Oswald font, white bg, matching reference)
-	async function handleExport() {
-		isExporting = true;
-		try {
-			const { width, height } = settings.type === 'preview'
-				? exportDimensions
-				: { width: exportDimensions.width, height: captionHeight };
-
-			const canvas = document.createElement('canvas');
-			canvas.width = width;
-			canvas.height = height;
-			const ctx = canvas.getContext('2d');
-
-			if (!ctx) {
-				throw new Error('Could not get canvas context');
-			}
-
-			// White background (always, matching reference)
-			ctx.fillStyle = '#ffffff';
-			ctx.fillRect(0, 0, width, height);
-
-			const textColor = getTextColor(settings.color);
-			const scale = settings.resolution === '4k' ? 2 : 1;
-
-			if (settings.type === 'preview') {
-				// Preview/full-screen style
-				const paddingX = width * 0.08;
-				const paddingBottom = height * 0.15;
-
-				// Draw title
-				if (settings.title) {
-					const titleSize = 200 * scale;
-					ctx.font = `600 ${titleSize}px Oswald, sans-serif`;
-					ctx.fillStyle = textColor;
-					ctx.textBaseline = 'top';
-					ctx.fillText(settings.title, paddingX, height * 0.05);
-				}
-
-				// Draw caption text (bold + dot + light)
-				if (settings.boldText || settings.lightText) {
-					const captionSize = height * 0.267; // 26.667vh
-					ctx.textBaseline = 'middle';
-					const textY = height * 0.55;
-					let textX = paddingX;
-
-					if (settings.boldText) {
-						ctx.font = `600 ${captionSize}px Oswald, sans-serif`;
-						ctx.fillStyle = textColor;
-						ctx.fillText(settings.boldText.toUpperCase(), textX, textY);
-						textX += ctx.measureText(settings.boldText.toUpperCase()).width;
-					}
-
-					if (settings.boldText && settings.lightText) {
-						// Dot separator
-						const dotSize = 15 * scale;
-						const dotMargin = 16 * scale;
-						textX += dotMargin;
-						ctx.beginPath();
-						ctx.arc(textX + dotSize / 2, textY, dotSize / 2, 0, Math.PI * 2);
-						ctx.fillStyle = textColor;
-						ctx.fill();
-						textX += dotSize + dotMargin;
-					}
-
-					if (settings.lightText) {
-						ctx.font = `300 ${captionSize}px Oswald, sans-serif`;
-						ctx.fillStyle = textColor;
-						ctx.fillText(settings.lightText.toUpperCase(), textX, textY);
-					}
-				}
-
-				// Draw logo at bottom
-				if (settings.showLogo && settings.svgLogo) {
-					const logoMaxWidth = 300 * scale;
-					const logoMaxHeight = height * 0.12;
-
-					const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
-					const svgUrl = URL.createObjectURL(svgBlob);
-					const logoImg = new window.Image();
-
-					await new Promise<void>((resolve, reject) => {
-						logoImg.onload = () => resolve();
-						logoImg.onerror = reject;
-						logoImg.src = svgUrl;
-					});
-
-					const logoAspect = logoImg.width / logoImg.height;
-					let drawWidth = logoMaxHeight * logoAspect;
-					let drawHeight = logoMaxHeight;
-
-					if (drawWidth > logoMaxWidth) {
-						drawWidth = logoMaxWidth;
-						drawHeight = logoMaxWidth / logoAspect;
-					}
-
-					const logoY = height - paddingBottom;
-					ctx.drawImage(logoImg, paddingX, logoY, drawWidth, drawHeight);
-					URL.revokeObjectURL(svgUrl);
-				}
-			} else {
-				// Caption bar style (matching reference exactly)
-				const padding = 48 * scale; // 3rem
-				const paddingY = 32 * scale; // 2rem
-				let contentX = padding;
-
-				// Draw logo if present
-				if (settings.showLogo && settings.svgLogo) {
-					// Logo takes flex: 0 0 133.3334vh equivalent
-					const logoWidth = height * 1.333334;
-
-					const svgBlob = new Blob([settings.svgLogo], { type: 'image/svg+xml' });
-					const svgUrl = URL.createObjectURL(svgBlob);
-					const logoImg = new window.Image();
-
-					await new Promise<void>((resolve, reject) => {
-						logoImg.onload = () => resolve();
-						logoImg.onerror = reject;
-						logoImg.src = svgUrl;
-					});
-
-					const logoAspect = logoImg.width / logoImg.height;
-					const drawHeight = height - paddingY * 2;
-					let drawWidth = drawHeight * logoAspect;
-					if (drawWidth > logoWidth) {
-						drawWidth = logoWidth;
-					}
-
-					const logoY = (height - drawHeight) / 2;
-					ctx.drawImage(logoImg, contentX, logoY, drawWidth, drawHeight);
-					contentX += drawWidth;
-
-					// Draw vertical divider
-					const dividerMargin = height * 0.213334; // 21.3334vh
-					const dividerHeight = height * 0.5; // 50vh
-					const dividerX = contentX + dividerMargin;
-					const dividerY = (height - dividerHeight) / 2;
-					ctx.strokeStyle = textColor;
-					ctx.lineWidth = 5 * scale;
-					ctx.beginPath();
-					ctx.moveTo(dividerX, dividerY);
-					ctx.lineTo(dividerX, dividerY + dividerHeight);
-					ctx.stroke();
-					contentX = dividerX + dividerMargin;
-				}
-
-				// Draw caption text
-				const captionSize = height * 0.26667; // 26.667vh
-				ctx.textBaseline = 'middle';
-				const textY = height / 2;
-				let textX = contentX;
-
-				if (settings.boldText) {
-					ctx.font = `600 ${captionSize}px Oswald, sans-serif`;
-					ctx.fillStyle = textColor;
-					ctx.fillText(settings.boldText.toUpperCase(), textX, textY);
-					textX += ctx.measureText(settings.boldText.toUpperCase()).width;
-				}
-
-				if (settings.boldText && settings.lightText) {
-					// Dot separator
-					const dotSize = 15 * scale;
-					const dotMargin = 16 * scale;
-					textX += dotMargin;
-					ctx.beginPath();
-					ctx.arc(textX + dotSize / 2, textY, dotSize / 2, 0, Math.PI * 2);
-					ctx.fillStyle = textColor;
-					ctx.fill();
-					textX += dotSize + dotMargin;
-				}
-
-				if (settings.lightText) {
-					ctx.font = `300 ${captionSize}px Oswald, sans-serif`;
-					ctx.fillStyle = textColor;
-					ctx.fillText(settings.lightText.toUpperCase(), textX, textY);
-				}
-			}
-
-			// Convert to blob and save
-			const blob = await new Promise<Blob>((resolve, reject) => {
-				canvas.toBlob((b) => {
-					if (b) resolve(b);
-					else reject(new Error('Failed to create blob'));
-				}, 'image/png');
-			});
-
-			const filename = `caption-${settings.resolution}-${settings.aspectRatio.replace(':', 'x')}.png`;
-
-			// If Tauri and no output path configured, prompt for folder
-			if (isTauri && !$appSettings.captionOutputPath) {
-				const selectedPath = await pickOutputFolder('Select Caption Export Folder');
-				if (!selectedPath) {
-					toast({
-						title: 'Export Cancelled',
-						description: 'No output folder selected',
-						variant: 'error'
-					});
-					return;
-				}
-				await appSettingsStore.set('captionOutputPath', selectedPath);
-			}
-
-			const result = await saveFile(blob, filename, $appSettings.captionOutputPath);
-
-			if (result.success) {
-				toast({
-					title: 'Export Complete',
-					description: result.path
-						? `Saved to ${result.path}`
-						: `Image exported at ${width}x${settings.type === 'preview' ? exportDimensions.height : captionHeight}`,
-					variant: 'success'
-				});
-			} else {
-				toast({
-					title: 'Export Failed',
-					description: result.error || 'Failed to export image',
-					variant: 'error'
-				});
-			}
-		} catch (error) {
-			console.error('Export failed:', error);
-			toast({
-				title: 'Export Failed',
-				description: error instanceof Error ? error.message : 'Failed to export image',
-				variant: 'error'
-			});
-		} finally {
-			isExporting = false;
-		}
+	async function handleCopyUrl() {
+		await navigator.clipboard.writeText(captionUrl());
+		urlCopied = true;
+		toast.success('Caption URL copied to clipboard');
+		setTimeout(() => {
+			urlCopied = false;
+		}, 2000);
 	}
 
-	async function handleChangeFolder() {
-		const selectedPath = await pickOutputFolder('Select Caption Export Folder');
-		if (selectedPath) {
-			await appSettingsStore.set('captionOutputPath', selectedPath);
-		}
-	}
-
-	async function handleOpenFolder() {
-		if ($appSettings.captionOutputPath) {
-			await openFolder($appSettings.captionOutputPath);
-		}
-	}
-
-	function getOBSDimensions(): { width: number; height: number } {
-		const base = RESOLUTION_DIMENSIONS[settings.resolution];
-		if (settings.type === 'preview') {
-			return base;
-		}
-		return { width: base.width, height: captionHeight };
-	}
+	const obsDims = $derived(getOBSDimensions());
+	const previewScale = $derived(Math.min(1, 500 / obsDims.width));
+	const scaledHeight = $derived(Math.round(obsDims.height * previewScale));
 </script>
 
 <svelte:head>
-	<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;600&display=swap" rel="stylesheet" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;600&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
-<div class="mt-12 lg:mt-0">
-	<h2 class="text-3xl font-bold tracking-tight">OBS Caption</h2>
-	<p class="text-muted-foreground">Create embeddable captions for OBS browser sources</p>
-</div>
+<div class="page">
+	<h1>OBS Caption</h1>
+	<p class="subtitle">Configure the caption browser source for OBS Studio</p>
 
-<div class="grid gap-6 lg:grid-cols-2 mt-6">
-	<!-- Left Column: Settings -->
-	<div class="space-y-6">
-		<Card>
-			<svelte:fragment slot="title">
-				<Subtitles class="h-5 w-5" />
-				Caption Settings
-			</svelte:fragment>
+	{#if isLoading}
+		<p class="loading">{$_('common.loading')}</p>
+	{:else}
+		<div class="layout">
+			<!-- Left: settings -->
+			<div class="glass-card settings-card">
+				<h2>Settings</h2>
 
-			<svelte:fragment slot="description">
-				Configure the text and appearance of your caption
-			</svelte:fragment>
-
-			<svelte:fragment slot="content">
-				<div class="space-y-6">
-					<!-- Resolution & Type Row -->
-					<div class="grid grid-cols-2 gap-4">
-						<div class="space-y-2">
-							<Label for="caption-resolution">Resolution</Label>
-							<select
-								id="caption-resolution"
-								bind:value={settings.resolution}
-								disabled={isLoading}
-								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<option value="1080p">1080p (1920×1080)</option>
-								<option value="4k">4K (3840×2160)</option>
-							</select>
-						</div>
-
-						<div class="space-y-2">
-							<Label for="caption-type">Caption Type</Label>
-							<select
-								id="caption-type"
-								bind:value={settings.type}
-								disabled={isLoading}
-								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<option value="caption">Caption Bar</option>
-								<option value="preview">Preview (Full Screen)</option>
-							</select>
-						</div>
-					</div>
-
-					<!-- Title (only shown in preview mode, hidden in caption per reference) -->
-					{#if settings.type === 'preview'}
-						<div class="space-y-2">
-							<Label for="caption-title">Title</Label>
-							<Input
-								id="caption-title"
-								type="text"
-								bind:value={settings.title}
-								placeholder="e.g., Pásztor Balázs"
-								disabled={isLoading}
-							/>
-							<p class="text-xs text-muted-foreground">
-								Large display name (shown at top)
-							</p>
-						</div>
-					{/if}
-
-					<!-- Bold Text -->
-					<div class="space-y-2">
-						<Label for="caption-bold">Bold text</Label>
-						<Input
-							id="caption-bold"
-							type="text"
-							bind:value={settings.boldText}
-							placeholder="e.g., VASÁRNAPI ISTENTISZTELET"
-							disabled={isLoading}
-						/>
-					</div>
-
-					<!-- Light Text -->
-					<div class="space-y-2">
-						<Label for="caption-light">Light text</Label>
-						<Input
-							id="caption-light"
-							type="text"
-							bind:value={settings.lightText}
-							placeholder="e.g., IGEHIRDETÉS"
-							disabled={isLoading}
-						/>
-						<p class="text-xs text-muted-foreground">
-							Displayed as: {settings.boldText || 'BOLD'} <span class="inline-block w-1.5 h-1.5 rounded-full bg-current align-middle mx-1"></span> {settings.lightText || 'LIGHT'} (uppercase)
-						</p>
-					</div>
-
-					<!-- Color & Logo Row -->
-					<div class="grid grid-cols-2 gap-4">
-						<div class="space-y-2">
-							<Label for="caption-color">Text Color</Label>
-							<select
-								id="caption-color"
-								bind:value={settings.color}
-								disabled={isLoading}
-								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<option value="black">Black</option>
-								<option value="red">Red</option>
-							</select>
-						</div>
-
-						<div class="space-y-2">
-							<Label>Logo</Label>
-							<div class="flex items-center h-10 gap-2">
-								<input
-									type="checkbox"
-									id="show-logo"
-									bind:checked={settings.showLogo}
-									disabled={isLoading}
-									class="h-4 w-4 rounded border-gray-300"
-								/>
-								<Label for="show-logo" className="text-sm font-normal flex items-center gap-2 cursor-pointer">
-									{#if settings.showLogo}
-										<Eye class="h-4 w-4" />
-										Visible
-									{:else}
-										<EyeOff class="h-4 w-4" />
-										Hidden
-									{/if}
-								</Label>
-							</div>
-						</div>
-					</div>
-
-					<!-- SVG Logo Input -->
-					<div class="space-y-2">
-						<Label for="svg-logo">SVG Logo Code</Label>
-						<Textarea
-							id="svg-logo"
-							bind:value={settings.svgLogo}
-							placeholder={'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">...</svg>'}
-							disabled={isLoading}
-							rows={4}
-							className="font-mono text-xs"
-						/>
-						<p class="text-xs text-muted-foreground">
-							{settings.type === 'preview' ? 'Logo displayed at bottom left' : 'Logo displayed on the left side with vertical divider'}
-						</p>
-					</div>
-
-					<!-- Action Buttons -->
-					<div class="flex gap-3">
-						<Button
-							buttonVariant="outline"
-							onclick={handleReset}
-							disabled={isLoading || isSaving}
-							className="flex-1 bg-transparent"
-						>
-							<RotateCcw class="mr-2 h-4 w-4" />
-							Reset
-						</Button>
-
-						<Button
-							onclick={handleSave}
-							disabled={isLoading || isSaving}
-							className="flex-1"
-						>
-							<Save class="mr-2 h-4 w-4" />
-							{isSaving ? 'Saving...' : 'Save'}
-						</Button>
-					</div>
+				<div class="field">
+					<label for="resolution">Resolution</label>
+					<select id="resolution" bind:value={settings.resolution}>
+						<option value="1080p">1080p (1920×1080)</option>
+						<option value="4k">4K (3840×2160)</option>
+					</select>
 				</div>
-			</svelte:fragment>
-		</Card>
-	</div>
 
-	<!-- Right Column: Preview & Export -->
-	<div class="space-y-6">
-		<!-- Live Preview -->
-		<Card>
-			<svelte:fragment slot="title">
-				<Monitor class="h-5 w-5" />
-				Live Preview
-			</svelte:fragment>
-
-			<svelte:fragment slot="description">
-				{previewWidth} × {previewHeight} pixels ({settings.resolution})
-			</svelte:fragment>
-
-			<svelte:fragment slot="content">
-				<div class="space-y-4">
-					<!-- Preview Container (iframe showing actual served caption) -->
-					{#if captionUrl}
-						{@const obsDims = getOBSDimensions()}
-						{@const previewScale = Math.min(1, 500 / obsDims.width)}
-						{@const scaledHeight = obsDims.height * previewScale}
-						<div
-							class="rounded-lg overflow-hidden border shadow-lg"
-							style="width: 100%; height: {scaledHeight}px;"
-						>
-							{#key captionUrl}
-								<iframe
-									title="Caption Preview"
-									src={captionUrl}
-									width={obsDims.width}
-									height={obsDims.height}
-									style="transform: scale({previewScale}); transform-origin: 0 0; border: none;"
-								></iframe>
-							{/key}
-						</div>
-					{:else}
-						<div class="rounded-lg border p-8 text-center text-muted-foreground">
-							Start the discovery server to see a live preview
-						</div>
-					{/if}
-
-					<!-- Export Options -->
-					<div class="rounded-lg bg-muted p-4 space-y-4">
-						<div class="flex items-center gap-2">
-							<Image class="h-4 w-4" />
-							<h4 class="font-medium text-sm">Export Image</h4>
-						</div>
-
-						<div class="space-y-2">
-							<Label for="aspect-ratio">Aspect Ratio</Label>
-							<select
-								id="aspect-ratio"
-								bind:value={settings.aspectRatio}
-								class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-							>
-								<option value="16:9">16:9 (Widescreen)</option>
-								<option value="4:3">4:3 (Standard)</option>
-								<option value="1:1">1:1 (Square)</option>
-								<option value="9:16">9:16 (Portrait)</option>
-							</select>
-						</div>
-
-						<div class="text-xs text-muted-foreground">
-							Export size: {exportDimensions.width} × {settings.type === 'preview' ? exportDimensions.height : captionHeight} pixels
-						</div>
-
-						<!-- Output folder (Tauri only) -->
-						{#if isTauri}
-							<div class="space-y-2">
-								<Label>Output Folder</Label>
-								{#if $appSettings.captionOutputPath}
-									<div class="flex items-center gap-2">
-										<code class="flex-1 text-xs bg-background rounded px-2 py-1.5 truncate border">{$appSettings.captionOutputPath}</code>
-										<button
-											type="button"
-											on:click={handleOpenFolder}
-											class="shrink-0 p-1.5 rounded hover:bg-background transition-colors"
-											title="Open folder"
-										>
-											<FolderOpen class="h-4 w-4" />
-										</button>
-										<button
-											type="button"
-											on:click={handleChangeFolder}
-											class="shrink-0 text-xs text-muted-foreground hover:text-foreground underline"
-										>
-											Change
-										</button>
-									</div>
-								{:else}
-									<Button
-										buttonVariant="outline"
-										onclick={handleChangeFolder}
-										className="w-full bg-transparent"
-									>
-										<FolderOpen class="mr-2 h-4 w-4" />
-										Select Output Folder
-									</Button>
-								{/if}
-							</div>
-						{/if}
-
-						<Button
-							onclick={handleExport}
-							disabled={isExporting}
-							className="w-full"
-						>
-							{#if isExporting}
-								<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-								Exporting...
-							{:else}
-								<Download class="mr-2 h-4 w-4" />
-								Export PNG
-							{/if}
-						</Button>
-					</div>
+				<div class="field">
+					<label for="caption-type">Caption Type</label>
+					<select id="caption-type" bind:value={settings.type}>
+						<option value="caption">Caption Bar</option>
+						<option value="preview">Preview Full Screen</option>
+					</select>
 				</div>
-			</svelte:fragment>
-		</Card>
 
-		<!-- OBS URL -->
-		<Card>
-			<svelte:fragment slot="title">
-				OBS Browser Source
-			</svelte:fragment>
+				{#if settings.type === 'preview'}
+					<div class="field">
+						<label for="caption-title">Title</label>
+						<input
+							id="caption-title"
+							type="text"
+							bind:value={settings.title}
+							placeholder="Service title"
+						/>
+					</div>
+				{/if}
 
-			<svelte:fragment slot="description">
-				Use this URL in OBS Studio
-			</svelte:fragment>
+				<div class="field">
+					<label for="bold-text">Bold Text</label>
+					<input
+						id="bold-text"
+						type="text"
+						bind:value={settings.boldText}
+						placeholder="e.g. John 3:16"
+					/>
+				</div>
 
-			<svelte:fragment slot="content">
-				<div class="space-y-4">
-					{#if !$discoveryServerStatus.running}
-						<div class="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
-							<p class="text-sm text-destructive">
-								Discovery server is not running. Start it from Settings.
-							</p>
-						</div>
-					{:else}
-						<div class="rounded-lg bg-muted p-3">
-							<code class="text-xs break-all">{captionUrl}</code>
-						</div>
-					{/if}
+				<div class="field">
+					<label for="light-text">Light Text</label>
+					<input
+						id="light-text"
+						type="text"
+						bind:value={settings.lightText}
+						placeholder="e.g. Sunday Service"
+					/>
+				</div>
 
-					<Button
-						onclick={handleCopyUrl}
-						disabled={!$discoveryServerStatus.running}
-						className="w-full"
+				<div class="field">
+					<label for="color">Color</label>
+					<select id="color" bind:value={settings.color}>
+						<option value="black">Black</option>
+						<option value="red">Red</option>
+					</select>
+				</div>
+
+				<div class="field checkbox-field">
+					<label class="checkbox-label" for="show-logo">
+						<input id="show-logo" type="checkbox" bind:checked={settings.showLogo} />
+						Show Logo
+					</label>
+				</div>
+
+				{#if settings.showLogo}
+					<div class="field">
+						<label for="logo-alt">Logo Alt Text</label>
+						<input
+							id="logo-alt"
+							type="text"
+							bind:value={settings.logoAlt}
+							placeholder="e.g. Church name"
+						/>
+					</div>
+				{/if}
+
+				<div class="field">
+					<label for="svg-logo">SVG Logo</label>
+					<textarea
+						id="svg-logo"
+						bind:value={settings.svgLogo}
+						rows={4}
+						placeholder="Paste SVG source here"
+					></textarea>
+				</div>
+
+				<div class="button-row">
+					<button class="btn-primary" onclick={handleSave} disabled={isSaving}>
+						{isSaving ? 'Saving…' : 'Save'}
+					</button>
+					<button class="btn-secondary" onclick={handleReset} disabled={isSaving}>
+						Reset
+					</button>
+				</div>
+			</div>
+
+			<!-- Right: preview + OBS info -->
+			<div class="right-col">
+				<!-- Live preview -->
+				<div class="glass-card preview-card">
+					<h2>Live Preview</h2>
+					<div
+						class="preview-container"
+						style="height: {scaledHeight}px;"
 					>
-						{#if urlCopied}
-							<Check class="mr-2 h-4 w-4" />
-							Copied!
-						{:else}
-							<Copy class="mr-2 h-4 w-4" />
-							Copy URL
-						{/if}
-					</Button>
-
-					<!-- OBS Instructions -->
-					<div class="text-sm text-muted-foreground space-y-1">
-						<p><strong>OBS Settings:</strong></p>
-						<p>Width: <code class="bg-muted px-1 rounded">{getOBSDimensions().width}</code></p>
-						<p>Height: <code class="bg-muted px-1 rounded">{getOBSDimensions().height}</code></p>
+						{#key captionUrl()}
+							<iframe
+								title="Caption Preview"
+								src={captionUrl()}
+								width={obsDims.width}
+								height={obsDims.height}
+								style="transform: scale({previewScale}); transform-origin: 0 0; border: none;"
+							></iframe>
+						{/key}
 					</div>
 				</div>
-			</svelte:fragment>
-		</Card>
-	</div>
+
+				<!-- OBS Browser Source info -->
+				<div class="glass-card obs-card">
+					<h2>OBS Browser Source</h2>
+					<p class="note">Add a Browser Source in OBS and paste this URL:</p>
+					<div class="url-block">
+						<code>{captionUrl()}</code>
+					</div>
+					<div class="obs-info">
+						<span class="dim-label">Width: <strong>{obsDims.width}</strong></span>
+						<span class="dim-label">Height: <strong>{obsDims.height}</strong></span>
+					</div>
+					<button class="btn-primary" onclick={handleCopyUrl}>
+						{urlCopied ? 'Copied!' : 'Copy URL'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
+
+<style>
+	.page {
+		max-width: 1100px;
+	}
+
+	h1 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0 0 0.25rem;
+	}
+
+	.subtitle {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		margin: 0 0 1.5rem;
+	}
+
+	.loading {
+		color: var(--text-secondary);
+		font-size: 0.875rem;
+	}
+
+	.layout {
+		display: grid;
+		grid-template-columns: 320px 1fr;
+		gap: 1.25rem;
+		align-items: start;
+	}
+
+	.settings-card,
+	.preview-card,
+	.obs-card {
+		padding: 1.25rem;
+	}
+
+	.right-col {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	h2 {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		margin: 0 0 1rem;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.field label,
+	.checkbox-label {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--text-primary);
+	}
+
+	.checkbox-field {
+		margin-bottom: 0.75rem;
+	}
+
+	.checkbox-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		cursor: pointer;
+	}
+
+	input[type='text'],
+	select,
+	textarea {
+		padding: 0.375rem 0.625rem;
+		border: 1px solid var(--input-border);
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		background: var(--input-bg);
+		color: var(--text-primary);
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	input[type='text']:focus,
+	select:focus,
+	textarea:focus {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+		border-color: var(--accent);
+	}
+
+	textarea {
+		resize: vertical;
+		font-family: monospace;
+		font-size: 0.75rem;
+	}
+
+	.button-row {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	.preview-container {
+		width: 100%;
+		overflow: hidden;
+		border-radius: 6px;
+		border: 1px solid var(--glass-border);
+	}
+
+	.note {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		margin: 0 0 0.75rem;
+	}
+
+	.url-block {
+		background: var(--input-bg);
+		border: 1px solid var(--input-border);
+		border-radius: 0.375rem;
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.75rem;
+		overflow-x: auto;
+	}
+
+	.url-block code {
+		font-size: 0.75rem;
+		color: var(--text-primary);
+		word-break: break-all;
+	}
+
+	.obs-info {
+		display: flex;
+		gap: 1.5rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.dim-label {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+	}
+
+	.btn-primary {
+		padding: 0.5rem 1rem;
+		background: var(--accent);
+		color: #fff;
+		border: none;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+
+	.btn-primary:hover:not(:disabled) {
+		filter: brightness(0.9);
+	}
+
+	.btn-primary:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.btn-secondary {
+		padding: 0.5rem 1rem;
+		background: transparent;
+		color: var(--accent);
+		border: 1px solid var(--accent);
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		cursor: pointer;
+	}
+
+	.btn-secondary:hover:not(:disabled) {
+		background: var(--accent-subtle);
+	}
+
+	.btn-secondary:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+</style>

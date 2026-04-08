@@ -21,6 +21,7 @@ pnpm check:watch      # Watch mode for type checking
 **Tech Stack:** SvelteKit 2.9 + Svelte 5 + Tauri 2 + Tailwind CSS 4 + TypeScript
 
 **Frontend (`/src`):**
+
 - `routes/` - SvelteKit file-based routing (SSG via adapter-static)
 - `lib/components/ui/` - Reusable UI primitives (button, card, alert, dialog, etc.)
 - `lib/components/sidebar.svelte` - Main navigation + system status display
@@ -28,10 +29,12 @@ pnpm check:watch      # Watch mode for type checking
 - `lib/utils/` - Services: `obs-websocket.ts` (OBS control), `obs-store.ts` (settings persistence), `toast.ts`
 
 **Backend (`/src-tauri`):**
+
 - Minimal Rust - most logic in TypeScript frontend
 - Uses Tauri plugins: store (persistence), websocket, opener
 
 **Key Integrations:**
+
 - `obs-websocket-js` - Direct OBS WebSocket client for streaming control
 - `svelte-sonner` - Toast notifications
 - 3-tier storage fallback: Tauri store → localStorage → in-memory
@@ -43,6 +46,7 @@ pnpm check:watch      # Watch mode for type checking
 **Styling:** Tailwind CSS 4 with OKLch CSS variables, `cn()` utility for class merging (clsx + tailwind-merge)
 
 **SystemStatus Type** (`src/lib/stores/types.ts`):
+
 ```typescript
 type SystemStatus = {
   obs: boolean;
@@ -50,7 +54,7 @@ type SystemStatus = {
   mainDisplay: boolean;
   secondaryDisplay: boolean;
   youtubeLoggedIn: boolean;
-}
+};
 ```
 
 ## Implementation Status
@@ -62,9 +66,11 @@ type SystemStatus = {
 ## Type Definitions
 
 Two SystemStatus definitions exist:
+
 - `src/lib/stores/types.ts` - Flat structure (correct)
 - `src/lib/types.ts` - Nested structure (outdated, to be consolidated)
 
 ## Rules
+
 - Always fix all `pnpm check` errors before finishing, even if they are unrelated to your changes.
 - Always name plan files with the format: PLAN-{feature-name}.md under the `plans` folder.

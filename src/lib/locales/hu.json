@@ -254,6 +254,7 @@
 		},
 		"form": {
 			"basicInfo": "Alapadatok",
+			"defaultTitle": "(Vasárnapi) istentisztelet",
 			"title": "Esemény Címe",
 			"titlePlaceholder": "Vasárnapi Istentisztelet - Isten Szeretete",
 			"date": "Dátum",
@@ -670,6 +671,264 @@
 		"errors": {
 			"obsNotConnected": "Az OBS nincs csatlakoztatva. Kérjük, először csatlakozzon az OBS-hez.",
 			"fillAllFields": "Kérjük, töltse ki az összes kötelező mezőt"
+		},
+		"availableDevices": "Elérhető Eszközök",
+		"listeners": "Eszközfigyelők",
+		"scanNow": "Szkennelés Most",
+		"addListener": "Figyelő Hozzáadása",
+		"connectorPlaceholder": "OBS Studio",
+		"notConnected": "Csatlakoztassa az OBS-t az eszközök szkenneléséhez",
+		"categories": {
+			"display": "Kijelző",
+			"audioInput": "Audio Bemenet",
+			"audioOutput": "Audio Kimenet",
+			"videoInput": "Video Bemenet",
+			"captureCard": "Rögzítő Kártya"
+		},
+		"listenerForm": {
+			"category": "Kategória",
+			"device": "Eszköz",
+			"name": "Barátságos Név",
+			"save": "Mentés",
+			"cancel": "Mégse"
+		},
+		"status": {
+			"available": "Elérhető",
+			"unavailable": "Nem elérhető"
+		},
+		"manageDeviceMonitors": "Eszközfigyelők Kezelése →"
+	},
+	"nav": {
+		"dashboard": "Főoldal",
+		"events": "Események",
+		"connect": "Kapcsolódás",
+		"settings": "Beállítások",
+		"liveEvents": "Élő Közvetítések & Videók",
+		"presentations": "Prezentációk",
+		"obsCaption": "OBS Felirat",
+		"obsDevices": "Eszközfigyelő"
+	},
+	"presentations": {
+		"title": "Prezentációk",
+		"folders": {
+			"title": "Prezentáció Mappák",
+			"add": "Mappa Hozzáadása",
+			"remove": "Mappa eltávolítása"
+		},
+		"search": {
+			"title": "Fájl Keresés"
+		},
+		"results": {
+			"title": "Eredmények"
+		},
+		"status": {
+			"title": "Keynote Állapot",
+			"slideshow": "Diavetítés",
+			"slide": "Dia",
+			"document": "Dokumentum",
+			"on": "BE",
+			"off": "KI"
+		},
+		"controls": {
+			"title": "Vezérlők",
+			"first": "Első Dia",
+			"prev": "Előző Dia",
+			"next": "Következő Dia",
+			"last": "Utolsó Dia",
+			"play": "Lejátszás",
+			"stop": "Megállítás",
+			"closeAll": "Összes Bezárása"
 		}
+	},
+	"liveEvents": {
+		"title": "Élő Közvetítések & Videók",
+		"platform": {
+			"youtube": "YouTube"
+		},
+		"loading": "Betöltés…",
+		"error": "A tartalom betöltése sikertelen",
+		"sessionExpired": "A YouTube munkamenet lejárt — kérjük, jelentkezzen be újra",
+		"reLogin": "Újra bejelentkezés YouTube-ra",
+		"retry": "Újra",
+		"notConnected": "Nincs kapcsolat",
+		"connectFirst": "Csatlakoztassa YouTube-fiókját a Beállításokban a csatorna tartalmának megtekintéséhez.",
+		"broadcasts": "Élő Közvetítések",
+		"videos": "Feltöltött Videók",
+		"noContent": "Nem található tartalom",
+		"views": "{count} megtekintés",
+		"live": "ÉLŐ",
+		"upcoming": "HAMAROSAN"
+	},
+	"appSettings": {
+		"title": "Beállítások",
+		"language": "Nyelv",
+		"appMode": {
+			"title": "App Mód",
+			"current": "Jelenlegi mód",
+			"changeMode": "Mód módosítása",
+			"changing": "Visszaállítás…",
+			"note": "A mód módosítása visszahozza a telepítési képernyőt. Ha ez az eszköz szerverként fut, a beágyazott adatbázis tovább fut, amíg újra nem indítja az alkalmazást."
+		},
+		"connectors": {
+			"title": "Csatlakozók",
+			"obs": {
+				"title": "OBS Studio",
+				"subtitle": "Csatlakozás az OBS Studiohoz WebSocket-en (v5)",
+				"host": "Gazdagép",
+				"port": "Port",
+				"password": "Jelszó",
+				"passwordPlaceholder": "OBS WebSocket jelszó",
+				"enabled": "OBS csatlakozó engedélyezése",
+				"save": "Mentés és újracsatlakozás",
+				"saving": "Mentés…",
+				"connect": "Csatlakozás",
+				"disconnect": "Lecsatlakozás",
+				"status": "Állapot"
+			},
+			"vmix": {
+				"title": "VMix",
+				"subtitle": "VMix támogatás hamarosan",
+				"host": "Gazdagép",
+				"port": "Port",
+				"enabled": "VMix csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"comingSoon": "A VMix integráció még nem érhető el. A konfiguráció mentésre kerül a jövőbeli használathoz."
+			},
+			"youtube": {
+				"title": "YouTube",
+				"subtitle": "Élő közvetítések ütemezése YouTube Data API v3 segítségével",
+				"clientId": "Ügyfél-azonosító",
+				"clientSecret": "Ügyfél-titok",
+				"enabled": "YouTube csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"login": "Bejelentkezés YouTube-ra",
+				"logout": "Kijelentkezés",
+				"loggingIn": "Böngésző megnyitása…"
+			},
+			"facebook": {
+				"title": "Facebook",
+				"subtitle": "Facebook oldal-esemény és élő közvetítés létrehozása",
+				"appId": "Alkalmazás-azonosító",
+				"appSecret": "Alkalmazás-titok",
+				"pageId": "Oldal-azonosító",
+				"enabled": "Facebook csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"login": "Bejelentkezés Facebook-ra",
+				"logout": "Kijelentkezés",
+				"loggingIn": "Böngésző megnyitása…"
+			},
+			"atem": {
+				"title": "Blackmagic ATEM",
+				"subtitle": "ATEM váltó támogatás hamarosan",
+				"host": "Gazdagép / IP",
+				"port": "Port",
+				"enabled": "ATEM csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"comingSoon": "Az ATEM integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+			},
+			"broadlink": {
+				"title": "BroadLink",
+				"subtitle": "BroadLink hub támogatás hamarosan",
+				"host": "Gazdagép / IP",
+				"port": "Port",
+				"enabled": "BroadLink csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"comingSoon": "A BroadLink integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+			},
+			"discord": {
+				"title": "Discord",
+				"subtitle": "Discord webhook támogatás hamarosan",
+				"webhookUrl": "Webhook URL",
+				"enabled": "Discord csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…",
+				"comingSoon": "A Discord integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+			},
+			"broadlink": {
+				"title": "Broadlink RF/IR",
+				"subtitle": "Vetítők, kijelzők és AV eszközök vezérlése IR és RF jelekkel",
+				"enabled": "Broadlink csatlakozó engedélyezése",
+				"save": "Mentés",
+				"saving": "Mentés…"
+			},
+			"statusLabels": {
+				"connected": "Csatlakozva",
+				"connecting": "Csatlakozás…",
+				"disconnected": "Nincs kapcsolat",
+				"error": "Hiba"
+			}
+		},
+		"dependencies": {
+			"title": "Függőségek",
+			"note": "Opcionális csomagok a stream előnézethez és a multi-stream relayhez."
+		},
+		"obsBadge": {
+			"title": "OBS Jelvény",
+			"description": "Liquid glass jelvény létrehozása OBS-ben a LucidGlass shader segítségével. Az OBS-nek csatlakoztatva kell lennie.",
+			"obsNotConnected": "Az OBS-t először csatlakoztatni kell. Kérjük, konfigurálja és csatlakoztassa az OBS-t fent.",
+			"installButton": "Plugin és Shader telepítése",
+			"installing": "Telepítés…",
+			"pluginInstalled": "Plugin: ✓ Telepítve",
+			"pluginNotInstalled": "Plugin: ✗ Nem telepítve — kérjük, telepítse az obs-shaderfilter-t manuálisan",
+			"shaderInstalled": "Shader: ✓ Telepítve",
+			"shaderNotInstalled": "Shader: ✗ A shader fájl írása sikertelen",
+			"targetScene": "Céljelenet",
+			"selectScene": "Válasszon jelenetet…",
+			"loadingScenes": "Jelenetek betöltése…",
+			"selectSceneError": "Kérjük, válasszon jelenetet",
+			"createButton": "Jelvény források létrehozása",
+			"creating": "Létrehozás…",
+			"sourcesCreated": "✓ Jelvény források létrehozva: \u201e{sceneName}\u201d"
+		},
+		"updater": {
+			"title": "Alkalmazás verziója",
+			"currentVersion": "Jelenlegi verzió",
+			"checkForUpdates": "Frissítések keresése",
+			"checking": "Keresés…",
+			"upToDate": "Az alkalmazás naprakész",
+			"updateAvailable": "Elérhető frissítés: v{version}",
+			"download": "Letöltés",
+			"lastChecked": "Utoljára ellenőrizve",
+			"errorChecking": "Nem sikerült ellenőrizni a frissítéseket",
+			"toast": {
+				"title": "Frissítés elérhető",
+				"description": "A {version} verzió letölthető"
+			}
+		},
+		"cronJobs": {
+			"title": "Időzített feladatok",
+			"colName": "Név",
+			"colExpression": "Kifejezés",
+			"colEnabled": "Engedélyezve",
+			"colPullYoutube": "YouTube húzás",
+			"colActions": "Műveletek",
+			"noneConfigured": "Még nincsenek időzített feladatok beállítva.",
+			"editTitle": "Időzített feladat szerkesztése",
+			"addTitle": "Időzített feladat hozzáadása",
+			"namePlaceholder": "pl. YouTube lekérdezés",
+			"expressionLabel": "Cron kifejezés",
+			"expressionPlaceholder": "pl. 0 */5 * * * * (minden 5 percben)",
+			"enabledLabel": "Engedélyezve",
+			"pullYoutubeLabel": "YouTube élő események lekérése",
+			"saving": "Mentés…",
+			"save": "Mentés",
+			"cancel": "Mégse",
+			"editButton": "Szerkesztés",
+			"deleteButton": "Törlés"
+		}
+	},
+	"errorsPage": {
+		"title": "Csatlakozó hibák",
+		"noErrors": "Nincsenek csatlakozó hibák",
+		"recheck": "Újraellenőrzés",
+		"fix": "Javítás",
+		"info": "Info",
+		"closeInfo": "Info bezárása",
+		"rechecking": "Ellenőrzés…"
 	}
 }

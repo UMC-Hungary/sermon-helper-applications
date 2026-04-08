@@ -1,27 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
-  "windows": [
-    "main"
-  ],
+  "description": "Default application capabilities",
+  "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
-    "store:default",
-    "websocket:default",
-    "deep-link:default",
-    "dialog:default",
-    "fs:default",
-    "fs:allow-document-write-recursive",
-    "fs:allow-download-write-recursive",
-    "fs:allow-home-write-recursive",
-    "fs:allow-desktop-write-recursive",
-    "updater:default",
-    "process:allow-restart",
-    "log:default",
     "core:window:allow-start-dragging",
-    "core:window:allow-start-resize-dragging",
-    "core:window:allow-toggle-maximize"
+    "opener:default",
+    "dialog:allow-open",
+    "store:default",
+    "liquid-glass:default"
   ]
 }

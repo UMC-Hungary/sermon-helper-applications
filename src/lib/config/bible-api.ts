@@ -25,7 +25,7 @@ export function getApiConfig(): BibleApiConfig {
     return {
       v2ApiUrl: (import.meta.env.VITE_BIBLE_V2_API_URL as string) || DEFAULT_CONFIG.v2ApiUrl,
       legacyApiUrl: (import.meta.env.VITE_BIBLE_LEGACY_API_URL as string) || DEFAULT_CONFIG.legacyApiUrl,
-      browserProxyUrl: (import.meta.env.VITE_CORS_PROXY_URL as string) || DEFAULT_CONFIG.browserProxyUrl,
+      browserProxyUrl: (import.meta.env.VITE_CORS_PROXY_URL as string) || (DEFAULT_CONFIG.browserProxyUrl ?? ''),
       useCorsProxy: import.meta.env.VITE_USE_CORS_PROXY !== 'false',
     };
   }

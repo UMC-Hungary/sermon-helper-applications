@@ -1,8 +1,7 @@
-import { createStorageBackend, type StorageBackend } from './storage-helpers';
+import { browser } from '$app/environment';
 
 export type CaptionType = 'caption' | 'preview';
 export type Resolution = '1080p' | '4k';
-export type AspectRatio = '16:9' | '4:3' | '1:1' | '9:16';
 
 export interface CaptionSettings {
 	type: CaptionType;
@@ -11,46 +10,29 @@ export interface CaptionSettings {
 	lightText: string;
 	color: string;
 	showLogo: boolean;
+	logoAlt: string;
 	svgLogo: string;
 	resolution: Resolution;
-	aspectRatio: AspectRatio;
 }
 
-// Resolution dimensions
 export const RESOLUTION_DIMENSIONS: Record<Resolution, { width: number; height: number }> = {
 	'1080p': { width: 1920, height: 1080 },
 	'4k': { width: 3840, height: 2160 },
 };
 
-// Aspect ratio multipliers (width / height)
-export const ASPECT_RATIOS: Record<AspectRatio, number> = {
-	'16:9': 16 / 9,
-	'4:3': 4 / 3,
-	'1:1': 1,
-	'9:16': 9 / 16,
-};
-
-// Get export dimensions based on resolution and aspect ratio
-export function getExportDimensions(resolution: Resolution, aspectRatio: AspectRatio): { width: number; height: number } {
-	const base = RESOLUTION_DIMENSIONS[resolution];
-	const ratio = ASPECT_RATIOS[aspectRatio];
-
-	// Keep the height fixed, adjust width based on aspect ratio
-	const height = base.height;
-	const width = Math.round(height * ratio);
-
-	return { width, height };
-}
-
-// Get caption height based on type and resolution
 export function getCaptionHeight(type: CaptionType, resolution: Resolution): number {
-	const base = RESOLUTION_DIMENSIONS[resolution];
 	if (type === 'caption') {
-		// Caption bar: 150px at 1080p, 300px at 4K (matching reference)
 		return resolution === '4k' ? 300 : 150;
 	}
-	return base.height;
+	return RESOLUTION_DIMENSIONS[resolution].height;
 }
+
+const isTauriApp = (): boolean =>
+	browser &&
+	typeof (window as unknown as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ !==
+		'undefined';
+
+const STORE_NAME = 'caption-settings.json';
 
 const DEFAULT_SETTINGS: CaptionSettings = {
 	type: 'caption',
@@ -59,106 +41,84 @@ const DEFAULT_SETTINGS: CaptionSettings = {
 	lightText: '',
 	color: 'black',
 	showLogo: true,
+	logoAlt: '',
 	svgLogo: '',
 	resolution: '1080p',
-	aspectRatio: '16:9',
 };
 
-class CaptionSettingsStore {
-	private store: StorageBackend | null = null;
-	private readonly storeName = 'caption-settings.json';
-
-	async init(): Promise<void> {
-		if (!this.store) {
-			this.store = await createStorageBackend(this.storeName);
-		}
-	}
-
-	async getSettings(): Promise<CaptionSettings> {
-		await this.init();
-
-		if (!this.store) {
-			return DEFAULT_SETTINGS;
-		}
-
-		try {
-			const type = (await this.store.get('type')) ?? DEFAULT_SETTINGS.type;
-			const title = (await this.store.get('title')) ?? DEFAULT_SETTINGS.title;
-			const boldText = (await this.store.get('boldText')) ?? DEFAULT_SETTINGS.boldText;
-			const lightText = (await this.store.get('lightText')) ?? DEFAULT_SETTINGS.lightText;
-			const color = (await this.store.get('color')) ?? DEFAULT_SETTINGS.color;
-			const showLogo = (await this.store.get('showLogo')) ?? DEFAULT_SETTINGS.showLogo;
-			const svgLogo = (await this.store.get('svgLogo')) ?? DEFAULT_SETTINGS.svgLogo;
-			const resolution = (await this.store.get('resolution')) ?? DEFAULT_SETTINGS.resolution;
-			const aspectRatio = (await this.store.get('aspectRatio')) ?? DEFAULT_SETTINGS.aspectRatio;
-
-			return {
-				type,
-				title,
-				boldText,
-				lightText,
-				color,
-				showLogo,
-				svgLogo,
-				resolution,
-				aspectRatio,
-			};
-		} catch (error) {
-			console.error('Failed to load caption settings:', error);
-			return DEFAULT_SETTINGS;
-		}
-	}
-
-	async saveSettings(settings: Partial<CaptionSettings>): Promise<void> {
-		await this.init();
-
-		if (!this.store) {
-			throw new Error('Store not initialized');
-		}
-
-		try {
-			if (settings.type !== undefined) {
-				await this.store.set('type', settings.type);
-			}
-			if (settings.title !== undefined) {
-				await this.store.set('title', settings.title);
-			}
-			if (settings.boldText !== undefined) {
-				await this.store.set('boldText', settings.boldText);
-			}
-			if (settings.lightText !== undefined) {
-				await this.store.set('lightText', settings.lightText);
-			}
-			if (settings.color !== undefined) {
-				await this.store.set('color', settings.color);
-			}
-			if (settings.showLogo !== undefined) {
-				await this.store.set('showLogo', settings.showLogo);
-			}
-			if (settings.svgLogo !== undefined) {
-				await this.store.set('svgLogo', settings.svgLogo);
-			}
-			if (settings.resolution !== undefined) {
-				await this.store.set('resolution', settings.resolution);
-			}
-			if (settings.aspectRatio !== undefined) {
-				await this.store.set('aspectRatio', settings.aspectRatio);
-			}
-			await this.store.save();
-		} catch (error) {
-			console.error('Failed to save caption settings:', error);
-			throw error;
-		}
-	}
-
-	async resetSettings(): Promise<void> {
-		await this.saveSettings(DEFAULT_SETTINGS);
-	}
-
-	getDefaultSettings(): CaptionSettings {
-		return { ...DEFAULT_SETTINGS };
-	}
+function getDefaultSettings(): CaptionSettings {
+	return { ...DEFAULT_SETTINGS };
 }
 
-// Export singleton instance
-export const captionSettingsStore = new CaptionSettingsStore();
+async function getSettings(): Promise<CaptionSettings> {
+	if (!browser) return getDefaultSettings();
+
+	try {
+		if (isTauriApp()) {
+			const { load } = await import('@tauri-apps/plugin-store');
+			const store = await load(STORE_NAME);
+
+			const [type, title, boldText, lightText, color, showLogo, logoAlt, svgLogo, resolution] =
+				await Promise.all([
+					store.get<CaptionType>('type'),
+					store.get<string>('title'),
+					store.get<string>('boldText'),
+					store.get<string>('lightText'),
+					store.get<string>('color'),
+					store.get<boolean>('showLogo'),
+					store.get<string>('logoAlt'),
+					store.get<string>('svgLogo'),
+					store.get<Resolution>('resolution'),
+				]);
+
+			return {
+				type: type ?? DEFAULT_SETTINGS.type,
+				title: title ?? DEFAULT_SETTINGS.title,
+				boldText: boldText ?? DEFAULT_SETTINGS.boldText,
+				lightText: lightText ?? DEFAULT_SETTINGS.lightText,
+				color: color ?? DEFAULT_SETTINGS.color,
+				showLogo: showLogo ?? DEFAULT_SETTINGS.showLogo,
+				logoAlt: logoAlt ?? DEFAULT_SETTINGS.logoAlt,
+				svgLogo: svgLogo ?? DEFAULT_SETTINGS.svgLogo,
+				resolution: resolution ?? DEFAULT_SETTINGS.resolution,
+			};
+		}
+	} catch (error) {
+		console.warn('Failed to load caption settings from Tauri store:', error);
+	}
+
+	// Browser localStorage fallback
+	try {
+		const raw = localStorage.getItem(STORE_NAME);
+		if (raw) {
+			return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<CaptionSettings>) };
+		}
+	} catch {
+		// ignore parse errors
+	}
+	return getDefaultSettings();
+}
+
+async function saveSettings(settings: Partial<CaptionSettings>): Promise<void> {
+	if (!browser) return;
+
+	const merged = { ...(await getSettings()), ...settings };
+
+	try {
+		if (isTauriApp()) {
+			const { load } = await import('@tauri-apps/plugin-store');
+			const store = await load(STORE_NAME);
+			const keys = Object.keys(merged) as Array<keyof CaptionSettings>;
+			await Promise.all(keys.map((key) => store.set(key, merged[key])));
+			await store.save();
+			return;
+		}
+	} catch (error) {
+		console.warn('Failed to save caption settings to Tauri store:', error);
+	}
+
+	// Browser localStorage fallback
+	localStorage.setItem(STORE_NAME, JSON.stringify(merged));
+}
+
+export const captionSettingsStore = { getDefaultSettings, getSettings, saveSettings };

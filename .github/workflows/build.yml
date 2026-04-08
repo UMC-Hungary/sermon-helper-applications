@@ -1,7 +1,11 @@
 name: Build and Release
 
 on:
-  # Build on push to main or version tags
+  # Run tests on every pull request targeting main
+  pull_request:
+    branches:
+      - main
+  # Build and release on push to main or version tags
   push:
     branches:
       - main
@@ -19,7 +23,88 @@ env:
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
 jobs:
+  # ──────────────────────────────────────────────
+  # E2E tests — must pass before any build starts
+  # Runs on Linux only; builds the headless test_server binary,
+  # starts it, runs pnpm test:e2e, then shuts it down.
+  # ──────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-22.04
+    name: E2E Tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: Linux-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: Linux-pnpm-store-
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: test-server
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build test server
+        run: pnpm build:test-server
+
+      - name: Cache embedded PostgreSQL binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/postgresql-embedded
+          key: postgresql-embedded-${{ runner.os }}-v1
+
+      - name: Cache test server data directory
+        uses: actions/cache@v4
+        with:
+          path: test-server-data
+          key: test-server-data-${{ runner.os }}-v1
+
+      - name: Run E2E tests
+        # TAURI_TEST_TOKEN comes from .env.test (loaded by vitest.config.ts via dotenv).
+        # Both the server (started in globalSetup) and test workers use the same
+        # hardcoded test token from .env.test — no CI secret needed here.
+        run: pnpm test:e2e
+
+  # ──────────────────────────────────────────────
+  # Desktop builds (macOS, Windows, Linux)
+  # ──────────────────────────────────────────────
   build:
+    needs: test
+    if: github.event_name != 'pull_request'
     permissions:
       contents: write
     strategy:
@@ -220,35 +305,325 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.sig
           if-no-files-found: error
 
-  # Build presenter-receiver terminal binary for all platforms
-  build-presenter-receiver:
+  # ──────────────────────────────────────────────
+  # iOS build (client-only, no embedded server)
+  # Requires: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
+  #           APPLE_PROVISIONING_PROFILE secrets for signed builds.
+  # Without those secrets an unsigned simulator/device build is produced.
+  #
+  # One-time setup: run `pnpm tauri ios init` locally and commit
+  # src-tauri/gen/apple/ to the repository.
+  # ──────────────────────────────────────────────
+  build-ios:
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    name: Build (iOS)
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: macOS-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: macOS-pnpm-store-
+
+      - name: Setup Rust with iOS targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: ios
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Update version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = '$VERSION';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+          "
+          sed -i '' 's/^version = ".*"/version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+
+      # Initialize iOS project if it hasn't been committed to the repo yet.
+      # Best practice: run `pnpm tauri ios init` locally and commit the result.
+      - name: Initialize iOS project (if needed)
+        run: |
+          if [ ! -d "src-tauri/gen/apple" ]; then
+            echo "iOS project not found — running tauri ios init"
+            pnpm tauri ios init
+          else
+            echo "iOS project already present"
+          fi
+
+      # Import Apple signing certificate when the secret is configured.
+      - name: Import Apple signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          security create-keychain -p "" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "" $KEYCHAIN_PATH
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 \
+            -k $KEYCHAIN_PATH \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "" $KEYCHAIN_PATH
+
+      # Install provisioning profile when configured.
+      - name: Install provisioning profile
+        if: env.APPLE_PROVISIONING_PROFILE != ''
+        env:
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$APPLE_PROVISIONING_PROFILE" | base64 --decode \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      # iOS requires a real Apple Developer signing identity — xcodebuild cannot
+      # produce a device build without one. This step runs only when the signing
+      # secrets are configured; without them the job skips the build but still
+      # succeeds (the Android debug build covers unsigned mobile compilation).
+      - name: Build iOS app
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_PROVISIONING_PROFILE" ]; then
+            echo "Skipping iOS build — APPLE_CERTIFICATE / APPLE_PROVISIONING_PROFILE secrets not configured."
+            echo "Add them to enable signed iOS builds."
+            exit 0
+          fi
+          pnpm tauri ios build --export-method ad-hoc
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS
+          path: |
+            src-tauri/gen/apple/build/**/*.ipa
+            src-tauri/gen/apple/build/**/*.app
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────
+  # Android build (client-only, no embedded server)
+  # Requires: ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD,
+  #           ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD secrets
+  #           for signed release builds.
+  #
+  # One-time setup: run `pnpm tauri android init` locally and commit
+  # src-tauri/gen/android/ to the repository.
+  # ──────────────────────────────────────────────
+  build-android:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    name: Build (Android)
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: Linux-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: Linux-pnpm-store-
+
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;27.0.12077973"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Setup Rust with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          shared-key: android
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Update version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            conf.version = '$VERSION';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+          "
+          sed -i 's/^version = ".*"/version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+
+      # Initialize Android project if not committed to the repo.
+      # Best practice: run `pnpm tauri android init` locally and commit the result.
+      - name: Initialize Android project (if needed)
+        run: |
+          if [ ! -d "src-tauri/gen/android" ]; then
+            echo "Android project not found — running tauri android init"
+            pnpm tauri android init
+          else
+            echo "Android project already present"
+          fi
+
+      # Decode keystore for signed release builds.
+      - name: Setup Android keystore
+        if: env.ANDROID_KEYSTORE != ''
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 --decode > $RUNNER_TEMP/release.keystore
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
+
+      # Signed release build when keystore is available.
+      - name: Build Android app (signed release)
+        if: env.ANDROID_KEYSTORE != ''
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          pnpm tauri android build \
+            --apk \
+            -- \
+            -Pandroid.injected.signing.store.file="$ANDROID_KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+
+      # Debug (unsigned) build when keystore is not available.
+      - name: Build Android app (debug)
+        if: env.ANDROID_KEYSTORE == ''
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+        run: pnpm tauri android build --apk --debug
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────
+  # Presenter Receiver — standalone CLI binary
+  # Builds for: macOS arm64/x86_64, Linux arm64 (RPi), Linux x86_64
+  # No Node/pnpm needed — pure Rust + Cairo/Pango system libs.
+  # Note: linux-arm64 uses GitHub's hosted ubuntu-24.04-arm runner.
+  # ──────────────────────────────────────────────
+  build-receiver:
+    needs: test
+    if: github.event_name != 'pull_request'
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            binary-name: presenter-receiver-macos-arm64
-          - os: macos-13
-            binary-name: presenter-receiver-macos-x86_64
-          - os: ubuntu-22.04
-            binary-name: presenter-receiver-linux-x86_64
-          - os: ubuntu-22.04-arm
-            binary-name: presenter-receiver-linux-arm64
+          - runner: macos-latest
+            artifact: presenter-receiver-macos-arm64
 
-    runs-on: ${{ matrix.os }}
-    name: Presenter Receiver (${{ matrix.binary-name }})
+          - runner: macos-13
+            artifact: presenter-receiver-macos-x86_64
+
+          - runner: ubuntu-22.04
+            artifact: presenter-receiver-linux-x86_64
+
+          - runner: ubuntu-24.04-arm
+            artifact: presenter-receiver-linux-arm64
+
+    runs-on: ${{ matrix.runner }}
+    name: Receiver (${{ matrix.artifact }})
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install macOS dependencies
+      - name: Install macOS dependencies (Cairo + Pango via Homebrew)
         if: runner.os == 'macOS'
         run: brew install cairo pango pkg-config
 
-      - name: Install Linux dependencies
+      - name: Install Linux dependencies (Cairo + Pango via apt)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -261,25 +636,32 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './presenter-receiver -> target'
-          shared-key: ${{ matrix.binary-name }}
+          shared-key: ${{ matrix.artifact }}
 
-      - name: Build
+      - name: Build release binary
         working-directory: presenter-receiver
-        run: cargo build --release
-
-      - name: Rename binary
         shell: bash
-        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.binary-name }}
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
+          fi
+          cargo build --release
+
+      - name: Rename binary with platform suffix
+        shell: bash
+        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.binary-name }}
-          path: ${{ matrix.binary-name }}
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
 
-  # Create release (only on version tags)
+  # ──────────────────────────────────────────────
+  # Release (version tags only)
+  # ──────────────────────────────────────────────
   release:
-    needs: [build, build-presenter-receiver]
+    needs: [build, build-ios, build-android, build-receiver]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -396,12 +778,36 @@ jobs:
             - `.rpm` - Fedora/RHEL
             - `.AppImage` - Universal (make executable with `chmod +x`)
 
+            ### iOS
+            Install via TestFlight or side-load the `.ipa` (requires ad-hoc provisioning).
+
+            ### Android
+            Install the `.apk` directly (enable "Install from unknown sources").
+
+            ---
+
+            ## Presenter Receiver
+
+            A standalone terminal binary that connects to the Sermon Helper WebSocket
+            and renders the active presentation slide on-screen.
+            - **macOS**: opens a native window (Helvetica Neue, Cairo-rendered)
+            - **Linux / Raspberry Pi**: writes directly to the framebuffer (`/dev/fb0`) — no desktop needed
+
+            ### One-line install (auto-detects platform)
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws
+            ```
+            Detects macOS/Linux and arm64/x86_64 automatically, downloads the right binary, and starts it.
+
+            To install without running:
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
+            ```
+
+            > **Auto-start on RPi** — add to `/etc/rc.local` or create a systemd service pointing to the installed binary.
+
           files: |
             latest.json
-            artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64
-            artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
-            artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
-            artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
             artifacts/**/*.exe
             artifacts/**/*.exe.sig
             artifacts/**/*.msi
@@ -415,3 +821,10 @@ jobs:
             artifacts/**/*.rpm.sig
             artifacts/**/*.AppImage
             artifacts/**/*.AppImage.sig
+            artifacts/**/*.ipa
+            artifacts/**/*.apk
+            artifacts/**/*.aab
+            artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64
+            artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
+            artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
+            artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64

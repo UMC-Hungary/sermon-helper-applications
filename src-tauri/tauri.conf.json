@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "sermon-helper-tauri",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "identifier": "com.sermon-helper-tauri.app",
   "build": {
     "beforeDevCommand": "pnpm run dev",
@@ -11,9 +11,10 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "sermon-helper-tauri",
+        "title": "Sermon Helper",
         "width": 1280,
         "height": 800,
         "transparent": true,
@@ -29,7 +30,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
+
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,19 +41,6 @@
     "macOS": {
       "signingIdentity": "-",
       "minimumSystemVersion": "10.13"
-    }
-  },
-  "plugins": {
-    "deep-link": {
-      "desktop": {
-        "schemes": ["sermon-helper"]
-      }
-    },
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM4ODE5NzU4NDQ4RDBFN0YKUldSL0RvMUVXSmVCeUVCOFU4YTFMblJRUGtEYmR5VktLUytsUlp4WGZzcVJqY2pLZWZrdWYvOEcK",
-      "endpoints": [
-        "https://github.com/UMC-Hungary/sermon-helper-applications/releases/latest/download/latest.json"
-      ]
     }
   }
 }

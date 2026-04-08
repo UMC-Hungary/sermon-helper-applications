@@ -1,17 +1,16 @@
-import { register, init, getLocaleFromNavigator, locale } from 'svelte-i18n';
+import { addMessages, init, locale } from 'svelte-i18n';
 import { browser } from '$app/environment';
+import en from './locales/en.json';
+import hu from './locales/hu.json';
 
-// Register locales
-register('en', () => import('./locales/en.json'));
-register('hu', () => import('./locales/hu.json'));
+// Use addMessages (synchronous) so $_() works during SSR
+addMessages('en', en);
+addMessages('hu', hu);
 
-// Check if running in Tauri environment
 const isTauriApp = () => {
-	return browser &&
-		   typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+	return browser && typeof (window as unknown as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ !== 'undefined';
 };
 
-// Get initial locale synchronously (for SSR compatibility)
 function getInitialLocale(): string {
 	if (browser) {
 		const saved = localStorage.getItem('locale');
@@ -20,13 +19,11 @@ function getInitialLocale(): string {
 	return 'en';
 }
 
-// Initialize synchronously with default locale
 init({
 	fallbackLocale: 'en',
 	initialLocale: getInitialLocale(),
 });
 
-// Load saved locale from Tauri store (called after mount)
 export async function loadSavedLocale(): Promise<void> {
 	if (!browser) return;
 
@@ -34,7 +31,7 @@ export async function loadSavedLocale(): Promise<void> {
 		if (isTauriApp()) {
 			const { load } = await import('@tauri-apps/plugin-store');
 			const store = await load('settings.json');
-			const savedLocale = await store.get('locale') as string | null;
+			const savedLocale = (await store.get('locale')) as string | null;
 			if (savedLocale) {
 				locale.set(savedLocale);
 			}
@@ -44,15 +41,12 @@ export async function loadSavedLocale(): Promise<void> {
 	}
 }
 
-// Save locale to storage
-export async function saveLocale(newLocale: string): Promise<void> {
+export async function setLocale(newLocale: string): Promise<void> {
+	locale.set(newLocale);
 	if (!browser) return;
 
 	try {
-		// Always save to localStorage for quick access
 		localStorage.setItem('locale', newLocale);
-
-		// Also save to Tauri store if available
 		if (isTauriApp()) {
 			const { load } = await import('@tauri-apps/plugin-store');
 			const store = await load('settings.json');
@@ -64,13 +58,6 @@ export async function saveLocale(newLocale: string): Promise<void> {
 	}
 }
 
-// Set locale and persist
-export async function setLocale(newLocale: string): Promise<void> {
-	locale.set(newLocale);
-	await saveLocale(newLocale);
-}
-
-// Available locales for the language switcher
 export const availableLocales = [
 	{ code: 'en', name: 'English', flag: '🇬🇧' },
 	{ code: 'hu', name: 'Magyar', flag: '🇭🇺' },

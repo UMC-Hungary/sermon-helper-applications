@@ -74,7 +74,7 @@ impl BroadlinkDevice {
         socket.connect(device_addr)
             .map_err(|e| format!("Failed to connect socket: {}", e))?;
 
-        log::info!("Socket bound to {:?}, connected to {:?}",
+        tracing::info!("Socket bound to {:?}, connected to {:?}",
             socket.local_addr().ok(), device_addr);
 
         let mut dev = BroadlinkDevice {
@@ -199,27 +199,27 @@ impl BroadlinkDevice {
         packet[0x20] = (checksum & 0xff) as u8;
         packet[0x21] = ((checksum >> 8) & 0xff) as u8;
 
-        log::debug!("Sending packet: cmd=0x{:02x}, payload_len={}, encrypted_len={}, total_len={}",
+        tracing::debug!("Sending packet: cmd=0x{:02x}, payload_len={}, encrypted_len={}, total_len={}",
             command, payload.len(), encrypted.len(), packet.len());
-        log::debug!("Using key: {:02x?}", &self.key);
-        log::debug!("Device ID: {:02x?}, count: {}", &self.id, self.count);
-        log::debug!("Packet header (first 56 bytes): {:02x?}", &packet[..0x38.min(packet.len())]);
+        tracing::debug!("Using key: {:02x?}", &self.key);
+        tracing::debug!("Device ID: {:02x?}, count: {}", &self.id, self.count);
+        tracing::debug!("Packet header (first 56 bytes): {:02x?}", &packet[..0x38.min(packet.len())]);
 
         // Send (using send() since we used connect())
         let sent = self.socket.send(&packet)
             .map_err(|e| format!("Send failed: {}", e))?;
-        log::debug!("Sent {} bytes", sent);
+        tracing::debug!("Sent {} bytes", sent);
 
         // Receive response
         let mut buf = [0u8; 2048];
         let len = self.socket.recv(&mut buf)
             .map_err(|e| {
-                log::error!("Receive failed (timeout or error): {}", e);
+                tracing::error!("Receive failed (timeout or error): {}", e);
                 format!("Receive failed: {}", e)
             })?;
-        log::debug!("Received {} bytes", len);
+        tracing::debug!("Received {} bytes", len);
 
-        log::debug!("Received response: {} bytes", len);
+        tracing::debug!("Received response: {} bytes", len);
 
         if len < 0x38 {
             return Err(format!("Response too short: {} bytes", len));
@@ -228,7 +228,7 @@ impl BroadlinkDevice {
         // Check error code
         let err = (buf[0x22] as u16) | ((buf[0x23] as u16) << 8);
         if err != 0 {
-            log::error!("Device returned error: 0x{:04x}", err);
+            tracing::error!("Device returned error: 0x{:04x}", err);
             return Err(format!("Device error: 0x{:04x}", err));
         }
 
@@ -254,10 +254,10 @@ impl BroadlinkDevice {
         // Device name "Test 1" (6 bytes at 0x30-0x35)
         payload[0x30..0x36].copy_from_slice(b"Test 1");
 
-        log::info!("Sending auth packet...");
+        tracing::info!("Sending auth packet...");
         let response = self.send_packet(0x65, &payload)?;
 
-        log::info!("Auth response length: {}, data: {:02x?}", response.len(), &response[..response.len().min(32)]);
+        tracing::info!("Auth response length: {}, data: {:02x?}", response.len(), &response[..response.len().min(32)]);
 
         if response.len() < 0x14 {
             return Err(format!("Auth response too short: {} bytes", response.len()));
@@ -267,7 +267,7 @@ impl BroadlinkDevice {
         self.id.copy_from_slice(&response[0x00..0x04]);
         self.key.copy_from_slice(&response[0x04..0x14]);
 
-        log::info!("Authenticated with device, session ID: {:02x?}, new key: {:02x?}",
+        tracing::info!("Authenticated with device, session ID: {:02x?}, new key: {:02x?}",
             self.id, &self.key[..8]);
 
         Ok(())
@@ -309,14 +309,14 @@ impl BroadlinkDevice {
     /// Enter IR learning mode and wait for code
     fn learn_ir(&mut self) -> Result<Vec<u8>, String> {
         // Enter learning mode - RM4 format: command 0x03
-        log::info!("Sending enter learning mode command (RM4 format)...");
+        tracing::info!("Sending enter learning mode command (RM4 format)...");
         let payload = self.encode_rm4_command(0x03, &[]);
-        log::debug!("RM4 command payload: {:02x?}", payload);
+        tracing::debug!("RM4 command payload: {:02x?}", payload);
         let response = self.send_packet(0x6a, &payload)?;
-        log::info!("Enter learning response: {} bytes, data: {:02x?}",
+        tracing::info!("Enter learning response: {} bytes, data: {:02x?}",
             response.len(), &response[..response.len().min(20)]);
 
-        log::info!("Entered IR learning mode, waiting for signal...");
+        tracing::info!("Entered IR learning mode, waiting for signal...");
 
         // Poll for data (up to 30 seconds)
         let start = Instant::now();
@@ -334,11 +334,11 @@ impl BroadlinkDevice {
             let check_payload = self.encode_rm4_command(0x04, &[]);
             match self.send_packet(0x6a, &check_payload) {
                 Ok(data) => {
-                    log::debug!("Check data response: {} bytes, data: {:02x?}",
+                    tracing::debug!("Check data response: {} bytes, data: {:02x?}",
                         data.len(), &data[..data.len().min(20)]);
                     let code = self.decode_rm4_response(&data);
                     if !code.is_empty() && code.iter().any(|&b| b != 0) {
-                        log::info!("Received IR code: {} bytes", code.len());
+                        tracing::info!("Received IR code: {} bytes", code.len());
                         return Ok(code);
                     }
                 }
@@ -346,9 +346,9 @@ impl BroadlinkDevice {
                     // Error 0xfffb means "no data available yet" on some RM4 devices
                     // This is NOT a fatal error during learning, just keep polling
                     if e.contains("0xfffb") {
-                        log::debug!("No IR data yet (0xfffb), continuing to poll...");
+                        tracing::debug!("No IR data yet (0xfffb), continuing to poll...");
                     } else {
-                        log::warn!("Check data error: {}", e);
+                        tracing::warn!("Check data error: {}", e);
                     }
                 }
             }
@@ -363,7 +363,7 @@ impl BroadlinkDevice {
         let payload = self.encode_rm4_command(0x19, &[]);
         self.send_packet(0x6a, &payload)?;
 
-        log::info!("RF learning: Press and hold the remote button...");
+        tracing::info!("RF learning: Press and hold the remote button...");
 
         // Wait for frequency lock
         let start = Instant::now();
@@ -383,7 +383,7 @@ impl BroadlinkDevice {
                 let decoded = self.decode_rm4_response(&data);
                 if !decoded.is_empty() && decoded[0] == 1 {
                     freq_locked = true;
-                    log::info!("RF frequency locked");
+                    tracing::info!("RF frequency locked");
                 }
             }
         }
@@ -396,7 +396,7 @@ impl BroadlinkDevice {
         let payload = self.encode_rm4_command(0x1b, &[]);
         self.send_packet(0x6a, &payload)?;
 
-        log::info!("RF learning: Now tap the button briefly...");
+        tracing::info!("RF learning: Now tap the button briefly...");
 
         // Poll for data
         let start = Instant::now();
@@ -417,14 +417,14 @@ impl BroadlinkDevice {
                         // Cancel sweep (RM4 format: command 0x1e)
                         let cancel = self.encode_rm4_command(0x1e, &[]);
                         let _ = self.send_packet(0x6a, &cancel);
-                        log::info!("Received RF code: {} bytes", code.len());
+                        tracing::info!("Received RF code: {} bytes", code.len());
                         return Ok(code);
                     }
                 }
                 Err(e) => {
                     // Error 0xfffb means "no data available yet" on some RM4 devices
                     if !e.contains("0xfffb") {
-                        log::debug!("RF check data error: {}", e);
+                        tracing::debug!("RF check data error: {}", e);
                     }
                 }
             }
@@ -558,29 +558,29 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
     let socket = match UdpSocket::bind(bind_addr) {
         Ok(s) => s,
         Err(e) => {
-            log::warn!("Failed to bind UDP socket on {}: {}", local_ip, e);
+            tracing::warn!("Failed to bind UDP socket on {}: {}", local_ip, e);
             return devices;
         }
     };
 
     if let Err(e) = socket.set_broadcast(true) {
-        log::warn!("Failed to set broadcast: {}", e);
+        tracing::warn!("Failed to set broadcast: {}", e);
         return devices;
     }
 
     if let Err(e) = socket.set_read_timeout(Some(Duration::from_secs(timeout_secs))) {
-        log::warn!("Failed to set timeout: {}", e);
+        tracing::warn!("Failed to set timeout: {}", e);
         return devices;
     }
 
     // Send discovery broadcast
     let broadcast_addr: SocketAddr = "255.255.255.255:80".parse().unwrap();
     if let Err(e) = socket.send_to(&packet, broadcast_addr) {
-        log::warn!("Failed to send discovery on {}: {}", local_ip, e);
+        tracing::warn!("Failed to send discovery on {}: {}", local_ip, e);
         return devices;
     }
 
-    log::info!("Sent discovery broadcast from {}", local_ip);
+    tracing::info!("Sent discovery broadcast from {}", local_ip);
 
     // Receive responses
     let mut buf = [0u8; 1024];
@@ -588,7 +588,7 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
         match socket.recv_from(&mut buf) {
             Ok((len, src)) => {
                 if len < 0x40 {
-                    log::debug!("Response too short ({} bytes) from {}", len, src);
+                    tracing::debug!("Response too short ({} bytes) from {}", len, src);
                     continue;
                 }
 
@@ -632,7 +632,7 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
                     name: if name.is_empty() { model.to_string() } else { name },
                 };
 
-                log::info!("Found device: {} ({}) at {} [{}]",
+                tracing::info!("Found device: {} ({}) at {} [{}]",
                     device.model, device.device_type, device.host, device.mac);
 
                 devices.push(device);
@@ -643,7 +643,7 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
                 {
                     break; // Timeout, done receiving
                 }
-                log::debug!("Receive error: {}", e);
+                tracing::debug!("Receive error: {}", e);
                 break;
             }
         }
@@ -688,6 +688,12 @@ fn get_local_ipv4_addresses() -> Vec<Ipv4Addr> {
                 // bridged to Hyper-V - we need to keep it for LAN access
                 let is_external_switch = name_lower.contains("external switch");
 
+                // Skip link-local addresses (169.254.x.x) — unusable for LAN broadcast
+                if ipv4.is_link_local() {
+                    tracing::debug!("Skipping link-local address: {} ({})", name, ipv4);
+                    continue;
+                }
+
                 if !is_external_switch && (
                     name_lower.starts_with("veth")
                     || name_lower.starts_with("docker")
@@ -697,12 +703,18 @@ fn get_local_ipv4_addresses() -> Vec<Ipv4Addr> {
                     || name_lower.contains("hyper-v")
                     || name_lower.contains("virtualbox")
                     || name_lower.contains("default switch")
+                    // macOS VPN / tunnel interfaces — point-to-point, no broadcast subnet
+                    || name_lower.starts_with("utun")
+                    || name_lower.starts_with("awdl")
+                    || name_lower.starts_with("llw")
+                    || name_lower.starts_with("anpi")
+                    || name_lower.starts_with("bridge")
                 ) {
-                    log::debug!("Skipping virtual interface: {} ({})", name, ipv4);
+                    tracing::debug!("Skipping virtual/tunnel interface: {} ({})", name, ipv4);
                     continue;
                 }
 
-                log::info!("Found network interface: {} ({})", name, ipv4);
+                tracing::info!("Found network interface: {} ({})", name, ipv4);
                 addresses.push(ipv4);
             }
         }
@@ -722,14 +734,14 @@ pub async fn discover_devices(timeout: u32) -> Result<Vec<DiscoveredDevice>, Str
             return Err("No suitable network interfaces found".to_string());
         }
 
-        log::info!("Attempting discovery on {} network interface(s)", local_ips.len());
+        tracing::info!("Attempting discovery on {} network interface(s)", local_ips.len());
 
         let mut all_discovered = Vec::new();
         let mut seen_macs = HashSet::new();
 
         // Try raw UDP discovery on each interface
         for local_ip in local_ips {
-            log::info!("Trying raw UDP discovery on interface: {}", local_ip);
+            tracing::info!("Trying raw UDP discovery on interface: {}", local_ip);
 
             let devices = raw_discover_on_interface(local_ip, timeout_secs);
 
@@ -744,10 +756,10 @@ pub async fn discover_devices(timeout: u32) -> Result<Vec<DiscoveredDevice>, Str
         }
 
         if all_discovered.is_empty() {
-            log::warn!("No Broadlink devices found on any interface");
+            tracing::warn!("No Broadlink devices found on any interface");
         }
 
-        log::info!("Total discovered devices: {}", all_discovered.len());
+        tracing::info!("Total discovered devices: {}", all_discovered.len());
         Ok(all_discovered)
     })
     .await
@@ -798,13 +810,13 @@ pub async fn learn_code(
         // Get the best local IP for this device
         let local_ip = get_local_ip_for_device(ip)
             .ok_or_else(|| "No suitable local IP found".to_string())?;
-        log::info!("Learning from device {} using local IP {}", ip, local_ip);
+        tracing::info!("Learning from device {} using local IP {}", ip, local_ip);
 
         // Connect using our custom BroadlinkDevice with RM4 protocol support
-        log::info!("Connecting to device...");
+        tracing::info!("Connecting to device...");
         let mut device = BroadlinkDevice::connect(&host, &mac, &devtype, local_ip)?;
 
-        log::info!("Connected! Starting {} learning (RM4 protocol)...", signal_type);
+        tracing::info!("Connected! Starting {} learning (RM4 protocol)...", signal_type);
 
         // Learn based on signal type
         let code_result = if signal_type == "rf" {
@@ -815,7 +827,7 @@ pub async fn learn_code(
 
         match code_result {
             Ok(code) => {
-                log::info!("Learned code: {} bytes", code.len());
+                tracing::info!("Learned code: {} bytes", code.len());
                 // Convert bytes to hex string
                 let hex_code = hex::encode(&code);
                 Ok(LearnResult {
@@ -824,7 +836,7 @@ pub async fn learn_code(
                 })
             }
             Err(e) => {
-                log::error!("Learning failed: {}", e);
+                tracing::error!("Learning failed: {}", e);
                 Ok(LearnResult {
                     code: None,
                     error: Some(e),
@@ -866,7 +878,7 @@ pub async fn send_code(
         // Get the best local IP for this device
         let local_ip = get_local_ip_for_device(ip)
             .ok_or_else(|| "No suitable local IP found".to_string())?;
-        log::info!("Sending to device {} using local IP {}", ip, local_ip);
+        tracing::info!("Sending to device {} using local IP {}", ip, local_ip);
 
         // Connect using our custom BroadlinkDevice with RM4 protocol support
         let mut device = BroadlinkDevice::connect(&host, &mac, &devtype, local_ip)
