@@ -220,9 +220,66 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.sig
           if-no-files-found: error
 
+  # Build presenter-receiver terminal binary for all platforms
+  build-presenter-receiver:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            binary-name: presenter-receiver-macos-arm64
+          - os: macos-13
+            binary-name: presenter-receiver-macos-x86_64
+          - os: ubuntu-22.04
+            binary-name: presenter-receiver-linux-x86_64
+          - os: ubuntu-22.04-arm
+            binary-name: presenter-receiver-linux-arm64
+
+    runs-on: ${{ matrix.os }}
+    name: Presenter Receiver (${{ matrix.binary-name }})
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install cairo pango pkg-config
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev pkg-config
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './presenter-receiver -> target'
+          shared-key: ${{ matrix.binary-name }}
+
+      - name: Build
+        working-directory: presenter-receiver
+        run: cargo build --release
+
+      - name: Rename binary
+        shell: bash
+        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.binary-name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary-name }}
+          path: ${{ matrix.binary-name }}
+
   # Create release (only on version tags)
   release:
-    needs: build
+    needs: [build, build-presenter-receiver]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -341,6 +398,10 @@ jobs:
 
           files: |
             latest.json
+            artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64
+            artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
+            artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
+            artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
             artifacts/**/*.exe
             artifacts/**/*.exe.sig
             artifacts/**/*.msi
