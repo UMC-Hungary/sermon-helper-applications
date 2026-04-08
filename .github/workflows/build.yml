@@ -661,7 +661,7 @@ jobs:
   # Release (version tags only)
   # ──────────────────────────────────────────────
   release:
-    needs: [build, build-ios, build-android, build-receiver]
+    needs: [build, build-receiver]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
