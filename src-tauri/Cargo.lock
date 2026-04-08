@@ -5609,8 +5609,6 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-liquid-glass"
 version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59a86fd9cd6fc62cad37daa0d7f8be8f4986543d13dd30e4ff5cd2bc81ff91d0"
 dependencies = [
  "cocoa",
  "dispatch",

@@ -13,7 +13,7 @@
 
 	let standaloneSocket: WebSocket | null = null;
 	let standaloneState = $state<PresenterState | null>(null);
-	let token: string | null = null;
+	let token = $state<string | null>(null);
 
 	function connect() {
 		const host = window.location.host;
@@ -80,7 +80,9 @@
 			: null
 	);
 
-	const slideTexts = $derived(currentSlide?.texts ?? []);
+	const slideParagraphs = $derived(currentSlide?.paragraphs ?? []);
+	// A single string used to trigger fitText re-calculation when content changes.
+	const slideFitKey = $derived(slideParagraphs.map((p) => p.text).join('\n'));
 	const slideIndex = $derived(standaloneState?.currentSlide ?? 0);
 	const slideTotal = $derived(standaloneState?.totalSlides ?? 0);
 	const isLoaded = $derived(standaloneState?.loaded ?? false);
@@ -98,36 +100,42 @@
 		</div>
 	{:else}
 		<div class="slide-area">
-			<div class="text-container" use:fitText={slideTexts.join('\n')}>
-				{#each slideTexts as text (text)}
-					<p class="slide-text">{text}</p>
+			<div class="text-container" use:fitText={slideFitKey}>
+				{#each slideParagraphs as para (para.text + para.align)}
+					<p class="slide-text" style="text-align: {para.align}">
+						{#each para.text.split('\n') as line, j}
+							{#if j > 0}<br>{/if}{line}
+						{/each}
+					</p>
 				{/each}
 			</div>
 		</div>
 
-		<div class="nav-bar">
-			<button
-				class="nav-btn"
-				onclick={() => navigate('first')}
-				aria-label="First slide"
-			>⏮</button>
-			<button
-				class="nav-btn"
-				onclick={() => navigate('prev')}
-				aria-label="Previous slide"
-			>◀</button>
-			<span class="slide-counter">{slideIndex} / {slideTotal}</span>
-			<button
-				class="nav-btn"
-				onclick={() => navigate('next')}
-				aria-label="Next slide"
-			>▶</button>
-			<button
-				class="nav-btn"
-				onclick={() => navigate('last')}
-				aria-label="Last slide"
-			>⏭</button>
-		</div>
+		{#if token}
+			<div class="nav-bar">
+				<button
+					class="nav-btn"
+					onclick={() => navigate('first')}
+					aria-label="First slide"
+				>⏮</button>
+				<button
+					class="nav-btn"
+					onclick={() => navigate('prev')}
+					aria-label="Previous slide"
+				>◀</button>
+				<span class="slide-counter">{slideIndex} / {slideTotal}</span>
+				<button
+					class="nav-btn"
+					onclick={() => navigate('next')}
+					aria-label="Next slide"
+				>▶</button>
+				<button
+					class="nav-btn"
+					onclick={() => navigate('last')}
+					aria-label="Last slide"
+				>⏭</button>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -159,34 +167,33 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 3vw 5vw;
+		/* Padding is accounted for by fitText when measuring available space. */
+		padding: 4vw 6vw;
 		min-height: 0;
-		overflow: hidden;
+		box-sizing: border-box;
 	}
 
 	.text-container {
 		width: 100%;
-		height: 100%;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: stretch;
 		justify-content: center;
-		gap: 0.4em;
-		overflow: hidden;
-		/* Initial font size before fitText kicks in */
+		gap: 0.35em;
+		/* Initial font size before fitText kicks in; fitText will override. */
 		font-size: clamp(1.5rem, 8vw, 12rem);
+		font-family: Helvetica, Arial, sans-serif;
+		font-weight: 700;
 	}
 
 	.slide-text {
 		margin: 0;
 		padding: 0;
-		text-align: center;
+		font-family: Helvetica, Arial, sans-serif;
 		font-weight: 700;
-		line-height: 1.15;
+		line-height: 1.2;
 		color: #fff;
-		/* Prevent overflow before fitText resolves */
-		word-break: break-word;
-		overflow-wrap: break-word;
+		width: 100%;
 	}
 
 	/* ── Navigation bar ───────────────────────────────────────────────────── */

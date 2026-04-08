@@ -300,6 +300,9 @@ enum WsCommand {
     PresenterGoto { slide: u32 },
     #[serde(rename = "presenter.status")]
     PresenterStatus,
+    /// Update the raw text content of a single slide (1-based index).
+    #[serde(rename = "presenter.slide.update")]
+    PresenterSlideUpdate { slide_index: u32, texts: Vec<String> },
     // ── OBS Devices ──────────────────────────────────────────────────────────
     #[serde(rename = "obs.devices.scan")]
     ObsDevicesScan,
@@ -556,6 +559,10 @@ async fn handle_ws_command(
             let ps = state.presenter_state.read().await;
             let msg = serde_json::json!({ "type": "presenter.state", "state": &*ps }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::PresenterSlideUpdate { slide_index, texts } => {
+            state.presenter_state.write().await.update_slide(slide_index, texts);
+            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
         }
         // ── Events ───────────────────────────────────────────────────────────
         WsCommand::EventsList => {

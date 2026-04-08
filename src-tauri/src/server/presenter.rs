@@ -7,11 +7,23 @@ use crate::server::AppState;
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
+/// A single paragraph extracted from a slide, including its text and alignment.
+///
+/// `text` may contain `\n` characters from `<a:br>` hard line breaks within
+/// the paragraph. `align` is one of `"left"`, `"center"`, `"right"`, or
+/// `"justify"` (mapped from the PPTX `algn` attribute).
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParagraphContent {
+    pub text: String,
+    pub align: String,
+}
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SlideContent {
     pub index: u32,
-    pub texts: Vec<String>,
+    pub paragraphs: Vec<ParagraphContent>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -32,28 +44,69 @@ fn slide_number(basename: &str) -> Option<u32> {
         .and_then(|n| n.parse::<u32>().ok())
 }
 
+/// Map a raw PPTX `algn` attribute value to a CSS text-align keyword.
+fn map_align(raw: &[u8]) -> &'static str {
+    match raw {
+        b"ctr" => "center",
+        b"r" => "right",
+        b"just" | b"dist" => "justify",
+        _ => "left",
+    }
+}
+
 /// Parse all visible text from a single slide's XML content.
 ///
-/// Text runs (`<a:t>`) within a paragraph (`<a:p>`) are joined together.
-/// Each non-empty paragraph is returned as one string.
-fn parse_slide_xml(xml: &[u8]) -> Vec<String> {
+/// Each `<a:p>` becomes a `ParagraphContent`. The paragraph's `align` is read
+/// from the `algn` attribute of its `<a:pPr>` element (defaulting to `"left"`).
+/// Text runs (`<a:t>`) within a paragraph are concatenated; `<a:br>` inserts
+/// a `\n` within the paragraph string.
+fn parse_slide_xml(xml: &[u8]) -> Vec<ParagraphContent> {
     use quick_xml::events::Event;
     use quick_xml::Reader;
 
     let mut reader = Reader::from_reader(xml);
     let mut buf: Vec<u8> = Vec::new();
-    let mut paragraphs: Vec<String> = Vec::new();
+    let mut paragraphs: Vec<ParagraphContent> = Vec::new();
     let mut current_para = String::new();
+    let mut current_align = "left";
     let mut in_text_run = false;
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) => match e.name().into_inner() {
+            Ok(Event::Start(ref e)) => match e.name().into_inner() {
+                b"a:p" => {
+                    current_para.clear();
+                    current_align = "left";
+                }
+                b"a:pPr" => {
+                    // Paragraph properties — read alignment attribute.
+                    for attr in e.attributes().flatten() {
+                        if attr.key.into_inner() == b"algn" {
+                            current_align = map_align(attr.value.as_ref());
+                            break;
+                        }
+                    }
+                }
                 b"a:t" => in_text_run = true,
-                b"a:p" => current_para.clear(),
                 _ => {}
             },
-            Ok(Event::Text(e)) => {
+            Ok(Event::Empty(ref e)) => match e.name().into_inner() {
+                b"a:br" => {
+                    // Hard line break within a paragraph.
+                    current_para.push('\n');
+                }
+                b"a:pPr" => {
+                    // Self-closing paragraph properties — read alignment attribute.
+                    for attr in e.attributes().flatten() {
+                        if attr.key.into_inner() == b"algn" {
+                            current_align = map_align(attr.value.as_ref());
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            },
+            Ok(Event::Text(ref e)) => {
                 if in_text_run {
                     if let Ok(decoded) = e.decode() {
                         let unescaped = quick_xml::escape::unescape(&decoded)
@@ -63,12 +116,15 @@ fn parse_slide_xml(xml: &[u8]) -> Vec<String> {
                     }
                 }
             }
-            Ok(Event::End(e)) => match e.name().into_inner() {
+            Ok(Event::End(ref e)) => match e.name().into_inner() {
                 b"a:t" => in_text_run = false,
                 b"a:p" => {
                     let trimmed = current_para.trim().to_string();
                     if !trimmed.is_empty() {
-                        paragraphs.push(trimmed);
+                        paragraphs.push(ParagraphContent {
+                            text: trimmed,
+                            align: current_align.to_string(),
+                        });
                     }
                     current_para.clear();
                 }
@@ -136,7 +192,7 @@ pub fn parse_pptx(file_path: &str) -> Result<ParsedPresentation, String> {
 
         slides.push(SlideContent {
             index: idx as u32 + 1,
-            texts: parse_slide_xml(&xml_bytes),
+            paragraphs: parse_slide_xml(&xml_bytes),
         });
     }
 
@@ -214,6 +270,35 @@ impl PresenterState {
     pub fn go_to(&mut self, slide: u32) {
         if self.loaded && self.total_slides > 0 {
             self.current_slide = slide.max(1).min(self.total_slides);
+        }
+    }
+
+    /// Update the text of a slide identified by its 1-based index.
+    ///
+    /// Receives plain text lines from the editor and maps them back to
+    /// `ParagraphContent`, preserving the alignment of each matching original
+    /// paragraph. Extra lines (beyond the original paragraph count) receive
+    /// `"left"` alignment.
+    ///
+    /// Does nothing when not loaded or when `slide_index` is out of range.
+    pub fn update_slide(&mut self, slide_index: u32, texts: Vec<String>) {
+        if !self.loaded {
+            return;
+        }
+        if let Some(slide) = self.slides.iter_mut().find(|s| s.index == slide_index) {
+            let old = std::mem::take(&mut slide.paragraphs);
+            slide.paragraphs = texts
+                .into_iter()
+                .enumerate()
+                .map(|(i, text)| {
+                    let align = old
+                        .get(i)
+                        .map(|p| p.align.as_str())
+                        .unwrap_or("left")
+                        .to_string();
+                    ParagraphContent { text, align }
+                })
+                .collect();
         }
     }
 }

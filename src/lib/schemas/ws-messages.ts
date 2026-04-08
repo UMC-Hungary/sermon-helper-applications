@@ -106,9 +106,14 @@ export const WsClientInfoSchema = z.object({
   latencyMs: z.number().int().nullable(),
 });
 
+export const ParagraphContentSchema = z.object({
+  text: z.string(),
+  align: z.string(),
+});
+
 export const SlideContentSchema = z.object({
   index: z.number().int().positive(),
-  texts: z.array(z.string()),
+  paragraphs: z.array(ParagraphContentSchema),
 });
 
 export const PresenterStateSchema = z.object({
@@ -132,6 +137,7 @@ export const BroadlinkCommandSchema = z.object({
 export type KeynoteStatus = z.infer<typeof KeynoteStatusSchema>;
 export type PptFile = z.infer<typeof PptFileSchema>;
 export type PptFolder = z.infer<typeof PptFolderSchema>;
+export type ParagraphContent = z.infer<typeof ParagraphContentSchema>;
 export type SlideContent = z.infer<typeof SlideContentSchema>;
 export type PresenterState = z.infer<typeof PresenterStateSchema>;
 export type WsClientInfo = z.infer<typeof WsClientInfoSchema>;

@@ -20,6 +20,7 @@
 		keynoteStop,
 		keynoteCloseAll,
 	} from '$lib/api/presentations.js';
+	import SlideEditorModal from '$lib/components/presentations/SlideEditorModal.svelte';
 
 	let loading = $state(false);
 	let addingFolder = $state(false);
@@ -28,6 +29,7 @@
 	let pingingClient = $state<string | null>(null);
 	let now = $state(Date.now());
 	let clockTimer: ReturnType<typeof setInterval>;
+	let slideEditorOpen = $state(false);
 
 	onMount(() => {
 		sendWsCommand('clients.list');
@@ -292,6 +294,11 @@
 					</span>
 				</div>
 			</div>
+			{#if $presenterState.loaded}
+				<button class="btn-edit-slides" onclick={() => { slideEditorOpen = true; }}>
+					Edit slide content
+				</button>
+			{/if}
 		{:else}
 			<div class="status-grid">
 				<div class="status-item">
@@ -355,7 +362,6 @@
 					src={buildIframeUrl()}
 					title="Presenter Display Preview"
 					class="presenter-iframe"
-					sandbox="allow-scripts allow-same-origin"
 				></iframe>
 			</div>
 		</section>
@@ -408,6 +414,13 @@
 		</section>
 	{/if}
 </div>
+
+{#if slideEditorOpen && $useWebPresenter}
+	<SlideEditorModal
+		slides={$presenterState.slides}
+		onclose={() => { slideEditorOpen = false; }}
+	/>
+{/if}
 
 <style>
 	.presentations-page {
@@ -486,6 +499,21 @@
 	.btn-primary:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	.btn-edit-slides {
+		margin-top: 0.75rem;
+		padding: 0.5rem 1rem;
+		background: transparent;
+		color: var(--accent);
+		border: 1px solid var(--accent);
+		border-radius: 0.375rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+	}
+
+	.btn-edit-slides:hover {
+		background: color-mix(in oklch, var(--accent) 12%, transparent);
 	}
 
 	.filter-display {

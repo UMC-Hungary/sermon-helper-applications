@@ -23,7 +23,7 @@ const emptyState: PresenterState = PresenterStateSchema.parse({
 	filePath: null,
 	currentSlide: 0,
 	totalSlides: 0,
-	slides: [],
+	slides: [] as { index: number; paragraphs: { text: string; align: string }[] }[],
 });
 
 export const presenterState = writable<PresenterState>(emptyState);

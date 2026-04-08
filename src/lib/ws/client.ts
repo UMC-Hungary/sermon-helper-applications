@@ -290,7 +290,7 @@ function syncDeviceListenerErrors(): void {
 	}
 }
 
-export function sendWsCommand(type: string, data?: Record<string, string | number | boolean | null>): boolean {
+export function sendWsCommand(type: string, data?: Record<string, string | number | boolean | null | string[]>): boolean {
 	if (!socket || socket.readyState !== WebSocket.OPEN) return false;
 	socket.send(JSON.stringify({ type, ...data }));
 	return true;

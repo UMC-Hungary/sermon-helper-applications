@@ -7,6 +7,16 @@ export const glassSupported = writable(false);
 export const reduceTransparency = writable(false);
 
 export async function initSystemAppearance(): Promise<void> {
+	// Tauri APIs are only available in the main webview, not in iframes or plain
+	// browsers.  Guard before touching any Tauri API so that the presenter and
+	// caption pages (which are accessed without Tauri context) don't throw.
+	if (
+		typeof (window as Window & { __TAURI_INTERNALS__?: Record<string, unknown> })
+			.__TAURI_INTERNALS__ === 'undefined'
+	) {
+		return;
+	}
+
 	const win = getCurrentWindow();
 
 	const theme = await win.theme();

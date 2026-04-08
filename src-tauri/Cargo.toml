@@ -52,6 +52,9 @@ tauri-plugin-dialog = "2.6.0"
 tokio-cron-scheduler = "0.15.1"
 quick-xml = "0.39.2"
 
+[patch.crates-io]
+tauri-plugin-liquid-glass = { path = "vendor/tauri-plugin-liquid-glass" }
+
 [lints.rust]
 unsafe_code = "forbid"
 
