@@ -9,9 +9,23 @@
 #
 set -e
 
-BASE_URL="https://github.com/UMC-Hungary/sermon-helper-applications/releases/latest/download"
+REPO="UMC-Hungary/sermon-helper-applications"
 DEST="${PRESENTER_INSTALL_DIR:-/usr/local/bin}/presenter-receiver"
 WS_URL="${1:-}"
+
+# ── Find latest presenter-receiver release ────────────────────────────────────
+RELEASE_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" \
+  | grep '"tag_name"' \
+  | grep 'presenter-receiver-v' \
+  | head -1 \
+  | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+
+if [ -z "$RELEASE_TAG" ]; then
+    echo "Error: no presenter-receiver release found on GitHub"
+    exit 1
+fi
+
+BASE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}"
 
 # ── Detect platform ───────────────────────────────────────────────────────────
 OS="$(uname -s)"
@@ -32,7 +46,7 @@ esac
 
 # ── Download ──────────────────────────────────────────────────────────────────
 echo "==> Detected: ${OS}-${ARCH} → $BINARY"
-echo "==> Downloading from GitHub Releases..."
+echo "==> Downloading from GitHub Releases (${RELEASE_TAG})..."
 
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT

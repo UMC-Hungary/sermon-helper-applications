@@ -1,0 +1,114 @@
+name: Presenter Receiver Release
+
+on:
+  push:
+    tags:
+      - 'presenter-receiver-v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            artifact: presenter-receiver-macos-arm64
+
+          - runner: macos-12
+            artifact: presenter-receiver-macos-x86_64
+
+          - runner: ubuntu-22.04
+            artifact: presenter-receiver-linux-x86_64
+
+          - runner: ubuntu-24.04-arm
+            artifact: presenter-receiver-linux-arm64
+
+    runs-on: ${{ matrix.runner }}
+    name: Build (${{ matrix.artifact }})
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install macOS dependencies (Cairo + Pango via Homebrew)
+        if: runner.os == 'macOS'
+        run: brew install cairo pango harfbuzz pkg-config
+
+      - name: Install Linux dependencies (Cairo + Pango via apt)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev pkg-config
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './presenter-receiver -> target'
+          shared-key: ${{ matrix.artifact }}
+
+      - name: Build release binary
+        working-directory: presenter-receiver
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
+          fi
+          cargo build --release
+
+      - name: Rename binary with platform suffix
+        shell: bash
+        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: false
+          body: |
+            Standalone terminal binary that connects to the Sermon Helper WebSocket
+            and renders the active presentation slide on-screen.
+
+            - **macOS**: opens a native window (Helvetica Neue, Cairo-rendered)
+            - **Linux / Raspberry Pi**: writes directly to the framebuffer (`/dev/fb0`) — no desktop needed
+
+            ### One-line install (auto-detects platform)
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws
+            ```
+
+            To install without running immediately:
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
+            ```
+          files: |
+            artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64
+            artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
+            artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
+            artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
