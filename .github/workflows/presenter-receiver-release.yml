@@ -52,7 +52,7 @@ jobs:
           # Install it at /usr/local via Rosetta, then install x86_64 Cairo/Pango.
           NONINTERACTIVE=1 arch -x86_64 /bin/bash -c \
             "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          arch -x86_64 /usr/local/bin/brew install cairo pango harfbuzz pkg-config
+          arch -x86_64 /usr/local/bin/brew install glib cairo pango harfbuzz pkg-config
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -71,9 +71,9 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
             if [ -n "${{ matrix.brew_prefix }}" ]; then
-              # Cross-compiling to x86_64: point pkg-config at x86_64 Homebrew (/usr/local)
-              export PKG_CONFIG_LIBDIR_x86_64_apple_darwin="/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig"
-              export PKG_CONFIG_SYSROOT_DIR=/usr/local
+              # Cross-compiling to x86_64: use the x86_64 pkg-config binary directly.
+              # It already knows all /usr/local/opt/*/lib/pkgconfig paths.
+              export PKG_CONFIG_x86_64_apple_darwin=/usr/local/bin/pkg-config
               export PKG_CONFIG_ALLOW_CROSS=1
             else
               # Native arm64 build
