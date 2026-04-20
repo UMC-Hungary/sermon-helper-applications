@@ -18,8 +18,9 @@ jobs:
             artifact: presenter-receiver-macos-arm64
 
           - runner: macos-latest
-            target: x86_64-apple-darwin
             artifact: presenter-receiver-macos-x86_64
+            cargo_target: x86_64-apple-darwin
+            brew_prefix: /usr/local
 
           - runner: ubuntu-22.04
             artifact: presenter-receiver-linux-x86_64
@@ -44,10 +45,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcairo2-dev libpango1.0-dev pkg-config
 
+      - name: Install macOS x86_64 dependencies via x86_64 Homebrew
+        if: matrix.brew_prefix != ''
+        run: |
+          # On Apple Silicon runners, /usr/local/bin/brew is x86_64 Homebrew (runs via Rosetta).
+          # Install x86_64 Cairo/Pango there so pkg-config can find them during cross-compilation.
+          /usr/local/bin/brew install cairo pango harfbuzz pkg-config
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.cargo_target }}
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
@@ -60,10 +68,15 @@ jobs:
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
-            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
+            BREW_PREFIX="${{ matrix.brew_prefix }}"
+            if [ -z "$BREW_PREFIX" ]; then
+              BREW_PREFIX="$(brew --prefix)"
+            fi
+            export PKG_CONFIG_PATH="$BREW_PREFIX/opt/cairo/lib/pkgconfig:$BREW_PREFIX/opt/pango/lib/pkgconfig:$BREW_PREFIX/lib/pkgconfig"
+            export PKG_CONFIG_ALLOW_CROSS=1
           fi
-          if [ -n "${{ matrix.target }}" ]; then
-            cargo build --release --target ${{ matrix.target }}
+          if [ -n "${{ matrix.cargo_target }}" ]; then
+            cargo build --release --target ${{ matrix.cargo_target }}
           else
             cargo build --release
           fi
@@ -71,8 +84,8 @@ jobs:
       - name: Rename binary with platform suffix
         shell: bash
         run: |
-          if [ -n "${{ matrix.target }}" ]; then
-            cp presenter-receiver/target/${{ matrix.target }}/release/presenter-receiver ${{ matrix.artifact }}
+          if [ -n "${{ matrix.cargo_target }}" ]; then
+            cp presenter-receiver/target/${{ matrix.cargo_target }}/release/presenter-receiver ${{ matrix.artifact }}
           else
             cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
           fi
