@@ -17,7 +17,8 @@ jobs:
           - runner: macos-latest
             artifact: presenter-receiver-macos-arm64
 
-          - runner: macos-13
+          - runner: macos-latest
+            target: x86_64-apple-darwin
             artifact: presenter-receiver-macos-x86_64
 
           - runner: ubuntu-22.04
@@ -45,6 +46,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
@@ -59,11 +62,20 @@ jobs:
           if [ "$RUNNER_OS" = "macOS" ]; then
             export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
           fi
-          cargo build --release
+          if [ -n "${{ matrix.target }}" ]; then
+            cargo build --release --target ${{ matrix.target }}
+          else
+            cargo build --release
+          fi
 
       - name: Rename binary with platform suffix
         shell: bash
-        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
+        run: |
+          if [ -n "${{ matrix.target }}" ]; then
+            cp presenter-receiver/target/${{ matrix.target }}/release/presenter-receiver ${{ matrix.artifact }}
+          else
+            cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
