@@ -63,7 +63,7 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './presenter-receiver -> target'
-          shared-key: ${{ matrix.artifact }}
+          shared-key: ${{ matrix.artifact }}-v2
 
       - name: Build release binary
         working-directory: presenter-receiver
