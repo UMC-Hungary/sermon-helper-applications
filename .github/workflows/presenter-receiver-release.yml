@@ -54,6 +54,16 @@ jobs:
             "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           arch -x86_64 /usr/local/bin/brew install glib cairo pango harfbuzz pkg-config
 
+      - name: Get Homebrew library versions for cache key (arm64)
+        if: runner.os == 'macOS' && matrix.brew_prefix == ''
+        id: brew-versions-arm64
+        run: echo "ver=$(brew list --versions harfbuzz cairo pango glib | tr ' \n' '_')" >> $GITHUB_OUTPUT
+
+      - name: Get Homebrew library versions for cache key (x86_64)
+        if: runner.os == 'macOS' && matrix.brew_prefix != ''
+        id: brew-versions-x86
+        run: echo "ver=$(arch -x86_64 /usr/local/bin/brew list --versions harfbuzz cairo pango glib | tr ' \n' '_')" >> $GITHUB_OUTPUT
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -63,7 +73,7 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './presenter-receiver -> target'
-          shared-key: ${{ matrix.artifact }}-v2
+          shared-key: ${{ matrix.artifact }}-${{ steps.brew-versions-arm64.outputs.ver || steps.brew-versions-x86.outputs.ver || 'linux' }}
 
       - name: Build release binary
         working-directory: presenter-receiver
