@@ -9,6 +9,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 #[serde(rename_all = "camelCase")]
 pub struct ParagraphContent {
     pub text: String,
+    pub align: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -148,12 +149,12 @@ fn send_frame(
     tx: &std::sync::mpsc::Sender<Frame>,
     dims: DisplayDims,
 ) {
-    let texts: Vec<String> = slides
+    let paragraphs: Vec<(&str, &str)> = slides
         .iter()
         .find(|s| s.index == current)
-        .map(|s| s.paragraphs.iter().map(|p| p.text.clone()).collect())
+        .map(|s| s.paragraphs.iter().map(|p| (p.text.as_str(), p.align.as_str())).collect())
         .unwrap_or_default();
 
-    let rgb = crate::renderer::render_slide(&texts, dims.width, dims.height);
+    let rgb = crate::renderer::render_slide(&paragraphs, dims.width, dims.height);
     let _ = tx.send(crate::renderer::rgb_to_u32(&rgb));
 }

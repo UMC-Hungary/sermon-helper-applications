@@ -7,13 +7,17 @@ const BG: (f64, f64, f64) = (0.05, 0.05, 0.08);
 const FG: (f64, f64, f64) = (1.0, 1.0, 1.0);
 const ACCENT: (f64, f64, f64) = (0.3, 0.3, 0.8);
 
-/// Render slide texts into a pixel buffer sized to the given display dimensions.
+/// Render slide paragraphs into a pixel buffer sized to the given display dimensions.
+///
+/// Each entry in `paragraphs` is `(text, align)` where `align` is one of
+/// `"left"`, `"center"`, `"right"`, or `"justify"` — matching the server's
+/// `ParagraphContent.align` field.
 ///
 /// All proportions (padding, accent line, font size) scale with `width`/`height`
 /// so the result looks identical whether the display is 720p, 1080p, or 4K.
 ///
 /// Returns raw RGB24 bytes: `width × height × 3` bytes, row-major.
-pub fn render_slide(texts: &[String], width: u32, height: u32) -> Vec<u8> {
+pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec<u8> {
     let (sw, sh) = (width as i32, height as i32);
     let mut surface = ImageSurface::create(Format::Rgb24, sw, sh).unwrap();
     let ctx = Context::new(&surface).unwrap();
@@ -35,48 +39,71 @@ pub fn render_slide(texts: &[String], width: u32, height: u32) -> Vec<u8> {
     ctx.stroke().unwrap();
 
     // ── Text — binary search for the largest bold size that fits ─────────────
-    let content = texts.join("\n");
-    if !content.is_empty() {
-        // Safe area: leave 10 % top (accent line) + 10 % bottom as margin
+    let non_empty: Vec<(&str, &str)> = paragraphs
+        .iter()
+        .copied()
+        .filter(|(t, _)| !t.is_empty())
+        .collect();
+
+    if !non_empty.is_empty() {
+        // Safe area: 10 % top (accent line) + 10 % bottom margin
         let max_h = (h * 0.80) as i32;
 
-        let make_layout = |font_size: i32| {
-            let layout = pc::create_layout(&ctx);
-            layout.set_font_description(Some(&FontDescription::from_string(
-                &format!("{FONT} Bold {font_size}"),
-            )));
-            layout.set_width(text_w);
-            layout.set_alignment(Alignment::Center);
-            layout.set_wrap(WrapMode::Word);
-            // Extra line gap = 20 % of font size, in Pango units
-            layout.set_spacing((font_size as f64 * 0.20 * pango::SCALE as f64) as i32);
-            layout.set_text(&content);
-            layout
+        let make_layouts = |font_size: i32| -> Vec<pango::Layout> {
+            non_empty
+                .iter()
+                .map(|(text, align)| {
+                    let layout = pc::create_layout(&ctx);
+                    layout.set_font_description(Some(&FontDescription::from_string(
+                        &format!("{FONT} Bold {font_size}"),
+                    )));
+                    layout.set_width(text_w);
+                    layout.set_alignment(parse_alignment(align));
+                    layout.set_wrap(WrapMode::Word);
+                    layout.set_spacing(
+                        (font_size as f64 * 0.20 * pango::SCALE as f64) as i32,
+                    );
+                    layout.set_text(text);
+                    layout
+                })
+                .collect()
         };
 
-        // Upper bound: 40 % of height is a generous max font size for any display
+        // Total height = sum of all layout heights + paragraph gaps between them
+        let total_height = |layouts: &[pango::Layout], font_size: i32| -> i32 {
+            let gap = (font_size as f64 * 0.50) as i32;
+            let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
+            let gaps = gap * (layouts.len().saturating_sub(1) as i32);
+            text_h + gaps
+        };
+
         let mut lo = 8i32;
         let mut hi = (h * 0.40) as i32;
 
         while lo < hi - 1 {
             let mid = (lo + hi) / 2;
-            if make_layout(mid).pixel_size().1 <= max_h {
+            if total_height(&make_layouts(mid), mid) <= max_h {
                 lo = mid;
             } else {
                 hi = mid;
             }
         }
 
-        let layout = make_layout(lo);
-        let (_, lh) = layout.pixel_size();
-        // Vertically centre in the safe area (below accent line)
+        let layouts = make_layouts(lo);
+        let gap = (lo as f64 * 0.50) as i32;
+        let used_h = total_height(&layouts, lo);
+
+        // Vertically centre the block in the safe area (below accent line)
         let safe_top = h * 0.10;
         let safe_h = h * 0.80;
-        let y = safe_top + (safe_h - lh as f64) / 2.0;
+        let mut y = safe_top + (safe_h - used_h as f64) / 2.0;
 
         ctx.set_source_rgb(FG.0, FG.1, FG.2);
-        ctx.move_to(pad_x, y);
-        pc::show_layout(&ctx, &layout);
+        for layout in &layouts {
+            ctx.move_to(pad_x, y);
+            pc::show_layout(&ctx, layout);
+            y += layout.pixel_size().1 as f64 + gap as f64;
+        }
     }
 
     // ── Extract RGB24 bytes ──────────────────────────────────────────────────
@@ -96,6 +123,14 @@ pub fn render_slide(texts: &[String], width: u32, height: u32) -> Vec<u8> {
         }
     }
     out
+}
+
+fn parse_alignment(align: &str) -> Alignment {
+    match align {
+        "center" => Alignment::Center,
+        "right" => Alignment::Right,
+        _ => Alignment::Left, // "left", "justify", or anything unknown
+    }
 }
 
 /// Convert RGB24 bytes → 0x00RRGGBB u32 per pixel (minifb format).
