@@ -3,6 +3,7 @@
   import { serverUrl, serverPort, localNetworkUrl } from '$lib/stores/server-url.js';
   import TokenDisplay from '$lib/components/connect/TokenDisplay.svelte';
   import ConnectionGuide from '$lib/components/connect/ConnectionGuide.svelte';
+  import SshAccessCard from '$lib/components/connect/SshAccessCard.svelte';
 
   type Platform = 'linux-x86_64' | 'linux-arm64' | 'macos-arm64' | 'macos-x86_64';
 
@@ -124,6 +125,9 @@
       <button onclick={copyManual}>{copiedManual ? 'Copied!' : 'Copy'}</button>
     </div>
   </section>
+
+  <SshAccessCard />
+
 {:else}
   <p>In client mode. Connect to a server to manage events.</p>
 {/if}
@@ -175,9 +179,11 @@
     gap: 0.5rem 1rem;
     margin: 0;
   }
+
   .meta dt {
     font-weight: 600;
   }
+
   .meta dd {
     margin: 0;
   }
