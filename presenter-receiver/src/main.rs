@@ -121,8 +121,32 @@ fn run_display(rx: std::sync::mpsc::Receiver<Frame>, dims: DisplayDims) {
 
 // ── Linux display: framebuffer (/dev/fb0) ─────────────────────────────────────
 
+/// Hides the terminal cursor and restores it when dropped.
+#[cfg(target_os = "linux")]
+struct CursorHide;
+
+#[cfg(target_os = "linux")]
+impl CursorHide {
+    fn new() -> Self {
+        use std::io::Write;
+        print!("\x1b[?25l");
+        let _ = std::io::stdout().flush();
+        CursorHide
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl Drop for CursorHide {
+    fn drop(&mut self) {
+        use std::io::Write;
+        print!("\x1b[?25h");
+        let _ = std::io::stdout().flush();
+    }
+}
+
 #[cfg(target_os = "linux")]
 fn run_display(rx: std::sync::mpsc::Receiver<Frame>, dims: DisplayDims) {
+    let _cursor = CursorHide::new();
     let mut fb = framebuffer::Framebuffer::new("/dev/fb0").unwrap_or_else(|e| {
         eprintln!("[display] Cannot open /dev/fb0: {e}");
         eprintln!("[display] Ensure a display is connected via HDMI.");
