@@ -86,9 +86,15 @@ async fn connect_and_receive(
     let (mut write, mut read) = ws_stream.split();
 
     // Announce ourselves and ask for current state immediately
+    let hostname = std::process::Command::new("hostname")
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
     write
         .send(Message::Text(
-            json!({"type": "presenter.register", "label": "Presenter Receiver"})
+            json!({"type": "presenter.register", "label": "Presenter Receiver", "hostname": hostname})
                 .to_string()
                 .into(),
         ))

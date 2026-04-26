@@ -43,6 +43,8 @@ pub struct WsClientInfo {
     /// Human-readable label set by the client via `presenter.register`.
     pub label: String,
     pub user_agent: Option<String>,
+    /// Hostname of the machine running the client, if reported via `presenter.register`.
+    pub hostname: Option<String>,
     pub connected_at: chrono::DateTime<Utc>,
     pub last_pong_at: Option<chrono::DateTime<Utc>>,
     pub latency_ms: Option<i64>,
@@ -272,9 +274,9 @@ enum WsCommand {
     #[serde(rename = "broadlink.commands.send")]
     BroadlinkCommandsSend { id: Uuid },
     // ── Presenter ────────────────────────────────────────────────────────────
-    /// Register a human-readable label for this connection (shown in the UI).
+    /// Register a human-readable label and hostname for this connection (shown in the UI).
     #[serde(rename = "presenter.register")]
-    PresenterRegister { label: String },
+    PresenterRegister { label: String, hostname: Option<String> },
     /// Request the list of currently connected clients (reply to sender only).
     #[serde(rename = "clients.list")]
     ClientsList,
@@ -472,11 +474,12 @@ async fn handle_ws_command(
             }
         }
         // ── Client registry & ping ───────────────────────────────────────────
-        WsCommand::PresenterRegister { label } => {
+        WsCommand::PresenterRegister { label, hostname } => {
             {
                 let mut info = state.ws_client_info.write().await;
                 if let Some(client) = info.get_mut(&client_id) {
                     client.label = label;
+                    client.hostname = hostname;
                 }
             }
             broadcast_clients_updated(state).await;
@@ -2077,6 +2080,7 @@ async fn handle_socket(
                 id: client_id,
                 label: "Browser".to_string(),
                 user_agent,
+                hostname: None,
                 connected_at: Utc::now(),
                 last_pong_at: None,
                 latency_ms: None,

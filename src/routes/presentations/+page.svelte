@@ -376,11 +376,14 @@
 					{#each $connectedClients as client (client.id)}
 						<li class="client-item">
 							<div class="client-icon" aria-hidden="true">
-								{#if client.label === 'Tauri App'}🖥{:else if client.label === 'Presenter Display'}📽{:else}🌐{/if}
+								{#if client.label === 'Tauri App'}🖥{:else if client.label === 'Presenter Receiver'}📽{:else}🌐{/if}
 							</div>
 							<div class="client-info">
 								<div class="client-top-row">
 									<span class="client-label">{client.label}</span>
+									{#if client.hostname}
+										<span class="client-hostname">{client.hostname}</span>
+									{/if}
 									<span class="client-browser">{parseBrowser(client.userAgent)}</span>
 								</div>
 								<div class="client-bottom-row">
@@ -760,6 +763,15 @@
 	.client-browser {
 		font-size: 0.75rem;
 		color: var(--text-secondary);
+	}
+
+	.client-hostname {
+		font-size: 0.75rem;
+		font-family: monospace;
+		color: var(--text-secondary);
+		background: var(--surface-secondary, oklch(0.92 0 0));
+		padding: 0.05rem 0.35rem;
+		border-radius: 0.25rem;
 	}
 
 	.client-bottom-row {

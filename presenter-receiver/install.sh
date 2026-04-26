@@ -7,11 +7,18 @@
 # Install and run immediately:
 #   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws
 #
+# Install and register as a systemd service (auto-starts on boot):
+#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws --service
+#
 set -e
 
 REPO="UMC-Hungary/sermon-helper-applications"
 DEST="${PRESENTER_INSTALL_DIR:-/usr/local/bin}/presenter-receiver"
 WS_URL="${1:-}"
+INSTALL_SERVICE=false
+for arg in "$@"; do
+    [ "$arg" = "--service" ] && INSTALL_SERVICE=true
+done
 
 # ── Find latest presenter-receiver release ────────────────────────────────────
 RELEASE_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" \
@@ -77,8 +84,10 @@ fi
 # ── Install ───────────────────────────────────────────────────────────────────
 chmod +x "$TMP"
 
-# Try to install to /usr/local/bin, fall back to current directory
-if [ -w "$(dirname "$DEST")" ]; then
+# Always try sudo install to /usr/local/bin so the service path is stable
+if sudo mv "$TMP" "$DEST" 2>/dev/null; then
+    echo "==> Installed to $DEST"
+elif [ -w "$(dirname "$DEST")" ]; then
     mv "$TMP" "$DEST"
     echo "==> Installed to $DEST"
 else
@@ -90,7 +99,45 @@ else
     echo "    To install globally: sudo mv $LOCAL_DEST /usr/local/bin/presenter-receiver"
 fi
 
-# ── Run ───────────────────────────────────────────────────────────────────────
+# ── Systemd service (Linux only, opt-in via --service) ────────────────────────
+if [ "$INSTALL_SERVICE" = "true" ] && [ "$OS" = "Linux" ] && command -v systemctl &>/dev/null; then
+    if [ -z "$WS_URL" ]; then
+        echo "Error: --service requires a WebSocket URL (e.g. ws://192.168.1.10:3000/ws)"
+        exit 1
+    fi
+
+    SERVICE_FILE="/etc/systemd/system/presenter-receiver.service"
+    SERVICE_USER="${SUDO_USER:-${USER}}"
+
+    echo "==> Installing systemd service as user '$SERVICE_USER'..."
+    sudo tee "$SERVICE_FILE" > /dev/null <<EOF
+[Unit]
+Description=Presenter Receiver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=$DEST $WS_URL
+Restart=always
+RestartSec=5
+User=$SERVICE_USER
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable presenter-receiver
+    sudo systemctl restart presenter-receiver
+    echo "==> Service installed and started."
+    echo "    Manage with:"
+    echo "      sudo systemctl status presenter-receiver"
+    echo "      sudo systemctl stop presenter-receiver"
+    echo "      journalctl -fu presenter-receiver"
+    exit 0
+fi
+
+# ── Run directly (no service) ─────────────────────────────────────────────────
 if [ -n "$WS_URL" ]; then
     echo "==> Starting: $DEST $WS_URL"
     exec "$DEST" "$WS_URL"
@@ -98,4 +145,7 @@ else
     echo ""
     echo "Done. Usage:"
     echo "  $DEST ws://YOUR_SERVER_IP:3000/ws"
+    echo ""
+    echo "To auto-start on boot (Linux/systemd):"
+    echo "  $DEST ws://YOUR_SERVER_IP:3000/ws --service"
 fi

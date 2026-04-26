@@ -101,6 +101,7 @@ export const WsClientInfoSchema = z.object({
   id: z.string().uuid(),
   label: z.string(),
   userAgent: z.string().nullable(),
+  hostname: z.string().nullable(),
   connectedAt: z.string(),
   lastPongAt: z.string().nullable(),
   latencyMs: z.number().int().nullable(),
