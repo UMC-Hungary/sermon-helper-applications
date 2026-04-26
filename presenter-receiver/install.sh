@@ -44,6 +44,20 @@ case "${OS}-${ARCH}" in
         ;;
 esac
 
+# ── Install Linux system dependencies ────────────────────────────────────────
+if [ "$OS" = "Linux" ] && command -v apt-get &>/dev/null; then
+    MISSING=""
+    for lib in libcairo2 libcairo-gobject2 libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 libglib2.0-0; do
+        if ! dpkg -s "$lib" &>/dev/null 2>&1; then
+            MISSING="$MISSING $lib"
+        fi
+    done
+    if [ -n "$MISSING" ]; then
+        echo "==> Installing required system libraries:$MISSING"
+        sudo apt-get install -y $MISSING
+    fi
+fi
+
 # ── Download ──────────────────────────────────────────────────────────────────
 echo "==> Detected: ${OS}-${ARCH} → $BINARY"
 echo "==> Downloading from GitHub Releases (${RELEASE_TAG})..."

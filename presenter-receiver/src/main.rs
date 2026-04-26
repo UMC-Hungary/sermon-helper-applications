@@ -123,7 +123,12 @@ fn run_display(rx: std::sync::mpsc::Receiver<Frame>, dims: DisplayDims) {
 
 #[cfg(target_os = "linux")]
 fn run_display(rx: std::sync::mpsc::Receiver<Frame>, dims: DisplayDims) {
-    let mut fb = framebuffer::Framebuffer::new("/dev/fb0").expect("Cannot open /dev/fb0");
+    let mut fb = framebuffer::Framebuffer::new("/dev/fb0").unwrap_or_else(|e| {
+        eprintln!("[display] Cannot open /dev/fb0: {e}");
+        eprintln!("[display] Ensure a display is connected via HDMI.");
+        eprintln!("[display] If running headless, add 'hdmi_force_hotplug=1' to /boot/firmware/config.txt and reboot.");
+        std::process::exit(1);
+    });
     let fb_w = fb.var_screen_info.xres as usize;
     let fb_h = fb.var_screen_info.yres as usize;
     let bpp = fb.var_screen_info.bits_per_pixel as usize / 8;
@@ -140,12 +145,27 @@ fn run_display(rx: std::sync::mpsc::Receiver<Frame>, dims: DisplayDims) {
                 let g = ((pixel >> 8) & 0xff) as u8;
                 let b = (pixel & 0xff) as u8;
                 let d = (y * fb_w + x) * bpp;
-                // Framebuffer colour order is BGR(A)
-                fb_frame[d] = b;
-                fb_frame[d + 1] = g;
-                fb_frame[d + 2] = r;
-                if bpp == 4 {
-                    fb_frame[d + 3] = 0xff;
+                match bpp {
+                    2 => {
+                        // RGB565 little-endian
+                        let v: u16 = ((r as u16 & 0xF8) << 8)
+                            | ((g as u16 & 0xFC) << 3)
+                            | (b as u16 >> 3);
+                        fb_frame[d] = (v & 0xFF) as u8;
+                        fb_frame[d + 1] = (v >> 8) as u8;
+                    }
+                    3 => {
+                        fb_frame[d] = b;
+                        fb_frame[d + 1] = g;
+                        fb_frame[d + 2] = r;
+                    }
+                    4 => {
+                        fb_frame[d] = b;
+                        fb_frame[d + 1] = g;
+                        fb_frame[d + 2] = r;
+                        fb_frame[d + 3] = 0xff;
+                    }
+                    _ => {}
                 }
             }
         }
