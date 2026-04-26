@@ -4,7 +4,6 @@
 	import { wsStatus } from '$lib/stores/ws.js';
 	import { CONNECTORS } from '$lib/connectors/registry.js';
 	import ConnectorDashboardWidget from '$lib/components/connectors/ConnectorDashboardWidget.svelte';
-	import StreamStatsWidget from '$lib/components/StreamStatsWidget.svelte';
 </script>
 
 <svelte:head>
@@ -36,9 +35,6 @@
       {/if}
     </dl>
   </div>
-
-  <!-- Stream stats widget — always visible; polls the server's mediamtx proxy -->
-  <StreamStatsWidget />
 
   <!-- One widget per configured connector -->
   {#each CONNECTORS.filter((c) => c.id !== 'broadlink') as def (def.id)}

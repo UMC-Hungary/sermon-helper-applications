@@ -491,7 +491,6 @@ pub async fn build_and_serve(
         )
         .route("/connectors/state", get(routes::get_connector_state))
         .route("/connectors/status", get(routes::get_connector_statuses))
-        .route("/stream/stats", get(routes::get_stream_stats))
         .route("/connectors/youtube/content", get(routes::get_youtube_content))
         .route("/connectors/youtube/stream-key", get(routes::get_youtube_stream_key))
         .route("/connectors/facebook/stream-key", get(routes::get_facebook_stream_key))

@@ -831,14 +831,11 @@
 				"comingSoon": "ATEM integration is not yet implemented. Configuration is saved for future use."
 			},
 			"broadlink": {
-				"title": "BroadLink",
-				"subtitle": "BroadLink hub support coming soon",
-				"host": "Host / IP",
-				"port": "Port",
-				"enabled": "Enable BroadLink connector",
+				"title": "Broadlink RF/IR",
+				"subtitle": "Control projectors, screens, and AV equipment via IR and RF",
+				"enabled": "Enable Broadlink connector",
 				"save": "Save",
-				"saving": "Saving…",
-				"comingSoon": "BroadLink integration is not yet implemented. Configuration is saved for future use."
+				"saving": "Saving…"
 			},
 			"discord": {
 				"title": "Discord",
@@ -849,23 +846,12 @@
 				"saving": "Saving…",
 				"comingSoon": "Discord integration is not yet implemented. Configuration is saved for future use."
 			},
-			"broadlink": {
-				"title": "Broadlink RF/IR",
-				"subtitle": "Control projectors, screens, and AV equipment via IR and RF",
-				"enabled": "Enable Broadlink connector",
-				"save": "Save",
-				"saving": "Saving…"
-			},
 			"statusLabels": {
 				"connected": "Connected",
 				"connecting": "Connecting…",
 				"disconnected": "Disconnected",
 				"error": "Error"
 			}
-		},
-		"dependencies": {
-			"title": "Dependencies",
-			"note": "Optional packages needed for stream preview and multi-stream relay."
 		},
 		"obsBadge": {
 			"title": "OBS Badge",

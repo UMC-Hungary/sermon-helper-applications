@@ -2,11 +2,9 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { openUrl } from '@tauri-apps/plugin-opener';
 	import { _ } from 'svelte-i18n';
-	import { streamPreviewEnabled } from '$lib/stores/stream-preview.js';
 	import {
 		obsConfig,
 		obsStatus,
-		obsState,
 		vmixConfig,
 		vmixStatus,
 		atemConfig,
@@ -20,7 +18,6 @@
 		discordConfig,
 		discordStatus
 	} from '$lib/stores/connectors.js';
-	import { get } from 'svelte/store';
 	import type {
 		ObsConfig,
 		VmixConfig,
@@ -49,17 +46,14 @@
 	let obsSaving = $state(false);
 	let obsError = $state('');
 
-	// ── Stream Preview check ──────────────────────────────────────────────────
-	let previewCheckError = $state<string | null>(null);
-
 	// ── OBS Streaming Destination ─────────────────────────────────────────────
-	type ObsDestination = 'proxy' | 'youtube' | 'facebook';
+	type ObsDestination = 'youtube' | 'facebook';
 	interface ObsStreamSettings {
 		serviceType: string;
 		server: string;
 		key: string;
 	}
-	let obsDestination = $state<ObsDestination>('proxy');
+	let obsDestination = $state<ObsDestination>('youtube');
 	let obsStreamSettings = $state<ObsStreamSettings | null>(null);
 	let obsDestSaving = $state(false);
 	let obsDestError = $state('');
@@ -68,38 +62,6 @@
 	let obsDestFetchingYt = $state(false);
 	let obsDestFetchingFb = $state(false);
 
-	// ── Local Streaming ────────────────────────────────────────────────────────
-	let localIp = $state('…');
-	let rtmpUrlCopied = $state(false);
-
-	// ── Multi-Stream Relay ────────────────────────────────────────────────────
-	interface RelayConfig {
-		youtubeRtmpUrl: string;
-		facebookRtmpUrl: string;
-		rtmpRestreamEnabled: boolean;
-	}
-
-	let relayForm: RelayConfig = $state({ youtubeRtmpUrl: '', facebookRtmpUrl: '', rtmpRestreamEnabled: true });
-	let relaySaving = $state(false);
-	let relayError = $state('');
-	let relayFetchingYt = $state(false);
-	let relayFetchingFb = $state(false);
-
-	$effect(() => {
-		if (connectorId === 'obs') {
-			invoke<RelayConfig>('get_relay_config')
-				.then((cfg) => {
-					relayForm = cfg;
-				})
-				.catch(() => {});
-			invoke<string | null>('get_local_ip')
-				.then((ip) => {
-					if (ip) localIp = ip;
-				})
-				.catch(() => {});
-		}
-	});
-
 	$effect(() => {
 		if (connectorId !== 'obs') return;
 		if ($obsStatus === 'connected') {
@@ -107,9 +69,7 @@
 				.then((s) => {
 					obsStreamSettings = s;
 					const srv = s.server.toLowerCase();
-					if (srv.includes('localhost') || srv.includes('127.0.0.1')) {
-						obsDestination = 'proxy';
-					} else if (srv.includes('youtube')) {
+					if (srv.includes('youtube')) {
 						obsDestination = 'youtube';
 					} else if (srv.includes('facebook') || srv.includes('fbcdn')) {
 						obsDestination = 'facebook';
@@ -122,53 +82,6 @@
 			obsStreamSettings = null;
 		}
 	});
-
-	async function saveRelayConfig() {
-		relaySaving = true;
-		relayError = '';
-		try {
-			await invoke('save_relay_config', { config: relayForm });
-		} catch (e) {
-			relayError = String(e);
-		} finally {
-			relaySaving = false;
-		}
-	}
-
-	async function toggleRtmpRestream() {
-		relayError = '';
-		try {
-			await invoke('save_relay_config', { config: relayForm });
-		} catch (e) {
-			relayError = String(e);
-		}
-	}
-
-	async function fetchRelayYouTubeKey() {
-		relayFetchingYt = true;
-		relayError = '';
-		try {
-			const result = await fetchYouTubeStreamKey();
-			relayForm = { ...relayForm, youtubeRtmpUrl: result.rtmpUrl };
-		} catch (e) {
-			relayError = String(e);
-		} finally {
-			relayFetchingYt = false;
-		}
-	}
-
-	async function fetchRelayFacebookKey() {
-		relayFetchingFb = true;
-		relayError = '';
-		try {
-			const result = await fetchFacebookStreamKey();
-			relayForm = { ...relayForm, facebookRtmpUrl: result.rtmpUrl };
-		} catch (e) {
-			relayError = String(e);
-		} finally {
-			relayFetchingFb = false;
-		}
-	}
 
 	async function fetchDestYouTubeKey() {
 		obsDestFetchingYt = true;
@@ -202,10 +115,7 @@
 		try {
 			let server = '';
 			let key = '';
-			if (obsDestination === 'proxy') {
-				server = 'rtmp://127.0.0.1:1935/live';
-				key = '';
-			} else if (obsDestination === 'youtube') {
+			if (obsDestination === 'youtube') {
 				const lastSlash = obsDestYtUrl.lastIndexOf('/');
 				server = lastSlash > 6 ? obsDestYtUrl.slice(0, lastSlash) : obsDestYtUrl;
 				key = lastSlash > 6 ? obsDestYtUrl.slice(lastSlash + 1) : '';
@@ -223,36 +133,6 @@
 		} finally {
 			obsDestSaving = false;
 		}
-	}
-
-	function copyRtmpUrl() {
-		const url = `rtmp://${localIp}:1935/live`;
-		navigator.clipboard.writeText(url).then(() => {
-			rtmpUrlCopied = true;
-			setTimeout(() => { rtmpUrlCopied = false; }, 2000);
-		});
-	}
-
-	function enablePreview() {
-		previewCheckError = null;
-		const status = get(obsStatus);
-		const state = get(obsState);
-		if (status !== 'connected') {
-			previewCheckError =
-				'OBS is not connected. Check your OBS WebSocket settings above and make sure OBS is running.';
-			return;
-		}
-		if (!state.isStreaming) {
-			previewCheckError =
-				'OBS is connected but not streaming. Click "Start Streaming" in OBS, then click Recheck.';
-			return;
-		}
-		streamPreviewEnabled.set(true);
-	}
-
-	function disablePreview() {
-		streamPreviewEnabled.set(false);
-		previewCheckError = null;
 	}
 
 	$effect(() => {
@@ -587,12 +467,6 @@
 				<fieldset class="dest-cards" disabled={$obsStatus !== 'connected'}>
 					<legend class="sr-only">Streaming destination</legend>
 
-					<label class="dest-card" class:dest-card--active={obsDestination === 'proxy'}>
-						<input type="radio" name="obs-dest" value="proxy" bind:group={obsDestination} />
-						<span class="dest-card-title">Sermon Helper</span>
-						<span class="dest-card-desc">Stream via this app's proxy (<code>rtmp://127.0.0.1:1935/live</code>)</span>
-					</label>
-
 					<label class="dest-card" class:dest-card--active={obsDestination === 'youtube'}>
 						<input type="radio" name="obs-dest" value="youtube" bind:group={obsDestination} />
 						<span class="dest-card-title">YouTube</span>
@@ -654,132 +528,6 @@
 					disabled={obsDestSaving || $obsStatus !== 'connected'}
 				>
 					{obsDestSaving ? 'Applying…' : 'Apply to OBS'}
-				</button>
-			</div>
-
-			<!-- Local Streaming -->
-			<div class="preview-section">
-				<h4 class="preview-heading">Local Streaming</h4>
-
-				<div class="local-streaming-row">
-					<div class="local-streaming-label">
-						<span class="toggle-label-main">RTMP Re-stream</span>
-						<span class="toggle-label-sub">When on, other computers on your network can receive the stream</span>
-					</div>
-					<label class="toggle-switch" aria-label="Enable RTMP re-stream">
-						<input
-							type="checkbox"
-							bind:checked={relayForm.rtmpRestreamEnabled}
-							onchange={toggleRtmpRestream}
-						/>
-						<span class="toggle-track" aria-hidden="true"></span>
-					</label>
-				</div>
-
-				{#if relayForm.rtmpRestreamEnabled}
-					<div class="lan-url-row">
-						<code class="lan-url">rtmp://{localIp}:1935/live</code>
-						<button class="btn-copy" onclick={copyRtmpUrl} aria-label="Copy RTMP URL">
-							{#if rtmpUrlCopied}
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-								Copied
-							{:else}
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-								Copy
-							{/if}
-						</button>
-					</div>
-				{/if}
-
-				{#if relayError}
-					<p class="error" role="alert">{relayError}</p>
-				{/if}
-
-				<div class="local-streaming-row">
-					<div class="local-streaming-label">
-						<span class="toggle-label-main">HLS Preview</span>
-						<span class="toggle-label-sub">Floating video player in this app</span>
-					</div>
-					{#if $streamPreviewEnabled}
-						<button class="preview-btn preview-btn--danger" onclick={disablePreview}>
-							Disable
-						</button>
-					{:else}
-						<button class="preview-btn" onclick={enablePreview}>
-							Enable
-						</button>
-					{/if}
-				</div>
-
-				{#if $streamPreviewEnabled}
-					<div class="check-result check-ok">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-						HLS preview is active
-					</div>
-				{:else if previewCheckError}
-					<div class="check-result check-error">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
-						{previewCheckError}
-					</div>
-				{/if}
-			</div>
-
-			<!-- ── Multi-Stream Relay ────────────────────────────────────────── -->
-			<div class="relay-section">
-				<h4 class="relay-heading">Multi-Stream Relay</h4>
-				<p class="relay-note">
-					mediamtx forwards the OBS stream to YouTube and/or Facebook simultaneously.
-					Leave a field empty to skip that destination. Requires <code>ffmpeg</code> on PATH.
-				</p>
-
-				<div class="relay-field-group">
-					<div class="field">
-						<label for="relay-yt-url">YouTube RTMP URL</label>
-						<div class="field-with-btn">
-							<input
-								id="relay-yt-url"
-								type="text"
-								bind:value={relayForm.youtubeRtmpUrl}
-								placeholder="rtmp://a.rtmp.youtube.com/live2/…"
-							/>
-							<button
-								class="btn-fetch"
-								onclick={fetchRelayYouTubeKey}
-								disabled={relayFetchingYt || $youtubeStatus !== 'connected'}
-								title={$youtubeStatus !== 'connected' ? 'Connect YouTube first' : 'Fetch stream key from YouTube API'}
-							>
-								{relayFetchingYt ? 'Fetching…' : 'Fetch'}
-							</button>
-						</div>
-					</div>
-
-					<div class="field">
-						<label for="relay-fb-url">Facebook RTMP URL</label>
-						<div class="field-with-btn">
-							<input
-								id="relay-fb-url"
-								type="text"
-								bind:value={relayForm.facebookRtmpUrl}
-								placeholder="rtmps://live-api-s.facebook.com:443/rtmp/…"
-							/>
-							<button
-								class="btn-fetch"
-								onclick={fetchRelayFacebookKey}
-								disabled={relayFetchingFb || $facebookStatus !== 'connected'}
-								title={$facebookStatus !== 'connected' ? 'Connect Facebook first' : 'Fetch stream key from Facebook API'}
-							>
-								{relayFetchingFb ? 'Fetching…' : 'Fetch'}
-							</button>
-						</div>
-					</div>
-				</div>
-
-				{#if relayError}
-					<p class="error" role="alert">{relayError}</p>
-				{/if}
-
-				<button class="btn-primary" onclick={saveRelayConfig} disabled={relaySaving}>
-					{relaySaving ? 'Saving…' : 'Save & Apply'}
 				</button>
 			</div>
 
@@ -1030,110 +778,10 @@
 		letter-spacing: 0.04em;
 	}
 
-	.check-result {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-		padding: 0.5rem 0.625rem;
-		border-radius: 0.375rem;
-		font-size: 0.8125rem;
-		line-height: 1.4;
-	}
-
-	.check-ok {
-		background: var(--status-ok-bg);
-		color: var(--status-ok-text);
-	}
-
-	.check-error {
-		background: var(--status-err-bg);
-		color: var(--status-err-text);
-	}
-
-	.check-result svg {
-		flex-shrink: 0;
-		margin-top: 0.1rem;
-	}
-
-	.preview-btn {
-		align-self: flex-start;
-		padding: 0.375rem 0.875rem;
-		background: var(--text-primary);
-		color: #fff;
-		border: none;
-		border-radius: 9999px;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		cursor: pointer;
-		transition: filter 0.15s;
-	}
-
-	.preview-btn:hover {
-		filter: brightness(0.8);
-	}
-
-	.preview-btn--danger {
-		background: var(--status-err-bg);
-		color: var(--status-err-text);
-	}
-
-	.preview-btn--danger:hover {
-		filter: brightness(0.95);
-	}
-
 	.rtmp-label {
 		margin: 0;
 		font-size: 0.75rem;
 		color: var(--text-secondary);
-	}
-
-	/* ── Multi-Stream Relay section ─────────────────────────────────────────── */
-	.relay-section {
-		margin-top: 1.25rem;
-		padding-top: 1.25rem;
-		border-top: 1px solid var(--border);
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.relay-heading {
-		margin: 0;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--text-primary);
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	.relay-note {
-		margin: 0;
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-	}
-
-	.relay-note code {
-		font-size: 0.75rem;
-		background: var(--border);
-		padding: 0.1rem 0.3rem;
-		border-radius: 0.25rem;
-	}
-
-	.relay-field-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.625rem;
-	}
-
-	.field-with-btn {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-
-	.field-with-btn input {
-		flex: 1;
-		min-width: 0;
 	}
 
 	.btn-fetch {
@@ -1217,13 +865,6 @@
 		color: var(--text-secondary);
 	}
 
-	.dest-card-desc code {
-		font-size: 0.7rem;
-		background: var(--border);
-		padding: 0.1rem 0.25rem;
-		border-radius: 0.2rem;
-	}
-
 	.dest-url-row {
 		display: flex;
 		gap: 0.5rem;
@@ -1258,114 +899,6 @@
 		clip: rect(0, 0, 0, 0);
 		white-space: nowrap;
 		border-width: 0;
-	}
-
-	/* ── Local Streaming section ─────────────────────────────────────────────── */
-	.local-streaming-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-	}
-
-	.local-streaming-label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-	}
-
-	.toggle-label-main {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--text-primary);
-	}
-
-	.toggle-label-sub {
-		font-size: 0.75rem;
-		color: var(--text-secondary);
-	}
-
-	.toggle-switch {
-		flex-shrink: 0;
-		display: flex;
-		align-items: center;
-		cursor: pointer;
-	}
-
-	.toggle-switch input[type='checkbox'] {
-		position: absolute;
-		opacity: 0;
-		pointer-events: none;
-		width: 0;
-		height: 0;
-	}
-
-	.toggle-track {
-		display: inline-block;
-		width: 2.25rem;
-		height: 1.25rem;
-		background: var(--border);
-		border-radius: 9999px;
-		position: relative;
-		transition: background 0.2s;
-	}
-
-	.toggle-track::after {
-		content: '';
-		position: absolute;
-		top: 0.175rem;
-		left: 0.175rem;
-		width: 0.875rem;
-		height: 0.875rem;
-		background: #fff;
-		border-radius: 50%;
-		transition: transform 0.2s;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-	}
-
-	.toggle-switch input:checked + .toggle-track {
-		background: var(--accent);
-	}
-
-	.toggle-switch input:checked + .toggle-track::after {
-		transform: translateX(1rem);
-	}
-
-	.lan-url-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: var(--content-bg);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
-		padding: 0.5rem 0.75rem;
-	}
-
-	.lan-url {
-		flex: 1;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8125rem;
-		color: var(--text-primary);
-		word-break: break-all;
-	}
-
-	.btn-copy {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		flex-shrink: 0;
-		padding: 0.25rem 0.5rem;
-		background: var(--content-bg);
-		color: var(--text-primary);
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
-		font-size: 0.75rem;
-		cursor: pointer;
-		white-space: nowrap;
-	}
-
-	.btn-copy:hover {
-		background: var(--nav-item-hover);
 	}
 
 	.connector-header {

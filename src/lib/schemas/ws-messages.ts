@@ -79,14 +79,6 @@ export const CronJobSchema = z.object({
   updatedAt: z.string(),
 });
 
-export const StreamStatsSchema = z.object({
-  ready: z.boolean(),
-  bytesReceived: z.number().int().nonnegative(),
-  bytesSent: z.number().int().nonnegative(),
-  readers: z.number().int().nonnegative(),
-  tracks: z.array(z.string()),
-});
-
 export const BroadlinkDeviceSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -143,7 +135,6 @@ export type SlideContent = z.infer<typeof SlideContentSchema>;
 export type PresenterState = z.infer<typeof PresenterStateSchema>;
 export type WsClientInfo = z.infer<typeof WsClientInfoSchema>;
 export type CronJob = z.infer<typeof CronJobSchema>;
-export type StreamStats = z.infer<typeof StreamStatsSchema>;
 export type BroadlinkDevice = z.infer<typeof BroadlinkDeviceSchema>;
 export type BroadlinkCommand = z.infer<typeof BroadlinkCommandSchema>;
 
@@ -321,8 +312,6 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   // ── Auth (WS command responses) ────────────────────────────────────────────
   z.object({ type: z.literal('auth.youtube.url'), url: z.string() }),
   z.object({ type: z.literal('auth.facebook.url'), url: z.string() }),
-  // ── Stream (WS command responses) ──────────────────────────────────────────
-  z.object({ type: z.literal('stream.stats'), stats: StreamStatsSchema }),
   // ── Broadlink (WS command responses) ───────────────────────────────────────
   z.object({ type: z.literal('broadlink.status'), status: ConnectorStatusPayloadSchema }),
   z.object({ type: z.literal('broadlink.devices.list'), devices: z.array(BroadlinkDeviceSchema) }),

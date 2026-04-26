@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -550,73 +550,3 @@ pub async fn broadlink_list_interfaces() -> Result<Vec<(String, String)>, String
     crate::broadlink::list_network_interfaces().await
 }
 
-// ── Relay config ──────────────────────────────────────────────────────────────
-
-#[tauri::command]
-pub fn get_relay_config(app: AppHandle) -> Result<crate::mediamtx::RelayConfig, String> {
-    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
-    Ok(store
-        .get("relay_config")
-        .and_then(|v| serde_json::from_value(v).ok())
-        .unwrap_or_default())
-}
-
-#[tauri::command]
-pub async fn save_relay_config(
-    config: crate::mediamtx::RelayConfig,
-    app: AppHandle,
-    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
-) -> Result<(), String> {
-    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
-    store.set(
-        "relay_config",
-        serde_json::to_value(&config).map_err(|e| e.to_string())?,
-    );
-    store.save().map_err(|e| e.to_string())?;
-
-    let (mediamtx_mgr, relay_config_arc, mode) = {
-        let rt = runtime.read().await;
-        (
-            Arc::clone(&rt.mediamtx_manager),
-            Arc::clone(&rt.relay_config),
-            rt.mode.clone(),
-        )
-    };
-
-    *relay_config_arc.write().await = config.clone();
-
-    if mode.as_deref() == Some("server") {
-        let data_dir = app.path().app_data_dir().map_err(|e: tauri::Error| e.to_string())?;
-        mediamtx_mgr
-            .restart(&app, &data_dir, &config)
-            .await
-            .map_err(|e| e.to_string())?;
-    }
-
-    Ok(())
-}
-
-/// Returns `true` if the mediamtx binary is present on this machine.
-#[tauri::command]
-pub async fn get_mediamtx_status(
-    app: AppHandle,
-    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
-) -> Result<bool, String> {
-    let data_dir = app.path().app_data_dir().map_err(|e: tauri::Error| e.to_string())?;
-    let rt = runtime.read().await;
-    Ok(rt.mediamtx_manager.is_installed(&app, &data_dir))
-}
-
-/// Download the mediamtx binary. Emits `mediamtx://progress` events during download.
-#[tauri::command]
-pub async fn download_mediamtx(
-    app: AppHandle,
-    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
-) -> Result<(), String> {
-    let data_dir = app.path().app_data_dir().map_err(|e: tauri::Error| e.to_string())?;
-    let mgr = {
-        let rt = runtime.read().await;
-        Arc::clone(&rt.mediamtx_manager)
-    };
-    mgr.download(&app, &data_dir).await.map_err(|e| e.to_string())
-}

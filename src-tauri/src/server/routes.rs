@@ -447,65 +447,6 @@ pub async fn trigger_facebook_schedule(
 }
 
 
-// ── Stream stats (mediamtx API proxy) ────────────────────────────────────────
-
-/// Proxy the mediamtx `/v3/paths/list` response to a minimal stats object.
-/// Returns a fixed shape even when mediamtx is not running (ready: false).
-pub async fn get_stream_stats() -> impl IntoResponse {
-    #[derive(Deserialize)]
-    struct MtxPath {
-        ready: bool,
-        #[serde(rename = "bytesReceived")]
-        bytes_received: u64,
-        #[serde(rename = "bytesSent")]
-        bytes_sent: u64,
-        tracks: Vec<String>,
-        readers: Vec<serde_json::Value>,
-    }
-
-    #[derive(Deserialize)]
-    struct MtxList {
-        items: Vec<MtxPath>,
-    }
-
-    let client = reqwest::Client::new();
-    let url = format!("http://localhost:{}/v3/paths/list", crate::mediamtx::API_PORT);
-
-    let result = client
-        .get(&url)
-        .timeout(std::time::Duration::from_secs(2))
-        .send()
-        .await;
-
-    let offline = json!({
-        "ready": false,
-        "bytesReceived": 0u64,
-        "bytesSent": 0u64,
-        "readers": 0u32,
-        "tracks": serde_json::Value::Array(vec![]),
-    });
-
-    match result {
-        Ok(r) if r.status().is_success() => match r.json::<MtxList>().await {
-            Ok(list) => {
-                let live = list.items.into_iter().find(|p| p.ready);
-                match live {
-                    Some(p) => Json(json!({
-                        "ready": true,
-                        "bytesReceived": p.bytes_received,
-                        "bytesSent": p.bytes_sent,
-                        "readers": p.readers.len() as u32,
-                        "tracks": p.tracks,
-                    }))
-                    .into_response(),
-                    None => Json(offline).into_response(),
-                }
-            }
-            Err(_) => Json(offline).into_response(),
-        },
-        _ => Json(offline).into_response(),
-    }
-}
 
 // ── Multi-stream relay: stream key fetch ──────────────────────────────────────
 

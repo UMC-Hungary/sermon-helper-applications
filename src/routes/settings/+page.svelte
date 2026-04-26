@@ -1,7 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import ConnectorSettingsBlock from '$lib/components/connectors/ConnectorSettingsBlock.svelte';
-  import MediamtxDownloadManager from '$lib/components/MediamtxDownloadManager.svelte';
   import LanguageSettings from '$lib/components/settings/LanguageSettings.svelte';
   import AppModeSettings from '$lib/components/settings/AppModeSettings.svelte';
   import ObsBadgeSettings from '$lib/components/settings/ObsBadgeSettings.svelte';
@@ -15,12 +14,6 @@
 
   <LanguageSettings />
   <AppModeSettings />
-
-  <h2 class="section-heading">{$_('appSettings.dependencies.title')}</h2>
-  <section>
-    <p class="note">{$_('appSettings.dependencies.note')}</p>
-    <MediamtxDownloadManager />
-  </section>
 
   <h2 class="section-heading">{$_('appSettings.connectors.title')}</h2>
   <ConnectorSettingsBlock connectorId="obs" />

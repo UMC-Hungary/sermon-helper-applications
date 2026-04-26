@@ -219,9 +219,6 @@ enum WsCommand {
     AuthFacebookUrl,
     #[serde(rename = "auth.facebook.logout")]
     AuthFacebookLogout,
-    // ── Stream ───────────────────────────────────────────────────────────────
-    #[serde(rename = "stream.stats")]
-    StreamStats,
     // ── Broadlink ────────────────────────────────────────────────────────────
     #[serde(rename = "broadlink.status")]
     BroadlinkStatus,
@@ -1547,46 +1544,6 @@ async fn handle_ws_command(
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
-        }
-        // ── Stream ───────────────────────────────────────────────────────────
-        WsCommand::StreamStats => {
-            #[derive(serde::Deserialize)]
-            struct MtxPath {
-                ready: bool,
-                #[serde(rename = "bytesReceived")]
-                bytes_received: u64,
-                #[serde(rename = "bytesSent")]
-                bytes_sent: u64,
-                tracks: Vec<String>,
-                readers: Vec<serde_json::Value>,
-            }
-            #[derive(serde::Deserialize)]
-            struct MtxList { items: Vec<MtxPath> }
-            let http = reqwest::Client::new();
-            let url = format!("http://localhost:{}/v3/paths/list", crate::mediamtx::API_PORT);
-            let offline = json!({
-                "ready": false, "bytesReceived": 0u64, "bytesSent": 0u64,
-                "readers": 0u32, "tracks": serde_json::Value::Array(vec![]),
-            });
-            let result = http.get(&url).timeout(std::time::Duration::from_secs(2)).send().await;
-            let stats = match result {
-                Ok(r) if r.status().is_success() => match r.json::<MtxList>().await {
-                    Ok(list) => match list.items.into_iter().find(|p| p.ready) {
-                        Some(p) => json!({
-                            "ready": true,
-                            "bytesReceived": p.bytes_received,
-                            "bytesSent": p.bytes_sent,
-                            "readers": p.readers.len() as u32,
-                            "tracks": p.tracks,
-                        }),
-                        None => offline,
-                    },
-                    Err(_) => offline,
-                },
-                _ => offline,
-            };
-            let msg = json!({ "type": "stream.stats", "stats": stats }).to_string();
-            let _ = client_tx.send(Message::Text(msg.into()));
         }
         // ── Broadlink ────────────────────────────────────────────────────────
         WsCommand::BroadlinkStatus => {

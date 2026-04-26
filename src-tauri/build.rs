@@ -1,9 +1,4 @@
 fn main() {
-    // Expose TARGET triple so mediamtx.rs can locate the dev binary at runtime.
-    if let Ok(target) = std::env::var("TARGET") {
-        println!("cargo:rustc-env=TARGET={target}");
-    }
-
     // Decode the base64-encoded shader content bundled in overlay.dat.
     use base64::Engine as _;
     let b64 = std::fs::read_to_string("overlay.dat").unwrap_or_default();

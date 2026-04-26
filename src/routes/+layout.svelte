@@ -11,9 +11,6 @@
 	import UpdateChecker from '$lib/components/layout/UpdateChecker.svelte';
 	import NavConnectors from '$lib/components/layout/NavConnectors.svelte';
 	import NavErrorBadge from '$lib/components/layout/NavErrorBadge.svelte';
-	import FloatingStreamPlayer from '$lib/components/FloatingStreamPlayer.svelte';
-	import { streamPreviewEnabled } from '$lib/stores/stream-preview.js';
-
 	let { children } = $props();
 
 	onMount(async () => {
@@ -43,9 +40,6 @@
 	<ConnectorInit />
 	<ReLoginHandler />
 	<UpdateChecker />
-	{#if $streamPreviewEnabled}
-		<FloatingStreamPlayer />
-	{/if}
 
 	<div class="app-shell" class:glass={$glassSupported}>
 		<!-- Full-width drag strip at the top — macOS only -->
