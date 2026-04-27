@@ -1,7 +1,9 @@
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::{Arc, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
+use crate::ConnectionState;
 
 // ── Message types from the server ────────────────────────────────────────────
 
@@ -51,13 +53,31 @@ enum ServerMsg {
 
 /// Connect to the presenter WebSocket, render slides, and send pixel frames
 /// down `tx` whenever the current slide changes. Reconnects automatically.
-pub async fn run(url: String, tx: std::sync::mpsc::Sender<Frame>, dims: DisplayDims) {
+pub async fn run(
+    url: String,
+    tx: std::sync::mpsc::Sender<Frame>,
+    dims: DisplayDims,
+    conn_state: Arc<Mutex<ConnectionState>>,
+) {
+    let mut fail_count = 0u32;
     loop {
+        *conn_state.lock().unwrap() = ConnectionState::Connecting;
         eprintln!("[ws] Connecting to {url}...");
-        match connect_and_receive(&url, &tx, dims).await {
-            Ok(()) => eprintln!("[ws] Connection closed."),
-            Err(e) => eprintln!("[ws] Error: {e}"),
+        match connect_and_receive(&url, &tx, dims, Arc::clone(&conn_state)).await {
+            Ok(()) => {
+                eprintln!("[ws] Connection closed.");
+                fail_count = 0;
+            }
+            Err(e) => {
+                eprintln!("[ws] Error: {e}");
+                fail_count += 1;
+            }
         }
+        *conn_state.lock().unwrap() = if fail_count >= 5 {
+            ConnectionState::Failed
+        } else {
+            ConnectionState::Reconnecting
+        };
         eprintln!("[ws] Reconnecting in 3 s...");
         tokio::time::sleep(std::time::Duration::from_secs(3)).await;
     }
@@ -81,8 +101,10 @@ async fn connect_and_receive(
     url: &str,
     tx: &std::sync::mpsc::Sender<Frame>,
     dims: DisplayDims,
+    conn_state: Arc<Mutex<ConnectionState>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (ws_stream, _) = connect_async(url).await?;
+    *conn_state.lock().unwrap() = ConnectionState::Connected;
     eprintln!("[ws] Connected.");
 
     let (mut write, mut read) = ws_stream.split();
