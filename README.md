@@ -4,28 +4,19 @@ Church livestream control desktop application built with Tauri 2 + SvelteKit 5 +
 
 ## Presenter Receiver
 
-A lightweight terminal binary that connects to the Sermon Helper WebSocket server and displays slides directly — no browser required. Designed for Raspberry Pi / Linux framebuffer setups or macOS secondary screens.
+A standalone binary that connects to the Sermon Helper server over WebSocket and renders slides directly on a display — no browser required. Designed for Raspberry Pi / Linux framebuffer setups or macOS secondary screens.
 
-### Install
+See [presenter-receiver/PRESENTER_RECEIVER.md](presenter-receiver/PRESENTER_RECEIVER.md) for full documentation: installation, auto-start on boot, supported platforms, update instructions, and WebSocket protocol reference.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
-```
-
-### Install and run immediately
+### Quick start
 
 ```bash
+# Install
 curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
+
+# Or with authentication token
+presenter-receiver ws://192.168.1.10:3737/ws --token YOUR_TOKEN
 ```
-
-### Usage
-
-```bash
-presenter-receiver ws://192.168.1.10:3737/ws
-presenter-receiver ws://192.168.1.10:3737/ws --token <your-token>
-```
-
-**Supported platforms:** macOS arm64/x86_64, Linux arm64/x86_64 (including Raspberry Pi)
 
 ## Development
 
