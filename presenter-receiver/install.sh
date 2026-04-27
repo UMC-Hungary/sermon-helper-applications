@@ -99,41 +99,76 @@ else
     echo "    To install globally: sudo mv $LOCAL_DEST /usr/local/bin/presenter-receiver"
 fi
 
-# ── Systemd service (Linux only, opt-in via --service) ────────────────────────
+# ── Auto-start via console auto-login (Linux only, opt-in via --service) ──────
 if [ "$INSTALL_SERVICE" = "true" ] && [ "$OS" = "Linux" ] && command -v systemctl &>/dev/null; then
     if [ -z "$WS_URL" ]; then
         echo "Error: --service requires a WebSocket URL (e.g. ws://192.168.1.10:3000/ws)"
         exit 1
     fi
 
-    SERVICE_FILE="/etc/systemd/system/presenter-receiver.service"
     SERVICE_USER="${SUDO_USER:-${USER}}"
+    SERVICE_HOME=$(getent passwd "$SERVICE_USER" | cut -d: -f6)
+    PROFILE="$SERVICE_HOME/.bash_profile"
 
-    echo "==> Installing systemd service as user '$SERVICE_USER'..."
-    sudo tee "$SERVICE_FILE" > /dev/null <<EOF
-[Unit]
-Description=Presenter Receiver
-After=network-online.target
-Wants=network-online.target
+    # Remove old background service if present (migration)
+    if [ -f /etc/systemd/system/presenter-receiver.service ]; then
+        echo "==> Removing old background service..."
+        sudo systemctl disable --now presenter-receiver 2>/dev/null || true
+        sudo rm -f /etc/systemd/system/presenter-receiver.service
+    fi
 
+    # Configure getty auto-login on tty1 (no login prompt on boot)
+    echo "==> Configuring console auto-login for '$SERVICE_USER'..."
+    AUTOLOGIN_DIR="/etc/systemd/system/getty@tty1.service.d"
+    sudo mkdir -p "$AUTOLOGIN_DIR"
+    sudo tee "$AUTOLOGIN_DIR/autologin.conf" > /dev/null <<EOF
 [Service]
-ExecStart=$DEST $WS_URL
-Restart=always
-RestartSec=5
-User=$SERVICE_USER
-
-[Install]
-WantedBy=multi-user.target
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $SERVICE_USER --noclear %I \$TERM
 EOF
 
+    # Create .bash_profile if it doesn't exist (source .profile/.bashrc for compatibility)
+    if [ ! -f "$PROFILE" ]; then
+        sudo tee "$PROFILE" > /dev/null <<'EOF'
+# .bash_profile
+[ -f ~/.profile ] && . ~/.profile
+[ -f ~/.bashrc ]  && . ~/.bashrc
+EOF
+        sudo chown "$SERVICE_USER:$SERVICE_USER" "$PROFILE"
+    fi
+
+    # Remove any existing auto-start block (idempotent re-installs)
+    MARKER="# presenter-receiver auto-start"
+    if grep -q "$MARKER" "$PROFILE" 2>/dev/null; then
+        sudo sed -i "/$MARKER/,/# end presenter-receiver/d" "$PROFILE"
+    fi
+
+    # Append the auto-start block
+    sudo tee -a "$PROFILE" > /dev/null <<BASHEOF
+
+$MARKER
+if [ "\$(tty)" = "/dev/tty1" ]; then
+    while true; do
+        $DEST $WS_URL
+        sleep 3
+    done
+fi
+# end presenter-receiver
+BASHEOF
+    sudo chown "$SERVICE_USER:$SERVICE_USER" "$PROFILE"
+
     sudo systemctl daemon-reload
-    sudo systemctl enable presenter-receiver
-    sudo systemctl restart presenter-receiver
-    echo "==> Service installed and started."
-    echo "    Manage with:"
-    echo "      sudo systemctl status presenter-receiver"
-    echo "      sudo systemctl stop presenter-receiver"
-    echo "      journalctl -fu presenter-receiver"
+    sudo systemctl enable getty@tty1
+    sudo systemctl restart getty@tty1
+
+    echo ""
+    echo "==> Auto-start configured for user '$SERVICE_USER'."
+    echo "    On next reboot the presenter launches automatically"
+    echo "    on the console display — no login prompt."
+    echo ""
+    echo "    To disable:"
+    echo "      sudo rm $AUTOLOGIN_DIR/autologin.conf"
+    echo "      Remove the '$MARKER' block from $PROFILE"
     exit 0
 fi
 

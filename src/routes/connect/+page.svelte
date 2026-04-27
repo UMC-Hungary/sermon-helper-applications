@@ -103,7 +103,7 @@
     <label class="autostart-toggle">
       <input type="checkbox" bind:checked={autoStart} />
       Auto-start on boot
-      <span class="autostart-hint">(Linux / systemd only)</span>
+      <span class="autostart-hint">(enables console auto-login, Linux only)</span>
     </label>
     <div class="url-cell">
       <code class="cmd">{installCommand}</code>
