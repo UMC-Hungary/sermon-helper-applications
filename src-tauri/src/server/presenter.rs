@@ -214,6 +214,7 @@ pub struct PresenterState {
     pub current_slide: u32,
     pub total_slides: u32,
     pub slides: Vec<SlideContent>,
+    pub muted: bool,
 }
 
 impl PresenterState {
@@ -224,6 +225,7 @@ impl PresenterState {
             current_slide: 0,
             total_slides: 0,
             slides: Vec::new(),
+            muted: false,
         }
     }
 
@@ -235,7 +237,16 @@ impl PresenterState {
             current_slide: if total > 0 { 1 } else { 0 },
             total_slides: total,
             slides: parsed.slides,
+            muted: false,
         }
+    }
+
+    pub fn mute(&mut self) {
+        self.muted = true;
+    }
+
+    pub fn unmute(&mut self) {
+        self.muted = false;
     }
 
     /// Advance one slide forward; clamps at `total_slides`.

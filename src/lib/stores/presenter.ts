@@ -24,6 +24,7 @@ const emptyState: PresenterState = PresenterStateSchema.parse({
 	currentSlide: 0,
 	totalSlides: 0,
 	slides: [] as { index: number; paragraphs: { text: string; align: string }[] }[],
+	muted: false,
 });
 
 export const presenterState = writable<PresenterState>(emptyState);

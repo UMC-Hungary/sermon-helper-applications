@@ -218,11 +218,13 @@ export class SermonHelperApi {
 	}
 
 	async presentationBlank(): Promise<{ success: boolean; error?: string }> {
-		return this.presentationStop()
+		const sent = this.sendWsCommand('presenter.mute')
+		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationUnblank(): Promise<{ success: boolean; error?: string }> {
-		return this.presentationStart()
+		const sent = this.sendWsCommand('presenter.unmute')
+		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	// ── WebSocket management ──────────────────────────────────────────────────
@@ -288,6 +290,28 @@ export class SermonHelperApi {
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
 		switch (message.type) {
+			case 'presenter.state': {
+				const s = message.state as
+					| {
+							loaded?: boolean
+							muted?: boolean
+							currentSlide?: number
+							totalSlides?: number
+					  }
+					| undefined
+				if (s) {
+					this.onPresentationStatusChanged?.({
+						app: 'web',
+						appRunning: s.loaded ?? false,
+						slideshowActive: s.loaded ?? false,
+						currentSlide: s.currentSlide ?? null,
+						totalSlides: s.totalSlides ?? null,
+						currentSlideTitle: null,
+						blanked: s.muted ?? false,
+					})
+				}
+				break
+			}
 			case 'keynote.status': {
 				const s = message.status as
 					| {

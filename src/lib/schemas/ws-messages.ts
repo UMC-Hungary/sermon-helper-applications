@@ -115,6 +115,7 @@ export const PresenterStateSchema = z.object({
   currentSlide: z.number().int().nonnegative(),
   totalSlides: z.number().int().nonnegative(),
   slides: z.array(SlideContentSchema),
+  muted: z.boolean(),
 });
 
 export const BroadlinkCommandSchema = z.object({

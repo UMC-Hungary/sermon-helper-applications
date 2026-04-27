@@ -67,11 +67,18 @@
 			navigate('first');
 		} else if (e.key === 'End') {
 			navigate('last');
+		} else if ((e.key === 'b' || e.key === 'B') && token) {
+			toggleMute();
 		}
 	}
 
 	function navigate(direction: 'next' | 'prev' | 'first' | 'last') {
 		standaloneSocket?.send(JSON.stringify({ type: `presenter.${direction}` }));
+	}
+
+	function toggleMute() {
+		const cmd = standaloneState?.muted ? 'presenter.unmute' : 'presenter.mute';
+		standaloneSocket?.send(JSON.stringify({ type: cmd }));
 	}
 
 	const currentSlide = $derived(
@@ -86,6 +93,7 @@
 	const slideIndex = $derived(standaloneState?.currentSlide ?? 0);
 	const slideTotal = $derived(standaloneState?.totalSlides ?? 0);
 	const isLoaded = $derived(standaloneState?.loaded ?? false);
+	const isMuted = $derived(standaloneState?.muted ?? false);
 </script>
 
 <svelte:head>
@@ -93,7 +101,15 @@
 </svelte:head>
 
 <div class="presenter-root">
-	{#if !isLoaded}
+	{#if isMuted}
+		<div class="mute-overlay" aria-label="Display muted">
+			{#if token}
+				<button class="unmute-hint" onclick={toggleMute} aria-label="Unmute display">
+					Click or press B to unmute
+				</button>
+			{/if}
+		</div>
+	{:else if !isLoaded}
 		<div class="waiting">
 			<p>Waiting for presentation…</p>
 			<p class="hint">Load a .pptx file from the Presentations page to begin.</p>
@@ -134,6 +150,11 @@
 					onclick={() => navigate('last')}
 					aria-label="Last slide"
 				>⏭</button>
+				<button
+					class="nav-btn mute-btn"
+					onclick={toggleMute}
+					aria-label="Mute display"
+				>⬛</button>
 			</div>
 		{/if}
 	{/if}
@@ -235,6 +256,32 @@
 		opacity: 0.8;
 		min-width: 4rem;
 		text-align: center;
+	}
+
+	/* ── Mute overlay ─────────────────────────────────────────────────────── */
+
+	.mute-overlay {
+		position: fixed;
+		inset: 0;
+		background: #000;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		padding-bottom: 1rem;
+	}
+
+	.unmute-hint {
+		background: transparent;
+		border: none;
+		color: rgba(255, 255, 255, 0.15);
+		font-size: 0.75rem;
+		cursor: pointer;
+		padding: 0.5rem 1rem;
+		transition: color 0.2s;
+	}
+
+	.unmute-hint:hover {
+		color: rgba(255, 255, 255, 0.5);
 	}
 
 	/* ── Waiting state ────────────────────────────────────────────────────── */

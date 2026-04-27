@@ -59,6 +59,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 					void this.refreshCommands()
 					void this.pptSelector.refreshFolders()
 					this.api.sendWsCommand('keynote.status')
+					this.api.sendWsCommand('presenter.status')
 				}
 			},
 			onPptFoldersChanged: (folders) => {

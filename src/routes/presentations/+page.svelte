@@ -207,6 +207,10 @@
 			if (!sendWsCommand('keynote.stop')) await keynoteStop();
 		}
 	}
+
+	function handleToggleMute() {
+		sendWsCommand($presenterState.muted ? 'presenter.unmute' : 'presenter.mute');
+	}
 	async function handleCloseAll() {
 		if (!sendWsCommand('keynote.close_all')) await keynoteCloseAll();
 	}
@@ -293,6 +297,12 @@
 						{$presenterState.filePath ? $presenterState.filePath.split('/').pop() : '—'}
 					</span>
 				</div>
+				<div class="status-item">
+					<span class="status-label">Display</span>
+					<span class="status-value" class:muted={$presenterState.muted}>
+						{$presenterState.muted ? 'Muted' : 'Live'}
+					</span>
+				</div>
 			</div>
 			{#if $presenterState.loaded}
 				<button class="btn-edit-slides" onclick={() => { slideEditorOpen = true; }}>
@@ -335,6 +345,17 @@
 			<button class="ctrl-btn stop-btn" onclick={handleStop} aria-label={$useWebPresenter ? 'Unload' : $_('presentations.controls.stop')}>
 				{$useWebPresenter ? '⏹ Unload' : `⏹ ${$_('presentations.controls.stop')}`}
 			</button>
+			{#if $useWebPresenter}
+				<button
+					class="ctrl-btn mute-btn"
+					class:mute-active={$presenterState.muted}
+					onclick={handleToggleMute}
+					aria-label={$presenterState.muted ? 'Unmute display' : 'Mute display'}
+					disabled={!$presenterState.loaded}
+				>
+					{$presenterState.muted ? '⬛ Unmute' : '⬛ Mute'}
+				</button>
+			{/if}
 			{#if !$useWebPresenter}
 				<button class="ctrl-btn close-btn" onclick={handleCloseAll} aria-label={$_('presentations.controls.closeAll')}>✕ {$_('presentations.controls.closeAll')}</button>
 			{/if}
@@ -647,6 +668,23 @@
 
 	.close-btn {
 		background: var(--status-err-dot);
+	}
+
+	.mute-btn {
+		background: var(--text-secondary);
+	}
+
+	.mute-btn.mute-active {
+		background: var(--status-warn-dot);
+	}
+
+	.mute-btn:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
+	.status-value.muted {
+		color: var(--status-warn-dot);
 	}
 
 	.note {

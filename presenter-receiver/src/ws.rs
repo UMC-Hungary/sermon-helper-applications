@@ -24,6 +24,8 @@ pub struct SlideContent {
 pub struct PresenterState {
     pub current_slide: u32,
     pub slides: Vec<SlideContent>,
+    #[serde(default)]
+    pub muted: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -107,6 +109,7 @@ async fn connect_and_receive(
 
     let mut slides: Vec<SlideContent> = Vec::new();
     let mut current_slide: u32;
+    let mut muted = false;
 
     while let Some(raw) = read.next().await {
         let raw = raw?;
@@ -124,12 +127,13 @@ async fn connect_and_receive(
         match msg {
             ServerMsg::PresenterState { state } => {
                 current_slide = state.current_slide;
+                muted = state.muted;
                 slides = state.slides;
-                send_frame(&slides, current_slide, tx, dims);
+                render_state(&slides, current_slide, muted, tx, dims);
             }
             ServerMsg::SlideChanged { current_slide: new_slide } => {
                 current_slide = new_slide;
-                send_frame(&slides, current_slide, tx, dims);
+                render_state(&slides, current_slide, muted, tx, dims);
             }
             ServerMsg::Ping { ping_id } => {
                 write
@@ -149,12 +153,17 @@ async fn connect_and_receive(
 
 // ── Render + send ─────────────────────────────────────────────────────────────
 
-fn send_frame(
+fn render_state(
     slides: &[SlideContent],
     current: u32,
+    muted: bool,
     tx: &std::sync::mpsc::Sender<Frame>,
     dims: DisplayDims,
 ) {
+    if muted {
+        let _ = tx.send(vec![0u32; (dims.width * dims.height) as usize]);
+        return;
+    }
     let paragraphs: Vec<(&str, &str)> = slides
         .iter()
         .find(|s| s.index == current)
