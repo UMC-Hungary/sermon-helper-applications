@@ -6,6 +6,9 @@ on:
       - 'companion-v*'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -41,11 +44,13 @@ jobs:
           pnpm install
           pnpm run build
 
+      - name: Verify build output
+        run: test -f companion/dist/main.js
+
       - name: Update version from tag
         working-directory: companion
         run: |
           VERSION="${GITHUB_REF#refs/tags/companion-v}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -59,21 +64,21 @@ jobs:
             fs.writeFileSync('companion/manifest.json', JSON.stringify(manifest, null, 2) + '\n');
           "
 
-      - name: Package companion module
+      - name: Install production dependencies
+        working-directory: companion
         run: |
-          cd companion
           rm -rf node_modules
           pnpm install --prod
-          cd ..
-          tar -czf "companion-module-sermon-helper-${VERSION}.tar.gz" \
-            -C companion \
-            dist companion package.json node_modules
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: companion-plugin
-          path: companion-module-sermon-helper-*.tar.gz
+          name: companion-module-sermon-helper
+          path: |
+            companion/dist/
+            companion/companion/
+            companion/package.json
+            companion/node_modules/
 
   release:
     needs: build
@@ -83,16 +88,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
-          name: companion-plugin
-          path: artifacts
+          name: companion-module-sermon-helper
+          path: pkg/companion-module-sermon-helper
+
+      - name: Package for release
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/companion-v}"
+          tar -czf "companion-module-sermon-helper-${VERSION}.tar.gz" \
+            -C pkg companion-module-sermon-helper
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: false
           generate_release_notes: false
@@ -115,4 +126,4 @@ jobs:
 
             All communication uses WebSocket — no REST API required.
           files: |
-            artifacts/companion-module-sermon-helper-*.tar.gz
+            companion-module-sermon-helper-*.tar.gz
