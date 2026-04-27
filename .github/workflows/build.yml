@@ -658,10 +658,86 @@ jobs:
           path: ${{ matrix.artifact }}
 
   # ──────────────────────────────────────────────
+  # Companion Plugin — Bitfocus Companion module
+  # Pure Node.js; single platform build is sufficient.
+  # ──────────────────────────────────────────────
+  build-companion:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    name: Companion Plugin
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: Linux-companion-pnpm-store-${{ hashFiles('companion/pnpm-lock.yaml') }}
+          restore-keys: Linux-companion-pnpm-store-
+
+      - name: Install dependencies and build
+        working-directory: companion
+        run: |
+          pnpm install
+          pnpm run build
+
+      - name: Update version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: companion
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('companion/manifest.json', 'utf8'));
+            manifest.version = '$VERSION';
+            fs.writeFileSync('companion/manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+          "
+
+      - name: Package companion module
+        run: |
+          VERSION=$(node -e "const p = require('./companion/package.json'); process.stdout.write(p.version)")
+          # Install production-only deps for packaging
+          cd companion
+          rm -rf node_modules
+          pnpm install --prod
+          cd ..
+          tar -czf "companion-module-sermon-helper-${VERSION}.tar.gz" \
+            -C companion \
+            dist companion package.json node_modules
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: companion-plugin
+          path: companion-module-sermon-helper-*.tar.gz
+
+  # ──────────────────────────────────────────────
   # Release (version tags only)
   # ──────────────────────────────────────────────
   release:
-    needs: [build, build-receiver]
+    needs: [build, build-receiver, build-companion]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -806,6 +882,14 @@ jobs:
 
             > **Auto-start on RPi** — add to `/etc/rc.local` or create a systemd service pointing to the installed binary.
 
+            ---
+
+            ## Companion Plugin
+
+            Bitfocus Companion module for controlling Sermon Helper via WebSocket.
+            Download `companion-module-sermon-helper-*.tar.gz` and install via
+            Companion's module developer mode by extracting to your Companion modules folder.
+
           files: |
             latest.json
             artifacts/**/*.exe
@@ -828,3 +912,4 @@ jobs:
             artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
             artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
             artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
+            artifacts/companion-plugin/companion-module-sermon-helper-*.tar.gz
