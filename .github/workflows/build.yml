@@ -5,12 +5,13 @@ on:
   pull_request:
     branches:
       - main
-  # Build and release on push to main or version tags
+  # Build and release on push to main or app version tags (vX.Y.Z only)
+  # companion-v* and presenter-receiver-v* tags have their own workflows
   push:
     branches:
       - main
     tags:
-      - 'v*'
+      - 'v[0-9]*'
     paths-ignore:
       - '**.md'
       - '.gitignore'
