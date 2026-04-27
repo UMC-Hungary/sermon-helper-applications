@@ -80,6 +80,8 @@
   let copiedId = $state<string | null>(null);
   let copiedLogs = $state(false);
 
+  const logCommand = 'tail -f ~/.local/log/presenter-receiver.log';
+
   async function copyCommand(device: SshDevice) {
     const cmd = sshCommand(device);
     if (!cmd) return;
@@ -89,7 +91,7 @@
   }
 
   async function copyLogs() {
-    await navigator.clipboard.writeText('journalctl -fu presenter-receiver');
+    await navigator.clipboard.writeText(logCommand);
     copiedLogs = true;
     setTimeout(() => { copiedLogs = false; }, 2000);
   }
@@ -100,7 +102,12 @@
     <h2>SSH Access</h2>
     <button class="btn-add" onclick={addDevice}>+ Add device</button>
   </div>
-  <p class="note">Save your remote devices here to quickly generate an SSH command for troubleshooting. Devices are stored locally in your browser.</p>
+  <p class="note">
+    Save your remote devices here to quickly generate an SSH command for troubleshooting.
+    Devices are stored locally in your browser. Once connected, run
+    <code class="inline-code">tail -f ~/.local/log/presenter-receiver.log</code>
+    to stream live logs from the presenter receiver.
+  </p>
 
   {#if suggestions.length > 0}
     <div class="suggestions">
@@ -195,9 +202,9 @@
     {/each}
   </div>
 
-  <h3>View service logs on remote</h3>
+  <h3>Stream logs on remote</h3>
   <div class="cmd-row">
-    <code class="cmd">journalctl -fu presenter-receiver</code>
+    <code class="cmd">{logCommand}</code>
     <button onclick={copyLogs}>{copiedLogs ? 'Copied!' : 'Copy'}</button>
   </div>
 </section>
@@ -410,5 +417,15 @@
   .note {
     font-size: 0.8rem;
     color: var(--text-secondary, #666);
+  }
+
+  .inline-code {
+    font-family: monospace;
+    font-size: 0.78rem;
+    background: var(--glass-card-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.2rem;
+    padding: 0.05rem 0.3rem;
+    white-space: nowrap;
   }
 </style>

@@ -143,13 +143,28 @@ EOF
         sudo sed -i "/$MARKER/,/# end presenter-receiver/d" "$PROFILE"
     fi
 
+    # Suppress kernel printk messages on the console (undervoltage, hwmon, etc.)
+    # so they don't overwrite the framebuffer display.
+    SYSCTL_FILE="/etc/sysctl.d/99-presenter-console.conf"
+    if [ ! -f "$SYSCTL_FILE" ]; then
+        echo "==> Suppressing kernel console messages..."
+        echo 'kernel.printk = 1 4 1 3' | sudo tee "$SYSCTL_FILE" > /dev/null
+        sudo sysctl -p "$SYSCTL_FILE" > /dev/null
+    fi
+
+    # Ensure log directory exists
+    LOG_DIR="$SERVICE_HOME/.local/log"
+    sudo mkdir -p "$LOG_DIR"
+    sudo chown "$SERVICE_USER:$SERVICE_USER" "$LOG_DIR"
+    LOG_FILE="$LOG_DIR/presenter-receiver.log"
+
     # Append the auto-start block
     sudo tee -a "$PROFILE" > /dev/null <<BASHEOF
 
 $MARKER
 if [ "\$(tty)" = "/dev/tty1" ]; then
     while true; do
-        $DEST $WS_URL
+        $DEST $WS_URL >> "$LOG_FILE" 2>&1
         sleep 3
     done
 fi
@@ -165,6 +180,10 @@ BASHEOF
     echo "==> Auto-start configured for user '$SERVICE_USER'."
     echo "    On next reboot the presenter launches automatically"
     echo "    on the console display — no login prompt."
+    echo "    Logs: $LOG_FILE"
+    echo ""
+    echo "    To view logs remotely:"
+    echo "      tail -f $LOG_FILE"
     echo ""
     echo "    To disable:"
     echo "      sudo rm $AUTOLOGIN_DIR/autologin.conf"
