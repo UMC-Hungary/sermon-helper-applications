@@ -184,7 +184,7 @@
 		<div class="slide-area" bind:this={slideAreaEl}>
 			<div class="main-content" style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}>
 				<div class="text-container">
-					{#each mainParagraphs as para (para.lines.join('|') + para.align)}
+					{#each mainParagraphs as para, i (i)}
 						<p
 							class="slide-text"
 							style="text-align: {para.align}; font-size: {fontSizePx(para.fontSizePt)}px"
