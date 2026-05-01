@@ -24,8 +24,9 @@ done
 RELEASE_TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases" \
   | grep '"tag_name"' \
   | grep 'presenter-receiver-v' \
-  | head -1 \
-  | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+  | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' \
+  | sort -V \
+  | tail -1)
 
 if [ -z "$RELEASE_TAG" ]; then
     echo "Error: no presenter-receiver release found on GitHub"
