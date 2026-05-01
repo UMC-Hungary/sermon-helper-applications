@@ -10,8 +10,22 @@ use crate::ConnectionState;
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParagraphContent {
-    pub text: String,
+    /// New format: explicit lines from the PPTX parser.
+    #[serde(default)]
+    pub lines: Vec<String>,
+    /// Legacy format (old binaries): single text string.
+    pub text: Option<String>,
     pub align: String,
+}
+
+impl ParagraphContent {
+    pub fn display_text(&self) -> String {
+        if !self.lines.is_empty() {
+            self.lines.join("\n")
+        } else {
+            self.text.clone().unwrap_or_default()
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -186,11 +200,12 @@ fn render_state(
         let _ = tx.send(vec![0u32; (dims.width * dims.height) as usize]);
         return;
     }
-    let paragraphs: Vec<(&str, &str)> = slides
+    let owned: Vec<(String, String)> = slides
         .iter()
         .find(|s| s.index == current)
-        .map(|s| s.paragraphs.iter().map(|p| (p.text.as_str(), p.align.as_str())).collect())
+        .map(|s| s.paragraphs.iter().map(|p| (p.display_text(), p.align.clone())).collect())
         .unwrap_or_default();
+    let paragraphs: Vec<(&str, &str)> = owned.iter().map(|(t, a)| (t.as_str(), a.as_str())).collect();
 
     let rgb = crate::renderer::render_slide(&paragraphs, dims.width, dims.height);
     let _ = tx.send(crate::renderer::rgb_to_u32(&rgb));
