@@ -762,7 +762,7 @@ dependencies = [
 
 [[package]]
 name = "presenter-receiver"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "cairo-rs",
  "framebuffer",

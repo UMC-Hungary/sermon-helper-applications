@@ -147,8 +147,14 @@ async fn connect_and_receive(
     let mut current_slide: u32;
     let mut muted = false;
 
-    while let Some(raw) = read.next().await {
-        let raw = raw?;
+    let idle_timeout = std::time::Duration::from_secs(15);
+
+    loop {
+        let raw = match tokio::time::timeout(idle_timeout, read.next()).await {
+            Ok(Some(msg)) => msg?,
+            Ok(None) => break, // stream ended cleanly
+            Err(_) => return Err("read timeout — connection lost".into()),
+        };
         let text = match raw {
             Message::Text(t) => t,
             Message::Close(_) => break,
