@@ -144,22 +144,30 @@
 	const isMuted = $derived(standaloneState?.muted ?? false);
 
 	// ── Counter paragraph detection ───────────────────────────────────────────
-	// The counter is the last paragraph when it is center-aligned and its font
-	// size is less than 70 % of the largest font size on the slide.
+	// The counter (slide number / verse reference) is a center-aligned paragraph
+	// whose fontSizePt is < 85 % of the maximum on the slide.  In some PPTXes
+	// it comes first in the XML (its text box was inserted before the lyrics
+	// text box), in others it is last — so we check both ends.
 
-	function detectCounter(paras: typeof slideParagraphs) {
-		if (paras.length < 2) return null;
+	function findCounterIdx(paras: typeof slideParagraphs): number {
+		if (paras.length < 2) return -1;
 		const maxPt = paras.reduce((m, p) => Math.max(m, p.fontSizePt), 0);
-		const last = paras.at(-1);
-		if (!last) return null;
-		if (last.fontSizePt > 0 && maxPt > 0 && last.fontSizePt < maxPt * 0.7 && last.align === 'center') {
-			return last;
-		}
-		return null;
+		if (maxPt === 0) return -1;
+		const isCounter = (p: (typeof paras)[0]) =>
+			p.fontSizePt > 0 && p.fontSizePt < maxPt * 0.85 && p.align === 'center';
+		const first = paras[0];
+		if (first && isCounter(first)) return 0;
+		const lastIdx = paras.length - 1;
+		const lastPara = paras[lastIdx];
+		if (lastPara && isCounter(lastPara)) return lastIdx;
+		return -1;
 	}
 
-	const counterParagraph = $derived(detectCounter(slideParagraphs));
-	const mainParagraphs = $derived(counterParagraph ? slideParagraphs.slice(0, -1) : slideParagraphs);
+	const counterIdx = $derived(findCounterIdx(slideParagraphs));
+	const counterParagraph = $derived(counterIdx >= 0 ? slideParagraphs[counterIdx] : null);
+	const mainParagraphs = $derived(
+		counterIdx >= 0 ? slideParagraphs.filter((_, i) => i !== counterIdx) : slideParagraphs
+	);
 </script>
 
 <svelte:head>

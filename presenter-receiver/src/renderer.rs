@@ -44,9 +44,10 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
     ctx.stroke().unwrap();
 
     // ── Detect counter paragraph ─────────────────────────────────────────────
-    // The counter is the last paragraph when it is center-aligned and has a
-    // font size < 70 % of the largest font size on the slide.  It is rendered
-    // at the bottom of the safe area instead of being part of the main block.
+    // The counter (slide number / verse ref) is center-aligned and its
+    // font_size_pt is < 85 % of the max on the slide.  In some PPTXes the
+    // counter text box appears first in the XML, in others it is last — so we
+    // check both ends.
     let non_empty: Vec<(&str, &str, f64)> = paragraphs
         .iter()
         .copied()
@@ -54,16 +55,22 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
         .collect();
 
     let max_pt = non_empty.iter().map(|(_, _, pt)| *pt).fold(0.0f64, f64::max);
-    let (main_paras, counter_para): (&[(&str, &str, f64)], Option<(&str, &str, f64)>) =
+    let is_counter = |p: (&str, &str, f64)| -> bool {
+        max_pt > 0.0 && p.2 > 0.0 && p.2 < max_pt * 0.85 && p.1 == "center"
+    };
+    let (main_paras, counter_para): (Vec<(&str, &str, f64)>, Option<(&str, &str, f64)>) =
         if non_empty.len() >= 2 {
+            let first = *non_empty.first().unwrap();
             let last = *non_empty.last().unwrap();
-            if last.2 > 0.0 && max_pt > 0.0 && last.2 < max_pt * 0.7 && last.1 == "center" {
-                (&non_empty[..non_empty.len() - 1], Some(last))
+            if is_counter(first) {
+                (non_empty[1..].to_vec(), Some(first))
+            } else if is_counter(last) {
+                (non_empty[..non_empty.len() - 1].to_vec(), Some(last))
             } else {
-                (&non_empty[..], None)
+                (non_empty.clone(), None)
             }
         } else {
-            (&non_empty[..], None)
+            (non_empty.clone(), None)
         };
 
     // ── Text — binary search for the largest bold size that fits ─────────────
@@ -74,6 +81,9 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
     } else {
         (h * 0.80) as i32
     };
+
+    // `lo` is updated inside the block below; used by counter sizing after.
+    let mut found_main_size = 8i32;
 
     if !main_paras.is_empty() {
         let make_layouts = |font_size: i32| -> Vec<pango::Layout> {
@@ -111,6 +121,7 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
             }
         }
 
+        found_main_size = lo;
         let layouts = make_layouts(lo);
         let gap = (lo as f64 * 0.50) as i32;
         let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
@@ -127,27 +138,28 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
             pc::show_layout(&ctx, layout);
             y += layout.pixel_size().1 as f64 + gap as f64;
         }
+    }
 
-        // ── Counter paragraph at the bottom ──────────────────────────────────
-        if let Some((text, align, counter_pt)) = counter_para {
-            let counter_size = if max_pt > 0.0 && counter_pt > 0.0 {
-                ((lo as f64) * (counter_pt / max_pt)).max(8.0) as i32
-            } else {
-                (lo as f64 * 0.50).max(8.0) as i32
-            };
-            let layout = pc::create_layout(&ctx);
-            layout.set_font_description(Some(&FontDescription::from_string(
-                &format!("{FONT} Bold {counter_size}"),
-            )));
-            layout.set_alignment(parse_alignment(align));
-            layout.set_text(text);
-            let counter_h = layout.pixel_size().1 as f64;
-            // Bottom of safe area minus a small margin.
-            let counter_y = h * 0.90 - counter_h;
-            ctx.set_source_rgb(FG.0, FG.1, FG.2);
-            ctx.move_to(pad_x, counter_y);
-            pc::show_layout(&ctx, &layout);
-        }
+    // ── Counter paragraph at the bottom ──────────────────────────────────────
+    if let Some((text, _align, counter_pt)) = counter_para {
+        let counter_size = if max_pt > 0.0 && counter_pt > 0.0 {
+            ((found_main_size as f64) * (counter_pt / max_pt)).max(8.0) as i32
+        } else {
+            (found_main_size as f64 * 0.50).max(8.0) as i32
+        };
+        let layout = pc::create_layout(&ctx);
+        layout.set_font_description(Some(&FontDescription::from_string(
+            &format!("{FONT} Bold {counter_size}"),
+        )));
+        layout.set_text(text);
+        let (lw, lh) = layout.pixel_size();
+        // Horizontally centre the counter within the text area.
+        let counter_x = pad_x + (max_w as f64 - lw as f64) / 2.0;
+        // Bottom of safe area minus a small margin.
+        let counter_y = h * 0.90 - lh as f64;
+        ctx.set_source_rgb(FG.0, FG.1, FG.2);
+        ctx.move_to(counter_x, counter_y);
+        pc::show_layout(&ctx, &layout);
     }
 
     // ── Extract RGB24 bytes ──────────────────────────────────────────────────
