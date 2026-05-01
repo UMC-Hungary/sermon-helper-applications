@@ -16,6 +16,8 @@ pub struct ParagraphContent {
     /// Legacy format (old binaries): single text string.
     pub text: Option<String>,
     pub align: String,
+    #[serde(default)]
+    pub font_size_pt: f64,
 }
 
 impl ParagraphContent {
@@ -206,12 +208,12 @@ fn render_state(
         let _ = tx.send(vec![0u32; (dims.width * dims.height) as usize]);
         return;
     }
-    let owned: Vec<(String, String)> = slides
+    let owned: Vec<(String, String, f64)> = slides
         .iter()
         .find(|s| s.index == current)
-        .map(|s| s.paragraphs.iter().map(|p| (p.display_text(), p.align.clone())).collect())
+        .map(|s| s.paragraphs.iter().map(|p| (p.display_text(), p.align.clone(), p.font_size_pt)).collect())
         .unwrap_or_default();
-    let paragraphs: Vec<(&str, &str)> = owned.iter().map(|(t, a)| (t.as_str(), a.as_str())).collect();
+    let paragraphs: Vec<(&str, &str, f64)> = owned.iter().map(|(t, a, pt)| (t.as_str(), a.as_str(), *pt)).collect();
 
     let rgb = crate::renderer::render_slide(&paragraphs, dims.width, dims.height);
     let _ = tx.send(crate::renderer::rgb_to_u32(&rgb));

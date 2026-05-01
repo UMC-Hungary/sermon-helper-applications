@@ -10,15 +10,20 @@ const ACCENT: (f64, f64, f64) = (0.3, 0.3, 0.8);
 
 /// Render slide paragraphs into a pixel buffer sized to the given display dimensions.
 ///
-/// Each entry in `paragraphs` is `(text, align)` where `align` is one of
+/// Each entry in `paragraphs` is `(text, align, font_size_pt)` where `align` is one of
 /// `"left"`, `"center"`, `"right"`, or `"justify"` — matching the server's
-/// `ParagraphContent.align` field.
+/// `ParagraphContent.align` field, and `font_size_pt` is the font size from the PPTX
+/// (0 when unknown / legacy format).
+///
+/// If the last paragraph is center-aligned and its `font_size_pt` is less than 70% of
+/// the largest size in the slide, it is treated as a slide counter and rendered at the
+/// bottom of the safe area instead of being part of the main vertically-centred block.
 ///
 /// All proportions (padding, accent line, font size) scale with `width`/`height`
 /// so the result looks identical whether the display is 720p, 1080p, or 4K.
 ///
 /// Returns raw RGB24 bytes: `width × height × 3` bytes, row-major.
-pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec<u8> {
+pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -> Vec<u8> {
     let (sw, sh) = (width as i32, height as i32);
     let mut surface = ImageSurface::create(Format::Rgb24, sw, sh).unwrap();
     let ctx = Context::new(&surface).unwrap();
@@ -38,22 +43,43 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
     ctx.line_to(w - pad_x, h * 0.06);
     ctx.stroke().unwrap();
 
-    // ── Text — binary search for the largest bold size that fits ─────────────
-    let non_empty: Vec<(&str, &str)> = paragraphs
+    // ── Detect counter paragraph ─────────────────────────────────────────────
+    // The counter is the last paragraph when it is center-aligned and has a
+    // font size < 70 % of the largest font size on the slide.  It is rendered
+    // at the bottom of the safe area instead of being part of the main block.
+    let non_empty: Vec<(&str, &str, f64)> = paragraphs
         .iter()
         .copied()
-        .filter(|(t, _)| !t.is_empty())
+        .filter(|(t, _, _)| !t.is_empty())
         .collect();
 
-    if !non_empty.is_empty() {
-        // Safe area: 10 % top (accent line) + 10 % bottom margin
-        let max_h = (h * 0.80) as i32;
-        let max_w = (w - pad_x * 2.0) as i32;
+    let max_pt = non_empty.iter().map(|(_, _, pt)| *pt).fold(0.0f64, f64::max);
+    let (main_paras, counter_para): (&[(&str, &str, f64)], Option<(&str, &str, f64)>) =
+        if non_empty.len() >= 2 {
+            let last = *non_empty.last().unwrap();
+            if last.2 > 0.0 && max_pt > 0.0 && last.2 < max_pt * 0.7 && last.1 == "center" {
+                (&non_empty[..non_empty.len() - 1], Some(last))
+            } else {
+                (&non_empty[..], None)
+            }
+        } else {
+            (&non_empty[..], None)
+        };
 
+    // ── Text — binary search for the largest bold size that fits ─────────────
+    let max_w = (w - pad_x * 2.0) as i32;
+    // Reserve space at the bottom when a counter is present.
+    let main_max_h = if counter_para.is_some() {
+        (h * 0.68) as i32
+    } else {
+        (h * 0.80) as i32
+    };
+
+    if !main_paras.is_empty() {
         let make_layouts = |font_size: i32| -> Vec<pango::Layout> {
-            non_empty
+            main_paras
                 .iter()
-                .map(|(text, align)| {
+                .map(|(text, align, _)| {
                     let layout = pc::create_layout(&ctx);
                     layout.set_font_description(Some(&FontDescription::from_string(
                         &format!("{FONT} Bold {font_size}"),
@@ -65,14 +91,12 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
                 .collect()
         };
 
-        // Total height = sum of all layout heights + paragraph gaps between them
         let fits = |layouts: &[pango::Layout], font_size: i32| -> bool {
             let gap = (font_size as f64 * 0.50) as i32;
             let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
             let gaps = gap * (layouts.len().saturating_sub(1) as i32);
-            let total_h = text_h + gaps;
             let max_line_w = layouts.iter().map(|l| l.pixel_size().0).max().unwrap_or(0);
-            total_h <= max_h && max_line_w <= max_w
+            text_h + gaps <= main_max_h && max_line_w <= max_w
         };
 
         let mut lo = 8i32;
@@ -92,9 +116,9 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
         let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
         let used_h = text_h + gap * (layouts.len().saturating_sub(1) as i32);
 
-        // Vertically centre the block in the safe area (below accent line)
+        // Vertically centre the main block in its safe area.
         let safe_top = h * 0.10;
-        let safe_h = h * 0.80;
+        let safe_h = main_max_h as f64;
         let mut y = safe_top + (safe_h - used_h as f64) / 2.0;
 
         ctx.set_source_rgb(FG.0, FG.1, FG.2);
@@ -102,6 +126,27 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
             ctx.move_to(pad_x, y);
             pc::show_layout(&ctx, layout);
             y += layout.pixel_size().1 as f64 + gap as f64;
+        }
+
+        // ── Counter paragraph at the bottom ──────────────────────────────────
+        if let Some((text, align, counter_pt)) = counter_para {
+            let counter_size = if max_pt > 0.0 && counter_pt > 0.0 {
+                ((lo as f64) * (counter_pt / max_pt)).max(8.0) as i32
+            } else {
+                (lo as f64 * 0.50).max(8.0) as i32
+            };
+            let layout = pc::create_layout(&ctx);
+            layout.set_font_description(Some(&FontDescription::from_string(
+                &format!("{FONT} Bold {counter_size}"),
+            )));
+            layout.set_alignment(parse_alignment(align));
+            layout.set_text(text);
+            let counter_h = layout.pixel_size().1 as f64;
+            // Bottom of safe area minus a small margin.
+            let counter_y = h * 0.90 - counter_h;
+            ctx.set_source_rgb(FG.0, FG.1, FG.2);
+            ctx.move_to(pad_x, counter_y);
+            pc::show_layout(&ctx, &layout);
         }
     }
 

@@ -1,22 +1,22 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
-	import { fitText } from '$lib/actions/fitText.js';
 	import { WsMessageSchema } from '$lib/schemas/ws-messages.js';
 	import type { PresenterState } from '$lib/schemas/ws-messages.js';
 
 	// ── Standalone WS connection ──────────────────────────────────────────────
-	// The presenter page always uses its own WebSocket — it runs either in an
-	// external browser or inside an iframe, never with access to the main app's
-	// Svelte stores.  A token in the URL enables authenticated (navigable) mode;
-	// no token gives read-only display mode.
 
 	let standaloneSocket: WebSocket | null = null;
 	let standaloneState = $state<PresenterState | null>(null);
 	let token = $state<string | null>(null);
 
 	function connect() {
-		const host = window.location.host;
+		// wsPort param lets the presenter page connect to the API server even when
+		// the frontend is served from a different port (e.g. Vite dev server).
+		const wsPort = $page.url.searchParams.get('wsPort');
+		const host = wsPort
+			? `${window.location.hostname}:${wsPort}`
+			: window.location.host;
 		const wsUrl = token
 			? `ws://${host}/ws?token=${encodeURIComponent(token)}`
 			: `ws://${host}/ws`;
@@ -46,6 +46,54 @@
 			setTimeout(() => connect(), 3000);
 		});
 	}
+
+	// ── Font scaling ──────────────────────────────────────────────────────────
+	// Font sizes are read directly from the PPTX (in points) and scaled to the
+	// web container using the ratio of container pixels to slide EMUs.
+	// 1 point = 12 700 EMU.
+
+	const EMU_PER_PT = 12700;
+	const DEFAULT_FONT_SIZE_PT = 28.0;
+
+	let slideAreaEl = $state<HTMLElement | null>(null);
+	let scaleFactor = $state(0);
+
+	$effect(() => {
+		const el = slideAreaEl;
+		const state = standaloneState;
+
+		if (!el || !state?.loaded) {
+			scaleFactor = 0;
+			return;
+		}
+
+		function recalc() {
+			if (!el || !state) return;
+			const style = getComputedStyle(el);
+			const pw = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+			const ph = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+			const w = el.clientWidth - pw;
+			const h = el.clientHeight - ph;
+			if (w > 0 && h > 0) {
+				scaleFactor = Math.min(
+					w / state.slideWidthEmu,
+					h / state.slideHeightEmu,
+				);
+			}
+		}
+
+		const obs = new ResizeObserver(recalc);
+		obs.observe(el);
+		recalc();
+		return () => obs.disconnect();
+	});
+
+	function fontSizePx(fontSizePt: number): number {
+		const pt = fontSizePt > 0 ? fontSizePt : DEFAULT_FONT_SIZE_PT;
+		return pt * EMU_PER_PT * scaleFactor;
+	}
+
+	// ── Keyboard / navigation ─────────────────────────────────────────────────
 
 	onMount(() => {
 		token = $page.url.searchParams.get('token');
@@ -81,6 +129,8 @@
 		standaloneSocket?.send(JSON.stringify({ type: cmd }));
 	}
 
+	// ── Derived display values ────────────────────────────────────────────────
+
 	const currentSlide = $derived(
 		standaloneState && standaloneState.loaded && standaloneState.currentSlide > 0
 			? standaloneState.slides.find((s) => s.index === standaloneState!.currentSlide) ?? null
@@ -88,12 +138,28 @@
 	);
 
 	const slideParagraphs = $derived(currentSlide?.paragraphs ?? []);
-	// A single string used to trigger fitText re-calculation when content changes.
-	const slideFitKey = $derived(slideParagraphs.map((p) => p.text).join('\n'));
 	const slideIndex = $derived(standaloneState?.currentSlide ?? 0);
 	const slideTotal = $derived(standaloneState?.totalSlides ?? 0);
 	const isLoaded = $derived(standaloneState?.loaded ?? false);
 	const isMuted = $derived(standaloneState?.muted ?? false);
+
+	// ── Counter paragraph detection ───────────────────────────────────────────
+	// The counter is the last paragraph when it is center-aligned and its font
+	// size is less than 70 % of the largest font size on the slide.
+
+	function detectCounter(paras: typeof slideParagraphs) {
+		if (paras.length < 2) return null;
+		const maxPt = paras.reduce((m, p) => Math.max(m, p.fontSizePt), 0);
+		const last = paras.at(-1);
+		if (!last) return null;
+		if (last.fontSizePt > 0 && maxPt > 0 && last.fontSizePt < maxPt * 0.7 && last.align === 'center') {
+			return last;
+		}
+		return null;
+	}
+
+	const counterParagraph = $derived(detectCounter(slideParagraphs));
+	const mainParagraphs = $derived(counterParagraph ? slideParagraphs.slice(0, -1) : slideParagraphs);
 </script>
 
 <svelte:head>
@@ -115,16 +181,32 @@
 			<p class="hint">Load a .pptx file from the Presentations page to begin.</p>
 		</div>
 	{:else}
-		<div class="slide-area">
-			<div class="text-container" use:fitText={slideFitKey}>
-				{#each slideParagraphs as para (para.text + para.align)}
-					<p class="slide-text" style="text-align: {para.align}">
-						{#each para.text.split('\n') as line, j}
-							{#if j > 0}<br>{/if}{line}
-						{/each}
-					</p>
-				{/each}
+		<div class="slide-area" bind:this={slideAreaEl}>
+			<div class="main-content" style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}>
+				<div class="text-container">
+					{#each mainParagraphs as para (para.lines.join('|') + para.align)}
+						<p
+							class="slide-text"
+							style="text-align: {para.align}; font-size: {fontSizePx(para.fontSizePt)}px"
+						>
+							{#each para.lines as line, i}
+								{#if i > 0}<br>{/if}{line}
+							{/each}
+						</p>
+					{/each}
+				</div>
 			</div>
+			{#if counterParagraph}
+				<p
+					class="counter-text"
+					style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}
+					style="font-size: {fontSizePx(counterParagraph.fontSizePt)}px"
+				>
+					{#each counterParagraph.lines as line, i}
+						{#if i > 0}<br>{/if}{line}
+					{/each}
+				</p>
+			{/if}
 		</div>
 
 		{#if token}
@@ -186,12 +268,18 @@
 	.slide-area {
 		flex: 1;
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		/* Padding is accounted for by fitText when measuring available space. */
-		padding: 4vw 6vw;
+		flex-direction: column;
+		padding: 4vw 6vw 3vw;
 		min-height: 0;
 		box-sizing: border-box;
+	}
+
+	.main-content {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 0;
 	}
 
 	.text-container {
@@ -200,11 +288,20 @@
 		flex-direction: column;
 		align-items: stretch;
 		justify-content: center;
-		gap: 0.35em;
-		/* Initial font size before fitText kicks in; fitText will override. */
-		font-size: clamp(1.5rem, 8vw, 12rem);
 		font-family: Helvetica, Arial, sans-serif;
 		font-weight: 700;
+	}
+
+	.counter-text {
+		margin: 0;
+		padding-top: 1vw;
+		text-align: center;
+		font-family: Helvetica, Arial, sans-serif;
+		font-weight: 700;
+		line-height: 1.2;
+		color: #fff;
+		width: 100%;
+		flex-shrink: 0;
 	}
 
 	.slide-text {
@@ -217,6 +314,11 @@
 		width: 100%;
 	}
 
+	/* Paragraph spacing proportional to each paragraph's own font size. */
+	.slide-text + .slide-text {
+		margin-top: 0.35em;
+	}
+
 	/* ── Navigation bar ───────────────────────────────────────────────────── */
 
 	.nav-bar {
@@ -227,7 +329,6 @@
 		padding: 0.5rem 1rem;
 		background: rgba(255, 255, 255, 0.08);
 		border-top: 1px solid rgba(255, 255, 255, 0.12);
-		/* Hide on hover — shows on mouse move over the bar */
 		opacity: 0.2;
 		transition: opacity 0.2s ease;
 	}
