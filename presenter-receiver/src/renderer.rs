@@ -1,5 +1,5 @@
 use cairo::{Context, Format, ImageSurface};
-use pango::{Alignment, FontDescription, WrapMode};
+use pango::{Alignment, FontDescription};
 use pangocairo::functions as pc;
 use std::f64::consts::PI;
 
@@ -26,7 +26,6 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
     let w = width as f64;
     let h = height as f64;
     let pad_x = w * 0.10;
-    let text_w = ((w - pad_x * 2.0) * pango::SCALE as f64) as i32;
 
     // ── Background ───────────────────────────────────────────────────────────
     ctx.set_source_rgb(BG.0, BG.1, BG.2);
@@ -49,6 +48,7 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
     if !non_empty.is_empty() {
         // Safe area: 10 % top (accent line) + 10 % bottom margin
         let max_h = (h * 0.80) as i32;
+        let max_w = (w - pad_x * 2.0) as i32;
 
         let make_layouts = |font_size: i32| -> Vec<pango::Layout> {
             non_empty
@@ -58,12 +58,7 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
                     layout.set_font_description(Some(&FontDescription::from_string(
                         &format!("{FONT} Bold {font_size}"),
                     )));
-                    layout.set_width(text_w);
                     layout.set_alignment(parse_alignment(align));
-                    layout.set_wrap(WrapMode::Word);
-                    layout.set_spacing(
-                        (font_size as f64 * 0.20 * pango::SCALE as f64) as i32,
-                    );
                     layout.set_text(text);
                     layout
                 })
@@ -71,11 +66,13 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
         };
 
         // Total height = sum of all layout heights + paragraph gaps between them
-        let total_height = |layouts: &[pango::Layout], font_size: i32| -> i32 {
+        let fits = |layouts: &[pango::Layout], font_size: i32| -> bool {
             let gap = (font_size as f64 * 0.50) as i32;
             let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
             let gaps = gap * (layouts.len().saturating_sub(1) as i32);
-            text_h + gaps
+            let total_h = text_h + gaps;
+            let max_line_w = layouts.iter().map(|l| l.pixel_size().0).max().unwrap_or(0);
+            total_h <= max_h && max_line_w <= max_w
         };
 
         let mut lo = 8i32;
@@ -83,7 +80,7 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
 
         while lo < hi - 1 {
             let mid = (lo + hi) / 2;
-            if total_height(&make_layouts(mid), mid) <= max_h {
+            if fits(&make_layouts(mid), mid) {
                 lo = mid;
             } else {
                 hi = mid;
@@ -92,7 +89,8 @@ pub fn render_slide(paragraphs: &[(&str, &str)], width: u32, height: u32) -> Vec
 
         let layouts = make_layouts(lo);
         let gap = (lo as f64 * 0.50) as i32;
-        let used_h = total_height(&layouts, lo);
+        let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
+        let used_h = text_h + gap * (layouts.len().saturating_sub(1) as i32);
 
         // Vertically centre the block in the safe area (below accent line)
         let safe_top = h * 0.10;
