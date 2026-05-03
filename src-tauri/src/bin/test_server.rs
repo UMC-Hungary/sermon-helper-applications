@@ -12,7 +12,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use sermon_helper_tauri_lib::{
+use metocast_lib::{
     connectors::{
         broadlink::BroadlinkConnector, facebook::FacebookConnector, obs::ObsConnector,
         vmix::VmixConnector, youtube::YouTubeConnector, FacebookConfig, YouTubeConfig,
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
         None, // no AppHandle — OAuth flows are unavailable in test mode
         cron_scheduler,
         #[cfg(target_os = "macos")]
-        Arc::new(sermon_helper_tauri_lib::connectors::keynote::KeynoteConnector::new()),
+        Arc::new(metocast_lib::connectors::keynote::KeynoteConnector::new()),
     )
     .await?;
 
