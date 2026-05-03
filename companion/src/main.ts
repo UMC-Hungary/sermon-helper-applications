@@ -58,8 +58,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				if (connected) {
 					void this.refreshCommands()
 					void this.pptSelector.refreshFolders()
-					this.api.sendWsCommand('keynote.status')
-					this.api.sendWsCommand('presenter.status')
+					this.api.sendWsCommand('presentation.status')
 				}
 			},
 			onPptFoldersChanged: (folders) => {
@@ -85,6 +84,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 					ppt_slideshow_active: status.slideshowActive ? 'ON' : 'OFF',
 					ppt_app: status.app ?? 'None',
 					ppt_blanked: status.blanked ? 'YES' : 'NO',
+					ppt_document: status.currentSlideTitle ?? '',
 				})
 				this.checkFeedbacks('slideshow_active', 'presentation_blanked')
 			},
@@ -159,9 +159,8 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 	private startPresentationPolling(): void {
 		if (this.presentationPollTimer) clearInterval(this.presentationPollTimer)
-		// Poll every 2 seconds; response triggers onPresentationStatusChanged callback
 		this.presentationPollTimer = setInterval(() => {
-			if (this.isConnected) this.api.sendWsCommand('keynote.status')
+			if (this.isConnected) this.api.sendWsCommand('presentation.status')
 		}, 2000)
 	}
 

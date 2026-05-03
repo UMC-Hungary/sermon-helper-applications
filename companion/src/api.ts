@@ -165,7 +165,7 @@ export class SermonHelperApi {
 	}
 
 	async openPptFile(filePath: string): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.open', { file_path: filePath })
+		const sent = this.sendWsCommand('presentation.open', { file_path: filePath })
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
@@ -174,17 +174,17 @@ export class SermonHelperApi {
 	}
 
 	async presentationStart(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.start')
+		const sent = this.sendWsCommand('presentation.start')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationStop(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.stop')
+		const sent = this.sendWsCommand('presentation.stop')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationClose(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.close_all')
+		const sent = this.sendWsCommand('presentation.close')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
@@ -192,38 +192,43 @@ export class SermonHelperApi {
 		return this.presentationClose()
 	}
 
+	async presentationCloseAll(): Promise<{ success: boolean; error?: string }> {
+		const sent = this.sendWsCommand('presentation.close_all')
+		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
+	}
+
 	async presentationNext(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.next')
+		const sent = this.sendWsCommand('presentation.next')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationPrevious(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.prev')
+		const sent = this.sendWsCommand('presentation.prev')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationGoto(slideNumber: number): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.goto', { slide: slideNumber })
+		const sent = this.sendWsCommand('presentation.goto', { slide: slideNumber })
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationFirst(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.first')
+		const sent = this.sendWsCommand('presentation.first')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationLast(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('keynote.last')
+		const sent = this.sendWsCommand('presentation.last')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationBlank(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('presenter.mute')
+		const sent = this.sendWsCommand('presentation.mute')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
 	async presentationUnblank(): Promise<{ success: boolean; error?: string }> {
-		const sent = this.sendWsCommand('presenter.unmute')
+		const sent = this.sendWsCommand('presentation.unmute')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
@@ -290,29 +295,7 @@ export class SermonHelperApi {
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
 		switch (message.type) {
-			case 'presenter.state': {
-				const s = message.state as
-					| {
-							loaded?: boolean
-							muted?: boolean
-							currentSlide?: number
-							totalSlides?: number
-					  }
-					| undefined
-				if (s) {
-					this.onPresentationStatusChanged?.({
-						app: 'web',
-						appRunning: s.loaded ?? false,
-						slideshowActive: s.loaded ?? false,
-						currentSlide: s.currentSlide ?? null,
-						totalSlides: s.totalSlides ?? null,
-						currentSlideTitle: null,
-						blanked: s.muted ?? false,
-					})
-				}
-				break
-			}
-			case 'keynote.status': {
+			case 'presentation.status': {
 				const s = message.status as
 					| {
 							appRunning?: boolean
@@ -320,19 +303,18 @@ export class SermonHelperApi {
 							currentSlide?: number | null
 							totalSlides?: number | null
 							documentName?: string | null
+							blanked?: boolean
 					  }
 					| undefined
 				if (s) {
-					// Resolve any pending presentationStatus() call
-					this.resolvePending('keynote.status', message)
 					this.onPresentationStatusChanged?.({
-						app: 'keynote',
+						app: 'web',
 						appRunning: s.appRunning ?? false,
 						slideshowActive: s.slideshowActive ?? false,
 						currentSlide: s.currentSlide ?? null,
 						totalSlides: s.totalSlides ?? null,
 						currentSlideTitle: s.documentName ?? null,
-						blanked: false,
+						blanked: s.blanked ?? false,
 					})
 				}
 				break
@@ -356,6 +338,23 @@ export class SermonHelperApi {
 				void this.getPptFolders().then((folders) => {
 					this.onPptFoldersChanged?.(folders)
 				})
+				break
+			}
+			case 'notification': {
+				const level = message.level as string | undefined
+				const msg = message.message as string | undefined
+				if (level === 'warn') console.warn('[SermonHelper]', msg)
+				else console.info('[SermonHelper]', msg)
+				break
+			}
+			case 'error': {
+				const errMsg = message.message as string | undefined
+				if (errMsg === 'unauthorized') {
+					console.error('[SermonHelper] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Sermon Helper app.')
+					this.onConnectionChange?.(false)
+				} else {
+					console.error('[SermonHelper] Server error:', errMsg)
+				}
 				break
 			}
 			default:

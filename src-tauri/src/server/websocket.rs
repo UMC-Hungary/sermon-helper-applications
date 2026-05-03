@@ -306,6 +306,47 @@ enum WsCommand {
     /// Update the raw text content of a single slide (1-based index).
     #[serde(rename = "presenter.slide.update")]
     PresenterSlideUpdate { slide_index: u32, texts: Vec<String> },
+    // ── Unified Presentation (auto-routes to active backend) ─────────────────
+    /// Request the current presentation settings (use_web_presenter flag).
+    #[serde(rename = "presentation.get_settings")]
+    PresentationGetSettings,
+    /// Request unified presentation status (works for both web presenter and Keynote).
+    #[serde(rename = "presentation.status")]
+    PresentationStatus,
+    /// Toggle the active presentation backend; closes any running presentation first.
+    #[serde(rename = "presentation.set_use_web_presenter")]
+    PresentationSetUseWebPresenter { enabled: bool },
+    /// Open a file: routes to web presenter or Keynote based on the stored setting.
+    #[serde(rename = "presentation.open")]
+    PresentationOpen { file_path: String },
+    /// Start the slideshow (Keynote only; shows notification in web presenter mode).
+    #[serde(rename = "presentation.start")]
+    PresentationStart,
+    /// Stop the Keynote slideshow (shows notification in web presenter mode; does NOT close).
+    #[serde(rename = "presentation.stop")]
+    PresentationStop,
+    /// Close/unload the active presentation: unloads web presenter or closes all in Keynote.
+    #[serde(rename = "presentation.close")]
+    PresentationClose,
+    /// Close all presentations (Keynote only; shows notification in web presenter mode).
+    #[serde(rename = "presentation.close_all")]
+    PresentationCloseAll,
+    #[serde(rename = "presentation.next")]
+    PresentationNext,
+    #[serde(rename = "presentation.prev")]
+    PresentationPrev,
+    #[serde(rename = "presentation.first")]
+    PresentationFirst,
+    #[serde(rename = "presentation.last")]
+    PresentationLast,
+    #[serde(rename = "presentation.goto")]
+    PresentationGoto { slide: u32 },
+    /// Mute (blank) the active presentation display.
+    #[serde(rename = "presentation.mute")]
+    PresentationMute,
+    /// Unmute the active presentation display.
+    #[serde(rename = "presentation.unmute")]
+    PresentationUnmute,
     // ── OBS Devices ──────────────────────────────────────────────────────────
     #[serde(rename = "obs.devices.scan")]
     ObsDevicesScan,
@@ -362,6 +403,66 @@ async fn ws_upsert_bible_references(
         }
     }
     Ok(())
+}
+
+/// Build a unified `presentation.status` JSON string from current backend state.
+async fn make_presentation_status(state: &AppState) -> String {
+    let (app_running, slideshow_active, current_slide, total_slides, document_name, blanked) =
+        if state.use_web_presenter.load(Ordering::Relaxed) {
+            let ps = state.presenter_state.read().await;
+            let doc = ps.file_path.as_ref().and_then(|p| p.split('/').last()).map(str::to_owned);
+            (
+                ps.loaded,
+                ps.loaded,
+                if ps.loaded { Some(ps.current_slide) } else { None },
+                if ps.loaded { Some(ps.total_slides) } else { None },
+                doc,
+                ps.muted,
+            )
+        } else {
+            #[cfg(target_os = "macos")]
+            {
+                let s = state.keynote_connector.get_status().await;
+                (s.app_running, s.slideshow_active, s.current_slide, s.total_slides, s.document_name, false)
+            }
+            #[cfg(not(target_os = "macos"))]
+            { (false, false, None::<u32>, None::<u32>, None::<String>, false) }
+        };
+    json!({
+        "type": "presentation.status",
+        "status": {
+            "appRunning": app_running,
+            "slideshowActive": slideshow_active,
+            "currentSlide": current_slide,
+            "totalSlides": total_slides,
+            "documentName": document_name,
+            "blanked": blanked,
+        }
+    })
+    .to_string()
+}
+
+async fn broadcast_presentation_status(
+    ws_clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    state: &AppState,
+) {
+    let msg = make_presentation_status(state).await;
+    let clients = ws_clients.read().await;
+    for tx in clients.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
+}
+
+async fn broadcast_notification(
+    ws_clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
+    level: &str,
+    message: &str,
+) {
+    let msg = json!({ "type": "notification", "level": level, "message": message }).to_string();
+    let clients = ws_clients.read().await;
+    for tx in clients.values() {
+        let _ = tx.send(Message::Text(msg.clone().into()));
+    }
 }
 
 fn ws_ok(tx: &mpsc::UnboundedSender<Message>) {
@@ -425,8 +526,11 @@ async fn handle_ws_command(
         // ── PPT ──────────────────────────────────────────────────────────────
         WsCommand::PptSearch { filter } => {
             let files = ppt::search_files_internal(&state.pool, &filter).await;
-            let msg = json!({ "type": "ppt.search_results", "files": files }).to_string();
-            let _ = client_tx.send(Message::Text(msg.into()));
+            let msg = json!({ "type": "ppt.search_results", "files": files, "filter": filter }).to_string();
+            let clients = state.ws_clients.read().await;
+            for tx in clients.values() {
+                let _ = tx.send(Message::Text(msg.clone().into()));
+            }
         }
         WsCommand::PptFoldersList => {
             match sqlx::query_as::<_, ppt::PptFolder>(
@@ -534,30 +638,37 @@ async fn handle_ws_command(
                 Ok(Err(e)) => ws_error(client_tx, &e),
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterUnload => {
             *state.presenter_state.write().await = presenter::PresenterState::empty();
             broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterNext => {
             state.presenter_state.write().await.go_next();
             broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterPrev => {
             state.presenter_state.write().await.go_prev();
             broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterFirst => {
             state.presenter_state.write().await.go_first();
             broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterLast => {
             state.presenter_state.write().await.go_last();
             broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterGoto { slide } => {
             state.presenter_state.write().await.go_to(slide);
             broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterStatus => {
             let ps = state.presenter_state.read().await;
@@ -567,14 +678,174 @@ async fn handle_ws_command(
         WsCommand::PresenterMute => {
             state.presenter_state.write().await.mute();
             broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterUnmute => {
             state.presenter_state.write().await.unmute();
             broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterSlideUpdate { slide_index, texts } => {
             state.presenter_state.write().await.update_slide(slide_index, texts);
             broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+        }
+        // ── Unified Presentation ──────────────────────────────────────────────
+        WsCommand::PresentationGetSettings => {
+            let enabled = state.use_web_presenter.load(Ordering::Relaxed);
+            let msg = json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::PresentationStatus => {
+            let msg = make_presentation_status(state).await;
+            let _ = client_tx.send(Message::Text(msg.into()));
+        }
+        WsCommand::PresentationSetUseWebPresenter { enabled } => {
+            // Close the active presentation before switching backends.
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                *state.presenter_state.write().await = presenter::PresenterState::empty();
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.stop_slideshow().await; }
+            }
+            // Persist to database.
+            let _ = sqlx::query(
+                "INSERT INTO app_settings (key, value) VALUES ('use_web_presenter', $1) \
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()",
+            )
+            .bind(enabled.to_string())
+            .execute(&state.pool)
+            .await;
+            // Update in-memory flag.
+            state.use_web_presenter.store(enabled, Ordering::Relaxed);
+            // Broadcast new setting to all clients.
+            let msg = json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+            let clients = state.ws_clients.read().await;
+            for tx in clients.values() {
+                let _ = tx.send(Message::Text(msg.clone().into()));
+            }
+        }
+        WsCommand::PresentationOpen { file_path } => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                let result = tokio::task::spawn_blocking(move || presenter::parse_pptx(&file_path)).await;
+                match result {
+                    Ok(Ok(parsed)) => {
+                        let new_state = presenter::PresenterState::from_parsed(parsed);
+                        *state.presenter_state.write().await = new_state;
+                        broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                    }
+                    Ok(Err(e)) => ws_error(client_tx, &e),
+                    Err(e) => ws_error(client_tx, &e.to_string()),
+                }
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.open_file(&file_path).await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationStart => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                broadcast_notification(&state.ws_clients, "warn",
+                    "▶ Play is only available in Keynote mode. Web Presenter loads and displays on open.").await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.start_slideshow().await; }
+                broadcast_presentation_status(&state.ws_clients, state).await;
+            }
+        }
+        WsCommand::PresentationStop => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                broadcast_notification(&state.ws_clients, "warn",
+                    "⏹ Stop is only available in Keynote mode. Use the Close button to unload the web presentation.").await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.stop_slideshow().await; }
+                broadcast_presentation_status(&state.ws_clients, state).await;
+            }
+        }
+        WsCommand::PresentationClose => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                *state.presenter_state.write().await = presenter::PresenterState::empty();
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.close_all().await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationCloseAll => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                broadcast_notification(&state.ws_clients, "warn",
+                    "✕ Close All is only available in Keynote mode. Use the Close button to unload the web presentation.").await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.close_all().await; }
+                broadcast_presentation_status(&state.ws_clients, state).await;
+            }
+        }
+        WsCommand::PresentationNext => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.go_next();
+                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.next().await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationPrev => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.go_prev();
+                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.prev().await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationFirst => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.go_first();
+                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.first().await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationLast => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.go_last();
+                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.last().await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationGoto { slide } => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.go_to(slide);
+                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            } else {
+                #[cfg(target_os = "macos")]
+                { let _ = state.keynote_connector.goto(slide).await; }
+            }
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
+        WsCommand::PresentationMute => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.mute();
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presentation_status(&state.ws_clients, state).await;
+            }
+        }
+        WsCommand::PresentationUnmute => {
+            if state.use_web_presenter.load(Ordering::Relaxed) {
+                state.presenter_state.write().await.unmute();
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presentation_status(&state.ws_clients, state).await;
+            }
         }
         // ── Events ───────────────────────────────────────────────────────────
         WsCommand::EventsList => {
@@ -2080,6 +2351,17 @@ async fn handle_socket(
         })
         .to_string();
         let _ = tx.send(Message::Text(msg.into()));
+    }
+
+    // Push current presentation settings, status, and presenter state.
+    {
+        let enabled = state.use_web_presenter.load(Ordering::Relaxed);
+        let settings_msg = json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+        let _ = tx.send(Message::Text(settings_msg.into()));
+        let status_msg = make_presentation_status(&state).await;
+        let _ = tx.send(Message::Text(status_msg.into()));
+        let presenter_msg = json!({ "type": "presenter.state", "state": &*state.presenter_state.read().await }).to_string();
+        let _ = tx.send(Message::Text(presenter_msg.into()));
     }
 
     // Send initial Keynote status on connection (macOS only).

@@ -99,10 +99,20 @@ export const WsClientInfoSchema = z.object({
   latencyMs: z.number().int().nullable(),
 });
 
-export const ParagraphContentSchema = z.object({
-  text: z.string(),
-  align: z.string(),
-});
+export const ParagraphContentSchema = z
+  .object({
+    // New format: explicit lines split at <a:br>, plus font size from PPTX.
+    lines: z.array(z.string()).optional(),
+    fontSizePt: z.number().optional(),
+    // Legacy format (old binary): single text string per paragraph.
+    text: z.string().optional(),
+    align: z.string(),
+  })
+  .transform((p) => ({
+    lines: p.lines ?? (p.text !== undefined ? [p.text] : []),
+    align: p.align,
+    fontSizePt: p.fontSizePt ?? 0,
+  }));
 
 export const SlideContentSchema = z.object({
   index: z.number().int().positive(),
@@ -116,6 +126,9 @@ export const PresenterStateSchema = z.object({
   totalSlides: z.number().int().nonnegative(),
   slides: z.array(SlideContentSchema),
   muted: z.boolean(),
+  // Optional: absent from old binaries; defaults to standard 16:9.
+  slideWidthEmu: z.number().int().nonnegative().default(12192000),
+  slideHeightEmu: z.number().int().nonnegative().default(6858000),
 });
 
 export const BroadlinkCommandSchema = z.object({
@@ -144,6 +157,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('connected'), serverId: z.string() }),
   z.object({ type: z.literal('ok') }),
   z.object({ type: z.literal('error'), message: z.string() }),
+  z.object({ type: z.literal('notification'), level: z.enum(['info', 'warn', 'error']), message: z.string() }),
   // ── Connector push (server → client) ───────────────────────────────────────
   z.object({
     type: z.literal('event.changed'),
@@ -204,6 +218,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('ppt.search_results'),
     files: z.array(PptFileSchema),
+    filter: z.string().optional(),
   }),
   z.object({
     type: z.literal('ppt.folders_changed'),
@@ -254,6 +269,8 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   // ── PPT (WS command responses) ─────────────────────────────────────────────
   z.object({ type: z.literal('ppt.folders.list'), folders: z.array(PptFolderSchema) }),
   z.object({ type: z.literal('ppt.folders.add'), folder: PptFolderSchema.nullable() }),
+  // ── Presentation settings (push + command response) ────────────────────────
+  z.object({ type: z.literal('presentation.settings'), useWebPresenter: z.boolean() }),
   // ── Presenter (push + command responses) ───────────────────────────────────
   z.object({ type: z.literal('presenter.state'), state: PresenterStateSchema }),
   z.object({

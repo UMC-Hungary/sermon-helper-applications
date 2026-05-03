@@ -11,18 +11,10 @@
 		addFolder,
 		removeFolder,
 		searchFiles,
-		openFile,
-		keynoteNext,
-		keynotePrev,
-		keynoteFirst,
-		keynoteLast,
-		keynoteStart,
-		keynoteStop,
 		keynoteCloseAll,
 	} from '$lib/api/presentations.js';
 	import SlideEditorModal from '$lib/components/presentations/SlideEditorModal.svelte';
 
-	let loading = $state(false);
 	let addingFolder = $state(false);
 	let foldersFetched = $state(false);
 	let copySuccess = $state(false);
@@ -94,7 +86,7 @@
 
 	function buildIframeUrl(): string {
 		const token = encodeURIComponent($authToken);
-		return `http://localhost:${$serverPort}/presenter?token=${token}`;
+		return `${window.location.origin}/presenter?token=${token}&wsPort=${$serverPort}`;
 	}
 
 	function pingClient(clientId: string) {
@@ -152,64 +144,21 @@
 
 	// ── File open ────────────────────────────────────────────────────────────
 
-	async function handleOpenSlot(path: string) {
-		loading = true;
-		try {
-			if ($useWebPresenter) {
-				sendWsCommand('presenter.load', { file_path: path });
-			} else {
-				if (!sendWsCommand('keynote.open', { file_path: path })) {
-					await openFile(path);
-				}
-			}
-		} finally {
-			loading = false;
-		}
+	function handleOpenSlot(path: string) {
+		sendWsCommand('presentation.open', { file_path: path });
 	}
 
 	// ── Navigation ───────────────────────────────────────────────────────────
 
-	async function handleNext() {
-		if ($useWebPresenter) {
-			sendWsCommand('presenter.next');
-		} else {
-			if (!sendWsCommand('keynote.next')) await keynoteNext();
-		}
-	}
-	async function handlePrev() {
-		if ($useWebPresenter) {
-			sendWsCommand('presenter.prev');
-		} else {
-			if (!sendWsCommand('keynote.prev')) await keynotePrev();
-		}
-	}
-	async function handleFirst() {
-		if ($useWebPresenter) {
-			sendWsCommand('presenter.first');
-		} else {
-			if (!sendWsCommand('keynote.first')) await keynoteFirst();
-		}
-	}
-	async function handleLast() {
-		if ($useWebPresenter) {
-			sendWsCommand('presenter.last');
-		} else {
-			if (!sendWsCommand('keynote.last')) await keynoteLast();
-		}
-	}
-	async function handleStart() {
-		if (!sendWsCommand('keynote.start')) await keynoteStart();
-	}
-	async function handleStop() {
-		if ($useWebPresenter) {
-			sendWsCommand('presenter.unload');
-		} else {
-			if (!sendWsCommand('keynote.stop')) await keynoteStop();
-		}
-	}
+	function handleNext() { sendWsCommand('presentation.next'); }
+	function handlePrev() { sendWsCommand('presentation.prev'); }
+	function handleFirst() { sendWsCommand('presentation.first'); }
+	function handleLast() { sendWsCommand('presentation.last'); }
+	function handleStart() { sendWsCommand('presentation.start'); }
+	function handleStop() { sendWsCommand('presentation.stop'); }
 
 	function handleToggleMute() {
-		sendWsCommand($presenterState.muted ? 'presenter.unmute' : 'presenter.mute');
+		sendWsCommand($presenterState.muted ? 'presentation.unmute' : 'presentation.mute');
 	}
 	async function handleCloseAll() {
 		if (!sendWsCommand('keynote.close_all')) await keynoteCloseAll();
@@ -266,7 +215,7 @@
 					class="slot-btn"
 					class:slot-filled={!!file}
 					onclick={() => file && handleOpenSlot(file.path)}
-					disabled={!file || loading}
+					disabled={!file}
 				>
 					{file ? file.name : `— ${i + 1} —`}
 				</button>

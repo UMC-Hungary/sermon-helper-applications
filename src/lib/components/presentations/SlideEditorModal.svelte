@@ -14,7 +14,7 @@
   // Each entry is all paragraph texts joined by '\n' for editing in a textarea.
   // untrack prevents Svelte from warning about capturing the initial prop value.
   let localTexts = $state<string[]>(
-    untrack(() => slides.map((s) => s.paragraphs.map((p) => p.text).join('\n')))
+    untrack(() => slides.map((s) => s.paragraphs.flatMap((p) => p.lines).join('\n')))
   );
 
   let debounceTimers = $state<(ReturnType<typeof setTimeout> | null)[]>(

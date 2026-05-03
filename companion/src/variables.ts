@@ -22,6 +22,7 @@ export function GetVariableDefinitions(_instance: ModuleInstance): CompanionVari
 		{ variableId: 'ppt_slideshow_active', name: 'Presentation Slideshow Active' },
 		{ variableId: 'ppt_app', name: 'Presentation App Name' },
 		{ variableId: 'ppt_blanked', name: 'Presentation Blanked' },
+		{ variableId: 'ppt_document', name: 'Current Presentation File Name' },
 	]
 }
 
@@ -48,5 +49,6 @@ export function GetDefaultVariableValues(instance: ModuleInstance): Record<strin
 		ppt_slideshow_active: instance.presentationStatus?.slideshowActive ? 'ON' : 'OFF',
 		ppt_app: instance.presentationStatus?.app ?? 'None',
 		ppt_blanked: instance.presentationStatus?.blanked ? 'YES' : 'NO',
+		ppt_document: instance.presentationStatus?.currentSlideTitle ?? '',
 	}
 }

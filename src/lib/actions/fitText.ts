@@ -1,47 +1,118 @@
 /**
- * Svelte action that automatically scales the font size of `node` so its
- * content fits within its parent container without overflowing.
+ * Canvas-based font size calculator for slide text.
  *
- * Usage:
- *   <div class="slide-text" use:fitText>{text}</div>
+ * For each paragraph, text is split on `\n` (matching <a:br> hard breaks from
+ * the server). Each resulting line is measured word-accurately with
+ * canvas.measureText — no DOM layout, no CSS word-wrap ambiguity.
  *
- * The action re-runs on every ResizeObserver event (parent resize OR content
- * change via `update()`), binary-searching for the largest font size that
- * does not cause the element to overflow its parent.
+ * Height is computed mathematically using the same ratios as the CSS:
+ *   line-height: 1.2  →  LINE_HEIGHT_RATIO
+ *   gap: 0.35em       →  GAP_EM_RATIO
  */
+
+export type FitTextParams = {
+	/** Change trigger — Svelte calls update() when this value changes. */
+	content?: string;
+	/** Pre-computed size: applied directly, skipping calculation. */
+	fixedSize?: number | null;
+	/** When provided, canvas-based calculation is used instead of DOM heuristics. */
+	paragraphs?: { text: string }[];
+};
+
+const LINE_HEIGHT_RATIO = 1.2;
+const GAP_EM_RATIO = 0.35;
+const SLIDE_FONT = '700 {SIZE}px Helvetica, Arial, sans-serif';
+
 /**
- * Pass the text content (or any reactive value) as the action parameter so
- * Svelte calls `update()` whenever the content changes, triggering a re-fit.
- *
- *   <div use:fitText={textContent}> ... </div>
+ * Find the largest integer font size (px) where every `\n`-separated line of
+ * every paragraph fits within `maxW`, and all stacked paragraphs fit `maxH`.
  */
-export function fitText(node: HTMLElement, _content?: string): { update: (_content?: string) => void; destroy: () => void } {
+export function calcFontSize(
+	paragraphs: { text: string }[],
+	maxW: number,
+	maxH: number,
+): number {
+	const canvas = document.createElement('canvas');
+	const ctx = canvas.getContext('2d');
+	if (!ctx) return 8;
+
+	const nonEmpty = paragraphs.filter((p) => p.text.trim());
+	if (nonEmpty.length === 0) return 8;
+
+	// Pre-split lines once outside the binary search loop.
+	const allLines: string[][] = nonEmpty.map((p) => p.text.split('\n').filter((l) => l.trim()));
+
+	let lo = 8;
+	let hi = Math.max(600, Math.min(Math.floor(maxW), Math.floor(maxH)));
+
+	while (hi - lo > 1) {
+		const mid = Math.floor((lo + hi) / 2);
+		ctx.font = SLIDE_FONT.replace('{SIZE}', String(mid));
+
+		let fits = true;
+		let totalH = 0;
+
+		for (let i = 0; i < allLines.length; i++) {
+			const lines = allLines[i] ?? [];
+			for (const line of lines) {
+				if (ctx.measureText(line).width > maxW) {
+					fits = false;
+					break;
+				}
+			}
+			if (!fits) break;
+			totalH += lines.length * mid * LINE_HEIGHT_RATIO;
+			if (i < allLines.length - 1) totalH += mid * GAP_EM_RATIO;
+		}
+
+		if (fits && totalH <= maxH) {
+			lo = mid;
+		} else {
+			hi = mid;
+		}
+	}
+
+	return lo;
+}
+
+export function fitText(
+	node: HTMLElement,
+	params?: FitTextParams,
+): { update: (p?: FitTextParams) => void; destroy: () => void } {
 	let observer: ResizeObserver;
+	let currentFixedSize: number | null | undefined = params?.fixedSize;
+	let currentParagraphs: { text: string }[] | undefined = params?.paragraphs;
 
-	function fit() {
+	function getContainerDims(): { maxW: number; maxH: number } | null {
 		const parent = node.parentElement;
-		if (!parent) return;
-
-		// Subtract padding so text doesn't overflow into the padding area.
+		if (!parent) return null;
 		const style = getComputedStyle(parent);
 		const paddingH = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
 		const paddingW = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
 		const parentH = parent.clientHeight - paddingH;
 		const parentW = parent.clientWidth - paddingW;
-		if (parentH <= 0 || parentW <= 0) return;
+		if (parentH <= 0 || parentW <= 0) return null;
+		return { maxW: Math.ceil(parentW), maxH: Math.ceil(parentH) };
+	}
 
-		// scrollHeight/scrollWidth are integers; parentH/parentW can be
-		// fractional (e.g. 281.6 from vw-based padding). Use ceil so that an
-		// element whose true width equals the container isn't falsely flagged as
-		// overflowing — otherwise the binary search collapses to lo=8.
-		const maxH = Math.ceil(parentH);
-		const maxW = Math.ceil(parentW);
+	function fit() {
+		if (currentFixedSize != null) {
+			node.style.fontSize = `${currentFixedSize}px`;
+			return;
+		}
 
-		// Binary search: find the largest font size that fits.
-		// Upper bound scales with the container so 4K/projector screens work.
+		const dims = getContainerDims();
+		if (!dims) return;
+		const { maxW, maxH } = dims;
+
+		if (currentParagraphs && currentParagraphs.length > 0) {
+			node.style.fontSize = `${calcFontSize(currentParagraphs, maxW, maxH)}px`;
+			return;
+		}
+
+		// DOM fallback for non-paragraph use-cases.
 		let lo = 8;
-		let hi = Math.max(600, Math.min(Math.floor(parentW), Math.floor(parentH)));
-
+		let hi = Math.max(600, Math.min(maxW, maxH));
 		node.style.fontSize = `${hi}px`;
 		while (hi - lo > 1) {
 			const mid = Math.floor((lo + hi) / 2);
@@ -57,14 +128,13 @@ export function fitText(node: HTMLElement, _content?: string): { update: (_conte
 
 	observer = new ResizeObserver(fit);
 	observer.observe(node);
-	if (node.parentElement) {
-		observer.observe(node.parentElement);
-	}
+	if (node.parentElement) observer.observe(node.parentElement);
 	fit();
 
 	return {
-		update(_newContent?: string) {
-			// Called by Svelte when reactive data feeding the element changes.
+		update(newParams?: FitTextParams) {
+			currentFixedSize = newParams?.fixedSize;
+			currentParagraphs = newParams?.paragraphs;
 			fit();
 		},
 		destroy() {

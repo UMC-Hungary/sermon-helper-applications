@@ -7,6 +7,12 @@
   import CronJobsSettings from '$lib/components/settings/CronJobsSettings.svelte';
   import AppVersionSettings from '$lib/components/settings/AppVersionSettings.svelte';
   import { useWebPresenter } from '$lib/stores/presenter.js';
+  import { sendWsCommand } from '$lib/ws/client.js';
+
+  function handleWebPresenterToggle(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    sendWsCommand('presentation.set_use_web_presenter', { enabled });
+  }
 </script>
 
 <div class="settings-container">
@@ -31,7 +37,7 @@
       instead of opening Keynote or PowerPoint. Only <code>.pptx</code> files are supported.
     </p>
     <label class="toggle-label">
-      <input type="checkbox" bind:checked={$useWebPresenter} />
+      <input type="checkbox" checked={$useWebPresenter} onchange={handleWebPresenterToggle} />
       Use web presenter
     </label>
   </section>

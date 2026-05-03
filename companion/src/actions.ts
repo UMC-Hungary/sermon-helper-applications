@@ -126,12 +126,11 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 					],
 				},
 			],
-			callback: async (action: CompanionActionEvent) => {
+			callback: (action: CompanionActionEvent) => {
 				const digit = parseInt(action.options['digit'] as string, 10)
 				if (!isNaN(digit)) {
 					instance.log('debug', `PPT: Adding digit ${digit}`)
-					await instance.pptSelector.appendDigit(digit)
-					instance.api.sendWsCommand('ppt.search', { filter: instance.pptSelector.getCurrentFilter() })
+					void instance.pptSelector.appendDigit(digit)
 				}
 			},
 		},
@@ -140,10 +139,9 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 			name: 'PPT: Backspace',
 			description: 'Remove the last digit from the PPT file filter',
 			options: [],
-			callback: async () => {
+			callback: () => {
 				instance.log('debug', 'PPT: Backspace')
-				await instance.pptSelector.backspace()
-				instance.api.sendWsCommand('ppt.search', { filter: instance.pptSelector.getCurrentFilter() })
+				void instance.pptSelector.backspace()
 			},
 		},
 
@@ -151,10 +149,9 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 			name: 'PPT: Clear Filter',
 			description: 'Clear the PPT file filter completely',
 			options: [],
-			callback: async () => {
+			callback: () => {
 				instance.log('debug', 'PPT: Clear filter')
-				await instance.pptSelector.clearFilter()
-				instance.api.sendWsCommand('ppt.search', { filter: '' })
+				void instance.pptSelector.clearFilter()
 			},
 		},
 
@@ -284,13 +281,13 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 
 		presentation_close: {
 			name: 'Presentation: Close All',
-			description: 'Close all open presentation files',
+			description: 'Close all open presentation files (Keynote only; shows notification in web presenter mode)',
 			options: [],
 			callback: async () => {
 				instance.log('debug', 'Presentation: Close all')
-				const result = await instance.api.presentationClose()
+				const result = await instance.api.presentationCloseAll()
 				if (!result.success) {
-					instance.log('error', `Presentation close failed: ${result.error}`)
+					instance.log('error', `Presentation close all failed: ${result.error}`)
 				}
 			},
 		},

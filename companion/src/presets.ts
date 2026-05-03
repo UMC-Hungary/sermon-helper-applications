@@ -610,8 +610,8 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'Presentation Control',
 		name: 'Slide Status',
 		style: {
-			text: '$(sermon-helper:ppt_current_slide)/$(sermon-helper:ppt_total_slides)',
-			size: '18',
+			text: '$(sermon-helper:ppt_document)\\n$(sermon-helper:ppt_current_slide)/$(sermon-helper:ppt_total_slides)',
+			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(50, 50, 50),
 		},

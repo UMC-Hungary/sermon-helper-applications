@@ -65,6 +65,8 @@ pub struct AppState {
     pub obs_available_devices: Arc<tokio::sync::RwLock<Option<ObsAvailableDevices>>>,
     /// In-memory state for the active web-presenter session.
     pub presenter_state: Arc<tokio::sync::RwLock<presenter::PresenterState>>,
+    /// Whether to use the web presenter instead of Keynote; persisted in app_settings.
+    pub use_web_presenter: Arc<AtomicBool>,
     /// Metadata for every currently-connected WebSocket client.
     pub ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>>,
     #[cfg(target_os = "macos")]
@@ -121,6 +123,16 @@ pub async fn build_and_serve(
     let presenter_state: Arc<tokio::sync::RwLock<presenter::PresenterState>> =
         Arc::new(tokio::sync::RwLock::new(presenter::PresenterState::empty()));
 
+    let use_web_presenter_val: bool = sqlx::query_scalar(
+        "SELECT value FROM app_settings WHERE key = 'use_web_presenter'",
+    )
+    .fetch_optional(&pool)
+    .await
+    .unwrap_or(None)
+    .and_then(|v: String| v.parse().ok())
+    .unwrap_or(false);
+    let use_web_presenter = Arc::new(AtomicBool::new(use_web_presenter_val));
+
     let ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>> =
         Arc::new(tokio::sync::RwLock::new(HashMap::new()));
 
@@ -143,6 +155,7 @@ pub async fn build_and_serve(
         upload_service: upload_service.clone(),
         obs_available_devices: obs_available_devices.clone(),
         presenter_state: presenter_state.clone(),
+        use_web_presenter: use_web_presenter.clone(),
         ws_client_info: ws_client_info.clone(),
         #[cfg(target_os = "macos")]
         keynote_connector: keynote_connector.clone(),

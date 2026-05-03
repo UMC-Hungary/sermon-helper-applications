@@ -221,11 +221,6 @@
 			<div class="nav-bar">
 				<button
 					class="nav-btn"
-					onclick={() => navigate('first')}
-					aria-label="First slide"
-				>⏮</button>
-				<button
-					class="nav-btn"
 					onclick={() => navigate('prev')}
 					aria-label="Previous slide"
 				>◀</button>
@@ -235,16 +230,6 @@
 					onclick={() => navigate('next')}
 					aria-label="Next slide"
 				>▶</button>
-				<button
-					class="nav-btn"
-					onclick={() => navigate('last')}
-					aria-label="Last slide"
-				>⏭</button>
-				<button
-					class="nav-btn mute-btn"
-					onclick={toggleMute}
-					aria-label="Mute display"
-				>⬛</button>
 			</div>
 		{/if}
 	{/if}
@@ -266,19 +251,17 @@
 		position: fixed;
 		inset: 0;
 		background: #000;
-		display: flex;
-		flex-direction: column;
 		color: #fff;
 	}
 
-	/* ── Slide area ───────────────────────────────────────────────────────── */
+	/* ── Slide area — full screen, nav bar overlays it ────────────────────── */
 
 	.slide-area {
-		flex: 1;
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
-		padding: 4vw 6vw 3vw;
-		min-height: 0;
+		padding: 3vw 4vw 1.5vw;
 		box-sizing: border-box;
 	}
 
@@ -300,18 +283,6 @@
 		font-weight: 700;
 	}
 
-	.counter-text {
-		margin: 0;
-		padding-top: 1vw;
-		text-align: center;
-		font-family: Helvetica, Arial, sans-serif;
-		font-weight: 700;
-		line-height: 1.2;
-		color: #fff;
-		width: 100%;
-		flex-shrink: 0;
-	}
-
 	.slide-text {
 		margin: 0;
 		padding: 0;
@@ -327,44 +298,73 @@
 		margin-top: 0.35em;
 	}
 
-	/* ── Navigation bar ───────────────────────────────────────────────────── */
+	/* Counter pinned to the very bottom of the content area */
+	.counter-text {
+		margin: 0;
+		padding: 0.5vw 0 0;
+		text-align: center;
+		font-family: Helvetica, Arial, sans-serif;
+		font-weight: 700;
+		line-height: 1.2;
+		color: #fff;
+		width: 100%;
+		flex-shrink: 0;
+	}
+
+	/* ── Navigation bar — overlays the slide content ──────────────────────── */
 
 	.nav-bar {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.75rem;
-		padding: 0.5rem 1rem;
-		background: rgba(255, 255, 255, 0.08);
-		border-top: 1px solid rgba(255, 255, 255, 0.12);
-		opacity: 0.2;
-		transition: opacity 0.2s ease;
+		gap: 2.5rem;
+		padding: 1rem 2rem 1.5rem;
+		opacity: 0.07;
+		transition: opacity 0.25s ease;
 	}
 
-	.nav-bar:hover {
+	.nav-bar:hover,
+	.nav-bar:focus-within {
 		opacity: 1;
+		background: rgba(0, 0, 0, 0.72);
 	}
 
+	/* Large touch targets — important for smart TV remotes and tablets */
 	.nav-btn {
-		padding: 0.35rem 0.7rem;
-		background: rgba(255, 255, 255, 0.15);
+		min-width: 4rem;
+		min-height: 4rem;
+		padding: 0.75rem 1.5rem;
+		background: rgba(255, 255, 255, 0.18);
 		color: #fff;
-		border: 1px solid rgba(255, 255, 255, 0.3);
-		border-radius: 0.25rem;
+		border: 1px solid rgba(255, 255, 255, 0.35);
+		border-radius: 0.5rem;
 		cursor: pointer;
-		font-size: 0.9rem;
+		font-size: 1.75rem;
 		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.nav-btn:hover {
-		background: rgba(255, 255, 255, 0.3);
+	.nav-btn:hover,
+	.nav-btn:focus-visible {
+		background: rgba(255, 255, 255, 0.35);
+		outline: 2px solid rgba(255, 255, 255, 0.6);
+		outline-offset: 2px;
 	}
 
 	.slide-counter {
-		font-size: 0.85rem;
-		opacity: 0.8;
-		min-width: 4rem;
+		font-size: 1.5rem;
+		font-family: Helvetica, Arial, sans-serif;
+		font-weight: 700;
+		opacity: 0.9;
+		min-width: 6rem;
 		text-align: center;
+		letter-spacing: 0.05em;
 	}
 
 	/* ── Mute overlay ─────────────────────────────────────────────────────── */
@@ -396,22 +396,23 @@
 	/* ── Waiting state ────────────────────────────────────────────────────── */
 
 	.waiting {
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		height: 100%;
 		gap: 0.5rem;
 		opacity: 0.5;
 	}
 
 	.waiting p {
 		margin: 0;
-		font-size: 1.25rem;
+		font-size: 1.5rem;
 	}
 
 	.hint {
-		font-size: 0.875rem !important;
+		font-size: 1rem !important;
 		opacity: 0.7;
 	}
 </style>

@@ -22,8 +22,8 @@ import {
 	youtubeLiveActive
 } from '$lib/stores/connectors.js';
 import { broadlinkDiscoveredDevices, broadlinkLearnResult } from '$lib/stores/broadlink.js';
-import { keynoteStatus, pptResults, pptFolders } from '$lib/stores/presentations.js';
-import { presenterState, connectedClients } from '$lib/stores/presenter.js';
+import { keynoteStatus, pptResults, pptFolders, pptFilter } from '$lib/stores/presentations.js';
+import { presenterState, connectedClients, useWebPresenter } from '$lib/stores/presenter.js';
 import { uploadProgress } from '$lib/stores/uploads.js';
 import { handleObsDevicesMessage, obsDeviceListeners, obsDeviceListenerStatuses } from '$lib/stores/obs-devices.js';
 import { listFolders } from '$lib/api/presentations.js';
@@ -106,7 +106,13 @@ function scheduleReconnect(): void {
 }
 
 function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
-	if (msg.type === 'event.changed') {
+	if (msg.type === 'error') {
+		toast.error(msg.message);
+	} else if (msg.type === 'notification') {
+		if (msg.level === 'warn') toast.warning(msg.message);
+		else if (msg.level === 'error') toast.error(msg.message);
+		else toast.info(msg.message);
+	} else if (msg.type === 'event.changed') {
 		const { operation, record: rec } = msg.data;
 		if (operation === 'DELETE') {
 			events.update((list) => list.filter((e) => e.id !== rec.id));
@@ -198,6 +204,8 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 	} else if (msg.type === 'cron.youtube_pull') {
 		youtubeLiveActive.set(msg.hasLive);
 		youtubeState.update((s) => ({ ...s, isLive: msg.hasLive }));
+	} else if (msg.type === 'presentation.settings') {
+		useWebPresenter.set(msg.useWebPresenter);
 	} else if (msg.type === 'presenter.state') {
 		presenterState.set(msg.state);
 	} else if (msg.type === 'presenter.slide_changed') {
@@ -210,6 +218,7 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 		keynoteStatus.set(msg.status);
 	} else if (msg.type === 'ppt.search_results') {
 		pptResults.set(msg.files);
+		if (msg.filter !== undefined) pptFilter.set(msg.filter);
 	} else if (msg.type === 'ppt.folders_changed') {
 		listFolders().then((folders) => pptFolders.set(folders));
 	} else if (msg.type === 'upload.progress') {
