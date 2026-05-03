@@ -1,6 +1,6 @@
-name: sermon-helper-tauri
+name: metocast
 options:
-  bundleIdPrefix: com.sermon-helper-tauri.app
+  bundleIdPrefix: com.metocast.app
   deploymentTarget:
     iOS: 14.0
 fileGroups: [../../src]
@@ -10,8 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: sermon-helper-tauri
-      PRODUCT_BUNDLE_IDENTIFIER: com.sermon-helper-tauri.app
+      PRODUCT_NAME: metocast
+      PRODUCT_BUNDLE_IDENTIFIER: com.metocast.app
 targetTemplates:
   app:
     type: application
@@ -24,20 +24,20 @@ targetTemplates:
     settings:
       groups: [app]
 targets:
-  sermon-helper-tauri_iOS:
+  metocast_iOS:
     type: application
     platform: iOS
     sources:
       - path: Sources
       - path: Assets.xcassets
       - path: Externals
-      - path: sermon-helper-tauri_iOS
+      - path: metocast_iOS
       - path: assets
         buildPhase: resources
         type: folder
       - path: LaunchScreen.storyboard
     info:
-      path: sermon-helper-tauri_iOS/Info.plist
+      path: metocast_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
@@ -54,7 +54,7 @@ targets:
         CFBundleShortVersionString: 2.0.0
         CFBundleVersion: "2.0.0"
     entitlements:
-      path: sermon-helper-tauri_iOS/sermon-helper-tauri_iOS.entitlements
+      path: metocast_iOS/metocast_iOS.entitlements
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full

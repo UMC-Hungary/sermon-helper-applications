@@ -1,13 +1,13 @@
 [package]
-name = "sermon-helper-tauri"
+name = "metocast"
 version = "0.1.0"
-description = "Sermon Helper v2 — embedded PostgreSQL + Axum"
+description = "Metocast — livestream control desktop application"
 authors = ["you"]
 edition = "2021"
-default-run = "sermon-helper-tauri"
+default-run = "metocast"
 
 [lib]
-name = "sermon_helper_tauri_lib"
+name = "metocast_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

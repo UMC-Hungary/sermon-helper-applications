@@ -1,5 +1,5 @@
 {
-	"name": "companion-module-sermon-helper",
+	"name": "companion-module-metocast",
 	"version": "1.0.0",
 	"main": "dist/main.js",
 	"type": "module",

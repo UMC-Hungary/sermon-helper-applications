@@ -1,7 +1,7 @@
 {
-  "name": "sermon-helper-tauri",
+  "name": "metocast",
   "version": "2.0.0",
-  "description": "Sermon Helper v2 — embedded PostgreSQL + Axum",
+  "description": "Metocast — livestream control desktop application",
   "type": "module",
   "scripts": {
     "dev": "vite dev",

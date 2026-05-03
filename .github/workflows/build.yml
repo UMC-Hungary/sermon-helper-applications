@@ -724,7 +724,7 @@ jobs:
           rm -rf node_modules
           pnpm install --prod
           cd ..
-          tar -czf "companion-module-sermon-helper-${VERSION}.tar.gz" \
+          tar -czf "companion-module-metocast-${VERSION}.tar.gz" \
             -C companion \
             dist companion package.json node_modules
 
@@ -732,7 +732,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: companion-plugin
-          path: companion-module-sermon-helper-*.tar.gz
+          path: companion-module-metocast-*.tar.gz
 
   # ──────────────────────────────────────────────
   # Release (version tags only)
@@ -847,7 +847,7 @@ jobs:
 
             **Note:** If macOS shows "app is damaged", run this in Terminal:
             ```bash
-            xattr -cr /Applications/sermon-helper-tauri.app
+            xattr -cr /Applications/metocast.app
             ```
 
             ### Linux
@@ -913,4 +913,4 @@ jobs:
             artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
             artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
             artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
-            artifacts/companion-plugin/companion-module-sermon-helper-*.tar.gz
+            artifacts/companion-plugin/companion-module-metocast-*.tar.gz

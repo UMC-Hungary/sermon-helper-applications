@@ -1,20 +1,20 @@
-# Sermon Helper - Companion Module
+# Metocast - Companion Module
 
-Control Broadlink IR/RF devices and presentations through the Sermon Helper desktop application via WebSocket.
+Control Broadlink IR/RF devices and presentations through the Metocast desktop application via WebSocket.
 
 ## Prerequisites
 
-- Sermon Helper desktop application running
-- Broadlink devices and/or Keynote configured in the Sermon Helper app
-- Auth token from Sermon Helper settings
+- Metocast desktop application running
+- Broadlink devices and/or Keynote configured in the Metocast app
+- Auth token from Metocast settings
 
 ## Configuration
 
 ### Connection Settings
 
-- **Host**: IP address or hostname of the computer running Sermon Helper (default: `127.0.0.1`)
-- **Port**: Sermon Helper WebSocket port (default: `3737`)
-- **Auth Token**: Authentication token from Sermon Helper settings
+- **Host**: IP address or hostname of the computer running Metocast (default: `127.0.0.1`)
+- **Port**: Metocast WebSocket port (default: `3737`)
+- **Auth Token**: Authentication token from Metocast settings
 
 ## Actions
 
@@ -43,7 +43,7 @@ Control Broadlink IR/RF devices and presentations through the Sermon Helper desk
 
 | Feedback | Description |
 |----------|-------------|
-| Connection Status | Green when connected to Sermon Helper |
+| Connection Status | Green when connected to Metocast |
 | Command Available | Blue when a specific command is loaded |
 | PPT: Slot Has File | Green when a PPT slot contains a file |
 | PPT: Filter Active | Orange when a digit filter is applied |
@@ -70,11 +70,11 @@ Control Broadlink IR/RF devices and presentations through the Sermon Helper desk
 ## Troubleshooting
 
 ### Module shows "Disconnected"
-1. Verify Sermon Helper is running
+1. Verify Metocast is running
 2. Check host and port settings
-3. Verify the auth token matches Sermon Helper settings
+3. Verify the auth token matches Metocast settings
 4. Check firewall allows connections on port 3737
 
 ### Commands not appearing
-1. Ensure Broadlink commands are saved in Sermon Helper
+1. Ensure Broadlink commands are saved in Metocast
 2. Click the **Refresh Command List** action button

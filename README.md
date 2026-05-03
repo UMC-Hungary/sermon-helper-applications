@@ -1,10 +1,10 @@
-# Sermon Helper Applications
+# Metocast
 
 Church livestream control desktop application built with Tauri 2 + SvelteKit 5 + TypeScript.
 
 ## Presenter Receiver
 
-A standalone binary that connects to the Sermon Helper server over WebSocket and renders slides directly on a display — no browser required. Designed for Raspberry Pi / Linux framebuffer setups or macOS secondary screens.
+A standalone binary that connects to the Metocast server over WebSocket and renders slides directly on a display — no browser required. Designed for Raspberry Pi / Linux framebuffer setups or macOS secondary screens.
 
 See [presenter-receiver/PRESENTER_RECEIVER.md](presenter-receiver/PRESENTER_RECEIVER.md) for full documentation: installation, auto-start on boot, supported platforms, update instructions, and WebSocket protocol reference.
 

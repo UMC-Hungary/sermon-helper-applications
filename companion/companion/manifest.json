@@ -1,8 +1,8 @@
 {
-	"id": "sermon-helper",
-	"name": "sermon-helper",
-	"shortname": "Sermon Helper",
-	"description": "Control Broadlink IR/RF devices and presentations through the Sermon Helper application",
+	"id": "metocast",
+	"name": "metocast",
+	"shortname": "Metocast",
+	"description": "Control Broadlink IR/RF devices and presentations through the Metocast application",
 	"version": "1.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/UMC-Hungary/sermon-helper-applications.git",
@@ -21,6 +21,6 @@
 		"entrypoint": "../dist/main.js"
 	},
 	"manufacturer": "Custom",
-	"products": ["Sermon Helper", "Broadlink"],
+	"products": ["Metocast", "Broadlink"],
 	"keywords": ["broadlink", "ir", "rf", "church", "livestream", "keynote", "presentation"]
 }
