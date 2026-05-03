@@ -1,3 +1,4 @@
+#[cfg(desktop)]
 mod badge;
 mod bible;
 mod commands;
