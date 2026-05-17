@@ -116,25 +116,25 @@ jobs:
           # Windows
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            bundles: nsis,msi
+            bundles: nsis msi
             name: Windows-x64
 
           # macOS ARM (M1/M2/M3)
           - platform: macos-latest
             target: aarch64-apple-darwin
-            bundles: dmg,app
+            bundles: dmg app
             name: macOS-ARM64
 
           # macOS Intel (cross-compile from ARM runner)
           - platform: macos-14
             target: x86_64-apple-darwin
-            bundles: dmg,app
+            bundles: dmg app
             name: macOS-Intel
 
           # Linux
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            bundles: deb,rpm,appimage
+            bundles: deb rpm appimage
             name: Linux-x64
 
     runs-on: ${{ matrix.platform }}
@@ -518,7 +518,7 @@ jobs:
           echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
           "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --version
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
             "platforms;android-35" \
