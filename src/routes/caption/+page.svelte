@@ -58,7 +58,7 @@
 {/if}
 
 <style>
-	/* ── Tailwind v3.4 Preflight (computed rules relevant to this page) ── */
+	/* ── Page reset rules ── */
 	:global(html) {
 		line-height: 1.5;
 		-webkit-text-size-adjust: 100%;
@@ -85,7 +85,7 @@
 		padding: 0;
 	}
 
-	/* ── Tailwind utility classes (@tailwind utilities) ── */
+	/* ── Utility classes ── */
 	.min-h-screen {
 		min-height: 100vh;
 	}
