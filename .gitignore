@@ -55,8 +55,12 @@ coverage
 # Temporary files
 *.tmp
 *.temp
+tmp.*
+presenter-receiver/tmp.*
+
+# Local test server state
+test-server-data/
 
 # Claude AI
 .claude
 gemini.md
-
