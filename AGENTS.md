@@ -74,5 +74,6 @@ Two SystemStatus definitions exist:
 
 - Always fix all `pnpm check` errors before finishing, even if they are unrelated to your changes.
 - Always name plan files with the format: PLAN-{feature-name}.md under the `plans` folder.
+- When fixing release workflow problems, do not mint a new version tag for each CI attempt. Finish the workflow fix first, then republish the latest synchronized release tag set so the app, companion, and presenter receiver tags stay on the same version.
 
 ## Imported Claude Cowork project instructions
