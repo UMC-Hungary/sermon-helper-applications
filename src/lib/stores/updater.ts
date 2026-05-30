@@ -1,6 +1,13 @@
 import { writable } from 'svelte/store';
 
-export type UpdateStatus = 'idle' | 'checking' | 'available' | 'up-to-date' | 'error';
+export type UpdateStatus =
+	| 'idle'
+	| 'checking'
+	| 'available'
+	| 'up-to-date'
+	| 'installing'
+	| 'installed'
+	| 'error';
 
 export type UpdateInfo = {
 	currentVersion: string;

@@ -72,6 +72,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init());
 
     #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+
+    #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_dialog::init());
 
     // Pass generate_handler! directly into invoke_handler so the closure type
@@ -134,6 +137,7 @@ pub fn run() {
         commands::badge::get_obs_scenes,
         commands::badge::create_badge_sources,
         commands::updater::check_for_updates,
+        commands::updater::install_update,
     ]);
 
     // Mobile is client-only — no server or Bruno collection commands.

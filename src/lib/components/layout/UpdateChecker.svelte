@@ -1,11 +1,27 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
-	import { openUrl } from '@tauri-apps/plugin-opener';
 	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
 	import { updaterStore, type UpdateInfo } from '$lib/stores/updater.js';
 	import { get } from 'svelte/store';
+
+	async function installUpdate() {
+		const t = get(_);
+		updaterStore.update((s) => ({ ...s, status: 'installing', error: null }));
+		try {
+			await invoke('install_update');
+			updaterStore.update((s) => ({ ...s, status: 'installed' }));
+			toast.success(t('appSettings.updater.installed'));
+		} catch (e) {
+			updaterStore.update((s) => ({
+				...s,
+				status: 'error',
+				error: e instanceof Error ? e.message : String(e),
+			}));
+			toast.error(t('appSettings.updater.installFailed'));
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -23,8 +39,10 @@
 						values: { version: info.latestVersion },
 					}),
 					action: {
-						label: t('appSettings.updater.download'),
-						onClick: () => openUrl(info.releaseUrl),
+						label: t('appSettings.updater.install'),
+						onClick: () => {
+							void installUpdate();
+						},
 					},
 				});
 			} else {

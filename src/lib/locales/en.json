@@ -880,6 +880,10 @@
 			"upToDate": "You're up to date",
 			"updateAvailable": "Update available: v{version}",
 			"download": "Download",
+			"install": "Install & Restart",
+			"installing": "Installing update…",
+			"installed": "Update installed. Restarting…",
+			"installFailed": "Failed to install update",
 			"lastChecked": "Last checked",
 			"errorChecking": "Failed to check for updates",
 			"toast": {

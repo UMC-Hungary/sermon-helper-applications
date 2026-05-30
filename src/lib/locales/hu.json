@@ -894,6 +894,10 @@
 			"upToDate": "Az alkalmazás naprakész",
 			"updateAvailable": "Elérhető frissítés: v{version}",
 			"download": "Letöltés",
+			"install": "Telepítés és újraindítás",
+			"installing": "Frissítés telepítése…",
+			"installed": "Frissítés telepítve. Újraindítás…",
+			"installFailed": "Nem sikerült telepíteni a frissítést",
 			"lastChecked": "Utoljára ellenőrizve",
 			"errorChecking": "Nem sikerült ellenőrizni a frissítéseket",
 			"toast": {

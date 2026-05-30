@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
-	import { openUrl } from '@tauri-apps/plugin-opener';
+	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
 	import { updaterStore, type UpdateInfo } from '$lib/stores/updater.js';
 
@@ -31,6 +31,22 @@
 			}));
 		}
 	}
+
+	async function installUpdate() {
+		updaterStore.update((s) => ({ ...s, status: 'installing', error: null }));
+		try {
+			await invoke('install_update');
+			updaterStore.update((s) => ({ ...s, status: 'installed' }));
+			toast.success($_('appSettings.updater.installed'));
+		} catch (e) {
+			updaterStore.update((s) => ({
+				...s,
+				status: 'error',
+				error: e instanceof Error ? e.message : String(e),
+			}));
+			toast.error($_('appSettings.updater.installFailed'));
+		}
+	}
 </script>
 
 <section>
@@ -48,10 +64,14 @@
 			{$_('appSettings.updater.updateAvailable', {
 				values: { version: $updaterStore.info.latestVersion },
 			})}
-			<button class="action-btn" onclick={() => openUrl($updaterStore.info!.releaseUrl)}>
-				{$_('appSettings.updater.download')}
+			<button class="action-btn" onclick={installUpdate}>
+				{$_('appSettings.updater.install')}
 			</button>
 		</div>
+	{:else if $updaterStore.status === 'installing'}
+		<p class="status-ok">{$_('appSettings.updater.installing')}</p>
+	{:else if $updaterStore.status === 'installed'}
+		<p class="status-ok">{$_('appSettings.updater.installed')}</p>
 	{:else if $updaterStore.status === 'up-to-date'}
 		<p class="status-ok">{$_('appSettings.updater.upToDate')}</p>
 	{:else if $updaterStore.status === 'error'}
@@ -71,7 +91,7 @@
 
 	<button
 		class="check-btn"
-		disabled={$updaterStore.status === 'checking'}
+		disabled={$updaterStore.status === 'checking' || $updaterStore.status === 'installing'}
 		onclick={checkForUpdates}
 	>
 		{$updaterStore.status === 'checking'

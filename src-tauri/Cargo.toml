@@ -51,6 +51,7 @@ tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-chrono-0_4"
 tauri-plugin-dialog = "2.6.0"
 tokio-cron-scheduler = "0.15.1"
 quick-xml = "0.39.2"
+tauri-plugin-updater = "2.10.0"
 
 [patch.crates-io]
 tauri-plugin-liquid-glass = { path = "vendor/tauri-plugin-liquid-glass" }
