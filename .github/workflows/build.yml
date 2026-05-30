@@ -240,6 +240,29 @@ jobs:
       - name: Build Tauri app
         run: pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
+      - name: Verify macOS app has no Homebrew runtime links
+        if: runner.os == 'macOS'
+        run: |
+          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle -name "*.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No app bundle found"
+            exit 1
+          fi
+
+          echo "Checking Mach-O dependencies in: $APP_PATH"
+          FAILED=0
+          while IFS= read -r file; do
+            if file "$file" | grep -q "Mach-O"; then
+              echo "Inspecting: $file"
+              if otool -L "$file" | grep -E "/opt/homebrew|/usr/local"; then
+                echo "::error file=$file::macOS app links to a Homebrew library"
+                FAILED=1
+              fi
+            fi
+          done < <(find "$APP_PATH/Contents" -type f)
+
+          exit "$FAILED"
+
       - name: Sign macOS app
         if: runner.os == 'macOS'
         run: |

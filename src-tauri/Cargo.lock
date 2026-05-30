@@ -2695,6 +2695,7 @@ dependencies = [
  "dirs 5.0.1",
  "futures-util",
  "hex",
+ "liblzma",
  "local-ip-address",
  "obws",
  "postgresql_embedded",
