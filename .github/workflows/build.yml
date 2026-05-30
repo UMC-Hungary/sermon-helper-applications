@@ -836,6 +836,7 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           REPO="UMC-Hungary/sermon-helper-applications"
+          shopt -s nullglob
 
           # Read signatures
           WINDOWS_SIG=""
@@ -843,10 +844,20 @@ jobs:
           MACOS_INTEL_SIG=""
           LINUX_APPIMAGE_SIG=""
           LINUX_DEB_SIG=""
+          WINDOWS_ASSET=""
+          LINUX_APPIMAGE_ASSET=""
 
-          # Windows NSIS updater signature
-          if [ -f artifacts/Windows-x64/nsis/*.nsis.zip.sig ]; then
-            WINDOWS_SIG=$(cat artifacts/Windows-x64/nsis/*.nsis.zip.sig)
+          # Windows NSIS updater artifact. Newer Tauri bundlers may emit a
+          # zipped installer, while the current CI emits the signed NSIS .exe.
+          WINDOWS_FILES=(artifacts/Windows-x64/nsis/*.nsis.zip)
+          WINDOWS_SIG_FILES=(artifacts/Windows-x64/nsis/*.nsis.zip.sig)
+          if [ ${#WINDOWS_FILES[@]} -eq 0 ] || [ ${#WINDOWS_SIG_FILES[@]} -eq 0 ]; then
+            WINDOWS_FILES=(artifacts/Windows-x64/nsis/*.exe)
+            WINDOWS_SIG_FILES=(artifacts/Windows-x64/nsis/*.exe.sig)
+          fi
+          if [ ${#WINDOWS_FILES[@]} -gt 0 ] && [ ${#WINDOWS_SIG_FILES[@]} -gt 0 ]; then
+            WINDOWS_ASSET=$(basename "${WINDOWS_FILES[0]}")
+            WINDOWS_SIG=$(cat "${WINDOWS_SIG_FILES[0]}")
           fi
 
           # macOS ARM signature (from .app.tar.gz bundle, not dmg)
@@ -859,9 +870,17 @@ jobs:
             MACOS_INTEL_SIG=$(cat artifacts/macOS-Intel/macos/*_x64.app.tar.gz.sig)
           fi
 
-          # Linux AppImage updater signature
-          if [ -f artifacts/Linux-x64/appimage/*.AppImage.tar.gz.sig ]; then
-            LINUX_APPIMAGE_SIG=$(cat artifacts/Linux-x64/appimage/*.AppImage.tar.gz.sig)
+          # Linux AppImage updater artifact. Prefer the archived AppImage when
+          # available, but support the signed raw AppImage emitted by this CI.
+          LINUX_APPIMAGE_FILES=(artifacts/Linux-x64/appimage/*.AppImage.tar.gz)
+          LINUX_APPIMAGE_SIG_FILES=(artifacts/Linux-x64/appimage/*.AppImage.tar.gz.sig)
+          if [ ${#LINUX_APPIMAGE_FILES[@]} -eq 0 ] || [ ${#LINUX_APPIMAGE_SIG_FILES[@]} -eq 0 ]; then
+            LINUX_APPIMAGE_FILES=(artifacts/Linux-x64/appimage/*.AppImage)
+            LINUX_APPIMAGE_SIG_FILES=(artifacts/Linux-x64/appimage/*.AppImage.sig)
+          fi
+          if [ ${#LINUX_APPIMAGE_FILES[@]} -gt 0 ] && [ ${#LINUX_APPIMAGE_SIG_FILES[@]} -gt 0 ]; then
+            LINUX_APPIMAGE_ASSET=$(basename "${LINUX_APPIMAGE_FILES[0]}")
+            LINUX_APPIMAGE_SIG=$(cat "${LINUX_APPIMAGE_SIG_FILES[0]}")
           fi
 
           # Linux deb signature
@@ -870,16 +889,14 @@ jobs:
           fi
 
           # Get actual filenames
-          WINDOWS_NSIS_ZIP=$(basename artifacts/Windows-x64/nsis/*.nsis.zip 2>/dev/null | head -1 || echo "")
           MACOS_ARM_APP=$(basename artifacts/macOS-ARM64/macos/*_aarch64.app.tar.gz 2>/dev/null | head -1 || echo "")
           MACOS_INTEL_APP=$(basename artifacts/macOS-Intel/macos/*_x64.app.tar.gz 2>/dev/null | head -1 || echo "")
-          LINUX_APPIMAGE_TAR=$(basename artifacts/Linux-x64/appimage/*.AppImage.tar.gz 2>/dev/null | head -1 || echo "")
 
           MISSING=()
-          [ -n "${WINDOWS_SIG}" ] && [ -n "${WINDOWS_NSIS_ZIP}" ] || MISSING+=("Windows NSIS updater artifact")
+          [ -n "${WINDOWS_SIG}" ] && [ -n "${WINDOWS_ASSET}" ] || MISSING+=("Windows NSIS updater artifact")
           [ -n "${MACOS_ARM_SIG}" ] && [ -n "${MACOS_ARM_APP}" ] || MISSING+=("macOS ARM updater artifact")
           [ -n "${MACOS_INTEL_SIG}" ] && [ -n "${MACOS_INTEL_APP}" ] || MISSING+=("macOS Intel updater artifact")
-          [ -n "${LINUX_APPIMAGE_SIG}" ] && [ -n "${LINUX_APPIMAGE_TAR}" ] || MISSING+=("Linux AppImage updater artifact")
+          [ -n "${LINUX_APPIMAGE_SIG}" ] && [ -n "${LINUX_APPIMAGE_ASSET}" ] || MISSING+=("Linux AppImage updater artifact")
 
           if [ ${#MISSING[@]} -gt 0 ]; then
             printf 'Missing required updater artifacts:\n'
@@ -896,7 +913,7 @@ jobs:
             "platforms": {
               "windows-x86_64": {
                 "signature": "${WINDOWS_SIG}",
-                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${WINDOWS_NSIS_ZIP}"
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${WINDOWS_ASSET}"
               },
               "darwin-aarch64": {
                 "signature": "${MACOS_ARM_SIG}",
@@ -908,7 +925,7 @@ jobs:
               },
               "linux-x86_64": {
                 "signature": "${LINUX_APPIMAGE_SIG}",
-                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${LINUX_APPIMAGE_TAR}"
+                "url": "https://github.com/${REPO}/releases/download/v${VERSION}/${LINUX_APPIMAGE_ASSET}"
               }
             }
           }
