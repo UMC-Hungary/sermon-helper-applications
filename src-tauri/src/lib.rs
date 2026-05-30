@@ -97,6 +97,8 @@ pub fn run() {
         commands::server::get_local_ip,
         commands::logs::get_application_log_path,
         commands::logs::read_application_log,
+        commands::logs::download_application_log,
+        commands::logs::remove_application_log,
         commands::logs::open_application_log,
         commands::connectors::get_obs_config,
         commands::connectors::save_obs_config,
@@ -158,6 +160,8 @@ pub fn run() {
         commands::server::get_local_ip,
         commands::logs::get_application_log_path,
         commands::logs::read_application_log,
+        commands::logs::download_application_log,
+        commands::logs::remove_application_log,
         commands::logs::open_application_log,
     ]);
 

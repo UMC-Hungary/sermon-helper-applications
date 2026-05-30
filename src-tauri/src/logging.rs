@@ -81,6 +81,35 @@ pub fn read_application_log(app: &tauri::AppHandle) -> Result<String, String> {
     ))
 }
 
+pub fn copy_application_log(app: &tauri::AppHandle, destination: &Path) -> Result<(), String> {
+    let path = ensure_application_log(app)?;
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create log download directory: {e}"))?;
+    }
+
+    fs::copy(&path, destination).map_err(|e| format!("Failed to download application log: {e}"))?;
+    Ok(())
+}
+
+pub fn clear_application_log(app: &tauri::AppHandle) -> Result<(), String> {
+    let path = ensure_application_log(app)?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .map_err(|e| format!("Failed to remove application log: {e}"))?;
+
+    writeln!(
+        file,
+        "=== Metocast application log cleared at {} ===",
+        chrono::Utc::now().to_rfc3339()
+    )
+    .map_err(|e| format!("Failed to write application log header: {e}"))?;
+
+    Ok(())
+}
+
 fn env_filter() -> EnvFilter {
     EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
 }

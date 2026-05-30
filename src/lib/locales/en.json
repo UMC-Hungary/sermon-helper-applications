@@ -919,6 +919,12 @@
 		"refresh": "Refresh",
 		"openLog": "Open Application Log",
 		"copyPath": "Copy Path",
+		"downloadLog": "Download Log",
+		"downloading": "Downloading…",
+		"removeLog": "Remove Log",
+		"removing": "Removing…",
+		"removeConfirm": "Remove the current application log contents?",
+		"logFileFilter": "Log File",
 		"empty": "No application logs yet",
 		"noMatches": "No log lines match this filter",
 		"desktopOnly": "Application logs are available in the desktop app.",
@@ -932,6 +938,10 @@
 		"toasts": {
 			"opened": "Application log opened",
 			"openFailed": "Failed to open application log",
+			"downloaded": "Application log downloaded",
+			"downloadFailed": "Failed to download application log",
+			"removed": "Application log removed",
+			"removeFailed": "Failed to remove application log",
 			"pathCopied": "Log path copied",
 			"copyFailed": "Failed to copy log path",
 			"clipboardUnavailable": "Clipboard is unavailable"

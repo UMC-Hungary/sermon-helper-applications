@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
-	import { Copy, ExternalLink, RefreshCw } from 'lucide-svelte';
+	import { save } from '@tauri-apps/plugin-dialog';
+	import { Copy, Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
 	import {
@@ -34,6 +35,8 @@
 	let logPath = $state('');
 	let selectedFilter = $state<LogFilter>('all');
 	let isLoading = $state(false);
+	let isDownloading = $state(false);
+	let isRemoving = $state(false);
 	let desktopAvailable = $state(false);
 	let errorMessage = $state<string | null>(null);
 
@@ -92,6 +95,57 @@
 			toast.error($_('logsPage.toasts.openFailed'), {
 				description: errorText(e)
 			});
+		}
+	}
+
+	async function downloadLog() {
+		if (!desktopAvailable) {
+			toast.error($_('logsPage.toasts.downloadFailed'), {
+				description: $_('logsPage.desktopOnly')
+			});
+			return;
+		}
+
+		isDownloading = true;
+		try {
+			const destination = await save({
+				defaultPath: 'metocast.log',
+				filters: [{ name: $_('logsPage.logFileFilter'), extensions: ['log', 'txt'] }]
+			});
+			if (!destination) return;
+
+			await invoke('download_application_log', { destination });
+			toast.success($_('logsPage.toasts.downloaded'));
+		} catch (e) {
+			toast.error($_('logsPage.toasts.downloadFailed'), {
+				description: errorText(e)
+			});
+		} finally {
+			isDownloading = false;
+		}
+	}
+
+	async function removeLog() {
+		if (!desktopAvailable) {
+			toast.error($_('logsPage.toasts.removeFailed'), {
+				description: $_('logsPage.desktopOnly')
+			});
+			return;
+		}
+
+		if (!window.confirm($_('logsPage.removeConfirm'))) return;
+
+		isRemoving = true;
+		try {
+			await invoke('remove_application_log');
+			toast.success($_('logsPage.toasts.removed'));
+			await loadLog();
+		} catch (e) {
+			toast.error($_('logsPage.toasts.removeFailed'), {
+				description: errorText(e)
+			});
+		} finally {
+			isRemoving = false;
 		}
 	}
 
@@ -174,6 +228,14 @@
 			<button class="icon-button" type="button" onclick={copyLogPath} disabled={!desktopAvailable} title={$_('logsPage.copyPath')}>
 				<Copy size={16} />
 				<span>{$_('logsPage.copyPath')}</span>
+			</button>
+			<button class="icon-button" type="button" onclick={downloadLog} disabled={!desktopAvailable || isDownloading} title={$_('logsPage.downloadLog')}>
+				<Download size={16} />
+				<span>{isDownloading ? $_('logsPage.downloading') : $_('logsPage.downloadLog')}</span>
+			</button>
+			<button class="icon-button danger" type="button" onclick={removeLog} disabled={!desktopAvailable || isRemoving} title={$_('logsPage.removeLog')}>
+				<Trash2 size={16} />
+				<span>{isRemoving ? $_('logsPage.removing') : $_('logsPage.removeLog')}</span>
 			</button>
 			<button class="icon-button primary" type="button" onclick={openLog} disabled={!desktopAvailable} title={$_('logsPage.openLog')}>
 				<ExternalLink size={16} />
@@ -293,6 +355,15 @@
 		border-color: var(--accent);
 		background: var(--accent-subtle);
 		color: var(--accent);
+	}
+
+	.icon-button.danger {
+		border-color: var(--status-err-text);
+		color: var(--status-err-text);
+	}
+
+	.icon-button.danger:hover:not(:disabled) {
+		background: var(--status-err-bg);
 	}
 
 	.filter-row {

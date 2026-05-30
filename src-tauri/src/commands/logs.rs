@@ -9,6 +9,16 @@ pub fn read_application_log(app: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn download_application_log(app: tauri::AppHandle, destination: String) -> Result<(), String> {
+    crate::logging::copy_application_log(&app, std::path::Path::new(&destination))
+}
+
+#[tauri::command]
+pub fn remove_application_log(app: tauri::AppHandle) -> Result<(), String> {
+    crate::logging::clear_application_log(&app)
+}
+
+#[tauri::command]
 pub fn open_application_log(app: tauri::AppHandle) -> Result<(), String> {
     let path = crate::logging::ensure_application_log(&app)?;
     match tauri_plugin_opener::open_path(&path, None::<&str>) {

@@ -933,6 +933,12 @@
 		"refresh": "Frissítés",
 		"openLog": "Alkalmazásnapló megnyitása",
 		"copyPath": "Útvonal másolása",
+		"downloadLog": "Napló letöltése",
+		"downloading": "Letöltés…",
+		"removeLog": "Napló eltávolítása",
+		"removing": "Eltávolítás…",
+		"removeConfirm": "Eltávolítja az aktuális alkalmazásnapló tartalmát?",
+		"logFileFilter": "Naplófájl",
 		"empty": "Még nincsenek alkalmazásnaplók",
 		"noMatches": "Nincs a szűrőnek megfelelő naplósor",
 		"desktopOnly": "Az alkalmazásnaplók az asztali alkalmazásban érhetők el.",
@@ -946,6 +952,10 @@
 		"toasts": {
 			"opened": "Alkalmazásnapló megnyitva",
 			"openFailed": "Az alkalmazásnapló megnyitása sikertelen",
+			"downloaded": "Alkalmazásnapló letöltve",
+			"downloadFailed": "Az alkalmazásnapló letöltése sikertelen",
+			"removed": "Alkalmazásnapló eltávolítva",
+			"removeFailed": "Az alkalmazásnapló eltávolítása sikertelen",
 			"pathCopied": "Napló útvonala másolva",
 			"copyFailed": "A napló útvonalának másolása sikertelen",
 			"clipboardUnavailable": "A vágólap nem érhető el"
