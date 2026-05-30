@@ -1,11 +1,12 @@
 use anyhow::Result;
-use postgresql_embedded::{PostgreSQL, Settings};
+use postgresql_embedded::{PostgreSQL, Settings, V18};
 use std::path::PathBuf;
 use std::time::Duration;
 
 const PG_PORT: u16 = 15432;
 const PG_USER: &str = "postgres";
 const PG_PASS: &str = "sermon_helper_embedded";
+const PG_RELEASES_URL: &str = "https://github.com/zonkyio/embedded-postgres-binaries";
 
 pub struct EmbeddedDb {
     pub pg: PostgreSQL,
@@ -17,6 +18,8 @@ impl EmbeddedDb {
         let db_name = "sermon_helper";
 
         let settings = Settings {
+            releases_url: PG_RELEASES_URL.to_string(),
+            version: (*V18).clone(),
             port: PG_PORT,
             installation_dir: data_dir.join("pg_install"),
             data_dir: data_dir.join("pg_data"),
@@ -25,6 +28,14 @@ impl EmbeddedDb {
             password: PG_PASS.to_string(),
             ..Settings::default()
         };
+
+        tracing::info!(
+            releases_url = %settings.releases_url,
+            version = %settings.version,
+            installation_dir = %settings.installation_dir.display(),
+            data_dir = %settings.data_dir.display(),
+            "Configuring embedded PostgreSQL"
+        );
 
         let mut pg = PostgreSQL::new(settings);
         pg.setup().await?;
