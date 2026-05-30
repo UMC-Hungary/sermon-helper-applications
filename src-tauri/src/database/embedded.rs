@@ -1,5 +1,9 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use postgresql_embedded::{PostgreSQL, Settings, V18};
+#[cfg(target_os = "macos")]
+use std::fs;
+#[cfg(target_os = "macos")]
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -16,12 +20,16 @@ pub struct EmbeddedDb {
 impl EmbeddedDb {
     pub async fn start(data_dir: PathBuf) -> Result<Self> {
         let db_name = "sermon_helper";
+        let installation_dir = data_dir.join("pg_install");
+
+        #[cfg(target_os = "macos")]
+        remove_incompatible_macos_postgres_installations(&installation_dir)?;
 
         let settings = Settings {
             releases_url: PG_RELEASES_URL.to_string(),
             version: (*V18).clone(),
             port: PG_PORT,
-            installation_dir: data_dir.join("pg_install"),
+            installation_dir,
             data_dir: data_dir.join("pg_data"),
             temporary: false,
             username: PG_USER.to_string(),
@@ -43,7 +51,9 @@ impl EmbeddedDb {
         // If start fails (stale process from a previous session left on the
         // port), kill whatever is using the port and retry once.
         if let Err(e) = pg.start().await {
-            tracing::warn!("PG start failed ({e}); killing stale process on port {PG_PORT} and retrying");
+            tracing::warn!(
+                "PG start failed ({e}); killing stale process on port {PG_PORT} and retrying"
+            );
             kill_on_port(PG_PORT).await;
             tokio::time::sleep(Duration::from_secs(2)).await;
             pg.start().await?;
@@ -62,6 +72,65 @@ impl EmbeddedDb {
         self.pg.stop().await?;
         Ok(())
     }
+}
+
+#[cfg(target_os = "macos")]
+fn remove_incompatible_macos_postgres_installations(install_root: &Path) -> Result<()> {
+    if !install_root.exists() {
+        return Ok(());
+    }
+
+    if is_incompatible_macos_postgres_installation(install_root) {
+        remove_incompatible_macos_postgres_installation(install_root)?;
+        return Ok(());
+    }
+
+    let entries = fs::read_dir(install_root).with_context(|| {
+        format!(
+            "failed to inspect embedded PostgreSQL installation directory {}",
+            install_root.display()
+        )
+    })?;
+
+    for entry in entries {
+        let path = entry
+            .with_context(|| {
+                format!(
+                    "failed to read embedded PostgreSQL installation entry in {}",
+                    install_root.display()
+                )
+            })?
+            .path();
+
+        if path.is_dir() && is_incompatible_macos_postgres_installation(&path) {
+            remove_incompatible_macos_postgres_installation(&path)?;
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn is_incompatible_macos_postgres_installation(installation_dir: &Path) -> bool {
+    let lib_dir = installation_dir.join("lib");
+
+    lib_dir.join("libpq.5.dylib").exists()
+        && (!lib_dir.join("libssl.3.dylib").exists() || !lib_dir.join("libcrypto.3.dylib").exists())
+}
+
+#[cfg(target_os = "macos")]
+fn remove_incompatible_macos_postgres_installation(installation_dir: &Path) -> Result<()> {
+    tracing::warn!(
+        installation_dir = %installation_dir.display(),
+        "Removing incompatible embedded PostgreSQL installation; it does not bundle OpenSSL dylibs"
+    );
+
+    fs::remove_dir_all(installation_dir).with_context(|| {
+        format!(
+            "failed to remove incompatible embedded PostgreSQL installation {}",
+            installation_dir.display()
+        )
+    })
 }
 
 /// Kill any processes listening on `port` using `lsof` + SIGTERM.
@@ -87,5 +156,34 @@ async fn kill_on_port(port: u16) {
                 .status()
                 .await;
         }
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::*;
+    use std::fs::File;
+
+    #[test]
+    fn removes_installations_missing_bundled_openssl() -> Result<()> {
+        let install_root =
+            std::env::temp_dir().join(format!("metocast-pg-install-test-{}", uuid::Uuid::new_v4()));
+        let broken_lib_dir = install_root.join("18.3.0").join("lib");
+        let valid_lib_dir = install_root.join("18.4.0").join("lib");
+
+        fs::create_dir_all(&broken_lib_dir)?;
+        fs::create_dir_all(&valid_lib_dir)?;
+        File::create(broken_lib_dir.join("libpq.5.dylib"))?;
+        File::create(valid_lib_dir.join("libpq.5.dylib"))?;
+        File::create(valid_lib_dir.join("libssl.3.dylib"))?;
+        File::create(valid_lib_dir.join("libcrypto.3.dylib"))?;
+
+        remove_incompatible_macos_postgres_installations(&install_root)?;
+
+        assert!(!install_root.join("18.3.0").exists());
+        assert!(install_root.join("18.4.0").exists());
+
+        fs::remove_dir_all(install_root)?;
+        Ok(())
     }
 }
