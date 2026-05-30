@@ -45,18 +45,24 @@ impl EmbeddedDb {
             "Configuring embedded PostgreSQL"
         );
 
-        let mut pg = PostgreSQL::new(settings);
-        pg.setup().await?;
+        let mut pg = PostgreSQL::new(settings.clone());
+        if let Err(error) = setup_and_start_postgres(&mut pg).await {
+            #[cfg(target_os = "macos")]
+            if is_homebrew_openssl_dyld_error(&error) {
+                tracing::warn!(
+                    error = %error,
+                    installation_dir = %settings.installation_dir.display(),
+                    "Embedded PostgreSQL startup used an incompatible Homebrew-linked binary; reinstalling binaries and retrying"
+                );
+                remove_macos_postgres_install_root(&settings.installation_dir)?;
+                pg = PostgreSQL::new(settings);
+                setup_and_start_postgres(&mut pg).await?;
+            } else {
+                return Err(error);
+            }
 
-        // If start fails (stale process from a previous session left on the
-        // port), kill whatever is using the port and retry once.
-        if let Err(e) = pg.start().await {
-            tracing::warn!(
-                "PG start failed ({e}); killing stale process on port {PG_PORT} and retrying"
-            );
-            kill_on_port(PG_PORT).await;
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            pg.start().await?;
+            #[cfg(not(target_os = "macos"))]
+            return Err(error);
         }
 
         if !pg.database_exists(db_name).await? {
@@ -72,6 +78,23 @@ impl EmbeddedDb {
         self.pg.stop().await?;
         Ok(())
     }
+}
+
+async fn setup_and_start_postgres(pg: &mut PostgreSQL) -> Result<()> {
+    pg.setup().await?;
+
+    // If start fails (stale process from a previous session left on the
+    // port), kill whatever is using the port and retry once.
+    if let Err(e) = pg.start().await {
+        tracing::warn!(
+            "PG start failed ({e}); killing stale process on port {PG_PORT} and retrying"
+        );
+        kill_on_port(PG_PORT).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        pg.start().await?;
+    }
+
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -133,6 +156,33 @@ fn remove_incompatible_macos_postgres_installation(installation_dir: &Path) -> R
     })
 }
 
+#[cfg(target_os = "macos")]
+fn is_homebrew_openssl_dyld_error(error: &anyhow::Error) -> bool {
+    let message = format!("{error:#}");
+
+    message.contains("Library not loaded: /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib")
+        || message.contains("Library not loaded: /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib")
+}
+
+#[cfg(target_os = "macos")]
+fn remove_macos_postgres_install_root(install_root: &Path) -> Result<()> {
+    if !install_root.exists() {
+        return Ok(());
+    }
+
+    tracing::warn!(
+        installation_dir = %install_root.display(),
+        "Removing embedded PostgreSQL installation root before reinstall"
+    );
+
+    fs::remove_dir_all(install_root).with_context(|| {
+        format!(
+            "failed to remove embedded PostgreSQL installation root {}",
+            install_root.display()
+        )
+    })
+}
+
 /// Kill any processes listening on `port` using `lsof` + SIGTERM.
 async fn kill_on_port(port: u16) {
     let output = match tokio::process::Command::new("lsof")
@@ -185,5 +235,14 @@ mod tests {
 
         fs::remove_dir_all(install_root)?;
         Ok(())
+    }
+
+    #[test]
+    fn detects_homebrew_openssl_dyld_errors() {
+        let error = anyhow::anyhow!(
+            "Command error: stdout=; stderr=dyld[1828]: Library not loaded: /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib"
+        );
+
+        assert!(is_homebrew_openssl_dyld_error(&error));
     }
 }
