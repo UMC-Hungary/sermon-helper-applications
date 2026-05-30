@@ -706,7 +706,8 @@
 		"liveEvents": "Élő Közvetítések & Videók",
 		"presentations": "Prezentációk",
 		"obsCaption": "OBS Felirat",
-		"obsDevices": "Eszközfigyelő"
+		"obsDevices": "Eszközfigyelő",
+		"logs": "Naplók"
 	},
 	"presentations": {
 		"title": "Prezentációk",
@@ -920,6 +921,30 @@
 			"cancel": "Mégse",
 			"editButton": "Szerkesztés",
 			"deleteButton": "Törlés"
+		}
+	},
+	"logsPage": {
+		"title": "Alkalmazásnaplók",
+		"loading": "Naplók betöltése…",
+		"refresh": "Frissítés",
+		"openLog": "Alkalmazásnapló megnyitása",
+		"copyPath": "Útvonal másolása",
+		"empty": "Még nincsenek alkalmazásnaplók",
+		"noMatches": "Nincs a szűrőnek megfelelő naplósor",
+		"desktopOnly": "Az alkalmazásnaplók az asztali alkalmazásban érhetők el.",
+		"filters": {
+			"label": "Naplószint szűrő",
+			"all": "Összes",
+			"info": "Infó",
+			"warn": "Figyelmeztetések",
+			"error": "Hibák"
+		},
+		"toasts": {
+			"opened": "Alkalmazásnapló megnyitva",
+			"openFailed": "Az alkalmazásnapló megnyitása sikertelen",
+			"pathCopied": "Napló útvonala másolva",
+			"copyFailed": "A napló útvonalának másolása sikertelen",
+			"clipboardUnavailable": "A vágólap nem érhető el"
 		}
 	},
 	"errorsPage": {

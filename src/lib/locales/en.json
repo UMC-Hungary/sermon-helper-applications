@@ -706,7 +706,8 @@
 		"liveEvents": "Live Events & Videos",
 		"presentations": "Presentations",
 		"obsCaption": "OBS Caption",
-		"obsDevices": "Device Monitor"
+		"obsDevices": "Device Monitor",
+		"logs": "Logs"
 	},
 	"presentations": {
 		"title": "Presentations",
@@ -906,6 +907,30 @@
 			"cancel": "Cancel",
 			"editButton": "Edit",
 			"deleteButton": "Delete"
+		}
+	},
+	"logsPage": {
+		"title": "Application Logs",
+		"loading": "Loading logs…",
+		"refresh": "Refresh",
+		"openLog": "Open Application Log",
+		"copyPath": "Copy Path",
+		"empty": "No application logs yet",
+		"noMatches": "No log lines match this filter",
+		"desktopOnly": "Application logs are available in the desktop app.",
+		"filters": {
+			"label": "Log level filter",
+			"all": "All",
+			"info": "Info",
+			"warn": "Warnings",
+			"error": "Errors"
+		},
+		"toasts": {
+			"opened": "Application log opened",
+			"openFailed": "Failed to open application log",
+			"pathCopied": "Log path copied",
+			"copyFailed": "Failed to copy log path",
+			"clipboardUnavailable": "Clipboard is unavailable"
 		}
 	},
 	"errorsPage": {

@@ -124,11 +124,6 @@
 		triggerSearch();
 	}
 
-	function handleBackspace() {
-		pptFilter.update((f) => f.slice(0, -1));
-		triggerSearch();
-	}
-
 	function handleClear() {
 		pptFilter.set('');
 		triggerSearch();
@@ -200,7 +195,6 @@
 			{#each ['1','2','3','4','5','6','7','8','9','0'] as digit}
 				<button class="digit-btn" onclick={() => appendDigit(digit)}>{digit}</button>
 			{/each}
-			<button class="digit-btn backspace-btn" onclick={handleBackspace}>⌫</button>
 			<button class="digit-btn clear-btn" onclick={handleClear}>CLR</button>
 		</div>
 	</section>
@@ -517,10 +511,6 @@
 		border: none;
 		border-radius: 0.375rem;
 		cursor: pointer;
-	}
-
-	.backspace-btn {
-		background: var(--status-err-dot);
 	}
 
 	.clear-btn {

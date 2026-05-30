@@ -2,6 +2,7 @@
 mod badge;
 mod bible;
 mod commands;
+mod logging;
 
 // Models, database, server, and connectors are desktop-only.
 #[cfg(desktop)]
@@ -91,6 +92,9 @@ pub fn run() {
         commands::server::get_client_token,
         commands::server::reset_setup,
         commands::server::get_local_ip,
+        commands::logs::get_application_log_path,
+        commands::logs::read_application_log,
+        commands::logs::open_application_log,
         commands::connectors::get_obs_config,
         commands::connectors::save_obs_config,
         commands::connectors::get_obs_status,
@@ -148,16 +152,25 @@ pub fn run() {
         commands::server::get_client_token,
         commands::server::reset_setup,
         commands::server::get_local_ip,
+        commands::logs::get_application_log_path,
+        commands::logs::read_application_log,
+        commands::logs::open_application_log,
     ]);
 
     builder
         .setup(|app| {
-            tracing_subscriber::fmt()
-                .with_env_filter(
-                    tracing_subscriber::EnvFilter::try_from_default_env()
-                        .unwrap_or_else(|_| "info".into()),
-                )
-                .init();
+            match logging::init_application_logging(&app.handle()) {
+                Ok(path) => {
+                    tracing::info!(log_path = %path.display(), "Application logging initialized");
+                }
+                Err(e) => {
+                    eprintln!("Failed to initialize application logging: {e}");
+                    logging::init_fallback_logging();
+                    tracing::warn!("Application file logging unavailable: {e}");
+                }
+            }
+
+            tracing::info!("Application setup started");
 
             // Load settings synchronously so AppRuntime is managed before the
             // UI can call any Tauri command.
@@ -166,6 +179,10 @@ pub fn run() {
             let mode = store
                 .get("mode")
                 .and_then(|v| v.as_str().map(String::from));
+            tracing::info!(
+                mode = mode.as_deref().unwrap_or("unset"),
+                "Application mode loaded"
+            );
 
             // TAURI_AUTH_TOKEN env var overrides the stored token — used in CI
             // and local E2E testing so the token is predictable without needing
@@ -292,6 +309,7 @@ pub fn run() {
             // Server mode is desktop-only (requires embedded PostgreSQL + Axum).
             #[cfg(desktop)]
             if mode.as_deref() == Some("server") {
+                tracing::info!(port, "Server mode detected; starting backend");
                 let handle = app.handle().clone();
                 let obs = Arc::clone(&obs_connector);
                 let vmix = Arc::clone(&vmix_connector);
@@ -385,7 +403,7 @@ pub(crate) async fn start_server(
     let embedded = database::embedded::EmbeddedDb::start(data_dir).await?;
     let connection_url = embedded.connection_url.clone();
 
-    tracing::info!("Connecting pool to {connection_url}");
+    tracing::info!("Connecting pool to embedded PostgreSQL");
     let pool = database::create_pool(&connection_url).await?;
 
     tracing::info!("Running migrations");

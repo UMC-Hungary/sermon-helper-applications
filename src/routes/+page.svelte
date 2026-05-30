@@ -50,6 +50,7 @@
     <li><a href="/events">View all events</a></li>
     <li><a href="/events/new">Create new event</a></li>
     <li><a href="/connect">Connection info &amp; token</a></li>
+    <li><a href="/logs">Application logs</a></li>
     <li><a href="/settings">Connector settings</a></li>
   </ul>
 </section>
