@@ -6,7 +6,7 @@ export function GetFeedbacks(instance: ModuleInstance): CompanionFeedbackDefinit
 		connection_status: {
 			type: 'boolean',
 			name: 'Connection Status',
-			description: 'Shows whether connected to Sermon Helper server',
+			description: 'Shows whether connected to the Metocast server',
 			defaultStyle: {
 				bgcolor: combineRgb(0, 200, 0),
 				color: combineRgb(255, 255, 255),

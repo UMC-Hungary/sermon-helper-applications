@@ -8,7 +8,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			id: 'info',
 			width: 12,
 			label: 'Information',
-			value: 'Connect to Sermon Helper to control Broadlink IR/RF devices and Keynote presentations.',
+			value: 'Connect to Metocast to control Broadlink IR/RF devices and Keynote presentations.',
 		},
 		{
 			type: 'textinput',
@@ -16,7 +16,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Host',
 			width: 8,
 			default: '127.0.0.1',
-			tooltip: 'IP address or hostname of the computer running Sermon Helper',
+			tooltip: 'IP address or hostname of the computer running Metocast',
 		},
 		{
 			type: 'number',
@@ -26,7 +26,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			default: 3737,
 			min: 1,
 			max: 65535,
-			tooltip: 'Sermon Helper WebSocket port (default 3737)',
+			tooltip: 'Metocast WebSocket port (default 3737)',
 		},
 		{
 			type: 'textinput',
@@ -34,7 +34,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			label: 'Auth Token',
 			width: 12,
 			default: '',
-			tooltip: 'Authentication token from Sermon Helper settings',
+			tooltip: 'Authentication token from Metocast settings',
 		},
 		{
 			type: 'number',

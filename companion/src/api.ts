@@ -343,17 +343,17 @@ export class SermonHelperApi {
 			case 'notification': {
 				const level = message.level as string | undefined
 				const msg = message.message as string | undefined
-				if (level === 'warn') console.warn('[SermonHelper]', msg)
-				else console.info('[SermonHelper]', msg)
+				if (level === 'warn') console.warn('[MetocastBridge]', msg)
+				else console.info('[MetocastBridge]', msg)
 				break
 			}
 			case 'error': {
 				const errMsg = message.message as string | undefined
 				if (errMsg === 'unauthorized') {
-					console.error('[SermonHelper] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Sermon Helper app.')
+					console.error('[MetocastBridge] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Metocast app.')
 					this.onConnectionChange?.(false)
 				} else {
-					console.error('[SermonHelper] Server error:', errMsg)
+					console.error('[MetocastBridge] Server error:', errMsg)
 				}
 				break
 			}

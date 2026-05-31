@@ -73,7 +73,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: companion-module-sermon-helper
+          name: companion-module-metocast-bridge
           path: |
             companion/dist/
             companion/companion/
@@ -93,14 +93,14 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v7
         with:
-          name: companion-module-sermon-helper
-          path: pkg/companion-module-sermon-helper
+          name: companion-module-metocast-bridge
+          path: pkg/companion-module-metocast-bridge
 
       - name: Package for release
         run: |
           VERSION="${GITHUB_REF#refs/tags/companion-v}"
-          tar -czf "companion-module-sermon-helper-${VERSION}.tar.gz" \
-            -C pkg companion-module-sermon-helper
+          tar -czf "companion-module-metocast-bridge-${VERSION}.tar.gz" \
+            -C pkg companion-module-metocast-bridge
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -108,22 +108,22 @@ jobs:
           draft: false
           generate_release_notes: false
           body: |
-            Bitfocus Companion module for controlling Sermon Helper via WebSocket.
+            Bitfocus Companion module for controlling Metocast via WebSocket.
 
             ## Installation
 
-            1. Download `companion-module-sermon-helper-*.tar.gz`
+            1. Download `companion-module-metocast-bridge-*.tar.gz`
             2. Extract to your Companion modules folder
-               (e.g. `~/.config/companion/modules/companion-module-sermon-helper/`)
+               (e.g. `~/.config/companion/modules/companion-module-metocast-bridge/`)
             3. Restart Companion
-            4. Add a new connection of type **Sermon Helper**
+            4. Add a new connection of type **Metocast Bridge**
 
             ## Configuration
 
-            - **Host**: IP of the machine running Sermon Helper (default `127.0.0.1`)
-            - **Port**: Sermon Helper WebSocket port (default `3737`)
-            - **Auth Token**: Token from Sermon Helper settings
+            - **Host**: IP of the machine running Metocast (default `127.0.0.1`)
+            - **Port**: Metocast WebSocket port (default `3737`)
+            - **Auth Token**: Token from Metocast settings
 
             All communication uses WebSocket — no REST API required.
           files: |
-            companion-module-sermon-helper-*.tar.gz
+            companion-module-metocast-bridge-*.tar.gz

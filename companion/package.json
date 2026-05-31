@@ -1,5 +1,5 @@
 {
-	"name": "companion-module-metocast",
+	"name": "companion-module-metocast-bridge",
 	"version": "1.0.0",
 	"main": "dist/main.js",
 	"type": "module",

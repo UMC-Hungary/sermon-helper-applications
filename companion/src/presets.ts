@@ -206,7 +206,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 			category: 'PPT Selector',
 			name: `PPT: Slot ${slot}`,
 			style: {
-				text: `$(sermon-helper:ppt_slot_${slot}_name)`,
+				text: `$(metocast-bridge:ppt_slot_${slot}_name)`,
 				size: '14',
 				color: combineRgb(255, 255, 255),
 				bgcolor: combineRgb(100, 100, 100),
@@ -251,7 +251,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'PPT Selector',
 		name: 'PPT: Filter Status',
 		style: {
-			text: 'Filter:\\n$(sermon-helper:ppt_filter)\\n$(sermon-helper:ppt_match_count) files',
+			text: 'Filter:\\n$(metocast-bridge:ppt_filter)\\n$(metocast-bridge:ppt_match_count) files',
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(50, 50, 50),
@@ -273,7 +273,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'PPT Selector',
 		name: 'PPT: Current Folder',
 		style: {
-			text: '📁\\n$(sermon-helper:ppt_folder_name)',
+			text: '📁\\n$(metocast-bridge:ppt_folder_name)',
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(70, 70, 70),
@@ -610,7 +610,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'Presentation Control',
 		name: 'Slide Status',
 		style: {
-			text: '$(sermon-helper:ppt_document)\\n$(sermon-helper:ppt_current_slide)/$(sermon-helper:ppt_total_slides)',
+			text: '$(metocast-bridge:ppt_document)\\n$(metocast-bridge:ppt_current_slide)/$(metocast-bridge:ppt_total_slides)',
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(50, 50, 50),

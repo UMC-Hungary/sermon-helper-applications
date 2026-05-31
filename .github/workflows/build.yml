@@ -822,7 +822,7 @@ jobs:
           rm -rf node_modules
           pnpm install --prod
           cd ..
-          tar -czf "companion-module-metocast-${VERSION}.tar.gz" \
+          tar -czf "companion-module-metocast-bridge-${VERSION}.tar.gz" \
             -C companion \
             dist companion package.json node_modules
 
@@ -830,7 +830,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: companion-plugin
-          path: companion-module-metocast-*.tar.gz
+          path: companion-module-metocast-bridge-*.tar.gz
 
   # ──────────────────────────────────────────────
   # Release (version tags only)
@@ -1014,8 +1014,8 @@ jobs:
 
             ## Companion Plugin
 
-            Bitfocus Companion module for controlling Sermon Helper via WebSocket.
-            Download `companion-module-sermon-helper-*.tar.gz` and install via
+            Bitfocus Companion module for controlling Metocast via WebSocket.
+            Download `companion-module-metocast-bridge-*.tar.gz` and install via
             Companion's module developer mode by extracting to your Companion modules folder.
 
           files: |
@@ -1046,4 +1046,4 @@ jobs:
             artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
             artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
             artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
-            artifacts/companion-plugin/companion-module-metocast-*.tar.gz
+            artifacts/companion-plugin/companion-module-metocast-bridge-*.tar.gz

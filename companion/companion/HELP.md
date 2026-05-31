@@ -1,4 +1,4 @@
-# Metocast - Companion Module
+# Metocast Bridge - Companion Module
 
 Control Broadlink IR/RF devices and presentations through the Metocast desktop application via WebSocket.
 
@@ -54,18 +54,18 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 
 | Variable | Description |
 |----------|-------------|
-| `$(sermon-helper:connection_status)` | Connected / Disconnected |
-| `$(sermon-helper:last_command)` | Name of the last executed command |
-| `$(sermon-helper:command_count)` | Total available commands |
-| `$(sermon-helper:ppt_filter)` | Current digit filter |
-| `$(sermon-helper:ppt_match_count)` | Number of matching files |
-| `$(sermon-helper:ppt_folder_name)` | Selected folder name |
-| `$(sermon-helper:ppt_slot_1_name)` … `ppt_slot_5_name` | File names in slots 1–5 |
-| `$(sermon-helper:ppt_current_slide)` | Current slide number |
-| `$(sermon-helper:ppt_total_slides)` | Total slides |
-| `$(sermon-helper:ppt_slideshow_active)` | ON / OFF |
-| `$(sermon-helper:ppt_app)` | Presentation app name |
-| `$(sermon-helper:ppt_blanked)` | YES / NO |
+| `$(metocast-bridge:connection_status)` | Connected / Disconnected |
+| `$(metocast-bridge:last_command)` | Name of the last executed command |
+| `$(metocast-bridge:command_count)` | Total available commands |
+| `$(metocast-bridge:ppt_filter)` | Current digit filter |
+| `$(metocast-bridge:ppt_match_count)` | Number of matching files |
+| `$(metocast-bridge:ppt_folder_name)` | Selected folder name |
+| `$(metocast-bridge:ppt_slot_1_name)` … `ppt_slot_5_name` | File names in slots 1–5 |
+| `$(metocast-bridge:ppt_current_slide)` | Current slide number |
+| `$(metocast-bridge:ppt_total_slides)` | Total slides |
+| `$(metocast-bridge:ppt_slideshow_active)` | ON / OFF |
+| `$(metocast-bridge:ppt_app)` | Presentation app name |
+| `$(metocast-bridge:ppt_blanked)` | YES / NO |
 
 ## Troubleshooting
 

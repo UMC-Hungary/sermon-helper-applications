@@ -1,7 +1,7 @@
 {
-	"id": "metocast",
-	"name": "metocast",
-	"shortname": "Metocast",
+	"id": "metocast-bridge",
+	"name": "metocast-bridge",
+	"shortname": "Metocast Bridge",
 	"description": "Control Broadlink IR/RF devices and presentations through the Metocast application",
 	"version": "1.0.0",
 	"license": "MIT",
@@ -13,7 +13,7 @@
 			"email": "author@example.com"
 		}
 	],
-	"legacyIds": [],
+	"legacyIds": ["metocast"],
 	"runtime": {
 		"type": "node18",
 		"api": "nodejs-ipc",
