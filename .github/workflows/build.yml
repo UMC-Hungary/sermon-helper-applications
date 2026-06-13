@@ -858,7 +858,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          REPO="UMC-Hungary/metocast"
+          REPO="UMC-Hungary/sermon-helper-applications"
           shopt -s nullglob
 
           # Read signatures
@@ -999,13 +999,13 @@ jobs:
 
             ### One-line install (auto-detects platform)
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
             ```
             Detects macOS/Linux and arm64/x86_64 automatically, downloads the right binary, and starts it.
 
             To install without running:
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
             ```
 
             > **Auto-start on RPi** — add to `/etc/rc.local` or create a systemd service pointing to the installed binary.
