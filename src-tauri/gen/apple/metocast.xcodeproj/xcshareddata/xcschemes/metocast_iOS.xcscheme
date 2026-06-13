@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9E8A85CE9D4485F02973DFA0"
-               BuildableName = "sermon-helper-tauri_iOS.app"
-               BlueprintName = "sermon-helper-tauri_iOS"
-               ReferencedContainer = "container:sermon-helper-tauri.xcodeproj">
+               BuildableName = "metocast_iOS.app"
+               BlueprintName = "metocast_iOS"
+               ReferencedContainer = "container:metocast.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9E8A85CE9D4485F02973DFA0"
-            BuildableName = "sermon-helper-tauri_iOS.app"
-            BlueprintName = "sermon-helper-tauri_iOS"
-            ReferencedContainer = "container:sermon-helper-tauri.xcodeproj">
+            BuildableName = "metocast_iOS.app"
+            BlueprintName = "metocast_iOS"
+            ReferencedContainer = "container:metocast.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -70,9 +70,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9E8A85CE9D4485F02973DFA0"
-            BuildableName = "sermon-helper-tauri_iOS.app"
-            BlueprintName = "sermon-helper-tauri_iOS"
-            ReferencedContainer = "container:sermon-helper-tauri.xcodeproj">
+            BuildableName = "metocast_iOS.app"
+            BlueprintName = "metocast_iOS"
+            ReferencedContainer = "container:metocast.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>
@@ -101,9 +101,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "9E8A85CE9D4485F02973DFA0"
-            BuildableName = "sermon-helper-tauri_iOS.app"
-            BlueprintName = "sermon-helper-tauri_iOS"
-            ReferencedContainer = "container:sermon-helper-tauri.xcodeproj">
+            BuildableName = "metocast_iOS.app"
+            BlueprintName = "metocast_iOS"
+            ReferencedContainer = "container:metocast.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <CommandLineArguments>

@@ -9,6 +9,7 @@
 	let standaloneSocket: WebSocket | null = null;
 	let standaloneState = $state<PresenterState | null>(null);
 	let token = $state<string | null>(null);
+	let svgObjectUrl = $state<string | null>(null);
 
 	function connect() {
 		// wsPort param lets the presenter page connect to the API server even when
@@ -54,6 +55,7 @@
 
 	const EMU_PER_PT = 12700;
 	const DEFAULT_FONT_SIZE_PT = 28.0;
+	const COUNTER_FONT_SIZE_PT = 18.0;
 
 	let slideAreaEl = $state<HTMLElement | null>(null);
 	let scaleFactor = $state(0);
@@ -91,6 +93,10 @@
 	function fontSizePx(fontSizePt: number): number {
 		const pt = fontSizePt > 0 ? fontSizePt : DEFAULT_FONT_SIZE_PT;
 		return pt * EMU_PER_PT * scaleFactor;
+	}
+
+	function counterFontSizePx(): number {
+		return COUNTER_FONT_SIZE_PT * EMU_PER_PT * scaleFactor;
 	}
 
 	// ── Keyboard / navigation ─────────────────────────────────────────────────
@@ -137,11 +143,31 @@
 			: null
 	);
 
+	const currentSvgSlide = $derived(
+		standaloneState && standaloneState.loaded && standaloneState.currentSlide > 0
+			? standaloneState.svgSlides.find((s) => s.index === standaloneState!.currentSlide) ?? null
+			: null
+	);
+
+	$effect(() => {
+		const svg = currentSvgSlide?.svg ?? null;
+		if (!svg) {
+			svgObjectUrl = null;
+			return;
+		}
+
+		const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+		svgObjectUrl = url;
+		return () => URL.revokeObjectURL(url);
+	});
+
 	const slideParagraphs = $derived(currentSlide?.paragraphs ?? []);
 	const slideIndex = $derived(standaloneState?.currentSlide ?? 0);
 	const slideTotal = $derived(standaloneState?.totalSlides ?? 0);
 	const isLoaded = $derived(standaloneState?.loaded ?? false);
 	const isMuted = $derived(standaloneState?.muted ?? false);
+	const renderMode = $derived(standaloneState?.renderMode ?? 'text');
+	const shouldRenderSvg = $derived(renderMode === 'svg' && currentSvgSlide !== null);
 
 	// ── Counter paragraph detection ───────────────────────────────────────────
 	// The counter (slide number / verse reference) is a center-aligned paragraph
@@ -189,33 +215,41 @@
 			<p class="hint">Load a .pptx file from the Presentations page to begin.</p>
 		</div>
 	{:else}
-		<div class="slide-area" bind:this={slideAreaEl}>
-			<div class="main-content" style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}>
-				<div class="text-container">
-					{#each mainParagraphs as para, i (i)}
-						<p
-							class="slide-text"
-							style="text-align: {para.align}; font-size: {fontSizePx(para.fontSizePt)}px"
-						>
-							{#each para.lines as line, i}
-								{#if i > 0}<br>{/if}{line}
-							{/each}
-						</p>
-					{/each}
-				</div>
+		{#if shouldRenderSvg}
+			<div class="svg-stage">
+				{#if svgObjectUrl}
+					<img class="svg-slide" src={svgObjectUrl} alt="Current slide">
+				{/if}
 			</div>
-			{#if counterParagraph}
-				<p
-					class="counter-text"
-					style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}
-					style="font-size: {fontSizePx(counterParagraph.fontSizePt)}px"
-				>
-					{#each counterParagraph.lines as line, i}
-						{#if i > 0}<br>{/if}{line}
-					{/each}
-				</p>
-			{/if}
-		</div>
+		{:else}
+			<div class="slide-area" bind:this={slideAreaEl}>
+				<div class="main-content" style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}>
+					<div class="text-container">
+						{#each mainParagraphs as para, i (i)}
+							<p
+								class="slide-text"
+								style="text-align: {para.align}; font-size: {fontSizePx(para.fontSizePt)}px"
+							>
+								{#each para.lines as line, i}
+									{#if i > 0}<br>{/if}{line}
+								{/each}
+							</p>
+						{/each}
+					</div>
+				</div>
+				{#if counterParagraph}
+					<p
+						class="counter-text"
+						style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}
+						style="font-size: {counterFontSizePx()}px"
+					>
+						{#each counterParagraph.lines as line, i}
+							{#if i > 0}<br>{/if}{line}
+						{/each}
+					</p>
+				{/if}
+			</div>
+		{/if}
 
 		{#if token}
 			<div class="nav-bar">
@@ -265,6 +299,24 @@
 		box-sizing: border-box;
 	}
 
+	.svg-stage {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #000;
+		overflow: hidden;
+	}
+
+	.svg-slide {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		display: block;
+		background: #000;
+	}
+
 	.main-content {
 		flex: 1;
 		display: flex;
@@ -298,17 +350,19 @@
 		margin-top: 0.35em;
 	}
 
-	/* Counter pinned to the very bottom of the content area */
 	.counter-text {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 8%;
+		box-sizing: border-box;
 		margin: 0;
-		padding: 0.5vw 0 0;
+		padding: 0 10%;
 		text-align: center;
 		font-family: Helvetica, Arial, sans-serif;
 		font-weight: 700;
 		line-height: 1.2;
 		color: #fff;
-		width: 100%;
-		flex-shrink: 0;
 	}
 
 	/* ── Navigation bar — overlays the slide content ──────────────────────── */

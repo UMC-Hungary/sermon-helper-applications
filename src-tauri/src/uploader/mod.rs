@@ -120,12 +120,8 @@ impl UploadService {
                     .execute(&self.pool)
                     .await;
 
-                    broadcast_upload_paused(
-                        &self.ws_clients,
-                        row.recording_id,
-                        "OBS is streaming",
-                    )
-                    .await;
+                    broadcast_upload_paused(&self.ws_clients, row.recording_id, "OBS is streaming")
+                        .await;
                 }
             }
             return;

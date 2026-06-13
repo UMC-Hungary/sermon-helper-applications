@@ -144,7 +144,7 @@
 		},
 		"obsUpdated": {
 			"title": "OBS Updated",
-			"description": "Sermon title has been updated in OBS"
+			"description": "Service title has been updated in OBS"
 		},
 		"pptGenerated": {
 			"title": "PPT Generated",
@@ -182,7 +182,7 @@
 	},
 	"bible": {
 		"title": "Bible Editor",
-		"subtitle": "Search, fetch, and edit scripture texts for your sermon",
+		"subtitle": "Search, fetch, and edit scripture texts for your service",
 		"tabs": {
 			"textus": "Textus",
 			"leckio": "Leckio"

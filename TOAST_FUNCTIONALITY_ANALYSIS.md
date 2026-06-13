@@ -1,6 +1,6 @@
 # Toast Notification Functionalities Analysis
 
-This document outlines all toast notification use cases in the sermon-helper-applications system, organized by functionality and severity level. Use this as a prompt for design AI tools to improve notification patterns, messaging, icons, animations, and layouts.
+This document outlines all toast notification use cases in the metocast system, organized by functionality and severity level. Use this as a prompt for design AI tools to improve notification patterns, messaging, icons, animations, and layouts.
 
 ## Toast Categories Overview
 

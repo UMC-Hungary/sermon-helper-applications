@@ -81,7 +81,13 @@ impl FacebookConnector {
         self.stop_internal().await;
         let guard = self.app_handle.lock().await;
         if let Some(app) = guard.as_ref() {
-            set_status(&self.status, &self.status_tx, app, ConnectorStatus::Disconnected).await;
+            set_status(
+                &self.status,
+                &self.status_tx,
+                app,
+                ConnectorStatus::Disconnected,
+            )
+            .await;
         } else {
             *self.status.write().await = ConnectorStatus::Disconnected;
             let _ = self.status_tx.send(ConnectorStatus::Disconnected);
@@ -132,7 +138,7 @@ pub async fn load_tokens(pool: &PgPool) -> Option<StoredToken> {
     }
 
     let row = sqlx::query_as::<_, Row>(
-        "SELECT access_token, expires_at FROM connector_tokens WHERE connector = 'facebook'"
+        "SELECT access_token, expires_at FROM connector_tokens WHERE connector = 'facebook'",
     )
     .fetch_optional(pool)
     .await
@@ -265,9 +271,9 @@ async fn run_token_loop(
         }
 
         // Facebook long-lived tokens last ~60 days; warn when < 10 days remain
-        let needs_renewal = token.expires_at.map_or(false, |exp| {
-            exp - Utc::now() < chrono::Duration::days(10)
-        });
+        let needs_renewal = token
+            .expires_at
+            .map_or(false, |exp| exp - Utc::now() < chrono::Duration::days(10));
 
         if needs_renewal {
             tracing::warn!("Facebook token expiring soon; prompting re-login");
@@ -319,7 +325,9 @@ pub async fn schedule_event(
 
     // Create a Live Video linked to the page
     let live_resp = client
-        .post(format!("https://graph.facebook.com/v19.0/{page_id}/live_videos"))
+        .post(format!(
+            "https://graph.facebook.com/v19.0/{page_id}/live_videos"
+        ))
         .query(&[("access_token", access_token)])
         .json(&serde_json::json!({
             "title": event_title,

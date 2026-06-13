@@ -123,7 +123,7 @@
 			<h2 class="dialog-title">Import Predefined Commands</h2>
 			<p class="dialog-subtitle">
 				Select commands to import for <strong>{device.name}</strong>.
-				These are pre-learned IR/RF codes from sermon-helper-service.
+				These are pre-learned IR/RF codes from metocast-service.
 			</p>
 		</div>
 

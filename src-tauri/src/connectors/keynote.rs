@@ -93,54 +93,42 @@ end tell"#
     }
 
     pub async fn first(&self) -> Result<(), String> {
-        Self::run_applescript(
-            r#"tell application "Keynote" to show slide 1 of document 1"#,
-        )
-        .await?;
+        Self::run_applescript(r#"tell application "Keynote" to show slide 1 of document 1"#)
+            .await?;
         Ok(())
     }
 
     pub async fn last(&self) -> Result<(), String> {
-        Self::run_applescript(
-            r#"tell application "Keynote" to show last slide of document 1"#,
-        )
-        .await?;
+        Self::run_applescript(r#"tell application "Keynote" to show last slide of document 1"#)
+            .await?;
         Ok(())
     }
 
     pub async fn goto(&self, slide: u32) -> Result<(), String> {
-        let script = format!(
-            r#"tell application "Keynote" to show slide {slide} of document 1"#
-        );
+        let script = format!(r#"tell application "Keynote" to show slide {slide} of document 1"#);
         Self::run_applescript(&script).await?;
         Ok(())
     }
 
     pub async fn start_slideshow(&self) -> Result<(), String> {
-        Self::run_applescript(
-            r#"tell application "Keynote" to start slideshow of document 1"#,
-        )
-        .await?;
+        Self::run_applescript(r#"tell application "Keynote" to start slideshow of document 1"#)
+            .await?;
         let status = self.poll_status().await;
         self.update_status(status).await;
         Ok(())
     }
 
     pub async fn stop_slideshow(&self) -> Result<(), String> {
-        Self::run_applescript(
-            r#"tell application "Keynote" to stop slideshow of document 1"#,
-        )
-        .await?;
+        Self::run_applescript(r#"tell application "Keynote" to stop slideshow of document 1"#)
+            .await?;
         let status = self.poll_status().await;
         self.update_status(status).await;
         Ok(())
     }
 
     pub async fn close_all(&self) -> Result<(), String> {
-        Self::run_applescript(
-            r#"tell application "Keynote" to close every document saving no"#,
-        )
-        .await?;
+        Self::run_applescript(r#"tell application "Keynote" to close every document saving no"#)
+            .await?;
         let status = self.poll_status().await;
         self.update_status(status).await;
         Ok(())

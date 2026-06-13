@@ -4,6 +4,9 @@ import { CATEGORY_COLORS } from './types.js'
 
 export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions {
 	const presets: CompanionPresetDefinitions = {}
+	const variablePrefix = instance.label
+	const stopOrUnloadName = instance.useWebPresenter ? 'Unload Web Presenter' : 'Stop Slideshow'
+	const stopOrUnloadText = instance.useWebPresenter ? '⏹ Unload' : '⏹ Stop'
 
 	// Generate a preset for each command
 	for (const cmd of instance.commands) {
@@ -55,7 +58,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'Status',
 		name: 'Connection Status',
 		style: {
-			text: 'Sermon\\nHelper',
+			text: 'Meto\\nStream',
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(100, 0, 0),
@@ -206,7 +209,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 			category: 'PPT Selector',
 			name: `PPT: Slot ${slot}`,
 			style: {
-				text: `$(metocast-bridge:ppt_slot_${slot}_name)`,
+				text: `$(${variablePrefix}:ppt_slot_${slot}_name)`,
 				size: '14',
 				color: combineRgb(255, 255, 255),
 				bgcolor: combineRgb(100, 100, 100),
@@ -251,7 +254,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'PPT Selector',
 		name: 'PPT: Filter Status',
 		style: {
-			text: 'Filter:\\n$(metocast-bridge:ppt_filter)\\n$(metocast-bridge:ppt_match_count) files',
+			text: `Filter:\\n$(${variablePrefix}:ppt_filter)\\n$(${variablePrefix}:ppt_match_count) files`,
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(50, 50, 50),
@@ -273,7 +276,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'PPT Selector',
 		name: 'PPT: Current Folder',
 		style: {
-			text: '📁\\n$(metocast-bridge:ppt_folder_name)',
+			text: `📁\\n$(${variablePrefix}:ppt_folder_name)`,
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(70, 70, 70),
@@ -364,9 +367,9 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 	presets['presentation_stop'] = {
 		type: 'button',
 		category: 'Presentation Control',
-		name: 'Stop Slideshow',
+		name: stopOrUnloadName,
 		style: {
-			text: '⏹ Stop',
+			text: stopOrUnloadText,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(153, 0, 0),
@@ -610,7 +613,7 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 		category: 'Presentation Control',
 		name: 'Slide Status',
 		style: {
-			text: '$(metocast-bridge:ppt_document)\\n$(metocast-bridge:ppt_current_slide)/$(metocast-bridge:ppt_total_slides)',
+			text: `$(${variablePrefix}:ppt_document)\\n$(${variablePrefix}:ppt_current_slide)/$(${variablePrefix}:ppt_total_slides)`,
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(50, 50, 50),
@@ -621,6 +624,58 @@ export function GetPresets(instance: ModuleInstance): CompanionPresetDefinitions
 				feedbackId: 'slideshow_active',
 				options: {},
 				style: { bgcolor: combineRgb(0, 100, 0) },
+			},
+		],
+	}
+
+	presets['presentation_bible_textus'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Show Textus',
+		style: {
+			text: 'Textus',
+			size: '18',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 120, 95),
+		},
+		steps: [
+			{
+				down: [{ actionId: 'presentation_bible_reference', options: { referenceType: 'textus', eventId: '' } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
+			},
+		],
+	}
+
+	presets['presentation_bible_leckio'] = {
+		type: 'button',
+		category: 'Presentation Control',
+		name: 'Show Lekcio',
+		style: {
+			text: 'Lekcio',
+			size: '18',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(120, 85, 30),
+		},
+		steps: [
+			{
+				down: [{ actionId: 'presentation_bible_reference', options: { referenceType: 'leckio', eventId: '' } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: 'connection_status',
+				options: {},
+				style: { bgcolor: combineRgb(100, 100, 100) },
+				isInverted: true,
 			},
 		],
 	}

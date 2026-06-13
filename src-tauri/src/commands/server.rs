@@ -145,9 +145,7 @@ pub async fn reset_setup(
     app: tauri::AppHandle,
 ) -> Result<(), String> {
     use tauri_plugin_store::StoreExt;
-    let store = app
-        .store("app-settings.json")
-        .map_err(|e| e.to_string())?;
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
     store.delete("mode");
     store.save().map_err(|e| e.to_string())?;
 
@@ -166,9 +164,7 @@ pub fn get_local_ip() -> Option<String> {
 
 async fn save_setting(app: &tauri::AppHandle, key: &str, value: &str) -> Result<(), String> {
     use tauri_plugin_store::StoreExt;
-    let store = app
-        .store("app-settings.json")
-        .map_err(|e| e.to_string())?;
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
     store.set(key, serde_json::Value::String(value.to_string()));
     store.save().map_err(|e| e.to_string())?;
     Ok(())

@@ -1,4 +1,4 @@
-# Sermon Helper Tauri - Codebase Documentation
+# Metocast - Codebase Documentation
 
 **Last Updated:** 2026-01-05
 **Project Type:** Tauri 2 Desktop Application with SvelteKit Frontend
@@ -19,7 +19,7 @@ This is a desktop application for managing church livestreams and presentations.
 ## 🏗️ Project Structure
 
 ```
-sermon-helper-tauri/
+metocast-tauri/
 ├── src/
 │   ├── lib/
 │   │   ├── components/
@@ -257,7 +257,7 @@ youtubeLoggedIn: false;
 
 1. **Implement Dashboard View**
    - Reference: `/home/church-control-app/components/dashboard-view.tsx`
-   - Sermon title management (OBS integration)
+   - Service title management (OBS integration)
    - Bible text inputs (Textus/Leckio)
    - PPT generation buttons
    - Stream control buttons
@@ -331,7 +331,7 @@ pnpm format
 
 - Initialized on 2026-01-05
 - Branch: `main`
-- Initial commit: `b76b2d6` - "Initial commit: Sermon Helper Tauri app with Svelte"
+- Initial commit: `b76b2d6` - "Initial commit: Metocast app with Svelte"
 
 ### .gitignore Coverage
 

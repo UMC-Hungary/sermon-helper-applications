@@ -1,6 +1,6 @@
 {
-	"name": "companion-module-metocast-bridge",
-	"version": "1.0.0",
+	"name": "companion-module-metocast",
+	"version": "2.0.12",
 	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
@@ -10,11 +10,12 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/UMC-Hungary/sermon-helper-applications.git"
+		"url": "git+https://github.com/UMC-Hungary/metocast.git"
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.11.0",
-		"ws": "^8.18.0"
+		"ws": "^8.18.0",
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",

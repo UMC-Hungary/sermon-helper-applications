@@ -1,9 +1,20 @@
 import WebSocket from 'ws'
-import type { ModuleConfig, RfIrCommand, PptFolder, PptFile, PptFilesResponse, PresentationStatus } from './types.js'
+import {
+	PresentationSettingsMessageSchema,
+	PresenterEventListResponseSchema,
+	type BibleReferenceType,
+	type EventSummary,
+	type ModuleConfig,
+	type PptFile,
+	type PptFilesResponse,
+	type PptFolder,
+	type PresentationStatus,
+	type RfIrCommand,
+} from './types.js'
 
 type AnyResolver = (data: unknown) => void
 
-export class SermonHelperApi {
+export class MetocastApi {
 	private config: ModuleConfig
 	private ws: WebSocket | null = null
 	private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
@@ -17,6 +28,9 @@ export class SermonHelperApi {
 	private onPptFoldersChanged?: (folders: PptFolder[]) => void
 	private onPptFileOpened?: (fileName: string, success: boolean, presenterStarted: boolean) => void
 	private onPresentationStatusChanged?: (status: PresentationStatus) => void
+	private onPresentationSettingsChanged?: (useWebPresenter: boolean) => void
+	private onEventsChanged?: () => void
+	private useWebPresenter = false
 
 	constructor(config: ModuleConfig) {
 		this.config = config
@@ -131,6 +145,21 @@ export class SermonHelperApi {
 		return { files: data.files, total: data.files.length, filter: filter ?? null }
 	}
 
+	async getPresenterEvents(): Promise<{ events: EventSummary[]; selectedEventId: string | null }> {
+		const data = await this.wsRequest<unknown>(
+			'events.presenter_list',
+			undefined,
+			'events.presenter_list',
+			5000,
+		)
+		const result = PresenterEventListResponseSchema.safeParse(data)
+		if (!result.success) return { events: [], selectedEventId: null }
+		return {
+			events: result.data.events,
+			selectedEventId: result.data.selectedEventId,
+		}
+	}
+
 	async presentationStatus(): Promise<PresentationStatus | null> {
 		const data = await this.wsRequest<{
 			status: {
@@ -179,6 +208,7 @@ export class SermonHelperApi {
 	}
 
 	async presentationStop(): Promise<{ success: boolean; error?: string }> {
+		if (this.useWebPresenter) return this.presentationClose()
 		const sent = this.sendWsCommand('presentation.stop')
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
@@ -232,6 +262,16 @@ export class SermonHelperApi {
 		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
 	}
 
+	async presentBibleReference(
+		referenceType: BibleReferenceType,
+		eventId?: string,
+	): Promise<{ success: boolean; error?: string }> {
+		const payload: Record<string, unknown> = { reference_type: referenceType }
+		if (eventId) payload['event_id'] = eventId
+		const sent = this.sendWsCommand('presenter.load_bible_reference', payload)
+		return sent ? { success: true } : { success: false, error: 'WebSocket not connected' }
+	}
+
 	// ── WebSocket management ──────────────────────────────────────────────────
 
 	/** Send a command over the active WebSocket. Returns true if sent. */
@@ -250,11 +290,15 @@ export class SermonHelperApi {
 		onPptFoldersChanged?: (folders: PptFolder[]) => void
 		onPptFileOpened?: (fileName: string, success: boolean, presenterStarted: boolean) => void
 		onPresentationStatusChanged?: (status: PresentationStatus) => void
+		onPresentationSettingsChanged?: (useWebPresenter: boolean) => void
+		onEventsChanged?: () => void
 	}): void {
 		this.onConnectionChange = callbacks.onConnectionChange
 		this.onPptFoldersChanged = callbacks.onPptFoldersChanged
 		this.onPptFileOpened = callbacks.onPptFileOpened
 		this.onPresentationStatusChanged = callbacks.onPresentationStatusChanged
+		this.onPresentationSettingsChanged = callbacks.onPresentationSettingsChanged
+		this.onEventsChanged = callbacks.onEventsChanged
 	}
 
 	connectWebSocket(): void {
@@ -295,6 +339,14 @@ export class SermonHelperApi {
 
 	private handleMessage(message: { type: string; [key: string]: unknown }): void {
 		switch (message.type) {
+			case 'presentation.settings': {
+				const result = PresentationSettingsMessageSchema.safeParse(message)
+				if (result.success) {
+					this.useWebPresenter = result.data.useWebPresenter
+					this.onPresentationSettingsChanged?.(result.data.useWebPresenter)
+				}
+				break
+			}
 			case 'presentation.status': {
 				const s = message.status as
 					| {
@@ -308,7 +360,7 @@ export class SermonHelperApi {
 					| undefined
 				if (s) {
 					this.onPresentationStatusChanged?.({
-						app: 'web',
+						app: this.useWebPresenter ? 'web' : 'keynote',
 						appRunning: s.appRunning ?? false,
 						slideshowActive: s.slideshowActive ?? false,
 						currentSlide: s.currentSlide ?? null,
@@ -333,6 +385,14 @@ export class SermonHelperApi {
 				this.resolvePending('ppt.search_results', message)
 				break
 			}
+			case 'events.presenter_list': {
+				this.resolvePending('events.presenter_list', message)
+				break
+			}
+			case 'event.changed': {
+				this.onEventsChanged?.()
+				break
+			}
 			case 'ppt.folders_changed': {
 				// Server broadcast: folder list changed — fetch fresh list and notify
 				void this.getPptFolders().then((folders) => {
@@ -343,17 +403,17 @@ export class SermonHelperApi {
 			case 'notification': {
 				const level = message.level as string | undefined
 				const msg = message.message as string | undefined
-				if (level === 'warn') console.warn('[MetocastBridge]', msg)
-				else console.info('[MetocastBridge]', msg)
+				if (level === 'warn') console.warn('[Metocast]', msg)
+				else console.info('[Metocast]', msg)
 				break
 			}
 			case 'error': {
 				const errMsg = message.message as string | undefined
 				if (errMsg === 'unauthorized') {
-					console.error('[MetocastBridge] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Metocast app.')
+					console.error('[Metocast] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Metocast app.')
 					this.onConnectionChange?.(false)
 				} else {
-					console.error('[MetocastBridge] Server error:', errMsg)
+					console.error('[Metocast] Server error:', errMsg)
 				}
 				break
 			}

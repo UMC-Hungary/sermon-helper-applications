@@ -1,6 +1,6 @@
 # Presenter Receiver
 
-A standalone binary that connects to the Sermon Helper server over WebSocket and renders presentation slides directly on a display — no browser required. Designed for Raspberry Pi running Raspberry Pi OS Lite (Linux framebuffer) or as a secondary window on macOS.
+A standalone binary that connects to the Metocast server over WebSocket and renders presentation slides directly on a display — no browser required. Designed for Raspberry Pi running Raspberry Pi OS Lite (Linux framebuffer) or as a secondary window on macOS.
 
 ---
 
@@ -20,7 +20,7 @@ A standalone binary that connects to the Sermon Helper server over WebSocket and
 
 The binary runs as a single process with two concurrent parts:
 
-**WebSocket thread** — connects to the Sermon Helper server, sends a registration message, and listens for slide state updates. When a new slide or state arrives it renders the slide to a pixel frame and sends it to the display thread via a channel. Reconnects automatically every 3 seconds on disconnect.
+**WebSocket thread** — connects to the Metocast server, sends a registration message, and listens for slide state updates. When a new slide or state arrives it renders the slide to a pixel frame and sends it to the display thread via a channel. Reconnects automatically every 3 seconds on disconnect.
 
 **Display thread** — owns the output device and polls the channel for new frames every 100 ms. On Linux it writes pixel data directly to `/dev/fb0` (the kernel framebuffer). On macOS it drives a `minifb` window. The display thread also reads the current connection state and composites a status indicator into the top-right corner of every frame before writing to the output.
 
@@ -46,17 +46,17 @@ The installer script auto-detects the platform, installs required system librari
 
 **Install only:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash
 ```
 
 **Install and start immediately:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
+curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
 ```
 
 **Install with auto-start on boot** (Linux / systemd only):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws --service
+curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws --service
 ```
 
 The install command is also available pre-filled with your server's address on the **Connect** page of the Tauri application.
@@ -78,7 +78,7 @@ The install command is also available pre-filled with your server's address on t
 
 ```bash
 # Replace BINARY with the correct name for your platform (see table above)
-curl -fsSL https://github.com/UMC-Hungary/sermon-helper-applications/releases/latest/download/BINARY -o presenter-receiver
+curl -fsSL https://github.com/UMC-Hungary/metocast/releases/latest/download/BINARY -o presenter-receiver
 chmod +x presenter-receiver
 ./presenter-receiver ws://YOUR_SERVER_IP:3737/ws
 ```
@@ -95,7 +95,7 @@ presenter-receiver ws://192.168.1.10:3737/ws
 
 ### With authentication token
 
-If the Sermon Helper server requires a token (recommended for production), pass it via `--token`:
+If the Metocast server requires a token (recommended for production), pass it via `--token`:
 
 ```bash
 presenter-receiver ws://192.168.1.10:3737/ws --token YOUR_TOKEN
@@ -103,9 +103,18 @@ presenter-receiver ws://192.168.1.10:3737/ws --token YOUR_TOKEN
 
 The token is shown on the **Connect** page of the Tauri application under **Auth Token**.
 
+### Local development on macOS
+
+When the Tauri app is running locally, start the receiver from source with:
+
+```bash
+cargo run --manifest-path presenter-receiver/Cargo.toml --bin presenter-receiver -- \
+  ws://127.0.0.1:3737/ws --token YOUR_TOKEN
+```
+
 ### Finding your server address
 
-Open the Sermon Helper desktop app and go to **Connect**. The **Network URL** field shows the address other devices on the same network should use. Copy it and replace `http://` with `ws://`, then append `/ws`:
+Open the Metocast desktop app and go to **Connect**. The **Network URL** field shows the address other devices on the same network should use. Copy it and replace `http://` with `ws://`, then append `/ws`:
 
 ```
 http://192.168.1.10:3737  ->  ws://192.168.1.10:3737/ws
@@ -142,7 +151,7 @@ After the script completes, reboot the device (or kill the running process — t
 
 ## Required WebSocket message format
 
-The presenter receiver speaks a subset of the Sermon Helper WebSocket protocol. All messages are JSON text frames.
+The presenter receiver speaks a subset of the Metocast WebSocket protocol. All messages are JSON text frames.
 
 ### Messages sent by the receiver (client to server)
 
@@ -188,6 +197,7 @@ The receiver ignores all message types it does not recognise. Unknown types do n
     "filePath": "/path/to/file.pptx",
     "currentSlide": 2,
     "totalSlides": 10,
+    "renderMode": "text",
     "muted": false,
     "slides": [
       {
@@ -203,7 +213,8 @@ The receiver ignores all message types it does not recognise. Unknown types do n
           { "text": "Second slide", "align": "left" }
         ]
       }
-    ]
+    ],
+    "svgSlides": []
   }
 }
 ```
@@ -211,10 +222,37 @@ The receiver ignores all message types it does not recognise. Unknown types do n
 Field notes:
 - `loaded` — when `false`, all other fields are at their zero values and the receiver shows a black screen.
 - `currentSlide` — 1-based index into `slides`. `0` means no slide is active.
+- `renderMode` — `"text"` uses the paragraph renderer; `"svg"` uses `svgSlides`.
 - `muted` — when `true`, the receiver renders a black frame regardless of `currentSlide`.
 - `slides` — full array of all slides including their text content. Only the slide at `currentSlide` is rendered.
+- `svgSlides` — full array of self-contained SVG slides when `renderMode` is `"svg"`.
 - `paragraphs[].align` — one of `"left"`, `"center"`, `"right"`, `"justify"`. The receiver maps these to Pango alignment values.
 - `paragraphs[].text` — plain text. Hard line breaks within a paragraph are represented as `\n` characters.
+
+**SVG presenter state** — used when the web presenter opens a normal PPTX in visual mode. The receiver rasterizes the active SVG slide and writes it to the display:
+
+```json
+{
+  "type": "presenter.state",
+  "state": {
+    "loaded": true,
+    "filePath": "/path/to/file.pptx",
+    "currentSlide": 1,
+    "totalSlides": 10,
+    "renderMode": "svg",
+    "muted": false,
+    "slides": [],
+    "svgSlides": [
+      {
+        "index": 1,
+        "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1280 720\">...</svg>",
+        "widthPx": 1280,
+        "heightPx": 720
+      }
+    ]
+  }
+}
+```
 
 **Incremental slide update** — sent when only the active slide number changes (navigation). The receiver updates `currentSlide` and re-renders without replacing the slide content array:
 
@@ -246,4 +284,4 @@ A server is compatible with the receiver if it:
 4. Sends periodic `ping` messages and expects `pong` replies.
 5. Accepts `presenter.register` for informational purposes (the receiver sends it but does not require a response).
 
-The `slides` array must be complete in every `presenter.state` message — partial updates are not supported. If `loaded` is `false`, the `slides` array should be empty and `currentSlide` should be `0`.
+The active render array must be complete in every `presenter.state` message — partial content updates are not supported. If `loaded` is `false`, `slides` and `svgSlides` should be empty and `currentSlide` should be `0`.

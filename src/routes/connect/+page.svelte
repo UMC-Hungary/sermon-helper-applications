@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-  <title>Connect — Sermon Helper</title>
+  <title>Connect — Metocast</title>
 </svelte:head>
 
 <h1>Connection Info</h1>

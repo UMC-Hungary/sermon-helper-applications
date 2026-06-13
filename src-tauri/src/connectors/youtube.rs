@@ -84,7 +84,13 @@ impl YouTubeConnector {
         self.stop_internal().await;
         let guard = self.app_handle.lock().await;
         if let Some(app) = guard.as_ref() {
-            set_status(&self.status, &self.status_tx, app, ConnectorStatus::Disconnected).await;
+            set_status(
+                &self.status,
+                &self.status_tx,
+                app,
+                ConnectorStatus::Disconnected,
+            )
+            .await;
         } else {
             *self.status.write().await = ConnectorStatus::Disconnected;
             let _ = self.status_tx.send(ConnectorStatus::Disconnected);
@@ -394,7 +400,11 @@ pub async fn schedule_event(
         if !resp.status().is_success() {
             let status = resp.status();
             let detail = resp.text().await.unwrap_or_default();
-            return Err(anyhow::anyhow!("YouTube API {} updating broadcast: {}", status, detail));
+            return Err(anyhow::anyhow!(
+                "YouTube API {} updating broadcast: {}",
+                status,
+                detail
+            ));
         }
 
         return Ok(BroadcastResult {
@@ -432,7 +442,11 @@ pub async fn schedule_event(
     if !resp.status().is_success() {
         let status = resp.status();
         let detail = resp.text().await.unwrap_or_default();
-        return Err(anyhow::anyhow!("YouTube API {} creating broadcast: {}", status, detail));
+        return Err(anyhow::anyhow!(
+            "YouTube API {} creating broadcast: {}",
+            status,
+            detail
+        ));
     }
 
     let resp = resp.json::<YtBroadcastInsertResponse>().await?;
@@ -621,9 +635,9 @@ pub async fn fetch_channel_content(
         .await
         .ok_or_else(|| anyhow::anyhow!("No YouTube token stored"))?;
 
-    let needs_refresh = token.expires_at.map_or(false, |exp| {
-        exp - Utc::now() < chrono::Duration::minutes(5)
-    });
+    let needs_refresh = token
+        .expires_at
+        .map_or(false, |exp| exp - Utc::now() < chrono::Duration::minutes(5));
 
     if needs_refresh {
         token = match refresh_tokens(pool, config, &token).await {
@@ -653,7 +667,10 @@ pub async fn fetch_channel_content(
         }
     }
 
-    Ok(ChannelContent { live_broadcasts, videos })
+    Ok(ChannelContent {
+        live_broadcasts,
+        videos,
+    })
 }
 
 /// Fetch all uploads for the authenticated channel, including `liveStreamingDetails`
@@ -710,7 +727,10 @@ async fn fetch_all_uploads(
     let videos_resp = client
         .get("https://www.googleapis.com/youtube/v3/videos")
         .query(&[
-            ("part", "snippet,statistics,contentDetails,status,liveStreamingDetails"),
+            (
+                "part",
+                "snippet,statistics,contentDetails,status,liveStreamingDetails",
+            ),
             ("id", &ids_str),
             ("maxResults", "50"),
         ])
@@ -792,4 +812,3 @@ fn to_channel_video_item(v: VideoItem) -> ChannelVideoItem {
         privacy_status,
     }
 }
-

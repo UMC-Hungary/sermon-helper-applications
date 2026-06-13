@@ -1,4 +1,4 @@
-# Metocast Bridge - Companion Module
+# Metocast - Companion Module
 
 Control Broadlink IR/RF devices and presentations through the Metocast desktop application via WebSocket.
 
@@ -33,11 +33,17 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 
 ### Presentation Control (Keynote)
 - **Presentation: Open File** — open a presentation by path
-- **Presentation: Start / Stop Slideshow**
+- **Presentation: Start / Stop Slideshow** — Stop becomes Unload when Metocast is using the web presenter
 - **Presentation: Close All / Close Latest**
 - **Presentation: Next / Previous / First / Last Slide**
 - **Presentation: Go to Slide** — jump to a specific slide number
 - **Presentation: Toggle Blank Screen**
+- **Presentation: Show Bible Reference** — show Textus or Lekció through the app WebSocket presenter. Leave Event set to “Backend selected event” to let Metocast choose the current/next event.
+
+## Presets
+
+- **Show Textus** — sends `presenter.load_bible_reference` with `reference_type: "textus"` and no `event_id`, so the app backend chooses the event.
+- **Show Lekcio** — sends `presenter.load_bible_reference` with `reference_type: "leckio"` and no `event_id`, so the app backend chooses the event.
 
 ## Feedbacks
 
@@ -52,20 +58,25 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 
 ## Variables
 
+Use your Companion connection label as the variable prefix. For example, if the connection label is `Metocast`, use `$(Metocast:connection_status)`.
+
 | Variable | Description |
 |----------|-------------|
-| `$(metocast-bridge:connection_status)` | Connected / Disconnected |
-| `$(metocast-bridge:last_command)` | Name of the last executed command |
-| `$(metocast-bridge:command_count)` | Total available commands |
-| `$(metocast-bridge:ppt_filter)` | Current digit filter |
-| `$(metocast-bridge:ppt_match_count)` | Number of matching files |
-| `$(metocast-bridge:ppt_folder_name)` | Selected folder name |
-| `$(metocast-bridge:ppt_slot_1_name)` … `ppt_slot_5_name` | File names in slots 1–5 |
-| `$(metocast-bridge:ppt_current_slide)` | Current slide number |
-| `$(metocast-bridge:ppt_total_slides)` | Total slides |
-| `$(metocast-bridge:ppt_slideshow_active)` | ON / OFF |
-| `$(metocast-bridge:ppt_app)` | Presentation app name |
-| `$(metocast-bridge:ppt_blanked)` | YES / NO |
+| `$(<connection-label>:connection_status)` | Connected / Disconnected |
+| `$(<connection-label>:last_command)` | Name of the last executed command |
+| `$(<connection-label>:command_count)` | Total available commands |
+| `$(<connection-label>:ppt_filter)` | Current digit filter |
+| `$(<connection-label>:ppt_match_count)` | Number of matching files |
+| `$(<connection-label>:ppt_folder_name)` | Selected folder name |
+| `$(<connection-label>:ppt_slot_1_name)` … `ppt_slot_5_name` | File names in slots 1–5 |
+| `$(<connection-label>:ppt_current_slide)` | Current slide number |
+| `$(<connection-label>:ppt_total_slides)` | Total slides |
+| `$(<connection-label>:ppt_slideshow_active)` | ON / OFF |
+| `$(<connection-label>:ppt_app)` | Presentation app name |
+| `$(<connection-label>:ppt_backend)` | Active presentation backend |
+| `$(<connection-label>:ppt_blanked)` | YES / NO |
+| `$(<connection-label>:presenter_event_count)` | Number of backend-ordered presenter events |
+| `$(<connection-label>:presenter_selected_event)` | Backend-selected current/next presenter event |
 
 ## Troubleshooting
 

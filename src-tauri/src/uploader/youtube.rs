@@ -147,10 +147,7 @@ pub async fn upload_chunk(
     if status == 200 || status == 201 {
         // Completed
         let body: serde_json::Value = resp.json().await.unwrap_or_default();
-        let video_id = body
-            .get("id")
-            .and_then(|v| v.as_str())
-            .map(String::from);
+        let video_id = body.get("id").and_then(|v| v.as_str()).map(String::from);
         return Ok(UploadChunkResult {
             bytes_uploaded: file_size,
             done: true,
@@ -185,15 +182,9 @@ pub async fn run_upload(
     let upload_uri = match existing_uri {
         Some(uri) if !uri.is_empty() => uri,
         _ => {
-            let uri = initiate_resumable_upload(
-                &client,
-                token,
-                title,
-                description,
-                visibility,
-                total,
-            )
-            .await?;
+            let uri =
+                initiate_resumable_upload(&client, token, title, description, visibility, total)
+                    .await?;
 
             // Persist URI so a crash can resume
             sqlx::query(
@@ -238,13 +229,21 @@ pub async fn run_upload(
                 .execute(pool)
                 .await?;
 
-                broadcast_upload_progress(ws_clients, recording_id, "youtube", offset as i64, total as i64).await;
+                broadcast_upload_progress(
+                    ws_clients,
+                    recording_id,
+                    "youtube",
+                    offset as i64,
+                    total as i64,
+                )
+                .await;
 
                 if result.done {
                     let video_id = result.video_id.as_deref();
-                    let video_url = result.video_id.as_ref().map(|id| {
-                        format!("https://www.youtube.com/watch?v={id}")
-                    });
+                    let video_url = result
+                        .video_id
+                        .as_ref()
+                        .map(|id| format!("https://www.youtube.com/watch?v={id}"));
                     finalize_completed(
                         pool,
                         ws_clients,
@@ -305,13 +304,6 @@ async fn finalize_completed(
     .execute(pool)
     .await?;
 
-    broadcast_upload_completed(
-        ws_clients,
-        recording_id,
-        platform,
-        &video_id,
-        &video_url,
-    )
-    .await;
+    broadcast_upload_completed(ws_clients, recording_id, platform, &video_id, &video_url).await;
     Ok(())
 }

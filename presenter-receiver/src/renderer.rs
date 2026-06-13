@@ -1,12 +1,20 @@
 use cairo::{Context, Format, ImageSurface};
-use pango::{Alignment, FontDescription};
+use pango::{Alignment, FontDescription, WrapMode};
 use pangocairo::functions as pc;
+use resvg::{
+    tiny_skia::{Pixmap, Transform},
+    usvg,
+};
 use std::f64::consts::PI;
 
 const FONT: &str = "Helvetica Neue";
 const BG: (f64, f64, f64) = (0.05, 0.05, 0.08);
 const FG: (f64, f64, f64) = (1.0, 1.0, 1.0);
 const ACCENT: (f64, f64, f64) = (0.3, 0.3, 0.8);
+const COUNTER_FONT_HEIGHT_RATIO: f64 = 0.030;
+const COUNTER_FONT_MIN_SIZE: i32 = 18;
+const COUNTER_FONT_MAX_SIZE: i32 = 54;
+const COUNTER_BOTTOM_RATIO: f64 = 0.92;
 
 /// Render slide paragraphs into a pixel buffer sized to the given display dimensions.
 ///
@@ -15,7 +23,7 @@ const ACCENT: (f64, f64, f64) = (0.3, 0.3, 0.8);
 /// `ParagraphContent.align` field, and `font_size_pt` is the font size from the PPTX
 /// (0 when unknown / legacy format).
 ///
-/// If the last paragraph is center-aligned and its `font_size_pt` is less than 70% of
+/// If the last paragraph is center-aligned and its `font_size_pt` is less than 85% of
 /// the largest size in the slide, it is treated as a slide counter and rendered at the
 /// bottom of the safe area instead of being part of the main vertically-centred block.
 ///
@@ -54,7 +62,10 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
         .filter(|(t, _, _)| !t.is_empty())
         .collect();
 
-    let max_pt = non_empty.iter().map(|(_, _, pt)| *pt).fold(0.0f64, f64::max);
+    let max_pt = non_empty
+        .iter()
+        .map(|(_, _, pt)| *pt)
+        .fold(0.0f64, f64::max);
     let is_counter = |p: (&str, &str, f64)| -> bool {
         max_pt > 0.0 && p.2 > 0.0 && p.2 < max_pt * 0.85 && p.1 == "center"
     };
@@ -82,19 +93,18 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
         (h * 0.80) as i32
     };
 
-    // `lo` is updated inside the block below; used by counter sizing after.
-    let mut found_main_size = 8i32;
-
     if !main_paras.is_empty() {
         let make_layouts = |font_size: i32| -> Vec<pango::Layout> {
             main_paras
                 .iter()
                 .map(|(text, align, _)| {
                     let layout = pc::create_layout(&ctx);
-                    layout.set_font_description(Some(&FontDescription::from_string(
-                        &format!("{FONT} Bold {font_size}"),
-                    )));
+                    layout.set_font_description(Some(&FontDescription::from_string(&format!(
+                        "{FONT} Bold {font_size}"
+                    ))));
                     layout.set_alignment(parse_alignment(align));
+                    layout.set_width(max_w * pango::SCALE);
+                    layout.set_wrap(WrapMode::WordChar);
                     layout.set_text(text);
                     layout
                 })
@@ -121,7 +131,6 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
             }
         }
 
-        found_main_size = lo;
         let layouts = make_layouts(lo);
         let gap = (lo as f64 * 0.50) as i32;
         let text_h: i32 = layouts.iter().map(|l| l.pixel_size().1).sum();
@@ -141,22 +150,20 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
     }
 
     // ── Counter paragraph at the bottom ──────────────────────────────────────
-    if let Some((text, _align, counter_pt)) = counter_para {
-        let counter_size = if max_pt > 0.0 && counter_pt > 0.0 {
-            ((found_main_size as f64) * (counter_pt / max_pt)).max(8.0) as i32
-        } else {
-            (found_main_size as f64 * 0.50).max(8.0) as i32
-        };
+    if let Some((text, _align, _counter_pt)) = counter_para {
+        let counter_size = ((h * COUNTER_FONT_HEIGHT_RATIO).round() as i32)
+            .clamp(COUNTER_FONT_MIN_SIZE, COUNTER_FONT_MAX_SIZE);
         let layout = pc::create_layout(&ctx);
-        layout.set_font_description(Some(&FontDescription::from_string(
-            &format!("{FONT} Bold {counter_size}"),
-        )));
+        layout.set_font_description(Some(&FontDescription::from_string(&format!(
+            "{FONT} Bold {counter_size}"
+        ))));
+        layout.set_width(max_w * pango::SCALE);
+        layout.set_alignment(Alignment::Center);
+        layout.set_wrap(WrapMode::WordChar);
         layout.set_text(text);
-        let (lw, lh) = layout.pixel_size();
-        // Horizontally centre the counter within the text area.
-        let counter_x = pad_x + (max_w as f64 - lw as f64) / 2.0;
-        // Bottom of safe area minus a small margin.
-        let counter_y = h * 0.90 - lh as f64;
+        let (_, lh) = layout.pixel_size();
+        let counter_x = pad_x;
+        let counter_y = h * COUNTER_BOTTOM_RATIO - lh as f64;
         ctx.set_source_rgb(FG.0, FG.1, FG.2);
         ctx.move_to(counter_x, counter_y);
         pc::show_layout(&ctx, &layout);
@@ -175,10 +182,52 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
             // Cairo RGB24: 0x00RRGGBB in native byte order → [B, G, R, X]
             out.push(data[i + 2]); // R
             out.push(data[i + 1]); // G
-            out.push(data[i]);     // B
+            out.push(data[i]); // B
         }
     }
     out
+}
+
+/// Render a self-contained SVG slide into a framebuffer-sized 0x00RRGGBB frame.
+pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, String> {
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+
+    let tree = usvg::Tree::from_data(svg.as_bytes(), &options)
+        .map_err(|err| format!("failed to parse SVG: {err}"))?;
+    let svg_size = tree.size();
+    let scale = (width as f32 / svg_size.width()).min(height as f32 / svg_size.height());
+    let render_width = ((svg_size.width() * scale).round().max(1.0) as u32).min(width);
+    let render_height = ((svg_size.height() * scale).round().max(1.0) as u32).min(height);
+
+    let mut pixmap =
+        Pixmap::new(render_width, render_height).ok_or("failed to allocate SVG pixmap")?;
+    resvg::render(
+        &tree,
+        Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+
+    let mut frame = vec![0u32; (width * height) as usize];
+    let offset_x = ((width - render_width) / 2) as usize;
+    let offset_y = ((height - render_height) / 2) as usize;
+    let frame_width = width as usize;
+
+    for (row, chunk) in pixmap
+        .take_demultiplied()
+        .chunks_exact((render_width * 4) as usize)
+        .enumerate()
+    {
+        for (col, rgba) in chunk.chunks_exact(4).enumerate() {
+            let alpha = rgba[3] as u32;
+            let r = (rgba[0] as u32 * alpha) / 255;
+            let g = (rgba[1] as u32 * alpha) / 255;
+            let b = (rgba[2] as u32 * alpha) / 255;
+            frame[(offset_y + row) * frame_width + offset_x + col] = (r << 16) | (g << 8) | b;
+        }
+    }
+
+    Ok(frame)
 }
 
 /// Composite a small status indicator (coloured dot + optional version text)
@@ -201,7 +250,9 @@ pub fn draw_status_overlay(
 
     let (dr, dg, db) = match state {
         crate::ConnectionState::Connected => (0.0f64, 0.78, 0.38),
-        crate::ConnectionState::Connecting | crate::ConnectionState::Reconnecting => (1.0, 0.55, 0.0),
+        crate::ConnectionState::Connecting | crate::ConnectionState::Reconnecting => {
+            (1.0, 0.55, 0.0)
+        }
         crate::ConnectionState::Failed => (1.0, 0.22, 0.22),
     };
 
@@ -217,9 +268,9 @@ pub fn draw_status_overlay(
         let tmp = ImageSurface::create(Format::ARgb32, 1, 1).unwrap();
         let tmp_ctx = Context::new(&tmp).unwrap();
         let layout = pc::create_layout(&tmp_ctx);
-        layout.set_font_description(Some(&FontDescription::from_string(
-            &format!("{FONT} {font_size}"),
-        )));
+        layout.set_font_description(Some(&FontDescription::from_string(&format!(
+            "{FONT} {font_size}"
+        ))));
         layout.set_text(text);
         layout.pixel_size().0 as f64
     } else {
@@ -246,10 +297,16 @@ pub fn draw_status_overlay(
     let radius = pill_h / 2.0;
     ctx.set_source_rgba(0.0, 0.0, 0.0, 0.55);
     ctx.new_path();
-    ctx.arc(px + radius,          py + radius,          radius, PI,          3.0 * PI / 2.0);
-    ctx.arc(px + pill_w - radius, py + radius,          radius, -PI / 2.0,  0.0);
-    ctx.arc(px + pill_w - radius, py + pill_h - radius, radius, 0.0,         PI / 2.0);
-    ctx.arc(px + radius,          py + pill_h - radius, radius, PI / 2.0,   PI);
+    ctx.arc(px + radius, py + radius, radius, PI, 3.0 * PI / 2.0);
+    ctx.arc(px + pill_w - radius, py + radius, radius, -PI / 2.0, 0.0);
+    ctx.arc(
+        px + pill_w - radius,
+        py + pill_h - radius,
+        radius,
+        0.0,
+        PI / 2.0,
+    );
+    ctx.arc(px + radius, py + pill_h - radius, radius, PI / 2.0, PI);
     ctx.close_path();
     ctx.fill().unwrap();
 
@@ -260,9 +317,9 @@ pub fn draw_status_overlay(
     // Version text to the left of the dot.
     if let Some(ref text) = version_text {
         let layout = pc::create_layout(&ctx);
-        layout.set_font_description(Some(&FontDescription::from_string(
-            &format!("{FONT} {font_size}"),
-        )));
+        layout.set_font_description(Some(&FontDescription::from_string(&format!(
+            "{FONT} {font_size}"
+        ))));
         layout.set_text(text);
         let text_h = layout.pixel_size().1 as f64;
         ctx.set_source_rgba(1.0, 1.0, 1.0, 0.9);

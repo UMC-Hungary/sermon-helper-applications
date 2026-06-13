@@ -7,10 +7,10 @@
 </script>
 
 <svelte:head>
-  <title>Sermon Helper</title>
+  <title>Metocast</title>
 </svelte:head>
 
-<h1>Sermon Helper v2</h1>
+<h1>Metocast</h1>
 
 <section class="status-grid">
   <!-- System info: mode + WebSocket + server URL in one card -->

@@ -6,6 +6,7 @@ use axum::{
     http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
+use chrono::{DateTime, Duration, Local, Utc};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -15,7 +16,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tokio_postgres::AsyncMessage;
-use chrono::Utc;
 use uuid::Uuid;
 
 use sqlx::{PgPool, Row};
@@ -25,13 +25,18 @@ use crate::models::{
     activity,
     cron_job::{self, CreateCronJob, UpdateCronJob},
     device_listener::DeviceListener,
-    event::{fetch_event, CreateBibleReference, CreateConnection, CreateEvent, Event, EventSummary, UpdateEvent},
+    event::{
+        fetch_event, CreateBibleReference, CreateConnection, CreateEvent, Event, EventSummary,
+        UpdateEvent,
+    },
     recording::{CreateRecording, FlagUploadItem, Recording, RecordingUpload},
     untracked_recording,
 };
 use crate::server::ppt;
 use crate::server::presenter;
 use crate::server::AppState;
+
+const PRESENTER_EVENT_CURRENT_WINDOW_MINUTES: i64 = 4 * 60;
 
 // ── Connected client registry ─────────────────────────────────────────────────
 
@@ -101,6 +106,8 @@ enum WsCommand {
     // ── Events ───────────────────────────────────────────────────────────────
     #[serde(rename = "events.list")]
     EventsList,
+    #[serde(rename = "events.presenter_list")]
+    EventsPresenterList,
     #[serde(rename = "events.get")]
     EventsGet { id: Uuid },
     #[serde(rename = "events.create")]
@@ -273,7 +280,10 @@ enum WsCommand {
     // ── Presenter ────────────────────────────────────────────────────────────
     /// Register a human-readable label and hostname for this connection (shown in the UI).
     #[serde(rename = "presenter.register")]
-    PresenterRegister { label: String, hostname: Option<String> },
+    PresenterRegister {
+        label: String,
+        hostname: Option<String>,
+    },
     /// Request the list of currently connected clients (reply to sender only).
     #[serde(rename = "clients.list")]
     ClientsList,
@@ -284,7 +294,15 @@ enum WsCommand {
     #[serde(rename = "pong")]
     Pong { ping_id: i64 },
     #[serde(rename = "presenter.load")]
-    PresenterLoad { file_path: String },
+    PresenterLoad {
+        file_path: String,
+        render_mode: Option<presenter::PresenterRenderMode>,
+    },
+    #[serde(rename = "presenter.load_bible_reference")]
+    PresenterLoadBibleReference {
+        event_id: Option<Uuid>,
+        reference_type: presenter::BibleReferenceType,
+    },
     #[serde(rename = "presenter.unload")]
     PresenterUnload,
     #[serde(rename = "presenter.next")]
@@ -305,7 +323,10 @@ enum WsCommand {
     PresenterUnmute,
     /// Update the raw text content of a single slide (1-based index).
     #[serde(rename = "presenter.slide.update")]
-    PresenterSlideUpdate { slide_index: u32, texts: Vec<String> },
+    PresenterSlideUpdate {
+        slide_index: u32,
+        texts: Vec<String>,
+    },
     // ── Unified Presentation (auto-routes to active backend) ─────────────────
     /// Request the current presentation settings (use_web_presenter flag).
     #[serde(rename = "presentation.get_settings")]
@@ -318,7 +339,10 @@ enum WsCommand {
     PresentationSetUseWebPresenter { enabled: bool },
     /// Open a file: routes to web presenter or Keynote based on the stored setting.
     #[serde(rename = "presentation.open")]
-    PresentationOpen { file_path: String },
+    PresentationOpen {
+        file_path: String,
+        render_mode: Option<presenter::PresenterRenderMode>,
+    },
     /// Start the slideshow (Keynote only; shows notification in web presenter mode).
     #[serde(rename = "presentation.start")]
     PresentationStart,
@@ -410,12 +434,24 @@ async fn make_presentation_status(state: &AppState) -> String {
     let (app_running, slideshow_active, current_slide, total_slides, document_name, blanked) =
         if state.use_web_presenter.load(Ordering::Relaxed) {
             let ps = state.presenter_state.read().await;
-            let doc = ps.file_path.as_ref().and_then(|p| p.split('/').last()).map(str::to_owned);
+            let doc = ps
+                .file_path
+                .as_ref()
+                .and_then(|p| p.split('/').last())
+                .map(str::to_owned);
             (
                 ps.loaded,
                 ps.loaded,
-                if ps.loaded { Some(ps.current_slide) } else { None },
-                if ps.loaded { Some(ps.total_slides) } else { None },
+                if ps.loaded {
+                    Some(ps.current_slide)
+                } else {
+                    None
+                },
+                if ps.loaded {
+                    Some(ps.total_slides)
+                } else {
+                    None
+                },
                 doc,
                 ps.muted,
             )
@@ -423,10 +459,26 @@ async fn make_presentation_status(state: &AppState) -> String {
             #[cfg(target_os = "macos")]
             {
                 let s = state.keynote_connector.get_status().await;
-                (s.app_running, s.slideshow_active, s.current_slide, s.total_slides, s.document_name, false)
+                (
+                    s.app_running,
+                    s.slideshow_active,
+                    s.current_slide,
+                    s.total_slides,
+                    s.document_name,
+                    false,
+                )
             }
             #[cfg(not(target_os = "macos"))]
-            { (false, false, None::<u32>, None::<u32>, None::<String>, false) }
+            {
+                (
+                    false,
+                    false,
+                    None::<u32>,
+                    None::<u32>,
+                    None::<String>,
+                    false,
+                )
+            }
         };
     json!({
         "type": "presentation.status",
@@ -470,7 +522,176 @@ fn ws_ok(tx: &mpsc::UnboundedSender<Message>) {
 }
 
 fn ws_error(tx: &mpsc::UnboundedSender<Message>, msg: &str) {
-    let _ = tx.send(Message::Text(json!({"type":"error","message":msg}).to_string().into()));
+    let _ = tx.send(Message::Text(
+        json!({"type":"error","message":msg}).to_string().into(),
+    ));
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PresenterEventList {
+    events: Vec<EventSummary>,
+    selected_event_id: Option<Uuid>,
+}
+
+async fn fetch_event_summaries(pool: &PgPool) -> Result<Vec<EventSummary>, sqlx::Error> {
+    sqlx::query_as::<_, EventSummary>(
+        r#"SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
+                  COUNT(r.id) AS recording_count,
+                  EXISTS (
+                      SELECT 1 FROM event_activities ea
+                      WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
+                  ) AS is_completed
+           FROM events e
+           LEFT JOIN recordings r ON r.event_id = e.id
+           GROUP BY e.id
+           ORDER BY e.date_time DESC"#,
+    )
+    .fetch_all(pool)
+    .await
+}
+
+async fn fetch_presenter_event_list(pool: &PgPool) -> Result<PresenterEventList, sqlx::Error> {
+    let now = Utc::now();
+    let mut events = fetch_event_summaries(pool).await?;
+    events.sort_by(|a, b| compare_presenter_events(a, b, now));
+    let selected_event_id = select_presenter_event_id(&events, now);
+    Ok(PresenterEventList {
+        events,
+        selected_event_id,
+    })
+}
+
+fn compare_presenter_events(
+    a: &EventSummary,
+    b: &EventSummary,
+    now: DateTime<Utc>,
+) -> std::cmp::Ordering {
+    let today = now.with_timezone(&Local).date_naive();
+    let a_bucket = presenter_event_bucket(a.date_time, now, today);
+    let b_bucket = presenter_event_bucket(b.date_time, now, today);
+    if a_bucket != b_bucket {
+        return a_bucket.cmp(&b_bucket);
+    }
+
+    match a_bucket {
+        0 => {
+            let a_future = a.date_time >= now;
+            let b_future = b.date_time >= now;
+            if a_future != b_future {
+                return b_future.cmp(&a_future);
+            }
+            if a_future {
+                a.date_time.cmp(&b.date_time)
+            } else {
+                b.date_time.cmp(&a.date_time)
+            }
+        }
+        1 => a.date_time.cmp(&b.date_time),
+        _ => b.date_time.cmp(&a.date_time),
+    }
+}
+
+fn presenter_event_bucket(
+    event_time: DateTime<Utc>,
+    now: DateTime<Utc>,
+    today: chrono::NaiveDate,
+) -> u8 {
+    if event_time.with_timezone(&Local).date_naive() == today {
+        0
+    } else if event_time >= now {
+        1
+    } else {
+        2
+    }
+}
+
+fn select_presenter_event_id(events: &[EventSummary], now: DateTime<Utc>) -> Option<Uuid> {
+    let today = now.with_timezone(&Local).date_naive();
+    let current_window = Duration::minutes(PRESENTER_EVENT_CURRENT_WINDOW_MINUTES);
+    events
+        .iter()
+        .filter(|event| {
+            !event.is_completed
+                && event.date_time.with_timezone(&Local).date_naive() == today
+                && event.date_time <= now
+                && now - event.date_time <= current_window
+        })
+        .max_by_key(|event| event.date_time)
+        .or_else(|| {
+            events
+                .iter()
+                .filter(|event| !event.is_completed && event.date_time >= now)
+                .min_by_key(|event| event.date_time)
+        })
+        .or_else(|| events.iter().max_by_key(|event| event.date_time))
+        .map(|event| event.id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    fn local_time(year: i32, month: u32, day: u32, hour: u32, minute: u32) -> DateTime<Utc> {
+        Local
+            .with_ymd_and_hms(year, month, day, hour, minute, 0)
+            .single()
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    fn event(id: Uuid, date_time: DateTime<Utc>, is_completed: bool) -> EventSummary {
+        EventSummary {
+            id,
+            title: id.to_string(),
+            date_time,
+            speaker: String::new(),
+            recording_count: 0,
+            is_completed,
+            created_at: date_time,
+            updated_at: date_time,
+        }
+    }
+
+    #[test]
+    fn selects_recent_same_day_past_event_before_later_future_event() {
+        let now = local_time(2026, 1, 11, 11, 0);
+        let service_id = Uuid::new_v4();
+        let later_id = Uuid::new_v4();
+        let events = vec![
+            event(service_id, local_time(2026, 1, 11, 10, 0), false),
+            event(later_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(select_presenter_event_id(&events, now), Some(service_id));
+    }
+
+    #[test]
+    fn ignores_recent_past_event_after_current_window() {
+        let now = local_time(2026, 1, 11, 15, 1);
+        let old_service_id = Uuid::new_v4();
+        let later_id = Uuid::new_v4();
+        let events = vec![
+            event(old_service_id, local_time(2026, 1, 11, 10, 0), false),
+            event(later_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(select_presenter_event_id(&events, now), Some(later_id));
+    }
+
+    #[test]
+    fn ignores_completed_recent_past_event() {
+        let now = local_time(2026, 1, 11, 11, 0);
+        let completed_id = Uuid::new_v4();
+        let later_id = Uuid::new_v4();
+        let events = vec![
+            event(completed_id, local_time(2026, 1, 11, 10, 0), true),
+            event(later_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(select_presenter_event_id(&events, now), Some(later_id));
+    }
 }
 
 async fn handle_ws_command(
@@ -526,7 +747,8 @@ async fn handle_ws_command(
         // ── PPT ──────────────────────────────────────────────────────────────
         WsCommand::PptSearch { filter } => {
             let files = ppt::search_files_internal(&state.pool, &filter).await;
-            let msg = json!({ "type": "ppt.search_results", "files": files, "filter": filter }).to_string();
+            let msg = json!({ "type": "ppt.search_results", "files": files, "filter": filter })
+                .to_string();
             let clients = state.ws_clients.read().await;
             for tx in clients.values() {
                 let _ = tx.send(Message::Text(msg.clone().into()));
@@ -599,7 +821,9 @@ async fn handle_ws_command(
             let msg = json!({ "type": "clients.list", "clients": clients_vec }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
-        WsCommand::ClientsPing { client_id: target_id } => {
+        WsCommand::ClientsPing {
+            client_id: target_id,
+        } => {
             let ping_sent_at = Utc::now();
             let ping_id = ping_sent_at.timestamp_millis();
             {
@@ -627,47 +851,139 @@ async fn handle_ws_command(
             broadcast_clients_updated(state).await;
         }
         // ── Presenter ────────────────────────────────────────────────────────
-        WsCommand::PresenterLoad { file_path } => {
-            let result = tokio::task::spawn_blocking(move || presenter::parse_pptx(&file_path)).await;
+        WsCommand::PresenterLoad {
+            file_path,
+            render_mode,
+        } => {
+            let mode = render_mode.unwrap_or(presenter::PresenterRenderMode::Text);
+            let result =
+                tokio::task::spawn_blocking(move || presenter::load_pptx(&file_path, mode)).await;
             match result {
-                Ok(Ok(parsed)) => {
-                    let new_state = presenter::PresenterState::from_parsed(parsed);
+                Ok(Ok(new_state)) => {
                     *state.presenter_state.write().await = new_state;
-                    broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                    broadcast_presenter_state(
+                        &state.ws_clients,
+                        &*state.presenter_state.read().await,
+                    )
+                    .await;
                 }
                 Ok(Err(e)) => ws_error(client_tx, &e),
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
+        WsCommand::PresenterLoadBibleReference {
+            event_id,
+            reference_type,
+        } => {
+            let event_id = match event_id {
+                Some(id) => id,
+                None => match fetch_presenter_event_list(&state.pool).await {
+                    Ok(list) => match list.selected_event_id {
+                        Some(id) => id,
+                        None => {
+                            ws_error(client_tx, "No presenter event is available");
+                            return;
+                        }
+                    },
+                    Err(e) => {
+                        ws_error(client_tx, &e.to_string());
+                        return;
+                    }
+                },
+            };
+            let event = match fetch_event(event_id, &state.pool).await {
+                Ok(Some(event)) => event,
+                Ok(None) => {
+                    ws_error(client_tx, "Event not found");
+                    return;
+                }
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
+            };
+            let Some(reference) = event
+                .bible_references
+                .iter()
+                .find(|item| item.r#type == reference_type.as_str())
+            else {
+                ws_error(client_tx, "Bible reference not found for selected event");
+                return;
+            };
+            let verses: Vec<presenter::BibleVerseContent> =
+                match serde_json::from_value(reference.verses.clone()) {
+                    Ok(verses) => verses,
+                    Err(e) => {
+                        ws_error(client_tx, &format!("Invalid Bible verse payload: {e}"));
+                        return;
+                    }
+                };
+            if verses.is_empty() {
+                ws_error(client_tx, "Selected Bible reference has no verses");
+                return;
+            }
+
+            let new_state = presenter::PresenterState::from_bible_reference(
+                &event.title,
+                reference_type,
+                &reference.reference,
+                verses,
+            );
+            *state.presenter_state.write().await = new_state;
+            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                .await;
+            broadcast_presentation_status(&state.ws_clients, state).await;
+        }
         WsCommand::PresenterUnload => {
             *state.presenter_state.write().await = presenter::PresenterState::empty();
-            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterNext => {
             state.presenter_state.write().await.go_next();
-            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_slide_changed(
+                &state.ws_clients,
+                &*state.presenter_state.read().await,
+            )
+            .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterPrev => {
             state.presenter_state.write().await.go_prev();
-            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_slide_changed(
+                &state.ws_clients,
+                &*state.presenter_state.read().await,
+            )
+            .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterFirst => {
             state.presenter_state.write().await.go_first();
-            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_slide_changed(
+                &state.ws_clients,
+                &*state.presenter_state.read().await,
+            )
+            .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterLast => {
             state.presenter_state.write().await.go_last();
-            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_slide_changed(
+                &state.ws_clients,
+                &*state.presenter_state.read().await,
+            )
+            .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterGoto { slide } => {
             state.presenter_state.write().await.go_to(slide);
-            broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_slide_changed(
+                &state.ws_clients,
+                &*state.presenter_state.read().await,
+            )
+            .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterStatus => {
@@ -677,22 +993,35 @@ async fn handle_ws_command(
         }
         WsCommand::PresenterMute => {
             state.presenter_state.write().await.mute();
-            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterUnmute => {
             state.presenter_state.write().await.unmute();
-            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                .await;
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresenterSlideUpdate { slide_index, texts } => {
-            state.presenter_state.write().await.update_slide(slide_index, texts);
-            broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+            let mut presenter_state = state.presenter_state.write().await;
+            if presenter_state.render_mode != presenter::PresenterRenderMode::Text {
+                ws_error(
+                    client_tx,
+                    "Slide text editing is only available in text presenter mode",
+                );
+            } else {
+                presenter_state.update_slide(slide_index, texts);
+                drop(presenter_state);
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                    .await;
+            }
         }
         // ── Unified Presentation ──────────────────────────────────────────────
         WsCommand::PresentationGetSettings => {
             let enabled = state.use_web_presenter.load(Ordering::Relaxed);
-            let msg = json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+            let msg =
+                json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
         WsCommand::PresentationStatus => {
@@ -703,10 +1032,13 @@ async fn handle_ws_command(
             // Close the active presentation before switching backends.
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 *state.presenter_state.write().await = presenter::PresenterState::empty();
-                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                    .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.stop_slideshow().await; }
+                {
+                    let _ = state.keynote_connector.stop_slideshow().await;
+                }
             }
             // Persist to database.
             let _ = sqlx::query(
@@ -719,27 +1051,39 @@ async fn handle_ws_command(
             // Update in-memory flag.
             state.use_web_presenter.store(enabled, Ordering::Relaxed);
             // Broadcast new setting to all clients.
-            let msg = json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+            let msg =
+                json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
             let clients = state.ws_clients.read().await;
             for tx in clients.values() {
                 let _ = tx.send(Message::Text(msg.clone().into()));
             }
         }
-        WsCommand::PresentationOpen { file_path } => {
+        WsCommand::PresentationOpen {
+            file_path,
+            render_mode,
+        } => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
-                let result = tokio::task::spawn_blocking(move || presenter::parse_pptx(&file_path)).await;
+                let mode = render_mode.unwrap_or(presenter::PresenterRenderMode::Svg);
+                let result =
+                    tokio::task::spawn_blocking(move || presenter::load_pptx(&file_path, mode))
+                        .await;
                 match result {
-                    Ok(Ok(parsed)) => {
-                        let new_state = presenter::PresenterState::from_parsed(parsed);
+                    Ok(Ok(new_state)) => {
                         *state.presenter_state.write().await = new_state;
-                        broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                        broadcast_presenter_state(
+                            &state.ws_clients,
+                            &*state.presenter_state.read().await,
+                        )
+                        .await;
                     }
                     Ok(Err(e)) => ws_error(client_tx, &e),
                     Err(e) => ws_error(client_tx, &e.to_string()),
                 }
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.open_file(&file_path).await; }
+                {
+                    let _ = state.keynote_connector.open_file(&file_path).await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
@@ -749,7 +1093,9 @@ async fn handle_ws_command(
                     "▶ Play is only available in Keynote mode. Web Presenter loads and displays on open.").await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.start_slideshow().await; }
+                {
+                    let _ = state.keynote_connector.start_slideshow().await;
+                }
                 broadcast_presentation_status(&state.ws_clients, state).await;
             }
         }
@@ -759,17 +1105,22 @@ async fn handle_ws_command(
                     "⏹ Stop is only available in Keynote mode. Use the Close button to unload the web presentation.").await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.stop_slideshow().await; }
+                {
+                    let _ = state.keynote_connector.stop_slideshow().await;
+                }
                 broadcast_presentation_status(&state.ws_clients, state).await;
             }
         }
         WsCommand::PresentationClose => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 *state.presenter_state.write().await = presenter::PresenterState::empty();
-                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                    .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.close_all().await; }
+                {
+                    let _ = state.keynote_connector.close_all().await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
@@ -779,108 +1130,136 @@ async fn handle_ws_command(
                     "✕ Close All is only available in Keynote mode. Use the Close button to unload the web presentation.").await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.close_all().await; }
+                {
+                    let _ = state.keynote_connector.close_all().await;
+                }
                 broadcast_presentation_status(&state.ws_clients, state).await;
             }
         }
         WsCommand::PresentationNext => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.go_next();
-                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_slide_changed(
+                    &state.ws_clients,
+                    &*state.presenter_state.read().await,
+                )
+                .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.next().await; }
+                {
+                    let _ = state.keynote_connector.next().await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresentationPrev => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.go_prev();
-                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_slide_changed(
+                    &state.ws_clients,
+                    &*state.presenter_state.read().await,
+                )
+                .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.prev().await; }
+                {
+                    let _ = state.keynote_connector.prev().await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresentationFirst => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.go_first();
-                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_slide_changed(
+                    &state.ws_clients,
+                    &*state.presenter_state.read().await,
+                )
+                .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.first().await; }
+                {
+                    let _ = state.keynote_connector.first().await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresentationLast => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.go_last();
-                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_slide_changed(
+                    &state.ws_clients,
+                    &*state.presenter_state.read().await,
+                )
+                .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.last().await; }
+                {
+                    let _ = state.keynote_connector.last().await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresentationGoto { slide } => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.go_to(slide);
-                broadcast_presenter_slide_changed(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_slide_changed(
+                    &state.ws_clients,
+                    &*state.presenter_state.read().await,
+                )
+                .await;
             } else {
                 #[cfg(target_os = "macos")]
-                { let _ = state.keynote_connector.goto(slide).await; }
+                {
+                    let _ = state.keynote_connector.goto(slide).await;
+                }
             }
             broadcast_presentation_status(&state.ws_clients, state).await;
         }
         WsCommand::PresentationMute => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.mute();
-                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                    .await;
                 broadcast_presentation_status(&state.ws_clients, state).await;
             }
         }
         WsCommand::PresentationUnmute => {
             if state.use_web_presenter.load(Ordering::Relaxed) {
                 state.presenter_state.write().await.unmute();
-                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await).await;
+                broadcast_presenter_state(&state.ws_clients, &*state.presenter_state.read().await)
+                    .await;
                 broadcast_presentation_status(&state.ws_clients, state).await;
             }
         }
         // ── Events ───────────────────────────────────────────────────────────
-        WsCommand::EventsList => {
-            let result = sqlx::query_as::<_, EventSummary>(
-                r#"SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
-                          COUNT(r.id) AS recording_count,
-                          EXISTS (
-                              SELECT 1 FROM event_activities ea
-                              WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
-                          ) AS is_completed
-                   FROM events e
-                   LEFT JOIN recordings r ON r.event_id = e.id
-                   GROUP BY e.id
-                   ORDER BY e.date_time DESC"#,
-            )
-            .fetch_all(&state.pool)
-            .await;
-            match result {
-                Ok(events) => {
-                    let msg = json!({ "type": "events.list", "events": events }).to_string();
-                    let _ = client_tx.send(Message::Text(msg.into()));
-                }
-                Err(e) => ws_error(client_tx, &e.to_string()),
+        WsCommand::EventsList => match fetch_event_summaries(&state.pool).await {
+            Ok(events) => {
+                let msg = json!({ "type": "events.list", "events": events }).to_string();
+                let _ = client_tx.send(Message::Text(msg.into()));
             }
-        }
-        WsCommand::EventsGet { id } => {
-            match fetch_event(id, &state.pool).await {
-                Ok(Some(event)) => {
-                    let msg = json!({ "type": "events.get", "event": event }).to_string();
-                    let _ = client_tx.send(Message::Text(msg.into()));
-                }
-                Ok(None) => ws_error(client_tx, "not_found"),
-                Err(e) => ws_error(client_tx, &e.to_string()),
+            Err(e) => ws_error(client_tx, &e.to_string()),
+        },
+        WsCommand::EventsPresenterList => match fetch_presenter_event_list(&state.pool).await {
+            Ok(list) => {
+                let msg = json!({
+                    "type": "events.presenter_list",
+                    "events": list.events,
+                    "selectedEventId": list.selected_event_id,
+                })
+                .to_string();
+                let _ = client_tx.send(Message::Text(msg.into()));
             }
-        }
+            Err(e) => ws_error(client_tx, &e.to_string()),
+        },
+        WsCommand::EventsGet { id } => match fetch_event(id, &state.pool).await {
+            Ok(Some(event)) => {
+                let msg = json!({ "type": "events.get", "event": event }).to_string();
+                let _ = client_tx.send(Message::Text(msg.into()));
+            }
+            Ok(None) => ws_error(client_tx, "not_found"),
+            Err(e) => ws_error(client_tx, &e.to_string()),
+        },
         WsCommand::EventsCreate {
             title,
             date_time,
@@ -1083,7 +1462,11 @@ async fn handle_ws_command(
                 .await
                 .unwrap_or_default();
                 for rec in &mut recordings {
-                    rec.uploads = uploads.iter().filter(|u| u.recording_id == rec.id).cloned().collect();
+                    rec.uploads = uploads
+                        .iter()
+                        .filter(|u| u.recording_id == rec.id)
+                        .cloned()
+                        .collect();
                 }
             }
             let msg = json!({ "type": "recordings.list", "recordings": recordings }).to_string();
@@ -1188,13 +1571,18 @@ async fn handle_ws_command(
             .await;
             match result {
                 Ok(recording) => {
-                    let msg = json!({ "type": "recordings.create", "recording": recording }).to_string();
+                    let msg =
+                        json!({ "type": "recordings.create", "recording": recording }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::RecordingsDelete { event_id, recording_id, delete_file } => {
+        WsCommand::RecordingsDelete {
+            event_id,
+            recording_id,
+            delete_file,
+        } => {
             let row = sqlx::query_as::<_, crate::models::recording::Recording>(
                 "SELECT * FROM recordings WHERE id = $1 AND event_id = $2",
             )
@@ -1222,7 +1610,10 @@ async fn handle_ws_command(
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::RecordingsFlagUpload { event_id, recordings } => {
+        WsCommand::RecordingsFlagUpload {
+            event_id,
+            recordings,
+        } => {
             let result: anyhow::Result<()> = async {
                 for item in &recordings {
                     sqlx::query(
@@ -1270,7 +1661,9 @@ async fn handle_ws_command(
         WsCommand::RecordingsUntrackedList => {
             match untracked_recording::list_untracked(&state.pool).await {
                 Ok(recordings) => {
-                    let msg = json!({ "type": "recordings.untracked.list", "recordings": recordings }).to_string();
+                    let msg =
+                        json!({ "type": "recordings.untracked.list", "recordings": recordings })
+                            .to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
@@ -1320,11 +1713,15 @@ async fn handle_ws_command(
                     tokio::spawn(async move {
                         broadcast_untracked_removed(&clients, id).await;
                     });
-                    let msg = json!({ "type": "recordings.untracked.assign", "recording": recording }).to_string();
+                    let msg =
+                        json!({ "type": "recordings.untracked.assign", "recording": recording })
+                            .to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) if e.to_string() == "NOT_FOUND" => ws_error(client_tx, "not_found"),
-                Err(e) if e.to_string() == "EVENT_NOT_FOUND" => ws_error(client_tx, "event_not_found"),
+                Err(e) if e.to_string() == "EVENT_NOT_FOUND" => {
+                    ws_error(client_tx, "event_not_found")
+                }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
@@ -1363,13 +1760,18 @@ async fn handle_ws_command(
         WsCommand::ActivitiesList { event_id } => {
             match activity::list_activities(event_id, &state.pool).await {
                 Ok(activities) => {
-                    let msg = json!({ "type": "activities.list", "activities": activities }).to_string();
+                    let msg =
+                        json!({ "type": "activities.list", "activities": activities }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::ActivitiesCreate { event_id, activity_type, message } => {
+        WsCommand::ActivitiesCreate {
+            event_id,
+            activity_type,
+            message,
+        } => {
             let event_exists: Result<bool, _> =
                 sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)")
                     .bind(event_id)
@@ -1398,7 +1800,10 @@ async fn handle_ws_command(
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::ActivitiesDelete { event_id, activity_id } => {
+        WsCommand::ActivitiesDelete {
+            event_id,
+            activity_id,
+        } => {
             let result = sqlx::query(
                 "DELETE FROM event_activities WHERE id = $1 AND event_id = $2 RETURNING id",
             )
@@ -1413,16 +1818,20 @@ async fn handle_ws_command(
             }
         }
         // ── Cron jobs ────────────────────────────────────────────────────────
-        WsCommand::CronJobsList => {
-            match cron_job::list_all(&state.pool).await {
-                Ok(jobs) => {
-                    let msg = json!({ "type": "cron_jobs.list", "jobs": jobs }).to_string();
-                    let _ = client_tx.send(Message::Text(msg.into()));
-                }
-                Err(e) => ws_error(client_tx, &e.to_string()),
+        WsCommand::CronJobsList => match cron_job::list_all(&state.pool).await {
+            Ok(jobs) => {
+                let msg = json!({ "type": "cron_jobs.list", "jobs": jobs }).to_string();
+                let _ = client_tx.send(Message::Text(msg.into()));
             }
-        }
-        WsCommand::CronJobsCreate { name, cron_expression, enabled, pull_youtube, auto_upload } => {
+            Err(e) => ws_error(client_tx, &e.to_string()),
+        },
+        WsCommand::CronJobsCreate {
+            name,
+            cron_expression,
+            enabled,
+            pull_youtube,
+            auto_upload,
+        } => {
             if tokio_cron_scheduler::Job::new_async(cron_expression.as_str(), |_, _| {
                 Box::pin(async {})
             })
@@ -1431,10 +1840,26 @@ async fn handle_ws_command(
                 ws_error(client_tx, "invalid_cron_expression");
                 return;
             }
-            let body = CreateCronJob { name, cron_expression, enabled, pull_youtube, auto_upload };
+            let body = CreateCronJob {
+                name,
+                cron_expression,
+                enabled,
+                pull_youtube,
+                auto_upload,
+            };
             let result: anyhow::Result<cron_job::CronJob> = async {
                 let mut tx = state.pool.begin().await?;
-                let row = sqlx::query_as::<_, (Uuid, String, String, bool, chrono::DateTime<Utc>, chrono::DateTime<Utc>)>(
+                let row = sqlx::query_as::<
+                    _,
+                    (
+                        Uuid,
+                        String,
+                        String,
+                        bool,
+                        chrono::DateTime<Utc>,
+                        chrono::DateTime<Utc>,
+                    ),
+                >(
                     "INSERT INTO cron_jobs (name, cron_expression, enabled) \
                      VALUES ($1, $2, $3) \
                      RETURNING id, name, cron_expression, enabled, created_at, updated_at",
@@ -1444,7 +1869,8 @@ async fn handle_ws_command(
                 .bind(body.enabled)
                 .fetch_one(&mut *tx)
                 .await?;
-                cron_job::sync_features(&mut tx, row.0, body.pull_youtube, body.auto_upload).await?;
+                cron_job::sync_features(&mut tx, row.0, body.pull_youtube, body.auto_upload)
+                    .await?;
                 tx.commit().await?;
                 Ok(cron_job::CronJob {
                     id: row.0,
@@ -1474,7 +1900,14 @@ async fn handle_ws_command(
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::CronJobsUpdate { id, name, cron_expression, enabled, pull_youtube, auto_upload } => {
+        WsCommand::CronJobsUpdate {
+            id,
+            name,
+            cron_expression,
+            enabled,
+            pull_youtube,
+            auto_upload,
+        } => {
             if tokio_cron_scheduler::Job::new_async(cron_expression.as_str(), |_, _| {
                 Box::pin(async {})
             })
@@ -1483,7 +1916,13 @@ async fn handle_ws_command(
                 ws_error(client_tx, "invalid_cron_expression");
                 return;
             }
-            let body = UpdateCronJob { name, cron_expression, enabled, pull_youtube, auto_upload };
+            let body = UpdateCronJob {
+                name,
+                cron_expression,
+                enabled,
+                pull_youtube,
+                auto_upload,
+            };
             let result: anyhow::Result<Option<cron_job::CronJob>> = async {
                 let mut tx = state.pool.begin().await?;
                 let row = sqlx::query_as::<_, (Uuid, String, String, bool, chrono::DateTime<Utc>, chrono::DateTime<Utc>)>(
@@ -1588,31 +2027,44 @@ async fn handle_ws_command(
         WsCommand::ConnectorsYoutubeSchedule { event_id } => {
             let event = match fetch_event(event_id, &state.pool).await {
                 Ok(Some(e)) => e,
-                Ok(None) => { ws_error(client_tx, "not_found"); return; }
-                Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+                Ok(None) => {
+                    ws_error(client_tx, "not_found");
+                    return;
+                }
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
             };
             let token = match youtube::load_tokens(&state.pool).await {
                 Some(t) => t,
-                None => { ws_error(client_tx, "not_authenticated"); return; }
+                None => {
+                    ws_error(client_tx, "not_authenticated");
+                    return;
+                }
             };
             let yt_conn = event.connection("youtube");
             let existing_id = yt_conn.and_then(|c| c.external_id.as_deref());
-            let privacy_status = yt_conn.and_then(|c| c.privacy_status.as_deref()).unwrap_or("private");
+            let privacy_status = yt_conn
+                .and_then(|c| c.privacy_status.as_deref())
+                .unwrap_or("private");
             match youtube::schedule_event(
-                &event.id.to_string(), &event.title, &event.date_time,
-                &token.access_token, existing_id, privacy_status,
+                &event.id.to_string(),
+                &event.title,
+                &event.date_time,
+                &token.access_token,
+                existing_id,
+                privacy_status,
             )
             .await
             {
-                Ok(result) => {
-                    match write_youtube_result(state, event_id, &result).await {
-                        Ok(updated) => {
-                            broadcast_event_changed(state, "UPDATE", &updated).await;
-                            ws_ok(client_tx);
-                        }
-                        Err(e) => ws_error(client_tx, &e.to_string()),
+                Ok(result) => match write_youtube_result(state, event_id, &result).await {
+                    Ok(updated) => {
+                        broadcast_event_changed(state, "UPDATE", &updated).await;
+                        ws_ok(client_tx);
                     }
-                }
+                    Err(e) => ws_error(client_tx, &e.to_string()),
+                },
                 Err(e) => {
                     let _ = write_youtube_status(&state.pool, event_id, "failed").await;
                     ws_error(client_tx, &e.to_string());
@@ -1622,12 +2074,21 @@ async fn handle_ws_command(
         WsCommand::ConnectorsFacebookSchedule { event_id } => {
             let event = match fetch_event(event_id, &state.pool).await {
                 Ok(Some(e)) => e,
-                Ok(None) => { ws_error(client_tx, "not_found"); return; }
-                Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+                Ok(None) => {
+                    ws_error(client_tx, "not_found");
+                    return;
+                }
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
             };
             let token = match facebook::load_tokens(&state.pool).await {
                 Some(t) => t,
-                None => { ws_error(client_tx, "not_authenticated"); return; }
+                None => {
+                    ws_error(client_tx, "not_authenticated");
+                    return;
+                }
             };
             let config = state.facebook_config.read().await.clone();
             if config.page_id.is_empty() {
@@ -1635,21 +2096,25 @@ async fn handle_ws_command(
                 return;
             }
             let fb_conn = event.connection("facebook");
-            let privacy_status = fb_conn.and_then(|c| c.privacy_status.as_deref()).unwrap_or("EVERYONE");
+            let privacy_status = fb_conn
+                .and_then(|c| c.privacy_status.as_deref())
+                .unwrap_or("EVERYONE");
             match facebook::schedule_event(
-                &event.title, &event.date_time, &token.access_token, &config.page_id, privacy_status,
+                &event.title,
+                &event.date_time,
+                &token.access_token,
+                &config.page_id,
+                privacy_status,
             )
             .await
             {
-                Ok(result) => {
-                    match write_facebook_result(state, event_id, &result).await {
-                        Ok(updated) => {
-                            broadcast_event_changed(state, "UPDATE", &updated).await;
-                            ws_ok(client_tx);
-                        }
-                        Err(e) => ws_error(client_tx, &e.to_string()),
+                Ok(result) => match write_facebook_result(state, event_id, &result).await {
+                    Ok(updated) => {
+                        broadcast_event_changed(state, "UPDATE", &updated).await;
+                        ws_ok(client_tx);
                     }
-                }
+                    Err(e) => ws_error(client_tx, &e.to_string()),
+                },
                 Err(e) => {
                     let _ = write_facebook_status(&state.pool, event_id, "failed").await;
                     ws_error(client_tx, &e.to_string());
@@ -1659,7 +2124,10 @@ async fn handle_ws_command(
         WsCommand::ConnectorsYoutubeStreamKey => {
             let token = match youtube::load_tokens(&state.pool).await {
                 Some(t) => t,
-                None => { ws_error(client_tx, "not_authenticated"); return; }
+                None => {
+                    ws_error(client_tx, "not_authenticated");
+                    return;
+                }
             };
             #[derive(serde::Deserialize)]
             struct IngestionInfo {
@@ -1674,9 +2142,13 @@ async fn handle_ws_command(
                 ingestion_info: IngestionInfo,
             }
             #[derive(serde::Deserialize)]
-            struct StreamItem { cdn: Cdn }
+            struct StreamItem {
+                cdn: Cdn,
+            }
             #[derive(serde::Deserialize)]
-            struct StreamList { items: Option<Vec<StreamItem>> }
+            struct StreamList {
+                items: Option<Vec<StreamItem>>,
+            }
             let client = reqwest::Client::new();
             let resp = client
                 .get("https://www.googleapis.com/youtube/v3/liveStreams")
@@ -1685,25 +2157,21 @@ async fn handle_ws_command(
                 .send()
                 .await;
             match resp {
-                Ok(r) if r.status().is_success() => {
-                    match r.json::<StreamList>().await {
-                        Ok(list) => {
-                            match list.items.and_then(|items| items.into_iter().next()) {
-                                Some(item) => {
-                                    let rtmp_url = format!(
-                                        "{}/{}",
-                                        item.cdn.ingestion_info.ingestion_address,
-                                        item.cdn.ingestion_info.stream_name,
-                                    );
-                                    let msg = json!({ "type": "connectors.youtube.stream_key", "rtmpUrl": rtmp_url }).to_string();
-                                    let _ = client_tx.send(Message::Text(msg.into()));
-                                }
-                                None => ws_error(client_tx, "no_stream_found"),
-                            }
+                Ok(r) if r.status().is_success() => match r.json::<StreamList>().await {
+                    Ok(list) => match list.items.and_then(|items| items.into_iter().next()) {
+                        Some(item) => {
+                            let rtmp_url = format!(
+                                "{}/{}",
+                                item.cdn.ingestion_info.ingestion_address,
+                                item.cdn.ingestion_info.stream_name,
+                            );
+                            let msg = json!({ "type": "connectors.youtube.stream_key", "rtmpUrl": rtmp_url }).to_string();
+                            let _ = client_tx.send(Message::Text(msg.into()));
                         }
-                        Err(e) => ws_error(client_tx, &e.to_string()),
-                    }
-                }
+                        None => ws_error(client_tx, "no_stream_found"),
+                    },
+                    Err(e) => ws_error(client_tx, &e.to_string()),
+                },
                 Ok(r) => ws_error(client_tx, &format!("youtube_api_{}", r.status())),
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
@@ -1711,7 +2179,10 @@ async fn handle_ws_command(
         WsCommand::ConnectorsFacebookStreamKey => {
             let token = match facebook::load_tokens(&state.pool).await {
                 Some(t) => t,
-                None => { ws_error(client_tx, "not_authenticated"); return; }
+                None => {
+                    ws_error(client_tx, "not_authenticated");
+                    return;
+                }
             };
             let config = state.facebook_config.read().await.clone();
             if config.page_id.is_empty() {
@@ -1726,10 +2197,15 @@ async fn handle_ws_command(
                 secure_stream_url: Option<String>,
             }
             #[derive(serde::Deserialize)]
-            struct FbList { data: Vec<FbLiveVideo> }
+            struct FbList {
+                data: Vec<FbLiveVideo>,
+            }
             let client = reqwest::Client::new();
             let resp = client
-                .get(format!("https://graph.facebook.com/v19.0/{}/live_videos", config.page_id))
+                .get(format!(
+                    "https://graph.facebook.com/v19.0/{}/live_videos",
+                    config.page_id
+                ))
                 .query(&[
                     ("status", "SCHEDULED_UNPUBLISHED"),
                     ("fields", "stream_url,secure_stream_url"),
@@ -1738,23 +2214,20 @@ async fn handle_ws_command(
                 .send()
                 .await;
             match resp {
-                Ok(r) if r.status().is_success() => {
-                    match r.json::<FbList>().await {
-                        Ok(list) => {
-                            match list.data.into_iter().next() {
-                                Some(video) => {
-                                    let rtmp_url = video.secure_stream_url
-                                        .or(video.stream_url)
-                                        .unwrap_or_default();
-                                    let msg = json!({ "type": "connectors.facebook.stream_key", "rtmpUrl": rtmp_url }).to_string();
-                                    let _ = client_tx.send(Message::Text(msg.into()));
-                                }
-                                None => ws_error(client_tx, "no_live_video_found"),
-                            }
+                Ok(r) if r.status().is_success() => match r.json::<FbList>().await {
+                    Ok(list) => match list.data.into_iter().next() {
+                        Some(video) => {
+                            let rtmp_url = video
+                                .secure_stream_url
+                                .or(video.stream_url)
+                                .unwrap_or_default();
+                            let msg = json!({ "type": "connectors.facebook.stream_key", "rtmpUrl": rtmp_url }).to_string();
+                            let _ = client_tx.send(Message::Text(msg.into()));
                         }
-                        Err(e) => ws_error(client_tx, &e.to_string()),
-                    }
-                }
+                        None => ws_error(client_tx, "no_live_video_found"),
+                    },
+                    Err(e) => ws_error(client_tx, &e.to_string()),
+                },
                 Ok(r) => ws_error(client_tx, &format!("facebook_api_{}", r.status())),
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
@@ -1763,7 +2236,8 @@ async fn handle_ws_command(
             let config = state.youtube_config.read().await.clone();
             match youtube::fetch_channel_content(&state.pool, &config).await {
                 Ok(content) => {
-                    let msg = json!({ "type": "connectors.youtube.content", "content": content }).to_string();
+                    let msg = json!({ "type": "connectors.youtube.content", "content": content })
+                        .to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
@@ -1779,7 +2253,10 @@ async fn handle_ws_command(
             let state_token = Uuid::new_v4().to_string();
             {
                 let mut states = state.oauth_states.write().await;
-                states.insert(state_token.clone(), ("youtube".to_string(), std::time::Instant::now()));
+                states.insert(
+                    state_token.clone(),
+                    ("youtube".to_string(), std::time::Instant::now()),
+                );
             }
             let url = format!(
                 "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=https://www.googleapis.com/auth/youtube&access_type=offline&prompt=consent&state={}",
@@ -1790,15 +2267,13 @@ async fn handle_ws_command(
             let msg = json!({ "type": "auth.youtube.url", "url": url }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
-        WsCommand::AuthYoutubeLogout => {
-            match youtube::delete_tokens(&state.pool).await {
-                Ok(_) => {
-                    state.youtube_connector.stop().await;
-                    ws_ok(client_tx);
-                }
-                Err(e) => ws_error(client_tx, &e.to_string()),
+        WsCommand::AuthYoutubeLogout => match youtube::delete_tokens(&state.pool).await {
+            Ok(_) => {
+                state.youtube_connector.stop().await;
+                ws_ok(client_tx);
             }
-        }
+            Err(e) => ws_error(client_tx, &e.to_string()),
+        },
         WsCommand::AuthFacebookUrl => {
             let config = state.facebook_config.read().await.clone();
             if config.app_id.is_empty() {
@@ -1808,7 +2283,10 @@ async fn handle_ws_command(
             let state_token = Uuid::new_v4().to_string();
             {
                 let mut states = state.oauth_states.write().await;
-                states.insert(state_token.clone(), ("facebook".to_string(), std::time::Instant::now()));
+                states.insert(
+                    state_token.clone(),
+                    ("facebook".to_string(), std::time::Instant::now()),
+                );
             }
             let url = format!(
                 "https://www.facebook.com/v19.0/dialog/oauth?client_id={}&redirect_uri={}&scope=pages_manage_posts,pages_read_engagement,publish_video&state={}",
@@ -1819,15 +2297,13 @@ async fn handle_ws_command(
             let msg = json!({ "type": "auth.facebook.url", "url": url }).to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
-        WsCommand::AuthFacebookLogout => {
-            match facebook::delete_tokens(&state.pool).await {
-                Ok(_) => {
-                    state.facebook_connector.stop().await;
-                    ws_ok(client_tx);
-                }
-                Err(e) => ws_error(client_tx, &e.to_string()),
+        WsCommand::AuthFacebookLogout => match facebook::delete_tokens(&state.pool).await {
+            Ok(_) => {
+                state.facebook_connector.stop().await;
+                ws_ok(client_tx);
             }
-        }
+            Err(e) => ws_error(client_tx, &e.to_string()),
+        },
         // ── Broadlink ────────────────────────────────────────────────────────
         WsCommand::BroadlinkStatus => {
             let status = state.broadlink_connector.get_status().await;
@@ -1848,13 +2324,20 @@ async fn handle_ws_command(
                             json!({ "id": id, "name": name, "deviceType": device_type, "model": model, "host": host, "mac": mac, "isDefault": is_default })
                         })
                         .collect();
-                    let msg = json!({ "type": "broadlink.devices.list", "devices": list }).to_string();
+                    let msg =
+                        json!({ "type": "broadlink.devices.list", "devices": list }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::BroadlinkDevicesAdd { name, host, mac, device_type, model } => {
+        WsCommand::BroadlinkDevicesAdd {
+            name,
+            host,
+            mac,
+            device_type,
+            model,
+        } => {
             let result = sqlx::query_as::<_, (Uuid,)>(
                 "INSERT INTO broadlink_devices (name, device_type, model, host, mac) \
                  VALUES ($1, $2, $3, $4, $5) RETURNING id",
@@ -1868,9 +2351,13 @@ async fn handle_ws_command(
             .await;
             match result {
                 Ok((id,)) => {
-                    state.broadlink_connector.set_status(ConnectorStatus::Connected).await;
+                    state
+                        .broadlink_connector
+                        .set_status(ConnectorStatus::Connected)
+                        .await;
                     let device = json!({ "id": id, "name": name, "deviceType": device_type, "model": model, "host": host, "mac": mac, "isDefault": false });
-                    let msg = json!({ "type": "broadlink.devices.add", "device": device }).to_string();
+                    let msg =
+                        json!({ "type": "broadlink.devices.add", "device": device }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
@@ -1907,10 +2394,11 @@ async fn handle_ws_command(
                             .execute(&pool)
                             .await;
                         }
-                        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
-                            .fetch_one(&pool)
-                            .await
-                            .unwrap_or(0);
+                        let count: i64 =
+                            sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
+                                .fetch_one(&pool)
+                                .await
+                                .unwrap_or(0);
                         let new_status = if count > 0 {
                             ConnectorStatus::Connected
                         } else {
@@ -1923,7 +2411,10 @@ async fn handle_ws_command(
             });
             ws_ok(client_tx);
         }
-        WsCommand::BroadlinkCommandsList { device_id, category } => {
+        WsCommand::BroadlinkCommandsList {
+            device_id,
+            category,
+        } => {
             let rows = if let Some(did) = device_id {
                 if let Some(cat) = category {
                     sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, String, String, String)>(
@@ -1959,13 +2450,21 @@ async fn handle_ws_command(
                             json!({ "id": id, "deviceId": did, "name": name, "slug": slug, "code": code, "codeType": code_type, "category": category })
                         })
                         .collect();
-                    let msg = json!({ "type": "broadlink.commands.list", "commands": list }).to_string();
+                    let msg =
+                        json!({ "type": "broadlink.commands.list", "commands": list }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::BroadlinkCommandsAdd { device_id, name, slug, code, code_type, category } => {
+        WsCommand::BroadlinkCommandsAdd {
+            device_id,
+            name,
+            slug,
+            code,
+            code_type,
+            category,
+        } => {
             let cat = category.unwrap_or_else(|| "other".to_string());
             let result = sqlx::query_as::<_, (Uuid,)>(
                 "INSERT INTO broadlink_commands (device_id, name, slug, code, code_type, category) \
@@ -1982,13 +2481,21 @@ async fn handle_ws_command(
             match result {
                 Ok((id,)) => {
                     let cmd = json!({ "id": id, "deviceId": device_id, "name": name, "slug": slug, "code": code, "codeType": code_type, "category": cat });
-                    let msg = json!({ "type": "broadlink.commands.add", "command": cmd }).to_string();
+                    let msg =
+                        json!({ "type": "broadlink.commands.add", "command": cmd }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::BroadlinkCommandsUpdate { id, name, slug, code, code_type, category } => {
+        WsCommand::BroadlinkCommandsUpdate {
+            id,
+            name,
+            slug,
+            code,
+            code_type,
+            category,
+        } => {
             let result = sqlx::query(
                 "UPDATE broadlink_commands SET \
                  name=COALESCE($2,name), slug=COALESCE($3,slug), code=COALESCE($4,code), \
@@ -2014,7 +2521,8 @@ async fn handle_ws_command(
                         "codeType": row.get::<String, _>("code_type"),
                         "category": row.get::<String, _>("category"),
                     });
-                    let msg = json!({ "type": "broadlink.commands.update", "command": cmd }).to_string();
+                    let msg =
+                        json!({ "type": "broadlink.commands.update", "command": cmd }).to_string();
                     let _ = client_tx.send(Message::Text(msg.into()));
                 }
                 Ok(None) => ws_error(client_tx, "not_found"),
@@ -2032,7 +2540,10 @@ async fn handle_ws_command(
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
-        WsCommand::BroadlinkLearnStart { device_id, signal_type } => {
+        WsCommand::BroadlinkLearnStart {
+            device_id,
+            signal_type,
+        } => {
             if state
                 .broadlink_learn_active
                 .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -2066,8 +2577,14 @@ async fn handle_ws_command(
             tokio::spawn(async move {
                 let result = crate::broadlink::learn_code(&host, &mac, &devtype, &sig_type).await;
                 let event = match result {
-                    Ok(lr) => crate::connectors::broadlink::BroadlinkLearnEvent { code: lr.code, error: lr.error },
-                    Err(e) => crate::connectors::broadlink::BroadlinkLearnEvent { code: None, error: Some(e) },
+                    Ok(lr) => crate::connectors::broadlink::BroadlinkLearnEvent {
+                        code: lr.code,
+                        error: lr.error,
+                    },
+                    Err(e) => crate::connectors::broadlink::BroadlinkLearnEvent {
+                        code: None,
+                        error: Some(e),
+                    },
                 };
                 let _ = learn_tx.send(event);
                 learn_active.store(false, Ordering::SeqCst);
@@ -2091,8 +2608,14 @@ async fn handle_ws_command(
             .await;
             let (code, host, mac, devtype) = match row {
                 Ok(Some(r)) => r,
-                Ok(None) => { ws_error(client_tx, "not_found"); return; }
-                Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+                Ok(None) => {
+                    ws_error(client_tx, "not_found");
+                    return;
+                }
+                Err(e) => {
+                    ws_error(client_tx, &e.to_string());
+                    return;
+                }
             };
             match crate::broadlink::send_code(&host, &mac, &devtype, &code).await {
                 Ok(r) if r.success => ws_ok(client_tx),
@@ -2113,8 +2636,7 @@ async fn handle_ws_command(
                         .fetch_all(&state.pool)
                         .await
                         .unwrap_or_default();
-                let statuses =
-                    crate::obs_devices::compute_listener_statuses(scanned, &listeners);
+                let statuses = crate::obs_devices::compute_listener_statuses(scanned, &listeners);
                 let msg = serde_json::json!({
                     "type": "obs.devices.available",
                     "devices": scanned,
@@ -2133,7 +2655,10 @@ async fn handle_ws_command(
                     .await
                 {
                     Ok(l) => l,
-                    Err(e) => { ws_error(client_tx, &e.to_string()); return; }
+                    Err(e) => {
+                        ws_error(client_tx, &e.to_string());
+                        return;
+                    }
                 };
             let statuses = {
                 let devices_guard = state.obs_available_devices.read().await;
@@ -2178,7 +2703,9 @@ async fn handle_ws_command(
                     .to_string();
                     let clients = state.ws_clients.read().await;
                     for tx in clients.values() {
-                        let _ = tx.send(axum::extract::ws::Message::Text(broadcast_msg.clone().into()));
+                        let _ = tx.send(axum::extract::ws::Message::Text(
+                            broadcast_msg.clone().into(),
+                        ));
                     }
                     ws_ok(client_tx);
                 }
@@ -2203,7 +2730,9 @@ async fn handle_ws_command(
                     .to_string();
                     let clients = state.ws_clients.read().await;
                     for tx in clients.values() {
-                        let _ = tx.send(axum::extract::ws::Message::Text(broadcast_msg.clone().into()));
+                        let _ = tx.send(axum::extract::ws::Message::Text(
+                            broadcast_msg.clone().into(),
+                        ));
                     }
                     ws_ok(client_tx);
                 }
@@ -2225,7 +2754,9 @@ async fn handle_ws_command(
                     .to_string();
                     let clients = state.ws_clients.read().await;
                     for tx in clients.values() {
-                        let _ = tx.send(axum::extract::ws::Message::Text(broadcast_msg.clone().into()));
+                        let _ = tx.send(axum::extract::ws::Message::Text(
+                            broadcast_msg.clone().into(),
+                        ));
                     }
                     ws_ok(client_tx);
                 }
@@ -2292,7 +2823,9 @@ pub async fn ws_handler(State(state): State<AppState>, req: Request) -> Response
         .get(header::USER_AGENT)
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
-    ws.on_upgrade(move |socket| handle_socket(socket, state, server_id, user_agent, is_authenticated))
+    ws.on_upgrade(move |socket| {
+        handle_socket(socket, state, server_id, user_agent, is_authenticated)
+    })
 }
 
 /// WS commands that read-only (unauthenticated) clients are permitted to send.
@@ -2356,11 +2889,14 @@ async fn handle_socket(
     // Push current presentation settings, status, and presenter state.
     {
         let enabled = state.use_web_presenter.load(Ordering::Relaxed);
-        let settings_msg = json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+        let settings_msg =
+            json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
         let _ = tx.send(Message::Text(settings_msg.into()));
         let status_msg = make_presentation_status(&state).await;
         let _ = tx.send(Message::Text(status_msg.into()));
-        let presenter_msg = json!({ "type": "presenter.state", "state": &*state.presenter_state.read().await }).to_string();
+        let presenter_msg =
+            json!({ "type": "presenter.state", "state": &*state.presenter_state.read().await })
+                .to_string();
         let _ = tx.send(Message::Text(presenter_msg.into()));
     }
 
@@ -2393,8 +2929,7 @@ async fn handle_socket(
                     .fetch_all(&state.pool)
                     .await
                     .unwrap_or_default();
-            let statuses =
-                crate::obs_devices::compute_listener_statuses(scanned, &listeners);
+            let statuses = crate::obs_devices::compute_listener_statuses(scanned, &listeners);
             let msg = json!({
                 "type": "obs.devices.available",
                 "devices": scanned,
@@ -2657,12 +3192,12 @@ pub fn spawn_scheduling_tasks(event: Event, state: AppState) {
                     )
                     .await
                     {
-                        Ok(result) => {
-                            match write_youtube_result(&state, event.id, &result).await {
-                                Ok(updated) => broadcast_event_changed(&state, "UPDATE", &updated).await,
-                                Err(e) => tracing::error!("YouTube DB write failed: {e}"),
+                        Ok(result) => match write_youtube_result(&state, event.id, &result).await {
+                            Ok(updated) => {
+                                broadcast_event_changed(&state, "UPDATE", &updated).await
                             }
-                        }
+                            Err(e) => tracing::error!("YouTube DB write failed: {e}"),
+                        },
                         Err(e) => {
                             tracing::error!("YouTube auto-schedule failed for {}: {e}", event.id);
                             let _ = write_youtube_status(&state.pool, event.id, "failed").await;
@@ -2703,10 +3238,7 @@ pub fn spawn_scheduling_tasks(event: Event, state: AppState) {
                             }
                         }
                         Err(e) => {
-                            tracing::error!(
-                                "Facebook auto-schedule failed for {}: {e}",
-                                event.id
-                            );
+                            tracing::error!("Facebook auto-schedule failed for {}: {e}", event.id);
                             let _ = write_facebook_status(&state.pool, event.id, "failed").await;
                         }
                     }

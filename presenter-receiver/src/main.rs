@@ -19,8 +19,8 @@ fn usage() -> ! {
         "Usage: presenter-receiver <ws-url> [--token <token>]\n",
         "\n",
         "Examples:\n",
-        "  presenter-receiver ws://192.168.1.10:3000/ws\n",
-        "  presenter-receiver ws://192.168.1.10:3000/ws --token abc123",
+        "  presenter-receiver ws://192.168.1.10:3737/ws\n",
+        "  presenter-receiver ws://192.168.1.10:3737/ws --token abc123",
     ));
     std::process::exit(1);
 }

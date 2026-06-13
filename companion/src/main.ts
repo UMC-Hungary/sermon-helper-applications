@@ -9,24 +9,27 @@ import { GetActions } from './actions.js'
 import { GetFeedbacks } from './feedbacks.js'
 import { GetPresets } from './presets.js'
 import { GetVariableDefinitions, GetDefaultVariableValues } from './variables.js'
-import { SermonHelperApi } from './api.js'
+import { MetocastApi } from './api.js'
 import { PptSelector } from './ppt-selector.js'
-import type { ModuleConfig, RfIrCommand, PresentationStatus } from './types.js'
+import type { EventSummary, ModuleConfig, PresentationStatus, RfIrCommand } from './types.js'
 
 export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	public config: ModuleConfig = GetDefaultConfig()
-	public api: SermonHelperApi
+	public api: MetocastApi
 	public commands: RfIrCommand[] = []
 	public isConnected = false
 	public pptSelector: PptSelector
 	public presentationStatus: PresentationStatus | null = null
+	public useWebPresenter = false
+	public presenterEvents: EventSummary[] = []
+	public selectedPresenterEventId: string | null = null
 
 	private pollTimer: ReturnType<typeof setInterval> | null = null
 	private presentationPollTimer: ReturnType<typeof setInterval> | null = null
 
 	constructor(internal: unknown) {
 		super(internal as ConstructorParameters<typeof InstanceBase>[0])
-		this.api = new SermonHelperApi(this.config)
+		this.api = new MetocastApi(this.config)
 		this.pptSelector = new PptSelector(this.api)
 	}
 
@@ -57,7 +60,9 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 				if (connected) {
 					void this.refreshCommands()
+					void this.refreshPresenterEvents()
 					void this.pptSelector.refreshFolders()
+					this.api.sendWsCommand('presentation.get_settings')
 					this.api.sendWsCommand('presentation.status')
 				}
 			},
@@ -82,11 +87,22 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 					ppt_current_slide: status.currentSlide?.toString() ?? '-',
 					ppt_total_slides: status.totalSlides?.toString() ?? '-',
 					ppt_slideshow_active: status.slideshowActive ? 'ON' : 'OFF',
-					ppt_app: status.app ?? 'None',
+					ppt_app: this.useWebPresenter ? 'Web Presenter' : (status.app ?? 'None'),
 					ppt_blanked: status.blanked ? 'YES' : 'NO',
 					ppt_document: status.currentSlideTitle ?? '',
 				})
 				this.checkFeedbacks('slideshow_active', 'presentation_blanked')
+			},
+			onPresentationSettingsChanged: (useWebPresenter) => {
+				this.useWebPresenter = useWebPresenter
+				this.setVariableValues({
+					ppt_app: useWebPresenter ? 'Web Presenter' : 'Keynote',
+					ppt_backend: useWebPresenter ? 'Web Presenter' : 'Keynote',
+				})
+				this.updateDefinitions()
+			},
+			onEventsChanged: () => {
+				void this.refreshPresenterEvents()
 			},
 		})
 
@@ -131,6 +147,19 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.setVariableValues({ command_count: commands.length })
 		this.updateDefinitions()
 		this.log('info', `Loaded ${commands.length} commands`)
+	}
+
+	public async refreshPresenterEvents(): Promise<void> {
+		const result = await this.api.getPresenterEvents()
+		this.presenterEvents = result.events
+		this.selectedPresenterEventId = result.selectedEventId
+		const selected = this.presenterEvents.find((event) => event.id === this.selectedPresenterEventId)
+		this.setVariableValues({
+			presenter_event_count: this.presenterEvents.length,
+			presenter_selected_event: selected?.title ?? '',
+		})
+		this.updateDefinitions()
+		this.log('debug', `Loaded ${this.presenterEvents.length} presenter events`)
 	}
 
 	private updateDefinitions(): void {

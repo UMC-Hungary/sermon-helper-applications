@@ -109,11 +109,11 @@
     if (!dir) return;
 
     const files: Record<string, string> = {
-      'Sermon Helper API/opencollection.yml': [
+      'Metocast API/opencollection.yml': [
         `opencollection: 1.0.0`,
         ``,
         `info:`,
-        `  name: Sermon Helper API`,
+        `  name: Metocast API`,
         `bundled: false`,
         `extensions:`,
         `  bruno:`,
@@ -121,27 +121,27 @@
         `      - node_modules`,
         `      - .git`,
       ].join('\n'),
-      'Sermon Helper API/List Events.yml': httpFile('List Events', 1, 'GET', '/api/events'),
-      'Sermon Helper API/Get Event.yml': httpFile('Get Event', 2, 'GET', '/api/events/:id'),
-      'Sermon Helper API/Create Event.yml': httpFile(
+      'Metocast API/List Events.yml': httpFile('List Events', 1, 'GET', '/api/events'),
+      'Metocast API/Get Event.yml': httpFile('Get Event', 2, 'GET', '/api/events/:id'),
+      'Metocast API/Create Event.yml': httpFile(
         'Create Event',
         3,
         'POST',
         '/api/events',
         `{\n  "title": "Sunday Service",\n  "date_time": "${new Date().toISOString()}",\n  "speaker": "Pastor"\n}`,
       ),
-      'Sermon Helper API/List Recordings.yml': httpFile('List Recordings', 4, 'GET', '/api/events/:id/recordings'),
-      'Sermon Helper API/Add Recording.yml': httpFile(
+      'Metocast API/List Recordings.yml': httpFile('List Recordings', 4, 'GET', '/api/events/:id/recordings'),
+      'Metocast API/Add Recording.yml': httpFile(
         'Add Recording',
         5,
         'POST',
         '/api/events/:id/recordings',
         `{\n  "filename": "recording.mp4",\n  "duration_seconds": 3600\n}`,
       ),
-      'Sermon Helper API/Get Connector Statuses.yml': httpFile('Get Connector Statuses', 6, 'GET', '/api/connectors/status'),
-      'Sermon Helper API/WebSocket.yml': wsFile(),
-      'Sermon Helper API/OpenAPI Spec.yml': httpFilePublic('OpenAPI Spec', 8, '/openapi.json'),
-      'Sermon Helper API/environments/Local.yml': envFile(),
+      'Metocast API/Get Connector Statuses.yml': httpFile('Get Connector Statuses', 6, 'GET', '/api/connectors/status'),
+      'Metocast API/WebSocket.yml': wsFile(),
+      'Metocast API/OpenAPI Spec.yml': httpFilePublic('OpenAPI Spec', 8, '/openapi.json'),
+      'Metocast API/environments/Local.yml': envFile(),
     };
 
     await invoke('save_bruno_collection', { dir, files });
@@ -168,7 +168,7 @@
 
   <section>
     <h4>Bruno Collection</h4>
-    <p class="hint">Choose a folder — a "Sermon Helper API" collection will be created inside it.</p>
+    <p class="hint">Choose a folder — a "Metocast API" collection will be created inside it.</p>
     <button onclick={saveBruno}>Save Bruno Collection…</button>
   </section>
 

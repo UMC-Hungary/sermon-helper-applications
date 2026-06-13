@@ -30,7 +30,7 @@
 		2E1752B7204C27EA9E54383B /* server.rs */ = {isa = PBXFileReference; path = server.rs; sourceTree = "<group>"; };
 		366F3E080E9351636CFDD841 /* recording.rs */ = {isa = PBXFileReference; path = recording.rs; sourceTree = "<group>"; };
 		369AC6A6E4F0476FEAE61CD5 /* event.rs */ = {isa = PBXFileReference; path = event.rs; sourceTree = "<group>"; };
-		421AC023D5379B3990837A6B /* sermon-helper-tauri_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "sermon-helper-tauri_iOS.entitlements"; sourceTree = "<group>"; };
+		421AC023D5379B3990837A6B /* metocast_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "metocast_iOS.entitlements"; sourceTree = "<group>"; };
 		4E61616E38ABBD3422D26064 /* routes.rs */ = {isa = PBXFileReference; path = routes.rs; sourceTree = "<group>"; };
 		5724564A0FBC0F7480A5D3EF /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
 		648E869F838CE8865052F540 /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
@@ -39,7 +39,7 @@
 		79996443763A0D126EDAA1D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		86F200C86DB9DD1D228B4E6B /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		9205A74EB6572F71DEB93C1B /* token.rs */ = {isa = PBXFileReference; path = token.rs; sourceTree = "<group>"; };
-		9382942713AF9F6E4B62DCF9 /* sermon-helper-tauri_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "sermon-helper-tauri_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9382942713AF9F6E4B62DCF9 /* metocast_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "metocast_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		96666E8982E9B5FB43E05742 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		9D8917AE16FCD494C965DE5C /* collections.rs */ = {isa = PBXFileReference; path = collections.rs; sourceTree = "<group>"; };
 		9FE91DC8F82A8FB6E63F3ECC /* websocket.rs */ = {isa = PBXFileReference; path = websocket.rs; sourceTree = "<group>"; };
@@ -82,7 +82,7 @@
 				79996443763A0D126EDAA1D1 /* Assets.xcassets */,
 				B3F14CCFA85B50B4D692A926 /* LaunchScreen.storyboard */,
 				E4DCB2DFD4EC1EF59D71BA45 /* Externals */,
-				4325E66B9CF7F0AAED54B244 /* sermon-helper-tauri_iOS */,
+				4325E66B9CF7F0AAED54B244 /* metocast_iOS */,
 				7CCEF811B0A5D3DE3FD1877B /* Sources */,
 				9B03883223D64BDE24B47698 /* src */,
 				3DF909C5496ED5E2774073A6 /* Frameworks */,
@@ -136,13 +136,13 @@
 			path = models;
 			sourceTree = "<group>";
 		};
-		4325E66B9CF7F0AAED54B244 /* sermon-helper-tauri_iOS */ = {
+		4325E66B9CF7F0AAED54B244 /* metocast_iOS */ = {
 			isa = PBXGroup;
 			children = (
 				7711C30767B1AC07DF56AF61 /* Info.plist */,
-				421AC023D5379B3990837A6B /* sermon-helper-tauri_iOS.entitlements */,
+				421AC023D5379B3990837A6B /* metocast_iOS.entitlements */,
 			);
-			path = "sermon-helper-tauri_iOS";
+			path = "metocast_iOS";
 			sourceTree = "<group>";
 		};
 		571C525BBDD478E33FF629EA /* migrations */ = {
@@ -153,19 +153,19 @@
 			path = migrations;
 			sourceTree = "<group>";
 		};
-		6DAB478295B1E529AE967B75 /* sermon-helper-tauri */ = {
+		6DAB478295B1E529AE967B75 /* metocast */ = {
 			isa = PBXGroup;
 			children = (
 				96666E8982E9B5FB43E05742 /* main.mm */,
 				EDB28335F3E127407F52EC96 /* bindings */,
 			);
-			path = "sermon-helper-tauri";
+			path = "metocast";
 			sourceTree = "<group>";
 		};
 		7CCEF811B0A5D3DE3FD1877B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				6DAB478295B1E529AE967B75 /* sermon-helper-tauri */,
+				6DAB478295B1E529AE967B75 /* metocast */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -173,7 +173,7 @@
 		80929D7C09A3932CD6687A4B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9382942713AF9F6E4B62DCF9 /* sermon-helper-tauri_iOS.app */,
+				9382942713AF9F6E4B62DCF9 /* metocast_iOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -221,9 +221,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		9E8A85CE9D4485F02973DFA0 /* sermon-helper-tauri_iOS */ = {
+		9E8A85CE9D4485F02973DFA0 /* metocast_iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F3403A38589FEDAB3892D1B9 /* Build configuration list for PBXNativeTarget "sermon-helper-tauri_iOS" */;
+			buildConfigurationList = F3403A38589FEDAB3892D1B9 /* Build configuration list for PBXNativeTarget "metocast_iOS" */;
 			buildPhases = (
 				399A4385C88D94E8F9FCD2F6 /* Build Rust Code */,
 				922EC5CE4AF68873747B445C /* Sources */,
@@ -234,11 +234,11 @@
 			);
 			dependencies = (
 			);
-			name = "sermon-helper-tauri_iOS";
+			name = "metocast_iOS";
 			packageProductDependencies = (
 			);
-			productName = "sermon-helper-tauri_iOS";
-			productReference = 9382942713AF9F6E4B62DCF9 /* sermon-helper-tauri_iOS.app */;
+			productName = "metocast_iOS";
+			productReference = 9382942713AF9F6E4B62DCF9 /* metocast_iOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -250,7 +250,7 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 			};
-			buildConfigurationList = 7B743AFDAEBEB4373AB1DF4A /* Build configuration list for PBXProject "sermon-helper-tauri" */;
+			buildConfigurationList = 7B743AFDAEBEB4373AB1DF4A /* Build configuration list for PBXProject "metocast" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -264,7 +264,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				9E8A85CE9D4485F02973DFA0 /* sermon-helper-tauri_iOS */,
+				9E8A85CE9D4485F02973DFA0 /* metocast_iOS */,
 			);
 		};
 /* End PBXProject section */
@@ -389,7 +389,7 @@
 					arm64,
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "sermon-helper-tauri_iOS/sermon-helper-tauri_iOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "metocast_iOS/metocast_iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
@@ -397,15 +397,15 @@
 					"$(inherited)",
 					"\".\"",
 				);
-				INFOPLIST_FILE = "sermon-helper-tauri_iOS/Info.plist";
+				INFOPLIST_FILE = "metocast_iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.sermon-helper-tauri.app;
-				PRODUCT_NAME = "sermon-helper-tauri";
+				PRODUCT_BUNDLE_IDENTIFIER = com.metocast.app;
+				PRODUCT_NAME = "metocast";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
@@ -477,7 +477,7 @@
 					arm64,
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "sermon-helper-tauri_iOS/sermon-helper-tauri_iOS.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "metocast_iOS/metocast_iOS.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
@@ -485,15 +485,15 @@
 					"$(inherited)",
 					"\".\"",
 				);
-				INFOPLIST_FILE = "sermon-helper-tauri_iOS/Info.plist";
+				INFOPLIST_FILE = "metocast_iOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
 				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.sermon-helper-tauri.app;
-				PRODUCT_NAME = "sermon-helper-tauri";
+				PRODUCT_BUNDLE_IDENTIFIER = com.metocast.app;
+				PRODUCT_NAME = "metocast";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
@@ -504,7 +504,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7B743AFDAEBEB4373AB1DF4A /* Build configuration list for PBXProject "sermon-helper-tauri" */ = {
+		7B743AFDAEBEB4373AB1DF4A /* Build configuration list for PBXProject "metocast" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				79041B40E26FF5AE2AB4977F /* debug */,
@@ -513,7 +513,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = debug;
 		};
-		F3403A38589FEDAB3892D1B9 /* Build configuration list for PBXNativeTarget "sermon-helper-tauri_iOS" */ = {
+		F3403A38589FEDAB3892D1B9 /* Build configuration list for PBXNativeTarget "metocast_iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8B75004CA0EC37D4266E9117 /* debug */,

@@ -2,8 +2,16 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::Read;
+use std::path::Path;
 
 use crate::server::AppState;
+
+#[path = "presenter_svg.rs"]
+mod presenter_svg;
+
+const MAX_BIBLE_WORDS_PER_SLIDE: usize = 55;
+const BIBLE_MAIN_FONT_SIZE_PT: f32 = 38.0;
+const BIBLE_COUNTER_FONT_SIZE_PT: f32 = 18.0;
 
 // ── Data types ────────────────────────────────────────────────────────────────
 
@@ -29,6 +37,71 @@ pub struct SlideContent {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct SvgSlideContent {
+    pub index: u32,
+    pub svg: String,
+    pub width_px: u32,
+    pub height_px: u32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PresenterRenderMode {
+    Text,
+    Svg,
+}
+
+impl Default for PresenterRenderMode {
+    fn default() -> Self {
+        Self::Text
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum BibleReferenceType {
+    Textus,
+    Leckio,
+}
+
+impl BibleReferenceType {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Textus => "textus",
+            Self::Leckio => "leckio",
+        }
+    }
+
+    fn display_name(self) -> &'static str {
+        match self {
+            Self::Textus => "Textus",
+            Self::Leckio => "Lekció",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BibleVerseContent {
+    pub chapter: u32,
+    pub verse: u32,
+    pub text: String,
+}
+
+#[derive(Debug, Clone)]
+struct BibleVerseChunk {
+    chapter: u32,
+    verse: u32,
+    text: String,
+}
+
+#[derive(Debug, Clone)]
+struct BibleSlidePage {
+    chunks: Vec<BibleVerseChunk>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ParsedPresentation {
     pub file_path: String,
     pub total_slides: u32,
@@ -36,6 +109,17 @@ pub struct ParsedPresentation {
     /// Slide width in EMUs (English Metric Units; 914 400 EMU = 1 inch).
     pub slide_width_emu: u64,
     /// Slide height in EMUs.
+    pub slide_height_emu: u64,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParsedSvgPresentation {
+    pub file_path: String,
+    pub total_slides: u32,
+    pub slides: Vec<SlideContent>,
+    pub svg_slides: Vec<SvgSlideContent>,
+    pub slide_width_emu: u64,
     pub slide_height_emu: u64,
 }
 
@@ -230,8 +314,7 @@ fn parse_slide_size(xml: &[u8]) -> (u64, u64) {
 
 /// Parse a `.pptx` file and return structured slide content.
 pub fn parse_pptx(file_path: &str) -> Result<ParsedPresentation, String> {
-    let file =
-        std::fs::File::open(file_path).map_err(|e| format!("Cannot open file: {e}"))?;
+    let file = std::fs::File::open(file_path).map_err(|e| format!("Cannot open file: {e}"))?;
 
     let mut archive =
         zip::ZipArchive::new(file).map_err(|e| format!("Not a valid .pptx file: {e}"))?;
@@ -300,6 +383,41 @@ pub fn parse_pptx(file_path: &str) -> Result<ParsedPresentation, String> {
     })
 }
 
+/// Parse a `.pptx` file into both the legacy text model and self-contained SVG slides.
+pub fn parse_pptx_svg(file_path: &str) -> Result<ParsedSvgPresentation, String> {
+    let parsed_text = parse_pptx(file_path)?;
+    let deck = presenter_svg::convert_pptx_to_inline_svg(Path::new(file_path))
+        .map_err(|e| format!("Cannot convert presentation to SVG: {e}"))?;
+
+    Ok(ParsedSvgPresentation {
+        file_path: file_path.to_string(),
+        total_slides: deck.slides.len() as u32,
+        slides: parsed_text.slides,
+        svg_slides: deck
+            .slides
+            .into_iter()
+            .map(|slide| SvgSlideContent {
+                index: slide.index,
+                svg: slide.svg,
+                width_px: slide.width_px,
+                height_px: slide.height_px,
+            })
+            .collect(),
+        slide_width_emu: deck.width_emu,
+        slide_height_emu: deck.height_emu,
+    })
+}
+
+pub fn load_pptx(
+    file_path: &str,
+    render_mode: PresenterRenderMode,
+) -> Result<PresenterState, String> {
+    match render_mode {
+        PresenterRenderMode::Text => parse_pptx(file_path).map(PresenterState::from_parsed),
+        PresenterRenderMode::Svg => parse_pptx_svg(file_path).map(PresenterState::from_svg),
+    }
+}
+
 // ── Live presenter state ──────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize)]
@@ -309,7 +427,9 @@ pub struct PresenterState {
     pub file_path: Option<String>,
     pub current_slide: u32,
     pub total_slides: u32,
+    pub render_mode: PresenterRenderMode,
     pub slides: Vec<SlideContent>,
+    pub svg_slides: Vec<SvgSlideContent>,
     pub muted: bool,
     pub slide_width_emu: u64,
     pub slide_height_emu: u64,
@@ -322,7 +442,9 @@ impl PresenterState {
             file_path: None,
             current_slide: 0,
             total_slides: 0,
+            render_mode: PresenterRenderMode::Text,
             slides: Vec::new(),
+            svg_slides: Vec::new(),
             muted: false,
             slide_width_emu: 12192000,
             slide_height_emu: 6858000,
@@ -336,10 +458,85 @@ impl PresenterState {
             file_path: Some(parsed.file_path),
             current_slide: if total > 0 { 1 } else { 0 },
             total_slides: total,
+            render_mode: PresenterRenderMode::Text,
             slides: parsed.slides,
+            svg_slides: Vec::new(),
             muted: false,
             slide_width_emu: parsed.slide_width_emu,
             slide_height_emu: parsed.slide_height_emu,
+        }
+    }
+
+    pub fn from_svg(parsed: ParsedSvgPresentation) -> Self {
+        let total = parsed.total_slides;
+        Self {
+            loaded: true,
+            file_path: Some(parsed.file_path),
+            current_slide: if total > 0 { 1 } else { 0 },
+            total_slides: total,
+            render_mode: PresenterRenderMode::Svg,
+            slides: parsed.slides,
+            svg_slides: parsed.svg_slides,
+            muted: false,
+            slide_width_emu: parsed.slide_width_emu,
+            slide_height_emu: parsed.slide_height_emu,
+        }
+    }
+
+    pub fn from_bible_reference(
+        event_title: &str,
+        reference_type: BibleReferenceType,
+        reference: &str,
+        verses: Vec<BibleVerseContent>,
+    ) -> Self {
+        let pages = paginate_bible_verses(verses, MAX_BIBLE_WORDS_PER_SLIDE);
+        let total = pages.len() as u32;
+        let slides = pages
+            .iter()
+            .enumerate()
+            .map(|(idx, page)| {
+                let slide_number = idx as u32 + 1;
+                let verse_range = format_bible_page_range(page);
+                let counter = format_bible_counter(
+                    reference_type.display_name(),
+                    reference,
+                    &verse_range,
+                    slide_number,
+                    total,
+                );
+                let mut paragraphs = vec![ParagraphContent {
+                    lines: vec![format_bible_page_text(page)],
+                    align: "left".to_string(),
+                    font_size_pt: BIBLE_MAIN_FONT_SIZE_PT,
+                }];
+                paragraphs.push(ParagraphContent {
+                    lines: vec![counter],
+                    align: "center".to_string(),
+                    font_size_pt: BIBLE_COUNTER_FONT_SIZE_PT,
+                });
+                SlideContent {
+                    index: slide_number,
+                    paragraphs,
+                }
+            })
+            .collect();
+
+        Self {
+            loaded: total > 0,
+            file_path: Some(format!(
+                "{} - {} {}",
+                event_title,
+                reference_type.display_name(),
+                reference
+            )),
+            current_slide: if total > 0 { 1 } else { 0 },
+            total_slides: total,
+            render_mode: PresenterRenderMode::Text,
+            slides,
+            svg_slides: Vec::new(),
+            muted: false,
+            slide_width_emu: 12192000,
+            slide_height_emu: 6858000,
         }
     }
 
@@ -386,7 +583,7 @@ impl PresenterState {
     /// Each text string becomes a single-line paragraph, preserving the
     /// original alignment and font size where possible.
     pub fn update_slide(&mut self, slide_index: u32, texts: Vec<String>) {
-        if !self.loaded {
+        if !self.loaded || self.render_mode != PresenterRenderMode::Text {
             return;
         }
         if let Some(slide) = self.slides.iter_mut().find(|s| s.index == slide_index) {
@@ -409,6 +606,167 @@ impl PresenterState {
                 })
                 .collect();
         }
+    }
+}
+
+fn paginate_bible_verses(
+    verses: Vec<BibleVerseContent>,
+    max_words_per_slide: usize,
+) -> Vec<BibleSlidePage> {
+    let max_words_per_slide = max_words_per_slide.max(1);
+    let mut pages = Vec::new();
+    let mut current_chunks = Vec::new();
+    let mut current_word_count = 0usize;
+
+    for verse in verses {
+        let words = verse.text.split_whitespace().collect::<Vec<_>>();
+        let word_count = words.len().max(1);
+
+        if word_count <= max_words_per_slide {
+            if current_word_count > 0 && current_word_count + word_count > max_words_per_slide {
+                push_bible_page(&mut pages, &mut current_chunks, &mut current_word_count);
+            }
+            current_chunks.push(BibleVerseChunk {
+                chapter: verse.chapter,
+                verse: verse.verse,
+                text: verse.text.trim().to_string(),
+            });
+            current_word_count += word_count;
+            continue;
+        }
+
+        push_bible_page(&mut pages, &mut current_chunks, &mut current_word_count);
+
+        for chunk_words in words.chunks(max_words_per_slide) {
+            current_chunks.push(BibleVerseChunk {
+                chapter: verse.chapter,
+                verse: verse.verse,
+                text: chunk_words.join(" "),
+            });
+            current_word_count = chunk_words.len();
+            push_bible_page(&mut pages, &mut current_chunks, &mut current_word_count);
+        }
+    }
+
+    push_bible_page(&mut pages, &mut current_chunks, &mut current_word_count);
+    pages
+}
+
+fn push_bible_page(
+    pages: &mut Vec<BibleSlidePage>,
+    chunks: &mut Vec<BibleVerseChunk>,
+    word_count: &mut usize,
+) {
+    if !chunks.is_empty() {
+        pages.push(BibleSlidePage {
+            chunks: std::mem::take(chunks),
+        });
+        *word_count = 0;
+    }
+}
+
+fn format_bible_page_range(page: &BibleSlidePage) -> String {
+    let Some(first) = page.chunks.first() else {
+        return String::new();
+    };
+    let last = page.chunks.last().unwrap_or(first);
+    if first.chapter == last.chapter && first.verse == last.verse {
+        format!("{}:{}", first.chapter, first.verse)
+    } else if first.chapter == last.chapter {
+        format!("{}:{}-{}", first.chapter, first.verse, last.verse)
+    } else {
+        format!(
+            "{}:{}-{}:{}",
+            first.chapter, first.verse, last.chapter, last.verse
+        )
+    }
+}
+
+fn format_bible_page_text(page: &BibleSlidePage) -> String {
+    page.chunks
+        .iter()
+        .map(|chunk| chunk.text.trim())
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn format_bible_counter(
+    display_name: &str,
+    reference: &str,
+    verse_range: &str,
+    slide_number: u32,
+    total: u32,
+) -> String {
+    let trimmed_reference = reference.trim();
+    if trimmed_reference.is_empty() {
+        format!("{display_name} {verse_range} ({slide_number}/{total})")
+    } else {
+        format!("{display_name} {trimmed_reference} | {verse_range} ({slide_number}/{total})")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn verse(chapter: u32, verse: u32, text: &str) -> BibleVerseContent {
+        BibleVerseContent {
+            chapter,
+            verse,
+            text: text.to_string(),
+        }
+    }
+
+    #[test]
+    fn paginates_short_verses_without_splitting_them() {
+        let pages = paginate_bible_verses(
+            vec![
+                verse(3, 16, "one two three"),
+                verse(3, 17, "four five"),
+                verse(3, 18, "six seven eight"),
+            ],
+            5,
+        );
+
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0].chunks.len(), 2);
+        assert_eq!(format_bible_page_range(&pages[0]), "3:16-17");
+        assert_eq!(pages[1].chunks[0].verse, 18);
+    }
+
+    #[test]
+    fn splits_single_oversized_verse_by_word_limit() {
+        let pages = paginate_bible_verses(vec![verse(4, 1, "one two three four five six")], 2);
+
+        assert_eq!(pages.len(), 3);
+        assert_eq!(pages[0].chunks[0].text, "one two");
+        assert_eq!(pages[1].chunks[0].text, "three four");
+        assert_eq!(pages[2].chunks[0].text, "five six");
+        assert_eq!(format_bible_page_range(&pages[2]), "4:1");
+    }
+
+    #[test]
+    fn bible_reference_slide_joins_verses_into_one_plain_paragraph() {
+        let state = PresenterState::from_bible_reference(
+            "Sunday",
+            BibleReferenceType::Textus,
+            "Jn 3:16-17",
+            vec![
+                verse(3, 16, "For God so loved the world."),
+                verse(3, 17, "God did not send the Son to condemn the world."),
+            ],
+        );
+
+        let slide = state.slides.first().unwrap();
+        assert_eq!(slide.paragraphs.len(), 2);
+        assert_eq!(slide.paragraphs[0].lines.len(), 1);
+        assert_eq!(
+            slide.paragraphs[0].lines.join(" "),
+            "For God so loved the world. God did not send the Son to condemn the world."
+        );
+        assert_eq!(slide.paragraphs[0].align, "left");
+        assert!(slide.paragraphs[1].lines[0].contains("Jn 3:16-17"));
     }
 }
 

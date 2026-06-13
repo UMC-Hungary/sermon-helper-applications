@@ -27,11 +27,11 @@
   );
 
   const installCommand = $derived(
-    `curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ${wsUrl}${autoStart ? ' --service' : ''}`
+    `curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ${wsUrl}${autoStart ? ' --service' : ''}`
   );
 
   const manualCommand = $derived(
-    `curl -fsSL https://github.com/UMC-Hungary/sermon-helper-applications/releases/latest/download/${binaryName[selectedPlatform]} -o presenter-receiver\nchmod +x presenter-receiver\n./presenter-receiver ${wsUrl}`
+    `curl -fsSL https://github.com/UMC-Hungary/metocast/releases/latest/download/${binaryName[selectedPlatform]} -o presenter-receiver\nchmod +x presenter-receiver\n./presenter-receiver ${wsUrl}`
   );
 
   async function copyInstall() {

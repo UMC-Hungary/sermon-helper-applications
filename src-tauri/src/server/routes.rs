@@ -91,13 +91,20 @@ pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoR
 pub async fn youtube_auth_url(State(state): State<AppState>) -> impl IntoResponse {
     let config = state.youtube_config.read().await.clone();
     if config.client_id.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "YouTube not configured"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "YouTube not configured"})),
+        )
+            .into_response();
     }
 
     let state_token = Uuid::new_v4().to_string();
     {
         let mut states = state.oauth_states.write().await;
-        states.insert(state_token.clone(), ("youtube".to_string(), std::time::Instant::now()));
+        states.insert(
+            state_token.clone(),
+            ("youtube".to_string(), std::time::Instant::now()),
+        );
     }
 
     let url = format!(
@@ -145,7 +152,10 @@ pub async fn oauth_callback(
             match youtube::exchange_code(&state.pool, &config, &code, OAUTH_REDIRECT_URI).await {
                 Ok(_) => {
                     if let Some(handle) = state.app_handle.clone() {
-                        state.youtube_connector.start(state.pool.clone(), config, handle).await;
+                        state
+                            .youtube_connector
+                            .start(state.pool.clone(), config, handle)
+                            .await;
                     }
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
@@ -160,7 +170,10 @@ pub async fn oauth_callback(
             match facebook::exchange_code(&state.pool, &config, &code, OAUTH_REDIRECT_URI).await {
                 Ok(_) => {
                     if let Some(handle) = state.app_handle.clone() {
-                        state.facebook_connector.start(state.pool.clone(), handle).await;
+                        state
+                            .facebook_connector
+                            .start(state.pool.clone(), handle)
+                            .await;
                     }
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
@@ -188,13 +201,20 @@ pub async fn youtube_logout(State(state): State<AppState>) -> impl IntoResponse 
 pub async fn facebook_auth_url(State(state): State<AppState>) -> impl IntoResponse {
     let config = state.facebook_config.read().await.clone();
     if config.app_id.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Facebook not configured"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Facebook not configured"})),
+        )
+            .into_response();
     }
 
     let state_token = Uuid::new_v4().to_string();
     {
         let mut states = state.oauth_states.write().await;
-        states.insert(state_token.clone(), ("facebook".to_string(), std::time::Instant::now()));
+        states.insert(
+            state_token.clone(),
+            ("facebook".to_string(), std::time::Instant::now()),
+        );
     }
 
     let url = format!(
@@ -232,7 +252,13 @@ pub async fn trigger_youtube_schedule(
 
     let token = match youtube::load_tokens(&state.pool).await {
         Some(t) => t,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Not authenticated"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Not authenticated"})),
+            )
+                .into_response()
+        }
     };
 
     let yt_conn = event.connection("youtube");
@@ -310,7 +336,11 @@ pub async fn trigger_youtube_schedule(
                 anyhow::Ok(())
             }
             .await;
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
     }
 }
@@ -357,12 +387,22 @@ pub async fn trigger_facebook_schedule(
 
     let token = match facebook::load_tokens(&state.pool).await {
         Some(t) => t,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Not authenticated"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Not authenticated"})),
+            )
+                .into_response()
+        }
     };
 
     let config = state.facebook_config.read().await.clone();
     if config.page_id.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Facebook page_id not configured"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Facebook page_id not configured"})),
+        )
+            .into_response();
     }
 
     let fb_conn = event.connection("facebook");
@@ -441,12 +481,14 @@ pub async fn trigger_facebook_schedule(
                 anyhow::Ok(())
             }
             .await;
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
     }
 }
-
-
 
 // ── Multi-stream relay: stream key fetch ──────────────────────────────────────
 
@@ -643,10 +685,7 @@ pub async fn list_events(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
-pub async fn get_event(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> impl IntoResponse {
+pub async fn get_event(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl IntoResponse {
     match fetch_event(id, &state.pool).await {
         Ok(Some(event)) => (StatusCode::OK, Json(event)).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
@@ -668,19 +707,14 @@ async fn upsert_bible_references(
     for br in refs {
         let reference = br.reference.as_deref().unwrap_or("").trim();
         if reference.is_empty() {
-            sqlx::query(
-                "DELETE FROM event_bible_references WHERE event_id = $1 AND type = $2",
-            )
-            .bind(event_id)
-            .bind(&br.r#type)
-            .execute(&mut **tx)
-            .await?;
+            sqlx::query("DELETE FROM event_bible_references WHERE event_id = $1 AND type = $2")
+                .bind(event_id)
+                .bind(&br.r#type)
+                .execute(&mut **tx)
+                .await?;
         } else {
             let translation = br.translation.as_deref().unwrap_or("UF");
-            let verses = br
-                .verses
-                .clone()
-                .unwrap_or_else(|| serde_json::json!([]));
+            let verses = br.verses.clone().unwrap_or_else(|| serde_json::json!([]));
             sqlx::query(
                 "INSERT INTO event_bible_references (event_id, type, reference, translation, verses) \
                  VALUES ($1, $2, $3, $4, $5) \
@@ -1028,13 +1062,12 @@ pub async fn delete_recording(
     Path((event_id, recording_id)): Path<(Uuid, Uuid)>,
     Query(params): Query<DeleteRecordingParams>,
 ) -> impl IntoResponse {
-    let row = sqlx::query_as::<_, Recording>(
-        "SELECT * FROM recordings WHERE id = $1 AND event_id = $2",
-    )
-    .bind(recording_id)
-    .bind(event_id)
-    .fetch_optional(&state.pool)
-    .await;
+    let row =
+        sqlx::query_as::<_, Recording>("SELECT * FROM recordings WHERE id = $1 AND event_id = $2")
+            .bind(recording_id)
+            .bind(event_id)
+            .fetch_optional(&state.pool)
+            .await;
 
     match row {
         Ok(Some(rec)) => {
@@ -1112,9 +1145,10 @@ pub async fn create_cron_job(
     Json(body): Json<CreateCronJob>,
 ) -> impl IntoResponse {
     // Validate the cron expression before inserting.
-    if tokio_cron_scheduler::Job::new_async(body.cron_expression.as_str(), |_, _| {
-        Box::pin(async {})
-    })
+    if tokio_cron_scheduler::Job::new_async(
+        body.cron_expression.as_str(),
+        |_, _| Box::pin(async {}),
+    )
     .is_err()
     {
         return (
@@ -1127,7 +1161,17 @@ pub async fn create_cron_job(
     let result: anyhow::Result<cron_job::CronJob> = async {
         let mut tx = state.pool.begin().await?;
 
-        let row = sqlx::query_as::<_, (Uuid, String, String, bool, chrono::DateTime<Utc>, chrono::DateTime<Utc>)>(
+        let row = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                String,
+                String,
+                bool,
+                chrono::DateTime<Utc>,
+                chrono::DateTime<Utc>,
+            ),
+        >(
             "INSERT INTO cron_jobs (name, cron_expression, enabled) \
              VALUES ($1, $2, $3) \
              RETURNING id, name, cron_expression, enabled, created_at, updated_at",
@@ -1179,9 +1223,10 @@ pub async fn update_cron_job(
     Json(body): Json<UpdateCronJob>,
 ) -> impl IntoResponse {
     // Validate the cron expression before updating.
-    if tokio_cron_scheduler::Job::new_async(body.cron_expression.as_str(), |_, _| {
-        Box::pin(async {})
-    })
+    if tokio_cron_scheduler::Job::new_async(
+        body.cron_expression.as_str(),
+        |_, _| Box::pin(async {}),
+    )
     .is_err()
     {
         return (
@@ -1194,7 +1239,17 @@ pub async fn update_cron_job(
     let result: anyhow::Result<Option<cron_job::CronJob>> = async {
         let mut tx = state.pool.begin().await?;
 
-        let row = sqlx::query_as::<_, (Uuid, String, String, bool, chrono::DateTime<Utc>, chrono::DateTime<Utc>)>(
+        let row = sqlx::query_as::<
+            _,
+            (
+                Uuid,
+                String,
+                String,
+                bool,
+                chrono::DateTime<Utc>,
+                chrono::DateTime<Utc>,
+            ),
+        >(
             "UPDATE cron_jobs \
              SET name = $1, cron_expression = $2, enabled = $3, updated_at = NOW() \
              WHERE id = $4 \
@@ -1252,11 +1307,10 @@ pub async fn delete_cron_job(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let result =
-        sqlx::query("DELETE FROM cron_jobs WHERE id = $1 RETURNING id")
-            .bind(id)
-            .fetch_optional(&state.pool)
-            .await;
+    let result = sqlx::query("DELETE FROM cron_jobs WHERE id = $1 RETURNING id")
+        .bind(id)
+        .fetch_optional(&state.pool)
+        .await;
 
     match result {
         Ok(Some(_)) => {
@@ -1467,7 +1521,10 @@ pub async fn delete_untracked_recording(
             }
             if params.delete_file {
                 if let Err(e) = tokio::fs::remove_file(&rec.file_path).await {
-                    tracing::warn!("delete_untracked_recording: could not delete file {}: {e}", rec.file_path);
+                    tracing::warn!(
+                        "delete_untracked_recording: could not delete file {}: {e}",
+                        rec.file_path
+                    );
                 }
             }
             let clients = state.ws_clients.clone();
@@ -1538,13 +1595,12 @@ pub async fn delete_event_activity(
     State(state): State<AppState>,
     Path((event_id, activity_id)): Path<(Uuid, Uuid)>,
 ) -> impl IntoResponse {
-    let result = sqlx::query(
-        "DELETE FROM event_activities WHERE id = $1 AND event_id = $2 RETURNING id",
-    )
-    .bind(activity_id)
-    .bind(event_id)
-    .fetch_optional(&state.pool)
-    .await;
+    let result =
+        sqlx::query("DELETE FROM event_activities WHERE id = $1 AND event_id = $2 RETURNING id")
+            .bind(activity_id)
+            .bind(event_id)
+            .fetch_optional(&state.pool)
+            .await;
 
     match result {
         Ok(Some(_)) => StatusCode::NO_CONTENT.into_response(),
@@ -1641,15 +1697,17 @@ pub async fn broadlink_list_devices(State(state): State<AppState>) -> impl IntoR
         Ok(devices) => {
             let list: Vec<BroadlinkDevice> = devices
                 .into_iter()
-                .map(|(id, name, device_type, model, host, mac, is_default)| BroadlinkDevice {
-                    id,
-                    name,
-                    device_type,
-                    model,
-                    host,
-                    mac,
-                    is_default,
-                })
+                .map(
+                    |(id, name, device_type, model, host, mac, is_default)| BroadlinkDevice {
+                        id,
+                        name,
+                        device_type,
+                        model,
+                        host,
+                        mac,
+                        is_default,
+                    },
+                )
                 .collect();
             Json(list).into_response()
         }
@@ -1829,15 +1887,17 @@ pub async fn broadlink_list_commands(
         Ok(commands) => {
             let list: Vec<BroadlinkCommand> = commands
                 .into_iter()
-                .map(|(id, device_id, name, slug, code, code_type, category)| BroadlinkCommand {
-                    id,
-                    device_id,
-                    name,
-                    slug,
-                    code,
-                    code_type,
-                    category,
-                })
+                .map(
+                    |(id, device_id, name, slug, code, code_type, category)| BroadlinkCommand {
+                        id,
+                        device_id,
+                        name,
+                        slug,
+                        code,
+                        code_type,
+                        category,
+                    },
+                )
                 .collect();
             Json(list).into_response()
         }
@@ -1972,9 +2032,7 @@ pub async fn broadlink_start_learn(
     let (host, mac, devtype) = match device {
         Ok(Some(row)) => row,
         Ok(None) => {
-            state
-                .broadlink_learn_active
-                .store(false, Ordering::SeqCst);
+            state.broadlink_learn_active.store(false, Ordering::SeqCst);
             return (
                 StatusCode::NOT_FOUND,
                 Json(json!({ "error": "Device not found" })),
@@ -1982,9 +2040,7 @@ pub async fn broadlink_start_learn(
                 .into_response();
         }
         Err(e) => {
-            state
-                .broadlink_learn_active
-                .store(false, Ordering::SeqCst);
+            state.broadlink_learn_active.store(false, Ordering::SeqCst);
             tracing::error!("broadlink_start_learn fetch device: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
@@ -1994,8 +2050,7 @@ pub async fn broadlink_start_learn(
     let learn_tx = state.broadlink_connector.learn_tx.clone();
 
     tokio::spawn(async move {
-        let result =
-            crate::broadlink::learn_code(&host, &mac, &devtype, &signal_type).await;
+        let result = crate::broadlink::learn_code(&host, &mac, &devtype, &signal_type).await;
         let event = match result {
             Ok(lr) => crate::connectors::broadlink::BroadlinkLearnEvent {
                 code: lr.code,
@@ -2015,9 +2070,7 @@ pub async fn broadlink_start_learn(
 
 pub async fn broadlink_cancel_learn(State(state): State<AppState>) -> impl IntoResponse {
     crate::broadlink::cancel_learn().await;
-    state
-        .broadlink_learn_active
-        .store(false, Ordering::SeqCst);
+    state.broadlink_learn_active.store(false, Ordering::SeqCst);
     StatusCode::NO_CONTENT.into_response()
 }
 

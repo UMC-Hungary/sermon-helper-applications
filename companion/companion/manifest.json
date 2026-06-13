@@ -1,19 +1,19 @@
 {
-	"id": "metocast-bridge",
-	"name": "metocast-bridge",
-	"shortname": "Metocast Bridge",
+	"id": "metocast",
+	"name": "metocast",
+	"shortname": "Metocast",
 	"description": "Control Broadlink IR/RF devices and presentations through the Metocast application",
-	"version": "1.0.0",
+	"version": "2.0.12",
 	"license": "MIT",
-	"repository": "git+https://github.com/UMC-Hungary/sermon-helper-applications.git",
-	"bugs": "https://github.com/UMC-Hungary/sermon-helper-applications/issues",
+	"repository": "git+https://github.com/UMC-Hungary/metocast.git",
+	"bugs": "https://github.com/UMC-Hungary/metocast/issues",
 	"maintainers": [
 		{
 			"name": "UMC Hungary",
 			"email": "author@example.com"
 		}
 	],
-	"legacyIds": ["metocast"],
+	"legacyIds": [],
 	"runtime": {
 		"type": "node18",
 		"api": "nodejs-ipc",
@@ -22,5 +22,5 @@
 	},
 	"manufacturer": "Custom",
 	"products": ["Metocast", "Broadlink"],
-	"keywords": ["broadlink", "ir", "rf", "church", "livestream", "keynote", "presentation"]
+	"keywords": ["metocast", "broadlink", "ir", "rf", "church", "livestream", "keynote", "presentation"]
 }

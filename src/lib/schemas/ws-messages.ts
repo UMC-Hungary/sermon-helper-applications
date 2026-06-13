@@ -119,12 +119,23 @@ export const SlideContentSchema = z.object({
   paragraphs: z.array(ParagraphContentSchema),
 });
 
+export const PresenterRenderModeSchema = z.enum(['text', 'svg']);
+
+export const SvgSlideContentSchema = z.object({
+  index: z.number().int().positive(),
+  svg: z.string(),
+  widthPx: z.number().int().positive(),
+  heightPx: z.number().int().positive(),
+});
+
 export const PresenterStateSchema = z.object({
   loaded: z.boolean(),
   filePath: z.string().nullable(),
   currentSlide: z.number().int().nonnegative(),
   totalSlides: z.number().int().nonnegative(),
+  renderMode: PresenterRenderModeSchema.default('text'),
   slides: z.array(SlideContentSchema),
+  svgSlides: z.array(SvgSlideContentSchema).default([]),
   muted: z.boolean(),
   // Optional: absent from old binaries; defaults to standard 16:9.
   slideWidthEmu: z.number().int().nonnegative().default(12192000),
@@ -146,6 +157,8 @@ export type PptFile = z.infer<typeof PptFileSchema>;
 export type PptFolder = z.infer<typeof PptFolderSchema>;
 export type ParagraphContent = z.infer<typeof ParagraphContentSchema>;
 export type SlideContent = z.infer<typeof SlideContentSchema>;
+export type PresenterRenderMode = z.infer<typeof PresenterRenderModeSchema>;
+export type SvgSlideContent = z.infer<typeof SvgSlideContentSchema>;
 export type PresenterState = z.infer<typeof PresenterStateSchema>;
 export type WsClientInfo = z.infer<typeof WsClientInfoSchema>;
 export type CronJob = z.infer<typeof CronJobSchema>;
@@ -250,6 +263,11 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   }),
   // ── Events (WS command responses) ──────────────────────────────────────────
   z.object({ type: z.literal('events.list'), events: z.array(EventSummarySchema) }),
+  z.object({
+    type: z.literal('events.presenter_list'),
+    events: z.array(EventSummarySchema),
+    selectedEventId: z.string().uuid().nullable(),
+  }),
   z.object({ type: z.literal('events.get'), event: EventSchema }),
   z.object({ type: z.literal('events.create'), event: EventSchema }),
   z.object({ type: z.literal('events.update'), event: EventSchema }),

@@ -1,11 +1,19 @@
 import type { CompanionActionDefinitions, CompanionActionEvent } from '@companion-module/base'
 import type { ModuleInstance } from './main.js'
+import type { BibleReferenceType } from './types.js'
 
 export function GetActions(instance: ModuleInstance): CompanionActionDefinitions {
 	const commandChoices = instance.commands.map((cmd) => ({
 		id: cmd.slug,
 		label: `${cmd.name} (${cmd.category})`,
 	}))
+	const presenterEventChoices = [
+		{ id: '', label: 'Backend selected event' },
+		...instance.presenterEvents.map((event) => ({
+			id: event.id,
+			label: `${new Date(event.dateTime).toLocaleString()} · ${event.title}`,
+		})),
+	]
 
 	return {
 		execute_command: {
@@ -236,7 +244,7 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 					id: 'filePath',
 					label: 'File Path',
 					default: '',
-					tooltip: 'Full path to the presentation file (e.g. /Users/me/sermon.pptx)',
+					tooltip: 'Full path to the presentation file (e.g. /Users/me/service.pptx)',
 				},
 			],
 			callback: async (action: CompanionActionEvent) => {
@@ -267,14 +275,22 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 		},
 
 		presentation_stop: {
-			name: 'Presentation: Stop Slideshow',
-			description: 'Stop the currently running slideshow',
+			name: instance.useWebPresenter ? 'Presentation: Unload Web Presenter' : 'Presentation: Stop Slideshow',
+			description: instance.useWebPresenter
+				? 'Unload the active web presenter deck'
+				: 'Stop the currently running slideshow',
 			options: [],
 			callback: async () => {
-				instance.log('debug', 'Presentation: Stop slideshow')
+				instance.log(
+					'debug',
+					instance.useWebPresenter ? 'Presentation: Unload web presenter' : 'Presentation: Stop slideshow',
+				)
 				const result = await instance.api.presentationStop()
 				if (!result.success) {
-					instance.log('error', `Presentation stop failed: ${result.error}`)
+					instance.log(
+						'error',
+						`Presentation ${instance.useWebPresenter ? 'unload' : 'stop'} failed: ${result.error}`,
+					)
 				}
 			},
 		},
@@ -396,6 +412,41 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 					if (!result.success) {
 						instance.log('error', `Presentation blank failed: ${result.error}`)
 					}
+				}
+			},
+		},
+
+		presentation_bible_reference: {
+			name: 'Presentation: Show Bible Reference',
+			description: 'Show the Textus or Lekció for the backend-selected presenter event',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'referenceType',
+					label: 'Reference',
+					default: 'textus',
+					choices: [
+						{ id: 'textus', label: 'Textus' },
+						{ id: 'leckio', label: 'Lekció' },
+					],
+				},
+				{
+					type: 'dropdown',
+					id: 'eventId',
+					label: 'Event',
+					default: '',
+					choices: presenterEventChoices,
+					allowCustom: true,
+					tooltip: 'Leave as backend selected event to use the app-selected current/next event',
+				},
+			],
+			callback: async (action: CompanionActionEvent) => {
+				const referenceType: BibleReferenceType =
+					action.options['referenceType'] === 'leckio' ? 'leckio' : 'textus'
+				const eventId = action.options['eventId'] as string
+				const result = await instance.api.presentBibleReference(referenceType, eventId || undefined)
+				if (!result.success) {
+					instance.log('error', `Bible reference presentation failed: ${result.error}`)
 				}
 			},
 		},

@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-  <title>Events — Sermon Helper</title>
+  <title>Events — Metocast</title>
 </svelte:head>
 
 <div class="page-header">

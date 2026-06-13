@@ -215,7 +215,10 @@ pub struct GotoBody {
 #[cfg(target_os = "macos")]
 pub async fn keynote_status(State(state): State<AppState>) -> impl IntoResponse {
     let status = state.keynote_connector.get_status().await;
-    (StatusCode::OK, Json(json!({ "success": true, "data": status })))
+    (
+        StatusCode::OK,
+        Json(json!({ "success": true, "data": status })),
+    )
 }
 
 #[cfg(target_os = "macos")]

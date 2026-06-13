@@ -7,7 +7,7 @@ const DOCS_HTML: &str = r#"<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sermon Helper API Reference</title>
+    <title>Metocast API Reference</title>
   </head>
   <body>
     <script id="api-reference" data-url="/openapi.json"></script>
@@ -27,9 +27,9 @@ pub fn spec() -> Value {
     json!({
         "openapi": "3.1.0",
         "info": {
-            "title": "Sermon Helper API",
-            "version": "1.0.0",
-            "description": "REST API and WebSocket interface for the Sermon Helper desktop application.\n\n## Authentication\n\nAll `/api/*` endpoints require a **Bearer token** in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\nThe token is displayed in the app's *Connection Guide* screen. It rotates on every server restart.\n\n## WebSocket — real-time push stream\n\n> **Note:** WebSocket is not an HTTP operation and cannot be tested from this page. Use a WebSocket client (e.g. [Hoppscotch](https://hoppscotch.io), [websocat](https://github.com/vi/websocat), or Bruno's socket type).\n\n**Endpoint:** `ws://<host>/ws?token=<token>`\n\nAuthentication uses the same bearer token passed as a **query parameter** (headers are not available during the WebSocket handshake).\n\n### Initial messages (sent immediately on connect)\n\n```json\n{ \"type\": \"connected\", \"serverId\": \"<uuid>\" }\n{ \"type\": \"connector.status\", \"connector\": \"obs\",  \"status\": { \"type\": \"connected\" } }\n{ \"type\": \"connector.status\", \"connector\": \"vmix\", \"status\": { \"type\": \"disconnected\" } }\n```\n\n### Push messages (broadcast on change)\n\n| `type` | Trigger | Schema |\n|---|---|---|\n| `connector.status` | OBS or VMix connection state changes | `WsConnectorStatusMessage` |\n| `event.changed` | Event created, updated, or deleted | `WsEventChangedMessage` |\n| `recording.changed` | Recording created or updated | `WsRecordingChangedMessage` |\n\n```json\n{ \"type\": \"connector.status\", \"connector\": \"obs\", \"status\": { \"type\": \"error\", \"message\": \"connection refused\" } }\n{ \"type\": \"event.changed\",     \"data\": { \"operation\": \"INSERT\", \"record\": { ...Event } } }\n{ \"type\": \"recording.changed\", \"data\": { \"operation\": \"UPDATE\", \"record\": { ...Recording } } }\n```\n\nFull payload definitions are in the `Ws*Message` schemas below."
+            "title": "Metocast API",
+            "version": env!("CARGO_PKG_VERSION"),
+            "description": "REST API and WebSocket interface for the Metocast desktop application.\n\n## Authentication\n\nAll `/api/*` endpoints require a **Bearer token** in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\nThe token is displayed in the app's *Connection Guide* screen. It rotates on every server restart.\n\n## WebSocket — real-time push stream\n\n> **Note:** WebSocket is not an HTTP operation and cannot be tested from this page. Use a WebSocket client (e.g. [Hoppscotch](https://hoppscotch.io), [websocat](https://github.com/vi/websocat), or Bruno's socket type).\n\n**Endpoint:** `ws://<host>/ws?token=<token>`\n\nAuthentication uses the same bearer token passed as a **query parameter** (headers are not available during the WebSocket handshake).\n\n### Initial messages (sent immediately on connect)\n\n```json\n{ \"type\": \"connected\", \"serverId\": \"<uuid>\" }\n{ \"type\": \"connector.status\", \"connector\": \"obs\",  \"status\": { \"type\": \"connected\" } }\n{ \"type\": \"connector.status\", \"connector\": \"vmix\", \"status\": { \"type\": \"disconnected\" } }\n```\n\n### Push messages (broadcast on change)\n\n| `type` | Trigger | Schema |\n|---|---|---|\n| `connector.status` | OBS or VMix connection state changes | `WsConnectorStatusMessage` |\n| `event.changed` | Event created, updated, or deleted | `WsEventChangedMessage` |\n| `recording.changed` | Recording created or updated | `WsRecordingChangedMessage` |\n\n```json\n{ \"type\": \"connector.status\", \"connector\": \"obs\", \"status\": { \"type\": \"error\", \"message\": \"connection refused\" } }\n{ \"type\": \"event.changed\",     \"data\": { \"operation\": \"INSERT\", \"record\": { ...Event } } }\n{ \"type\": \"recording.changed\", \"data\": { \"operation\": \"UPDATE\", \"record\": { ...Recording } } }\n```\n\nFull payload definitions are in the `Ws*Message` schemas below."
         },
         "servers": [
             {
@@ -41,7 +41,7 @@ pub fn spec() -> Value {
             { "bearerAuth": [] }
         ],
         "tags": [
-            { "name": "Events",     "description": "Sermon / service events" },
+            { "name": "Events",     "description": "Service events" },
             { "name": "Recordings", "description": "Video recording files linked to events" },
             { "name": "Connectors", "description": "Streaming software connector status (OBS, VMix)" },
             { "name": "Presenter",  "description": "Web presenter — parse .pptx files and push slide changes to all connected browsers" },
@@ -59,27 +59,71 @@ pub fn spec() -> Value {
                 "SlideContent": {
                     "type": "object",
                     "description": "Text content extracted from a single slide.",
-                    "required": ["index", "texts"],
+                    "required": ["index", "paragraphs"],
                     "properties": {
                         "index": { "type": "integer", "minimum": 1, "description": "1-based slide number" },
-                        "texts": {
+                        "paragraphs": {
                             "type": "array",
-                            "items": { "type": "string" },
-                            "description": "All non-empty text paragraphs found on the slide"
+                            "items": {
+                                "type": "object",
+                                "required": ["lines", "align", "fontSizePt"],
+                                "properties": {
+                                    "lines": { "type": "array", "items": { "type": "string" } },
+                                    "align": { "type": "string", "enum": ["left", "center", "right", "justify"] },
+                                    "fontSizePt": { "type": "number" }
+                                }
+                            }
                         }
+                    }
+                },
+                "SvgSlideContent": {
+                    "type": "object",
+                    "description": "Self-contained SVG rendering of a single slide.",
+                    "required": ["index", "svg", "widthPx", "heightPx"],
+                    "properties": {
+                        "index": { "type": "integer", "minimum": 1 },
+                        "svg": { "type": "string", "description": "Inline SVG document. Embedded images are data URIs." },
+                        "widthPx": { "type": "integer", "minimum": 1 },
+                        "heightPx": { "type": "integer", "minimum": 1 }
+                    }
+                },
+                "PresenterState": {
+                    "type": "object",
+                    "required": ["loaded", "filePath", "currentSlide", "totalSlides", "renderMode", "slides", "svgSlides", "muted"],
+                    "properties": {
+                        "loaded": { "type": "boolean" },
+                        "filePath": { "type": ["string", "null"] },
+                        "currentSlide": { "type": "integer", "minimum": 0 },
+                        "totalSlides": { "type": "integer", "minimum": 0 },
+                        "renderMode": { "type": "string", "enum": ["text", "svg"] },
+                        "slides": {
+                            "type": "array",
+                            "items": { "$ref": "#/components/schemas/SlideContent" },
+                            "description": "Text slides for text mode and fallback/editing data."
+                        },
+                        "svgSlides": {
+                            "type": "array",
+                            "items": { "$ref": "#/components/schemas/SvgSlideContent" },
+                            "description": "SVG slides when renderMode is svg."
+                        },
+                        "muted": { "type": "boolean" },
+                        "slideWidthEmu": { "type": "integer" },
+                        "slideHeightEmu": { "type": "integer" }
                     }
                 },
                 "ParsedPresentation": {
                     "type": "object",
-                    "description": "Structured content extracted from a parsed .pptx file.",
-                    "required": ["filePath", "totalSlides", "slides"],
+                    "description": "Structured text content extracted from a parsed .pptx file.",
+                    "required": ["filePath", "totalSlides", "slides", "slideWidthEmu", "slideHeightEmu"],
                     "properties": {
                         "filePath":    { "type": "string", "example": "/Users/admin/Presentations/sunday-service.pptx" },
                         "totalSlides": { "type": "integer", "minimum": 0 },
                         "slides": {
                             "type": "array",
                             "items": { "$ref": "#/components/schemas/SlideContent" }
-                        }
+                        },
+                        "slideWidthEmu": { "type": "integer" },
+                        "slideHeightEmu": { "type": "integer" }
                     }
                 },
                 "BibleReference": {
@@ -562,7 +606,7 @@ pub fn spec() -> Value {
                 "get": {
                     "tags": ["WebSocket"],
                     "summary": "WebSocket live stream",
-                    "description": "**This endpoint performs a WebSocket upgrade — it cannot be tested with the HTTP \"Send\" button.**\n\nUse a dedicated WebSocket client instead:\n- [Hoppscotch](https://hoppscotch.io) → New request → WebSocket\n- [websocat](https://github.com/vi/websocat): `websocat 'ws://<host>/ws?token=<token>'`\n- Bruno: add a request with type `socket`\n\n---\n\n**Connection URL:** `ws://<host>/ws?token=<token>`\n\nAuthentication uses the same bearer token passed as a **query parameter** (the `Authorization` header is not available during the WebSocket handshake).\n\n### Initial messages (pushed immediately on connect)\n\n```json\n{ \"type\": \"connected\", \"serverId\": \"<uuid>\" }\n{ \"type\": \"connector.status\", \"connector\": \"obs\",  \"status\": { \"type\": \"connected\" } }\n{ \"type\": \"connector.status\", \"connector\": \"vmix\", \"status\": { \"type\": \"disconnected\" } }\n```\n\n### Broadcast messages (sent when data changes)\n\n| `type` | Trigger | Schema |\n|---|---|---|\n| `connector.status` | OBS or VMix connection state changes | `WsConnectorStatusMessage` |\n| `event.changed` | Event created, updated, or deleted | `WsEventChangedMessage` |\n| `recording.changed` | Recording created or updated | `WsRecordingChangedMessage` |\n| `presenter.state` | Presentation loaded or unloaded | `{ type, state: { loaded, filePath, currentSlide, totalSlides, slides } }` |\n| `presenter.slide_changed` | Slide navigation | `{ type, currentSlide, totalSlides }` |\n\n### Presenter WS commands\n\n| Command | Fields | Description |\n|---|---|---|\n| `presenter.load` | `file_path` | Parse .pptx and load into presenter; broadcasts `presenter.state` |\n| `presenter.unload` | — | Clear the active presentation |\n| `presenter.next` | — | Advance one slide |\n| `presenter.prev` | — | Go back one slide |\n| `presenter.first` | — | Jump to slide 1 |\n| `presenter.last` | — | Jump to last slide |\n| `presenter.goto` | `slide` | Jump to a specific slide number |\n| `presenter.status` | — | Reply to requesting client with `presenter.state` |",
+                    "description": "**This endpoint performs a WebSocket upgrade — it cannot be tested with the HTTP \"Send\" button.**\n\nUse a dedicated WebSocket client instead:\n- [Hoppscotch](https://hoppscotch.io) → New request → WebSocket\n- [websocat](https://github.com/vi/websocat): `websocat 'ws://<host>/ws?token=<token>'`\n- Bruno: add a request with type `socket`\n\n---\n\n**Connection URL:** `ws://<host>/ws?token=<token>`\n\nAuthentication uses the same bearer token passed as a **query parameter** (the `Authorization` header is not available during the WebSocket handshake).\n\n### Initial messages (pushed immediately on connect)\n\n```json\n{ \"type\": \"connected\", \"serverId\": \"<uuid>\" }\n{ \"type\": \"connector.status\", \"connector\": \"obs\",  \"status\": { \"type\": \"connected\" } }\n{ \"type\": \"connector.status\", \"connector\": \"vmix\", \"status\": { \"type\": \"disconnected\" } }\n```\n\n### Broadcast messages (sent when data changes)\n\n| `type` | Trigger | Schema |\n|---|---|---|\n| `connector.status` | OBS or VMix connection state changes | `WsConnectorStatusMessage` |\n| `event.changed` | Event created, updated, or deleted | `WsEventChangedMessage` |\n| `recording.changed` | Recording created or updated | `WsRecordingChangedMessage` |\n| `presenter.state` | Presentation loaded or unloaded | `{ type, state: PresenterState }` with `renderMode: \"text\" | \"svg\"` |\n| `presenter.slide_changed` | Slide navigation | `{ type, currentSlide, totalSlides }` |\n\n### Presenter WS commands\n\n| Command | Fields | Description |\n|---|---|---|\n| `presenter.load` | `file_path`, optional `render_mode` | Load a .pptx into the presenter; defaults to text mode |\n| `presenter.load_bible_reference` | optional `event_id`, `reference_type` | Load an event Textus/Lekció Bible reference into the text presenter. If `event_id` is omitted, the backend-selected presenter event is used. |\n| `presenter.unload` | — | Clear the active presentation |\n| `presenter.next` | — | Advance one slide |\n| `presenter.prev` | — | Go back one slide |\n| `presenter.first` | — | Jump to slide 1 |\n| `presenter.last` | — | Jump to last slide |\n| `presenter.goto` | `slide` | Jump to a specific slide number |\n| `presenter.status` | — | Reply to requesting client with `presenter.state` |\n\n### Event WS commands for presenter controls\n\n| Command | Fields | Description |\n|---|---|---|\n| `events.presenter_list` | — | Return backend-ordered presenter event choices plus `selectedEventId` for the current/next event |\n\n`presentation.open` uses SVG mode by default in web-presenter mode. Send `render_mode: \"text\"` to force the text renderer.",
                     "operationId": "connectWebSocket",
                     "security": [],
                     "parameters": [

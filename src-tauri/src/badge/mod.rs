@@ -1,7 +1,7 @@
 pub mod encrypted_shader;
 
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BadgeInstallResult {
@@ -33,7 +33,7 @@ async fn resolve_latest_download_url(client: &reqwest::Client) -> Result<(String
     let api_url = "https://api.github.com/repos/exeldro/obs-shaderfilter/releases/latest";
     let response = client
         .get(api_url)
-        .header("User-Agent", "sermon-helper-tauri")
+        .header("User-Agent", "metocast-tauri")
         .send()
         .await
         .map_err(|e| format!("Failed to fetch latest release info: {}", e))?;
@@ -142,16 +142,19 @@ pub fn extract_shaderfilter(pkg_path: &PathBuf) -> Result<(), String> {
         return Err(format!(
             "Plugin installation failed (exit {}): {}",
             output.status.code().unwrap_or(-1),
-            if !stderr.is_empty() { stderr.as_ref() } else { stdout.as_ref() }
+            if !stderr.is_empty() {
+                stderr.as_ref()
+            } else {
+                stdout.as_ref()
+            }
         ));
     }
 
     // OBS 28+ on macOS only loads plugins from ~/Library/Application Support/obs-studio/plugins/,
     // not from the system-wide /Library path where the installer writes.
     // Copy the freshly installed bundle to the user path so OBS finds it.
-    let system_plugin = PathBuf::from(
-        "/Library/Application Support/obs-studio/plugins/obs-shaderfilter.plugin",
-    );
+    let system_plugin =
+        PathBuf::from("/Library/Application Support/obs-studio/plugins/obs-shaderfilter.plugin");
     let user_plugin_dir = get_obs_plugin_dir();
 
     if system_plugin.exists() {
@@ -181,39 +184,46 @@ pub fn extract_shaderfilter(pkg_path: &PathBuf) -> Result<(), String> {
 #[cfg(not(target_os = "macos"))]
 pub fn extract_shaderfilter(zip_path: &PathBuf) -> Result<(), String> {
     use std::fs::File;
-    
+
     let file = File::open(zip_path).map_err(|e| format!("Failed to open zip: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip: {}", e))?;
-    
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("Failed to read zip: {}", e))?;
+
     let plugin_dir = get_obs_plugin_dir();
-    
+
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i).map_err(|e| format!("Failed to read zip entry: {}", e))?;
+        let mut file = archive
+            .by_index(i)
+            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
         let outpath = plugin_dir.join(file.name());
-        
+
         if file.is_dir() {
             std::fs::create_dir_all(&outpath).ok();
         } else {
             if let Some(p) = outpath.parent() {
                 std::fs::create_dir_all(p).ok();
             }
-            let mut outfile = std::fs::File::create(&outpath).map_err(|e| format!("Failed to create file: {}", e))?;
-            std::io::copy(&mut file, &mut outfile).map_err(|e| format!("Failed to extract file: {}", e))?;
+            let mut outfile = std::fs::File::create(&outpath)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            std::io::copy(&mut file, &mut outfile)
+                .map_err(|e| format!("Failed to extract file: {}", e))?;
         }
     }
-    
+
     Ok(())
 }
 
 pub fn install_shader() -> Result<PathBuf, String> {
     let shader_content = encrypted_shader::get_shader_content()?;
-    
+
     let plugin_dir = get_obs_plugin_dir();
-    std::fs::create_dir_all(&plugin_dir).map_err(|e| format!("Failed to create plugin directory: {}", e))?;
-    
+    std::fs::create_dir_all(&plugin_dir)
+        .map_err(|e| format!("Failed to create plugin directory: {}", e))?;
+
     let shader_path = plugin_dir.join("LucidGlass.shader");
-    std::fs::write(&shader_path, shader_content).map_err(|e| format!("Failed to write shader: {}", e))?;
-    
+    std::fs::write(&shader_path, shader_content)
+        .map_err(|e| format!("Failed to write shader: {}", e))?;
+
     Ok(shader_path)
 }
 

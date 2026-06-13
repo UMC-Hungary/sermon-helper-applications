@@ -83,7 +83,13 @@ pub struct LegacySuggestion {
 }
 
 fn map_suggestion_label(label: &str) -> String {
-    let books = [("Ter", "1Móz"), ("Kiv", "2Móz"), ("Lev", "3Móz"), ("Szám", "4Móz"), ("MTörv", "5Móz")];
+    let books = [
+        ("Ter", "1Móz"),
+        ("Kiv", "2Móz"),
+        ("Lev", "3Móz"),
+        ("Szám", "4Móz"),
+        ("MTörv", "5Móz"),
+    ];
     let mut result = label.to_string();
     for (from, to) in books.iter() {
         result = result.replace(from, to);
@@ -93,13 +99,15 @@ fn map_suggestion_label(label: &str) -> String {
 
 // Remove HTML heading tags from verse text
 fn remove_headings(html: &str) -> String {
-    let re = regex::Regex::new(r"<h[1-6][^>]*>[\s\S]*?</h[1-6]>").unwrap_or_else(|_| regex::Regex::new("").unwrap());
+    let re = regex::Regex::new(r"<h[1-6][^>]*>[\s\S]*?</h[1-6]>")
+        .unwrap_or_else(|_| regex::Regex::new("").unwrap());
     re.replace_all(html, "").to_string()
 }
 
 // Remove <br> tags from verse text
 fn remove_breaks(html: &str) -> String {
-    let re = regex::Regex::new(r"<br\s*/?>(\s*)?").unwrap_or_else(|_| regex::Regex::new("").unwrap());
+    let re =
+        regex::Regex::new(r"<br\s*/?>(\s*)?").unwrap_or_else(|_| regex::Regex::new("").unwrap());
     re.replace_all(html, "").to_string()
 }
 
@@ -119,7 +127,12 @@ pub async fn fetch_bible_v2(
     translation: String,
     api_url: String,
 ) -> Result<V2SuggestResponse, String> {
-    let url = format!("{}/suggest/{}/{}", api_url, urlencoding::encode(&reference), translation);
+    let url = format!(
+        "{}/suggest/{}/{}",
+        api_url,
+        urlencoding::encode(&reference),
+        translation
+    );
 
     let client = reqwest::Client::new();
     let response = client
@@ -151,7 +164,11 @@ pub async fn fetch_bible_suggestions(
     term: String,
     api_url: String,
 ) -> Result<Vec<LegacySuggestion>, String> {
-    let url = format!("{}/kereses/suggest?term={}", api_url, urlencoding::encode(&term));
+    let url = format!(
+        "{}/kereses/suggest?term={}",
+        api_url,
+        urlencoding::encode(&term)
+    );
 
     let client = reqwest::Client::new();
     let response = client
@@ -197,7 +214,12 @@ pub async fn fetch_bible_legacy(
 ) -> Result<LegacySearchResponse, String> {
     // Strip leading slash if present and encode only spaces
     let clean_ref = reference.trim_start_matches('/');
-    let url = format!("{}/api/idezet/{}/{}", api_url, encode_path_segment(clean_ref), translation);
+    let url = format!(
+        "{}/api/idezet/{}/{}",
+        api_url,
+        encode_path_segment(clean_ref),
+        translation
+    );
 
     let client = reqwest::Client::new();
     let response = client

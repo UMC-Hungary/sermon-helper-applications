@@ -140,7 +140,7 @@
 </script>
 
 <svelte:head>
-  <title>{event?.title ?? 'Event'} — Sermon Helper</title>
+  <title>{event?.title ?? 'Event'} — Metocast</title>
 </svelte:head>
 
 <div class="nav">

@@ -74,7 +74,7 @@
 </script>
 
 <svelte:head>
-  <title>{$_('errorsPage.title')} — Sermon Helper</title>
+  <title>{$_('errorsPage.title')} — Metocast</title>
 </svelte:head>
 
 <h1>{$_('errorsPage.title')}</h1>

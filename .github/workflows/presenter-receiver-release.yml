@@ -140,7 +140,7 @@ jobs:
           draft: false
           generate_release_notes: false
           body: |
-            Standalone terminal binary that connects to the Sermon Helper WebSocket
+            Standalone terminal binary that connects to the Metocast WebSocket
             and renders the active presentation slide on-screen.
 
             - **macOS**: opens a native window (Helvetica Neue, Cairo-rendered)
@@ -148,12 +148,12 @@ jobs:
 
             ### One-line install (auto-detects platform)
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
             ```
 
             To install without running immediately:
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash
             ```
           files: |
             artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64

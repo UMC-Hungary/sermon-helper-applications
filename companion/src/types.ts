@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export interface ModuleConfig {
 	host: string
 	port: number
@@ -73,6 +75,32 @@ export interface PresentationStatus {
 	currentSlideTitle: string | null
 	blanked: boolean
 }
+
+export const PresentationSettingsMessageSchema = z.object({
+	type: z.literal('presentation.settings'),
+	useWebPresenter: z.boolean(),
+})
+
+export const EventSummarySchema = z.object({
+	id: z.string().uuid(),
+	title: z.string(),
+	dateTime: z.string(),
+	speaker: z.string(),
+	recordingCount: z.number().int().nonnegative(),
+	isCompleted: z.boolean(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+})
+
+export const PresenterEventListResponseSchema = z.object({
+	type: z.literal('events.presenter_list'),
+	events: z.array(EventSummarySchema),
+	selectedEventId: z.string().uuid().nullable(),
+})
+
+export type EventSummary = z.infer<typeof EventSummarySchema>
+export type PresenterEventListResponse = z.infer<typeof PresenterEventListResponseSchema>
+export type BibleReferenceType = 'textus' | 'leckio'
 
 export const CATEGORY_COLORS: Record<string, number> = {
 	projector: 0xdd614a,

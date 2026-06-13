@@ -309,9 +309,9 @@ async fn pull_youtube_live(
                         Ok(Some(event)) => {
                             emit_event_changed("UPDATE", event, &ws_clients).await;
                         }
-                        Ok(None) => tracing::warn!(
-                            "pull_youtube_live: event {eid} not found after update"
-                        ),
+                        Ok(None) => {
+                            tracing::warn!("pull_youtube_live: event {eid} not found after update")
+                        }
                         Err(e) => tracing::error!(
                             "pull_youtube_live: fetch_event after update for {eid}: {e}"
                         ),
@@ -378,9 +378,9 @@ async fn pull_youtube_live(
                             );
                             emit_event_changed("INSERT", event, &ws_clients).await;
                         }
-                        Ok(None) => tracing::warn!(
-                            "pull_youtube_live: event {eid} not found after insert"
-                        ),
+                        Ok(None) => {
+                            tracing::warn!("pull_youtube_live: event {eid} not found after insert")
+                        }
                         Err(e) => tracing::error!(
                             "pull_youtube_live: fetch_event after insert for {eid}: {e}"
                         ),
@@ -391,9 +391,7 @@ async fn pull_youtube_live(
                 }
             }
             Err(e) => {
-                tracing::error!(
-                    "pull_youtube_live: DB lookup for broadcast {broadcast_id}: {e}"
-                );
+                tracing::error!("pull_youtube_live: DB lookup for broadcast {broadcast_id}: {e}");
             }
         }
     }

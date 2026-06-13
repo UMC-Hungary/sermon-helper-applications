@@ -1,9 +1,10 @@
+use crate::ConnectionState;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
-use crate::ConnectionState;
 
 // ── Message types from the server ────────────────────────────────────────────
 
@@ -37,11 +38,31 @@ pub struct SlideContent {
     pub paragraphs: Vec<ParagraphContent>,
 }
 
+#[derive(Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PresenterRenderMode {
+    #[default]
+    Text,
+    Svg,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SvgSlideContent {
+    pub index: u32,
+    pub svg: String,
+}
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PresenterState {
     pub current_slide: u32,
+    #[serde(default)]
+    pub render_mode: PresenterRenderMode,
+    #[serde(default)]
     pub slides: Vec<SlideContent>,
+    #[serde(default)]
+    pub svg_slides: Vec<SvgSlideContent>,
     #[serde(default)]
     pub muted: bool,
 }
@@ -145,9 +166,14 @@ async fn connect_and_receive(
         ))
         .await?;
 
-    let mut slides: Vec<SlideContent> = Vec::new();
-    let mut current_slide: u32;
-    let mut muted = false;
+    let mut presenter_state = PresenterState {
+        current_slide: 0,
+        render_mode: PresenterRenderMode::Text,
+        slides: Vec::new(),
+        svg_slides: Vec::new(),
+        muted: false,
+    };
+    let mut svg_frame_cache: HashMap<u32, Frame> = HashMap::new();
 
     let idle_timeout = std::time::Duration::from_secs(15);
 
@@ -170,14 +196,15 @@ async fn connect_and_receive(
 
         match msg {
             ServerMsg::PresenterState { state } => {
-                current_slide = state.current_slide;
-                muted = state.muted;
-                slides = state.slides;
-                render_state(&slides, current_slide, muted, tx, dims);
+                presenter_state = state;
+                svg_frame_cache.clear();
+                render_state(&presenter_state, tx, dims, &mut svg_frame_cache);
             }
-            ServerMsg::SlideChanged { current_slide: new_slide } => {
-                current_slide = new_slide;
-                render_state(&slides, current_slide, muted, tx, dims);
+            ServerMsg::SlideChanged {
+                current_slide: new_slide,
+            } => {
+                presenter_state.current_slide = new_slide;
+                render_state(&presenter_state, tx, dims, &mut svg_frame_cache);
             }
             ServerMsg::Ping { ping_id } => {
                 write
@@ -198,22 +225,51 @@ async fn connect_and_receive(
 // ── Render + send ─────────────────────────────────────────────────────────────
 
 fn render_state(
-    slides: &[SlideContent],
-    current: u32,
-    muted: bool,
+    state: &PresenterState,
     tx: &std::sync::mpsc::Sender<Frame>,
     dims: DisplayDims,
+    svg_frame_cache: &mut HashMap<u32, Frame>,
 ) {
-    if muted {
+    if state.muted {
         let _ = tx.send(vec![0u32; (dims.width * dims.height) as usize]);
         return;
     }
-    let owned: Vec<(String, String, f64)> = slides
+
+    if state.render_mode == PresenterRenderMode::Svg {
+        let frame = svg_frame_cache
+            .entry(state.current_slide)
+            .or_insert_with(|| {
+                state
+                    .svg_slides
+                    .iter()
+                    .find(|s| s.index == state.current_slide)
+                    .and_then(|slide| {
+                        crate::renderer::render_svg_slide(&slide.svg, dims.width, dims.height)
+                            .map_err(|err| eprintln!("[render] SVG render failed: {err}"))
+                            .ok()
+                    })
+                    .unwrap_or_else(|| vec![0u32; (dims.width * dims.height) as usize])
+            })
+            .clone();
+        let _ = tx.send(frame);
+        return;
+    }
+
+    let owned: Vec<(String, String, f64)> = state
+        .slides
         .iter()
-        .find(|s| s.index == current)
-        .map(|s| s.paragraphs.iter().map(|p| (p.display_text(), p.align.clone(), p.font_size_pt)).collect())
+        .find(|s| s.index == state.current_slide)
+        .map(|s| {
+            s.paragraphs
+                .iter()
+                .map(|p| (p.display_text(), p.align.clone(), p.font_size_pt))
+                .collect()
+        })
         .unwrap_or_default();
-    let paragraphs: Vec<(&str, &str, f64)> = owned.iter().map(|(t, a, pt)| (t.as_str(), a.as_str(), *pt)).collect();
+    let paragraphs: Vec<(&str, &str, f64)> = owned
+        .iter()
+        .map(|(t, a, pt)| (t.as_str(), a.as_str(), *pt))
+        .collect();
 
     let rgb = crate::renderer::render_slide(&paragraphs, dims.width, dims.height);
     let _ = tx.send(crate::renderer::rgb_to_u32(&rgb));

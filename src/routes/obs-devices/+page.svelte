@@ -119,7 +119,7 @@
 </script>
 
 <svelte:head>
-	<title>{$_('obsDevices.title')} — Sermon Helper</title>
+	<title>{$_('obsDevices.title')} — Metocast</title>
 </svelte:head>
 
 <h1>{$_('obsDevices.title')}</h1>

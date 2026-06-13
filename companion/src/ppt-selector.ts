@@ -1,5 +1,5 @@
 import type { PptFolder, PptFile } from './types.js'
-import type { SermonHelperApi } from './api.js'
+import type { MetocastApi } from './api.js'
 
 export interface PptSelectorState {
 	currentFilter: string
@@ -10,11 +10,11 @@ export interface PptSelectorState {
 }
 
 export class PptSelector {
-	private api: SermonHelperApi
+	private api: MetocastApi
 	private state: PptSelectorState
 	private onStateChange?: (state: PptSelectorState) => void
 
-	constructor(api: SermonHelperApi) {
+	constructor(api: MetocastApi) {
 		this.api = api
 		this.state = {
 			currentFilter: '',

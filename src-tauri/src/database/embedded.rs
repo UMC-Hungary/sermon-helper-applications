@@ -6,11 +6,16 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
+use tokio_postgres::{Client, NoTls};
 
+const DB_NAME: &str = "metocast";
+const LEGACY_DB_NAME: &str = "sermon_helper";
 const PG_PORT: u16 = 15432;
 const PG_USER: &str = "postgres";
-const PG_PASS: &str = "sermon_helper_embedded";
+const PG_PASS: &str = "metocast_embedded";
+const LEGACY_PG_PASS: &str = "sermon_helper_embedded";
 const PG_RELEASES_URL: &str = "https://github.com/zonkyio/embedded-postgres-binaries";
+const POSTGRES_BOOTSTRAP_DB: &str = "postgres";
 
 pub struct EmbeddedDb {
     pub pg: PostgreSQL,
@@ -19,7 +24,6 @@ pub struct EmbeddedDb {
 
 impl EmbeddedDb {
     pub async fn start(data_dir: PathBuf) -> Result<Self> {
-        let db_name = "sermon_helper";
         let installation_dir = data_dir.join("pg_install");
 
         #[cfg(target_os = "macos")]
@@ -65,11 +69,7 @@ impl EmbeddedDb {
             return Err(error);
         }
 
-        if !pg.database_exists(db_name).await? {
-            pg.create_database(db_name).await?;
-        }
-
-        let connection_url = pg.settings().url(db_name);
+        let connection_url = ensure_application_database(pg.settings()).await?;
 
         Ok(Self { pg, connection_url })
     }
@@ -95,6 +95,144 @@ async fn setup_and_start_postgres(pg: &mut PostgreSQL) -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn ensure_application_database(settings: &Settings) -> Result<String> {
+    match ensure_database_with_password(settings, PG_PASS).await {
+        Ok(()) => Ok(database_url(settings, DB_NAME, PG_PASS)),
+        Err(error) if is_password_auth_error(&error) => {
+            tracing::warn!(
+                "Embedded PostgreSQL rejected current credentials; attempting local credential migration"
+            );
+
+            ensure_database_with_password(settings, LEGACY_PG_PASS).await.with_context(|| {
+                "failed to access embedded PostgreSQL with current or previous local credentials"
+            })?;
+            migrate_postgres_password(settings, LEGACY_PG_PASS).await?;
+
+            Ok(database_url(settings, DB_NAME, PG_PASS))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+async fn ensure_database_with_password(settings: &Settings, password: &str) -> Result<()> {
+    let client = connect_to_database(settings, POSTGRES_BOOTSTRAP_DB, password).await?;
+
+    if database_exists(&client, DB_NAME).await? {
+        return Ok(());
+    }
+
+    if database_exists(&client, LEGACY_DB_NAME).await? {
+        tracing::info!("Renaming embedded PostgreSQL database for Metocast");
+        terminate_database_connections(&client, LEGACY_DB_NAME).await?;
+        client
+            .execute(
+                &format!(
+                    "ALTER DATABASE {} RENAME TO {}",
+                    quote_pg_ident(LEGACY_DB_NAME),
+                    quote_pg_ident(DB_NAME)
+                ),
+                &[],
+            )
+            .await
+            .context("failed to rename embedded PostgreSQL database")?;
+    } else {
+        tracing::info!("Creating embedded PostgreSQL database for Metocast");
+        client
+            .execute(&format!("CREATE DATABASE {}", quote_pg_ident(DB_NAME)), &[])
+            .await
+            .context("failed to create embedded PostgreSQL database")?;
+    }
+
+    Ok(())
+}
+
+async fn migrate_postgres_password(settings: &Settings, current_password: &str) -> Result<()> {
+    let client = connect_to_database(settings, POSTGRES_BOOTSTRAP_DB, current_password).await?;
+
+    client
+        .execute(
+            &format!(
+                "ALTER USER {} WITH PASSWORD {}",
+                quote_pg_ident(PG_USER),
+                quote_pg_literal(PG_PASS)
+            ),
+            &[],
+        )
+        .await
+        .context("failed to update embedded PostgreSQL password")?;
+
+    Ok(())
+}
+
+async fn connect_to_database(
+    settings: &Settings,
+    database_name: &str,
+    password: &str,
+) -> Result<Client> {
+    let (client, connection) =
+        tokio_postgres::connect(&database_url(settings, database_name, password), NoTls)
+            .await
+            .with_context(|| {
+                format!("failed to connect to embedded PostgreSQL database {database_name}")
+            })?;
+
+    tokio::spawn(async move {
+        if let Err(error) = connection.await {
+            tracing::warn!(
+                %error,
+                "Embedded PostgreSQL maintenance connection closed with error"
+            );
+        }
+    });
+
+    Ok(client)
+}
+
+async fn database_exists(client: &Client, database_name: &str) -> Result<bool> {
+    let exists = client
+        .query_one(
+            "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)",
+            &[&database_name],
+        )
+        .await
+        .with_context(|| format!("failed to inspect embedded PostgreSQL database {database_name}"))?
+        .get(0);
+
+    Ok(exists)
+}
+
+async fn terminate_database_connections(client: &Client, database_name: &str) -> Result<()> {
+    client
+        .execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
+            &[&database_name],
+        )
+        .await
+        .with_context(|| {
+            format!("failed to terminate embedded PostgreSQL connections for {database_name}")
+        })?;
+
+    Ok(())
+}
+
+fn database_url(settings: &Settings, database_name: &str, password: &str) -> String {
+    let mut settings = settings.clone();
+    settings.password = password.to_string();
+    settings.url(database_name)
+}
+
+fn is_password_auth_error(error: &anyhow::Error) -> bool {
+    format!("{error:#}").contains("password authentication failed")
+}
+
+fn quote_pg_ident(identifier: &str) -> String {
+    format!("\"{}\"", identifier.replace('"', "\"\""))
+}
+
+fn quote_pg_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
 }
 
 #[cfg(target_os = "macos")]
@@ -244,5 +382,31 @@ mod tests {
         );
 
         assert!(is_homebrew_openssl_dyld_error(&error));
+    }
+}
+
+#[cfg(test)]
+mod credential_migration_tests {
+    use super::*;
+
+    #[test]
+    fn detects_password_authentication_errors() {
+        let error = anyhow::anyhow!(
+            "error returned from database: password authentication failed for user \"postgres\""
+        );
+
+        assert!(is_password_auth_error(&error));
+    }
+
+    #[test]
+    fn quotes_postgres_identifiers() {
+        assert_eq!(quote_pg_ident("metocast"), "\"metocast\"");
+        assert_eq!(quote_pg_ident("meto\"cast"), "\"meto\"\"cast\"");
+    }
+
+    #[test]
+    fn quotes_postgres_literals() {
+        assert_eq!(quote_pg_literal("metocast"), "'metocast'");
+        assert_eq!(quote_pg_literal("meto'cast"), "'meto''cast'");
     }
 }

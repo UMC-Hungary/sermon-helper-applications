@@ -1,13 +1,13 @@
 # Uncomment the next line to define a global platform for your project
 
-target 'sermon-helper-tauri_iOS' do
+target 'metocast_iOS' do
 platform :ios, '14.0'
-  # Pods for sermon-helper-tauri_iOS
+  # Pods for metocast_iOS
 end
 
-target 'sermon-helper-tauri_macOS' do
+target 'metocast_macOS' do
 platform :osx, '11.0'
-  # Pods for sermon-helper-tauri_macOS
+  # Pods for metocast_macOS
 end
 
 # Delete the deployment target for iOS and macOS, causing it to be inherited from the Podfile

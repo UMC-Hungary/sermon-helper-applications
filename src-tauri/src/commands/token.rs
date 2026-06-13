@@ -29,13 +29,8 @@ pub async fn refresh_token(
         *token = new_token.clone();
     }
 
-    let store = app
-        .store("app-settings.json")
-        .map_err(|e| e.to_string())?;
-    store.set(
-        "auth_token",
-        serde_json::Value::String(new_token.clone()),
-    );
+    let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
+    store.set("auth_token", serde_json::Value::String(new_token.clone()));
     store.save().map_err(|e| e.to_string())?;
 
     Ok(new_token)

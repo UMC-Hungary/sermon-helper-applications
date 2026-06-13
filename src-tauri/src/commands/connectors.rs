@@ -101,9 +101,7 @@ pub async fn connect_obs(
 }
 
 #[tauri::command]
-pub async fn disconnect_obs(
-    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
-) -> Result<(), String> {
+pub async fn disconnect_obs(runtime: State<'_, Arc<RwLock<AppRuntime>>>) -> Result<(), String> {
     let obs_connector = {
         let rt = runtime.read().await;
         Arc::clone(&rt.obs_connector)
@@ -296,7 +294,10 @@ pub async fn save_youtube_config(
 
     let (yt_connector, yt_config_arc) = {
         let rt = runtime.read().await;
-        (Arc::clone(&rt.youtube_connector), Arc::clone(&rt.youtube_config))
+        (
+            Arc::clone(&rt.youtube_connector),
+            Arc::clone(&rt.youtube_config),
+        )
     };
 
     // Update the shared Arc so Axum OAuth routes see the new config immediately.
@@ -335,7 +336,10 @@ pub async fn get_youtube_auth_url(
     };
 
     if config.client_id.is_empty() {
-        return Err("YouTube not configured. Please save your Client ID and Client Secret first.".to_string());
+        return Err(
+            "YouTube not configured. Please save your Client ID and Client Secret first."
+                .to_string(),
+        );
     }
 
     let state_token = Uuid::new_v4().to_string();
@@ -353,9 +357,7 @@ pub async fn get_youtube_auth_url(
 }
 
 #[tauri::command]
-pub async fn youtube_logout(
-    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
-) -> Result<(), String> {
+pub async fn youtube_logout(runtime: State<'_, Arc<RwLock<AppRuntime>>>) -> Result<(), String> {
     let yt_connector = {
         let rt = runtime.read().await;
         Arc::clone(&rt.youtube_connector)
@@ -394,7 +396,10 @@ pub async fn save_facebook_config(
 
     let (fb_connector, fb_config_arc) = {
         let rt = runtime.read().await;
-        (Arc::clone(&rt.facebook_connector), Arc::clone(&rt.facebook_config))
+        (
+            Arc::clone(&rt.facebook_connector),
+            Arc::clone(&rt.facebook_config),
+        )
     };
 
     // Update the shared Arc so Axum OAuth routes see the new config immediately.
@@ -433,14 +438,17 @@ pub async fn get_facebook_auth_url(
     };
 
     if config.app_id.is_empty() {
-        return Err("Facebook not configured. Please save your App ID, App Secret, and Page ID first.".to_string());
+        return Err(
+            "Facebook not configured. Please save your App ID, App Secret, and Page ID first."
+                .to_string(),
+        );
     }
 
     let state_token = Uuid::new_v4().to_string();
-    oauth_states
-        .write()
-        .await
-        .insert(state_token.clone(), ("facebook".to_string(), Instant::now()));
+    oauth_states.write().await.insert(
+        state_token.clone(),
+        ("facebook".to_string(), Instant::now()),
+    );
 
     Ok(format!(
         "https://www.facebook.com/v19.0/dialog/oauth?client_id={}&redirect_uri={}&scope=pages_manage_posts,pages_read_engagement,publish_video&state={}",
@@ -451,9 +459,7 @@ pub async fn get_facebook_auth_url(
 }
 
 #[tauri::command]
-pub async fn facebook_logout(
-    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
-) -> Result<(), String> {
+pub async fn facebook_logout(runtime: State<'_, Arc<RwLock<AppRuntime>>>) -> Result<(), String> {
     let fb_connector = {
         let rt = runtime.read().await;
         Arc::clone(&rt.facebook_connector)
@@ -549,4 +555,3 @@ pub async fn broadlink_test_device(
 pub async fn broadlink_list_interfaces() -> Result<Vec<(String, String)>, String> {
     crate::broadlink::list_network_interfaces().await
 }
-

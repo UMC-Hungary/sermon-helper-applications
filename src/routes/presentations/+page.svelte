@@ -4,8 +4,9 @@
 	import { pptFilter, pptResults, pptFolders, keynoteStatus } from '$lib/stores/presentations.js';
 	import { presenterState, useWebPresenter, connectedClients } from '$lib/stores/presenter.js';
 	import { appReady, localNetworkUrl, authToken, serverPort } from '$lib/stores/server-url.js';
+	import { lastWsMessage, wsStatus } from '$lib/stores/ws.js';
 	import { sendWsCommand } from '$lib/ws/client.js';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import {
 		listFolders,
 		addFolder,
@@ -13,15 +14,27 @@
 		searchFiles,
 		keynoteCloseAll,
 	} from '$lib/api/presentations.js';
+	import type { BibleReference, Event as ServiceEvent, EventSummary } from '$lib/schemas/event.js';
+	import type { WsMessage } from '$lib/schemas/ws-messages.js';
 	import SlideEditorModal from '$lib/components/presentations/SlideEditorModal.svelte';
+
+	type BibleReferenceKind = 'textus' | 'leckio';
 
 	let addingFolder = $state(false);
 	let foldersFetched = $state(false);
+	let eventsFetched = $state(false);
+	let eventsLoading = $state(false);
+	let eventSummaries = $state<EventSummary[]>([]);
+	let selectedEventId = $state('');
+	let selectedEvent = $state<ServiceEvent | null>(null);
+	let selectedEventLoading = $state(false);
 	let copySuccess = $state(false);
 	let pingingClient = $state<string | null>(null);
 	let now = $state(Date.now());
 	let clockTimer: ReturnType<typeof setInterval>;
 	let slideEditorOpen = $state(false);
+	const textusReference = $derived(findBibleReference(selectedEvent, 'textus'));
+	const leckioReference = $derived(findBibleReference(selectedEvent, 'leckio'));
 
 	onMount(() => {
 		sendWsCommand('clients.list');
@@ -65,6 +78,103 @@
 			listFolders().then((folders) => pptFolders.set(folders));
 		}
 	});
+
+	$effect(() => {
+		if ($wsStatus !== 'connected') {
+			eventsFetched = false;
+			return;
+		}
+		if ($appReady && $useWebPresenter && !eventsFetched) {
+			eventsFetched = true;
+			loadPresenterEvents();
+		}
+	});
+
+	$effect(() => {
+		if (selectedEventId) {
+			loadSelectedEvent(selectedEventId);
+		} else {
+			selectedEvent = null;
+			selectedEventLoading = false;
+		}
+	});
+
+	$effect(() => {
+		const message = $lastWsMessage;
+		if (!message) return;
+		untrack(() => handlePresenterWsMessage(message));
+	});
+
+	function handlePresenterWsMessage(message: WsMessage) {
+		if (message.type === 'events.presenter_list') {
+			eventsLoading = false;
+			eventSummaries = message.events;
+			const nextSelectedEventId = message.selectedEventId ?? '';
+			if (!eventSummaries.some((event) => event.id === selectedEventId)) {
+				selectedEventId = nextSelectedEventId;
+			}
+		} else if (message.type === 'events.get') {
+			if (message.event.id === selectedEventId) {
+				selectedEvent = message.event;
+				selectedEventLoading = false;
+			}
+		} else if (message.type === 'event.changed' && $useWebPresenter) {
+			loadPresenterEvents();
+			if (selectedEventId && message.data.record.id === selectedEventId) {
+				loadSelectedEvent(selectedEventId);
+			}
+		}
+	}
+
+	function loadPresenterEvents() {
+		eventsLoading = true;
+		if (!sendWsCommand('events.presenter_list')) {
+			console.error('Failed to request presenter events: WebSocket is not connected');
+			eventSummaries = [];
+			selectedEventId = '';
+			eventsLoading = false;
+		}
+	}
+
+	function loadSelectedEvent(eventId: string) {
+		selectedEventLoading = true;
+		selectedEvent = null;
+		if (!sendWsCommand('events.get', { id: eventId })) {
+			console.error('Failed to request presenter event details: WebSocket is not connected');
+			selectedEventLoading = false;
+		}
+	}
+
+	function findBibleReference(event: ServiceEvent | null, referenceType: BibleReferenceKind): BibleReference | null {
+		return event?.bibleReferences.find((reference) => reference.type === referenceType) ?? null;
+	}
+
+	function hasBibleVerses(reference: BibleReference | null): boolean {
+		return (reference?.verses.length ?? 0) > 0;
+	}
+
+	function formatEventOption(event: EventSummary): string {
+		const eventDate = new Date(event.dateTime);
+		const dateLabel = eventDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+		const timeLabel = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		const speaker = event.speaker ? ` · ${event.speaker}` : '';
+		return `${dateLabel} ${timeLabel} · ${event.title}${speaker}`;
+	}
+
+	function handleEventChange(event: Event) {
+		const target = event.currentTarget;
+		if (target instanceof HTMLSelectElement) {
+			selectedEventId = target.value;
+		}
+	}
+
+	function handlePresentBible(referenceType: BibleReferenceKind) {
+		if (!selectedEventId) return;
+		sendWsCommand('presenter.load_bible_reference', {
+			event_id: selectedEventId,
+			reference_type: referenceType,
+		});
+	}
 
 	// ── Presenter URL ─────────────────────────────────────────────────────────
 
@@ -150,7 +260,9 @@
 	function handleFirst() { sendWsCommand('presentation.first'); }
 	function handleLast() { sendWsCommand('presentation.last'); }
 	function handleStart() { sendWsCommand('presentation.start'); }
-	function handleStop() { sendWsCommand('presentation.stop'); }
+	function handleStopOrUnload() {
+		sendWsCommand($useWebPresenter ? 'presentation.close' : 'presentation.stop');
+	}
 
 	function handleToggleMute() {
 		sendWsCommand($presenterState.muted ? 'presentation.unmute' : 'presentation.mute');
@@ -217,6 +329,47 @@
 		</div>
 	</section>
 
+	{#if $useWebPresenter}
+		<section class="section">
+			<h2>Bible readings</h2>
+			<div class="event-presenter-controls">
+				<select
+					class="event-select"
+					value={selectedEventId}
+					onchange={handleEventChange}
+					disabled={eventsLoading || eventSummaries.length === 0}
+					aria-label="Select event for Bible readings"
+				>
+					{#if eventSummaries.length === 0}
+						<option value="">{eventsLoading ? 'Loading events...' : 'No events'}</option>
+					{:else}
+						{#each eventSummaries as event (event.id)}
+							<option value={event.id}>{formatEventOption(event)}</option>
+						{/each}
+					{/if}
+				</select>
+				<div class="bible-actions">
+					<button
+						class="bible-btn"
+						onclick={() => handlePresentBible('textus')}
+						disabled={selectedEventLoading || !hasBibleVerses(textusReference)}
+					>
+						<span class="bible-btn-main">Textus</span>
+						<span class="bible-btn-sub">{textusReference?.reference ?? 'No Textus'}</span>
+					</button>
+					<button
+						class="bible-btn"
+						onclick={() => handlePresentBible('leckio')}
+						disabled={selectedEventLoading || !hasBibleVerses(leckioReference)}
+					>
+						<span class="bible-btn-main">Lekció</span>
+						<span class="bible-btn-sub">{leckioReference?.reference ?? 'No Lekció'}</span>
+					</button>
+				</div>
+			</div>
+		</section>
+	{/if}
+
 	<!-- Presentation Status -->
 	<section class="section">
 		<h2>{$_('presentations.status.title')}</h2>
@@ -247,7 +400,7 @@
 					</span>
 				</div>
 			</div>
-			{#if $presenterState.loaded}
+			{#if $presenterState.loaded && $presenterState.renderMode === 'text'}
 				<button class="btn-edit-slides" onclick={() => { slideEditorOpen = true; }}>
 					Edit slide content
 				</button>
@@ -285,7 +438,12 @@
 			{#if !$useWebPresenter}
 				<button class="ctrl-btn play-btn" onclick={handleStart} aria-label={$_('presentations.controls.play')}>▶ {$_('presentations.controls.play')}</button>
 			{/if}
-			<button class="ctrl-btn stop-btn" onclick={handleStop} aria-label={$useWebPresenter ? 'Unload' : $_('presentations.controls.stop')}>
+			<button
+				class="ctrl-btn stop-btn"
+				onclick={handleStopOrUnload}
+				aria-label={$useWebPresenter ? 'Unload' : $_('presentations.controls.stop')}
+				disabled={$useWebPresenter && !$presenterState.loaded}
+			>
 				{$useWebPresenter ? '⏹ Unload' : `⏹ ${$_('presentations.controls.stop')}`}
 			</button>
 			{#if $useWebPresenter}
@@ -382,7 +540,7 @@
 	{/if}
 </div>
 
-{#if slideEditorOpen && $useWebPresenter}
+{#if slideEditorOpen && $useWebPresenter && $presenterState.renderMode === 'text'}
 	<SlideEditorModal
 		slides={$presenterState.slides}
 		onclose={() => { slideEditorOpen = false; }}
@@ -544,6 +702,71 @@
 	.slot-btn:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+	}
+
+	.event-presenter-controls {
+		display: flex;
+		align-items: stretch;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+
+	.event-select {
+		flex: 1 1 22rem;
+		min-width: 16rem;
+		padding: 0.6rem 0.75rem;
+		background: var(--content-bg);
+		color: var(--text-primary);
+		border: 1px solid var(--border);
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+	}
+
+	.event-select:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.bible-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex: 0 0 auto;
+	}
+
+	.bible-btn {
+		width: 9.5rem;
+		min-height: 3rem;
+		padding: 0.45rem 0.65rem;
+		background: var(--accent);
+		color: white;
+		border: none;
+		border-radius: 0.375rem;
+		cursor: pointer;
+		text-align: left;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.1rem;
+	}
+
+	.bible-btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.bible-btn-main {
+		font-size: 0.85rem;
+		font-weight: 700;
+		line-height: 1.1;
+	}
+
+	.bible-btn-sub {
+		font-size: 0.72rem;
+		line-height: 1.2;
+		opacity: 0.9;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.status-grid {
@@ -818,5 +1041,22 @@
 	.btn-ping:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+	}
+
+	@media (max-width: 640px) {
+		.event-select {
+			min-width: 0;
+			flex-basis: 100%;
+		}
+
+		.bible-actions {
+			width: 100%;
+		}
+
+		.bible-btn {
+			flex: 1 1 0;
+			width: auto;
+			min-width: 0;
+		}
 	}
 </style>

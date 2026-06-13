@@ -73,7 +73,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: companion-module-metocast-bridge
+          name: companion-module-metocast
           path: |
             companion/dist/
             companion/companion/
@@ -93,14 +93,14 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v7
         with:
-          name: companion-module-metocast-bridge
-          path: pkg/companion-module-metocast-bridge
+          name: companion-module-metocast
+          path: pkg/companion-module-metocast
 
       - name: Package for release
         run: |
           VERSION="${GITHUB_REF#refs/tags/companion-v}"
-          tar -czf "companion-module-metocast-bridge-${VERSION}.tar.gz" \
-            -C pkg companion-module-metocast-bridge
+          tar -czf "companion-module-metocast-${VERSION}.tar.gz" \
+            -C pkg companion-module-metocast
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -112,11 +112,11 @@ jobs:
 
             ## Installation
 
-            1. Download `companion-module-metocast-bridge-*.tar.gz`
+            1. Download `companion-module-metocast-*.tar.gz`
             2. Extract to your Companion modules folder
-               (e.g. `~/.config/companion/modules/companion-module-metocast-bridge/`)
+               (e.g. `~/.config/companion/modules/companion-module-metocast/`)
             3. Restart Companion
-            4. Add a new connection of type **Metocast Bridge**
+            4. Add a new connection of type **Metocast**
 
             ## Configuration
 
@@ -126,4 +126,4 @@ jobs:
 
             All communication uses WebSocket — no REST API required.
           files: |
-            companion-module-metocast-bridge-*.tar.gz
+            companion-module-metocast-*.tar.gz

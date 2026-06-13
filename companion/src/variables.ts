@@ -21,8 +21,11 @@ export function GetVariableDefinitions(_instance: ModuleInstance): CompanionVari
 		{ variableId: 'ppt_total_slides', name: 'Presentation Total Slides' },
 		{ variableId: 'ppt_slideshow_active', name: 'Presentation Slideshow Active' },
 		{ variableId: 'ppt_app', name: 'Presentation App Name' },
+		{ variableId: 'ppt_backend', name: 'Presentation Backend' },
 		{ variableId: 'ppt_blanked', name: 'Presentation Blanked' },
 		{ variableId: 'ppt_document', name: 'Current Presentation File Name' },
+		{ variableId: 'presenter_event_count', name: 'Presenter Event Count' },
+		{ variableId: 'presenter_selected_event', name: 'Backend Selected Presenter Event' },
 	]
 }
 
@@ -47,8 +50,12 @@ export function GetDefaultVariableValues(instance: ModuleInstance): Record<strin
 		ppt_current_slide: instance.presentationStatus?.currentSlide?.toString() ?? '-',
 		ppt_total_slides: instance.presentationStatus?.totalSlides?.toString() ?? '-',
 		ppt_slideshow_active: instance.presentationStatus?.slideshowActive ? 'ON' : 'OFF',
-		ppt_app: instance.presentationStatus?.app ?? 'None',
+		ppt_app: instance.useWebPresenter ? 'Web Presenter' : (instance.presentationStatus?.app ?? 'None'),
+		ppt_backend: instance.useWebPresenter ? 'Web Presenter' : 'Keynote',
 		ppt_blanked: instance.presentationStatus?.blanked ? 'YES' : 'NO',
 		ppt_document: instance.presentationStatus?.currentSlideTitle ?? '',
+		presenter_event_count: instance.presenterEvents.length,
+		presenter_selected_event:
+			instance.presenterEvents.find((event) => event.id === instance.selectedPresenterEventId)?.title ?? '',
 	}
 }

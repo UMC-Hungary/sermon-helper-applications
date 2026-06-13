@@ -26,14 +26,14 @@ use axum::extract::ws::Message;
 use serde_json::json;
 use sqlx::PgPool;
 
+#[cfg(target_os = "macos")]
+use crate::connectors::keynote::KeynoteConnector;
 use crate::connectors::{
     broadlink::BroadlinkConnector, facebook::FacebookConnector, obs::ObsConnector,
     vmix::VmixConnector, youtube::YouTubeConnector, FacebookConfig, YouTubeConfig,
 };
-use crate::obs_devices::ObsAvailableDevices;
-#[cfg(target_os = "macos")]
-use crate::connectors::keynote::KeynoteConnector;
 use crate::models::event::find_current_event;
+use crate::obs_devices::ObsAvailableDevices;
 use crate::scheduler::CronScheduler;
 use crate::uploader::UploadService;
 
@@ -123,14 +123,13 @@ pub async fn build_and_serve(
     let presenter_state: Arc<tokio::sync::RwLock<presenter::PresenterState>> =
         Arc::new(tokio::sync::RwLock::new(presenter::PresenterState::empty()));
 
-    let use_web_presenter_val: bool = sqlx::query_scalar(
-        "SELECT value FROM app_settings WHERE key = 'use_web_presenter'",
-    )
-    .fetch_optional(&pool)
-    .await
-    .unwrap_or(None)
-    .and_then(|v: String| v.parse().ok())
-    .unwrap_or(false);
+    let use_web_presenter_val: bool =
+        sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'use_web_presenter'")
+            .fetch_optional(&pool)
+            .await
+            .unwrap_or(None)
+            .and_then(|v: String| v.parse().ok())
+            .unwrap_or(false);
     let use_web_presenter = Arc::new(AtomicBool::new(use_web_presenter_val));
 
     let ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>> =
@@ -397,10 +396,7 @@ pub async fn build_and_serve(
 
     // PPT folder and file search routes (all platforms).
     let ppt_routes = Router::new()
-        .route(
-            "/ppt/folders",
-            get(ppt::list_folders).post(ppt::add_folder),
-        )
+        .route("/ppt/folders", get(ppt::list_folders).post(ppt::add_folder))
         .route("/ppt/folders/{id}", delete(ppt::remove_folder))
         .route("/ppt/files", get(ppt::search_files));
 
@@ -438,7 +434,9 @@ pub async fn build_and_serve(
         )
         .route(
             "/events/{id}",
-            get(routes::get_event).put(routes::update_event).delete(routes::delete_event),
+            get(routes::get_event)
+                .put(routes::update_event)
+                .delete(routes::delete_event),
         )
         .route(
             "/events/{id}/recordings",
@@ -469,7 +467,10 @@ pub async fn build_and_serve(
             "/recordings/untracked/{id}",
             delete(routes::delete_untracked_recording),
         )
-        .route("/connectors/broadlink/status", get(routes::broadlink_get_status))
+        .route(
+            "/connectors/broadlink/status",
+            get(routes::broadlink_get_status),
+        )
         .route(
             "/connectors/broadlink/devices",
             get(routes::broadlink_list_devices).post(routes::broadlink_add_device),
@@ -504,9 +505,18 @@ pub async fn build_and_serve(
         )
         .route("/connectors/state", get(routes::get_connector_state))
         .route("/connectors/status", get(routes::get_connector_statuses))
-        .route("/connectors/youtube/content", get(routes::get_youtube_content))
-        .route("/connectors/youtube/stream-key", get(routes::get_youtube_stream_key))
-        .route("/connectors/facebook/stream-key", get(routes::get_facebook_stream_key))
+        .route(
+            "/connectors/youtube/content",
+            get(routes::get_youtube_content),
+        )
+        .route(
+            "/connectors/youtube/stream-key",
+            get(routes::get_youtube_stream_key),
+        )
+        .route(
+            "/connectors/facebook/stream-key",
+            get(routes::get_facebook_stream_key),
+        )
         .route(
             "/connectors/youtube/schedule/{event_id}",
             post(routes::trigger_youtube_schedule),
@@ -588,7 +598,15 @@ pub async fn build_and_serve(
 /// Probe the video file duration via `ffprobe`. Returns 0.0 if unavailable.
 async fn probe_duration(path: &std::path::Path) -> f64 {
     let out = tokio::process::Command::new("ffprobe")
-        .args(["-v", "quiet", "-of", "json", "-show_entries", "format=duration", "-i"])
+        .args([
+            "-v",
+            "quiet",
+            "-of",
+            "json",
+            "-show_entries",
+            "format=duration",
+            "-i",
+        ])
         .arg(path)
         .output()
         .await;
@@ -597,7 +615,11 @@ async fn probe_duration(path: &std::path::Path) -> f64 {
             let text = String::from_utf8_lossy(&o.stdout);
             serde_json::from_str::<serde_json::Value>(&text)
                 .ok()
-                .and_then(|v| v["format"]["duration"].as_str().and_then(|s| s.parse::<f64>().ok()))
+                .and_then(|v| {
+                    v["format"]["duration"]
+                        .as_str()
+                        .and_then(|s| s.parse::<f64>().ok())
+                })
                 .unwrap_or(0.0)
         }
         _ => 0.0,

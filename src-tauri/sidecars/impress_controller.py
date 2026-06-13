@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LibreOffice Impress controller sidecar for Sermon Helper.
+LibreOffice Impress controller sidecar for Metocast.
 
 Communicates via stdin/stdout JSON messages.
 Connects to LibreOffice via UNO socket on localhost:2002.

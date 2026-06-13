@@ -4,7 +4,7 @@
 //! for sending and learning IR/RF codes using raw UDP protocol implementation.
 
 use aes::Aes128;
-use cipher::{BlockDecrypt, BlockEncrypt, KeyInit, generic_array::GenericArray};
+use cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
@@ -13,14 +13,12 @@ use std::time::{Duration, Instant};
 
 /// Default Broadlink encryption key (before auth)
 const DEFAULT_KEY: [u8; 16] = [
-    0x09, 0x76, 0x28, 0x34, 0x3f, 0xe9, 0x9e, 0x23,
-    0x76, 0x5c, 0x15, 0x13, 0xac, 0xcf, 0x8b, 0x02,
+    0x09, 0x76, 0x28, 0x34, 0x3f, 0xe9, 0x9e, 0x23, 0x76, 0x5c, 0x15, 0x13, 0xac, 0xcf, 0x8b, 0x02,
 ];
 
 /// Default Broadlink IV
 const DEFAULT_IV: [u8; 16] = [
-    0x56, 0x2e, 0x17, 0x99, 0x6d, 0x09, 0x3d, 0x28,
-    0xdd, 0xb3, 0xba, 0x69, 0x5a, 0x2e, 0x6f, 0x58,
+    0x56, 0x2e, 0x17, 0x99, 0x6d, 0x09, 0x3d, 0x28, 0xdd, 0xb3, 0xba, 0x69, 0x5a, 0x2e, 0x6f, 0x58,
 ];
 
 /// Raw Broadlink device handler for direct protocol communication
@@ -37,12 +35,12 @@ struct BroadlinkDevice {
 impl BroadlinkDevice {
     /// Connect to a Broadlink device
     fn connect(host: &str, mac: &str, devtype: &str, local_ip: Ipv4Addr) -> Result<Self, String> {
-        let device_ip: Ipv4Addr = host.parse()
-            .map_err(|e| format!("Invalid IP: {}", e))?;
+        let device_ip: Ipv4Addr = host.parse().map_err(|e| format!("Invalid IP: {}", e))?;
 
         // Parse MAC address - use as-is from discovery response (no reversal needed)
         // The MAC bytes from discovery are already in the correct format for packets
-        let mac_bytes: Vec<u8> = mac.split(':')
+        let mac_bytes: Vec<u8> = mac
+            .split(':')
             .map(|s| u8::from_str_radix(s, 16).unwrap_or(0))
             .collect();
         let mut device_mac = [0u8; 6];
@@ -59,23 +57,29 @@ impl BroadlinkDevice {
 
         // Bind socket to specific local IP (required for proper routing on Windows with multiple interfaces)
         let bind_addr = SocketAddr::new(local_ip.into(), 0);
-        let socket = UdpSocket::bind(bind_addr)
-            .map_err(|e| format!("Failed to bind socket: {}", e))?;
+        let socket =
+            UdpSocket::bind(bind_addr).map_err(|e| format!("Failed to bind socket: {}", e))?;
 
         // Set socket options (matching python-broadlink)
-        socket.set_broadcast(true)
+        socket
+            .set_broadcast(true)
             .map_err(|e| format!("Failed to set broadcast: {}", e))?;
 
-        socket.set_read_timeout(Some(Duration::from_secs(10)))
+        socket
+            .set_read_timeout(Some(Duration::from_secs(10)))
             .map_err(|e| format!("Failed to set timeout: {}", e))?;
 
         // Connect to device (helps Windows route correctly)
         let device_addr = SocketAddr::new(device_ip.into(), 80);
-        socket.connect(device_addr)
+        socket
+            .connect(device_addr)
             .map_err(|e| format!("Failed to connect socket: {}", e))?;
 
-        tracing::info!("Socket bound to {:?}, connected to {:?}",
-            socket.local_addr().ok(), device_addr);
+        tracing::info!(
+            "Socket bound to {:?}, connected to {:?}",
+            socket.local_addr().ok(),
+            device_addr
+        );
 
         let mut dev = BroadlinkDevice {
             socket,
@@ -199,24 +203,33 @@ impl BroadlinkDevice {
         packet[0x20] = (checksum & 0xff) as u8;
         packet[0x21] = ((checksum >> 8) & 0xff) as u8;
 
-        tracing::debug!("Sending packet: cmd=0x{:02x}, payload_len={}, encrypted_len={}, total_len={}",
-            command, payload.len(), encrypted.len(), packet.len());
+        tracing::debug!(
+            "Sending packet: cmd=0x{:02x}, payload_len={}, encrypted_len={}, total_len={}",
+            command,
+            payload.len(),
+            encrypted.len(),
+            packet.len()
+        );
         tracing::debug!("Using key: {:02x?}", &self.key);
         tracing::debug!("Device ID: {:02x?}, count: {}", &self.id, self.count);
-        tracing::debug!("Packet header (first 56 bytes): {:02x?}", &packet[..0x38.min(packet.len())]);
+        tracing::debug!(
+            "Packet header (first 56 bytes): {:02x?}",
+            &packet[..0x38.min(packet.len())]
+        );
 
         // Send (using send() since we used connect())
-        let sent = self.socket.send(&packet)
+        let sent = self
+            .socket
+            .send(&packet)
             .map_err(|e| format!("Send failed: {}", e))?;
         tracing::debug!("Sent {} bytes", sent);
 
         // Receive response
         let mut buf = [0u8; 2048];
-        let len = self.socket.recv(&mut buf)
-            .map_err(|e| {
-                tracing::error!("Receive failed (timeout or error): {}", e);
-                format!("Receive failed: {}", e)
-            })?;
+        let len = self.socket.recv(&mut buf).map_err(|e| {
+            tracing::error!("Receive failed (timeout or error): {}", e);
+            format!("Receive failed: {}", e)
+        })?;
         tracing::debug!("Received {} bytes", len);
 
         tracing::debug!("Received response: {} bytes", len);
@@ -257,7 +270,11 @@ impl BroadlinkDevice {
         tracing::info!("Sending auth packet...");
         let response = self.send_packet(0x65, &payload)?;
 
-        tracing::info!("Auth response length: {}, data: {:02x?}", response.len(), &response[..response.len().min(32)]);
+        tracing::info!(
+            "Auth response length: {}, data: {:02x?}",
+            response.len(),
+            &response[..response.len().min(32)]
+        );
 
         if response.len() < 0x14 {
             return Err(format!("Auth response too short: {} bytes", response.len()));
@@ -267,8 +284,11 @@ impl BroadlinkDevice {
         self.id.copy_from_slice(&response[0x00..0x04]);
         self.key.copy_from_slice(&response[0x04..0x14]);
 
-        tracing::info!("Authenticated with device, session ID: {:02x?}, new key: {:02x?}",
-            self.id, &self.key[..8]);
+        tracing::info!(
+            "Authenticated with device, session ID: {:02x?}, new key: {:02x?}",
+            self.id,
+            &self.key[..8]
+        );
 
         Ok(())
     }
@@ -313,8 +333,11 @@ impl BroadlinkDevice {
         let payload = self.encode_rm4_command(0x03, &[]);
         tracing::debug!("RM4 command payload: {:02x?}", payload);
         let response = self.send_packet(0x6a, &payload)?;
-        tracing::info!("Enter learning response: {} bytes, data: {:02x?}",
-            response.len(), &response[..response.len().min(20)]);
+        tracing::info!(
+            "Enter learning response: {} bytes, data: {:02x?}",
+            response.len(),
+            &response[..response.len().min(20)]
+        );
 
         tracing::info!("Entered IR learning mode, waiting for signal...");
 
@@ -334,8 +357,11 @@ impl BroadlinkDevice {
             let check_payload = self.encode_rm4_command(0x04, &[]);
             match self.send_packet(0x6a, &check_payload) {
                 Ok(data) => {
-                    tracing::debug!("Check data response: {} bytes, data: {:02x?}",
-                        data.len(), &data[..data.len().min(20)]);
+                    tracing::debug!(
+                        "Check data response: {} bytes, data: {:02x?}",
+                        data.len(),
+                        &data[..data.len().min(20)]
+                    );
                     let code = self.decode_rm4_response(&data);
                     if !code.is_empty() && code.iter().any(|&b| b != 0) {
                         tracing::info!("Received IR code: {} bytes", code.len());
@@ -523,12 +549,12 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
     packet[0x0d] = ((year >> 8) & 0xff) as u8;
 
     // Time fields
-    packet[0x0e] = 0;  // seconds
-    packet[0x0f] = 0;  // minutes
+    packet[0x0e] = 0; // seconds
+    packet[0x0f] = 0; // minutes
     packet[0x10] = 12; // hours
-    packet[0x11] = 1;  // weekday
-    packet[0x12] = 1;  // day
-    packet[0x13] = 1;  // month
+    packet[0x11] = 1; // weekday
+    packet[0x12] = 1; // day
+    packet[0x13] = 1; // month
 
     // Local IP
     let octets = local_ip.octets();
@@ -598,8 +624,7 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
 
                 // MAC at 0x3a-0x3f
                 let mac: [u8; 6] = [
-                    buf[0x3a], buf[0x3b], buf[0x3c],
-                    buf[0x3d], buf[0x3e], buf[0x3f],
+                    buf[0x3a], buf[0x3b], buf[0x3c], buf[0x3d], buf[0x3e], buf[0x3f],
                 ];
 
                 // Device IP from source address
@@ -629,11 +654,20 @@ fn raw_discover_on_interface(local_ip: Ipv4Addr, timeout_secs: u64) -> Vec<Disco
                     model: model.to_string(),
                     host,
                     mac: format_mac(&mac),
-                    name: if name.is_empty() { model.to_string() } else { name },
+                    name: if name.is_empty() {
+                        model.to_string()
+                    } else {
+                        name
+                    },
                 };
 
-                tracing::info!("Found device: {} ({}) at {} [{}]",
-                    device.model, device.device_type, device.host, device.mac);
+                tracing::info!(
+                    "Found device: {} ({}) at {} [{}]",
+                    device.model,
+                    device.device_type,
+                    device.host,
+                    device.mac
+                );
 
                 devices.push(device);
             }
@@ -694,8 +728,8 @@ fn get_local_ipv4_addresses() -> Vec<Ipv4Addr> {
                     continue;
                 }
 
-                if !is_external_switch && (
-                    name_lower.starts_with("veth")
+                if !is_external_switch
+                    && (name_lower.starts_with("veth")
                     || name_lower.starts_with("docker")
                     || name_lower.starts_with("br-")
                     || name_lower.starts_with("virbr")
@@ -708,8 +742,8 @@ fn get_local_ipv4_addresses() -> Vec<Ipv4Addr> {
                     || name_lower.starts_with("awdl")
                     || name_lower.starts_with("llw")
                     || name_lower.starts_with("anpi")
-                    || name_lower.starts_with("bridge")
-                ) {
+                    || name_lower.starts_with("bridge"))
+                {
                     tracing::debug!("Skipping virtual/tunnel interface: {} ({})", name, ipv4);
                     continue;
                 }
@@ -734,7 +768,10 @@ pub async fn discover_devices(timeout: u32) -> Result<Vec<DiscoveredDevice>, Str
             return Err("No suitable network interfaces found".to_string());
         }
 
-        tracing::info!("Attempting discovery on {} network interface(s)", local_ips.len());
+        tracing::info!(
+            "Attempting discovery on {} network interface(s)",
+            local_ips.len()
+        );
 
         let mut all_discovered = Vec::new();
         let mut seen_macs = HashSet::new();
@@ -808,15 +845,18 @@ pub async fn learn_code(
             .map_err(|e| format!("Invalid IP address '{}': {}", host, e))?;
 
         // Get the best local IP for this device
-        let local_ip = get_local_ip_for_device(ip)
-            .ok_or_else(|| "No suitable local IP found".to_string())?;
+        let local_ip =
+            get_local_ip_for_device(ip).ok_or_else(|| "No suitable local IP found".to_string())?;
         tracing::info!("Learning from device {} using local IP {}", ip, local_ip);
 
         // Connect using our custom BroadlinkDevice with RM4 protocol support
         tracing::info!("Connecting to device...");
         let mut device = BroadlinkDevice::connect(&host, &mac, &devtype, local_ip)?;
 
-        tracing::info!("Connected! Starting {} learning (RM4 protocol)...", signal_type);
+        tracing::info!(
+            "Connected! Starting {} learning (RM4 protocol)...",
+            signal_type
+        );
 
         // Learn based on signal type
         let code_result = if signal_type == "rf" {
@@ -872,12 +912,11 @@ pub async fn send_code(
             .map_err(|e| format!("Invalid IP address '{}': {}", host, e))?;
 
         // Decode the hex code
-        let code_bytes = hex::decode(&code)
-            .map_err(|e| format!("Invalid hex code: {}", e))?;
+        let code_bytes = hex::decode(&code).map_err(|e| format!("Invalid hex code: {}", e))?;
 
         // Get the best local IP for this device
-        let local_ip = get_local_ip_for_device(ip)
-            .ok_or_else(|| "No suitable local IP found".to_string())?;
+        let local_ip =
+            get_local_ip_for_device(ip).ok_or_else(|| "No suitable local IP found".to_string())?;
         tracing::info!("Sending to device {} using local IP {}", ip, local_ip);
 
         // Connect using our custom BroadlinkDevice with RM4 protocol support
@@ -901,11 +940,7 @@ pub async fn send_code(
 }
 
 /// Test if a device is reachable using raw UDP ping
-pub async fn test_device(
-    host: &str,
-    _mac: &str,
-    _devtype: &str,
-) -> Result<bool, String> {
+pub async fn test_device(host: &str, _mac: &str, _devtype: &str) -> Result<bool, String> {
     let host = host.to_string();
 
     tokio::task::spawn_blocking(move || {
@@ -949,7 +984,10 @@ pub async fn test_device(
             Err(_) => return Ok(false),
         };
 
-        if socket.set_read_timeout(Some(Duration::from_secs(3))).is_err() {
+        if socket
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .is_err()
+        {
             return Ok(false);
         }
 

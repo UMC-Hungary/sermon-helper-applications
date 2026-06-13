@@ -19,9 +19,7 @@ pub async fn start_upload(
     file_size: u64,
 ) -> anyhow::Result<(String, u64, u64)> {
     let resp = client
-        .post(format!(
-            "https://graph.facebook.com/v19.0/{page_id}/videos"
-        ))
+        .post(format!("https://graph.facebook.com/v19.0/{page_id}/videos"))
         .bearer_auth(token)
         .form(&[
             ("upload_phase", "start"),
@@ -85,9 +83,7 @@ pub async fn transfer_chunk(
         .part("video_file_chunk", part);
 
     let resp = client
-        .post(format!(
-            "https://graph.facebook.com/v19.0/{page_id}/videos"
-        ))
+        .post(format!("https://graph.facebook.com/v19.0/{page_id}/videos"))
         .bearer_auth(token)
         .multipart(form)
         .send()
@@ -130,9 +126,7 @@ pub async fn finish_upload(
     let privacy_json = serde_json::json!({ "value": visibility }).to_string();
 
     let resp = client
-        .post(format!(
-            "https://graph.facebook.com/v19.0/{page_id}/videos"
-        ))
+        .post(format!("https://graph.facebook.com/v19.0/{page_id}/videos"))
         .bearer_auth(token)
         .form(&[
             ("upload_phase", "finish"),
@@ -187,19 +181,18 @@ pub async fn run_upload(
     let total = file_size as u64;
 
     // Step 1: get or create upload session
-    let (session_id, mut start_offset, mut end_offset) =
-        match existing_session_id {
-            Some(sid) if !sid.is_empty() => {
-                // Resume from known offset
-                let start = progress_bytes as u64;
-                // Use a 10MB chunk or rest of file
-                let end = (start + 10 * 1024 * 1024).min(total);
-                (sid, start, end)
-            }
-            _ => {
-                let (sid, s, e) = start_upload(&client, token, page_id, total).await?;
+    let (session_id, mut start_offset, mut end_offset) = match existing_session_id {
+        Some(sid) if !sid.is_empty() => {
+            // Resume from known offset
+            let start = progress_bytes as u64;
+            // Use a 10MB chunk or rest of file
+            let end = (start + 10 * 1024 * 1024).min(total);
+            (sid, start, end)
+        }
+        _ => {
+            let (sid, s, e) = start_upload(&client, token, page_id, total).await?;
 
-                sqlx::query(
+            sqlx::query(
                     "UPDATE recording_uploads \
                      SET upload_session_id = $1, state = 'uploading', started_at = NOW(), updated_at = NOW() \
                      WHERE recording_id = $2 AND platform = 'facebook'",
@@ -209,9 +202,9 @@ pub async fn run_upload(
                 .execute(pool)
                 .await?;
 
-                (sid, s, e)
-            }
-        };
+            (sid, s, e)
+        }
+    };
 
     // Step 2: transfer chunks
     loop {
@@ -244,7 +237,14 @@ pub async fn run_upload(
                 .execute(pool)
                 .await?;
 
-                broadcast_upload_progress(ws_clients, recording_id, "facebook", end_offset as i64, total as i64).await;
+                broadcast_upload_progress(
+                    ws_clients,
+                    recording_id,
+                    "facebook",
+                    end_offset as i64,
+                    total as i64,
+                )
+                .await;
 
                 start_offset = next_start;
                 end_offset = next_end;
@@ -271,7 +271,16 @@ pub async fn run_upload(
     }
 
     // Step 3: finish upload
-    match finish_upload(&client, token, page_id, &session_id, title, description, visibility).await
+    match finish_upload(
+        &client,
+        token,
+        page_id,
+        &session_id,
+        title,
+        description,
+        visibility,
+    )
+    .await
     {
         Ok(video_id) => {
             let video_url = if video_id.is_empty() {
@@ -293,7 +302,8 @@ pub async fn run_upload(
             .execute(pool)
             .await?;
 
-            broadcast_upload_completed(ws_clients, recording_id, "facebook", &video_id, &video_url).await;
+            broadcast_upload_completed(ws_clients, recording_id, "facebook", &video_id, &video_url)
+                .await;
             tracing::info!("Facebook upload completed for recording {recording_id}: {video_id}");
             Ok(())
         }

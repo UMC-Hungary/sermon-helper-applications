@@ -2,17 +2,17 @@
 # Presenter Receiver — one-line installer
 #
 # Install only:
-#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash
 #
 # Install and run immediately:
-#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws
+#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
 #
 # Install and register as a systemd service (auto-starts on boot):
-#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3000/ws --service
+#   curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws --service
 #
 set -e
 
-REPO="UMC-Hungary/sermon-helper-applications"
+REPO="UMC-Hungary/metocast"
 DEST="${PRESENTER_INSTALL_DIR:-/usr/local/bin}/presenter-receiver"
 WS_URL="${1:-}"
 INSTALL_SERVICE=false
@@ -103,7 +103,7 @@ fi
 # ── Auto-start via console auto-login (Linux only, opt-in via --service) ──────
 if [ "$INSTALL_SERVICE" = "true" ] && [ "$OS" = "Linux" ] && command -v systemctl &>/dev/null; then
     if [ -z "$WS_URL" ]; then
-        echo "Error: --service requires a WebSocket URL (e.g. ws://192.168.1.10:3000/ws)"
+        echo "Error: --service requires a WebSocket URL (e.g. ws://192.168.1.10:3737/ws)"
         exit 1
     fi
 
@@ -199,8 +199,8 @@ if [ -n "$WS_URL" ]; then
 else
     echo ""
     echo "Done. Usage:"
-    echo "  $DEST ws://YOUR_SERVER_IP:3000/ws"
+    echo "  $DEST ws://YOUR_SERVER_IP:3737/ws"
     echo ""
     echo "To auto-start on boot (Linux/systemd):"
-    echo "  $DEST ws://YOUR_SERVER_IP:3000/ws --service"
+    echo "  $DEST ws://YOUR_SERVER_IP:3737/ws --service"
 fi

@@ -89,6 +89,7 @@ Two SystemStatus definitions exist:
 ## Rules
 
 - Always fix all `pnpm check` errors before finishing, even if they are unrelated to your changes.
+- Always finish with zero warnings and zero errors from relevant Rust and frontend checks. Do not add `#[allow(dead_code)]`, `#![allow(dead_code)]`, or similar warning suppressions; remove or restructure unused code instead.
 - Always name plan files with the format: PLAN-{feature-name}.md under the `plans` folder.
 - Always use Zod for runtime validation of external, persisted, IPC, API, and WebSocket data.
 - Always keep strict TypeScript types. Do not use `any`, broad casts, or relaxed compiler settings to bypass type errors.

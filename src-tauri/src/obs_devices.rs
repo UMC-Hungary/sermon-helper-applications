@@ -7,10 +7,16 @@ use crate::models::device_listener::DeviceListener;
 
 /// OBS input kinds that map to each device category.
 const DISPLAY_KINDS: &[&str] = &["screen_capture", "monitor_capture"];
-const AUDIO_INPUT_KINDS: &[&str] =
-    &["coreaudio_input_capture", "wasapi_input_capture", "pulse_input_capture"];
-const AUDIO_OUTPUT_KINDS: &[&str] =
-    &["coreaudio_output_capture", "wasapi_output_capture", "pulse_output_capture"];
+const AUDIO_INPUT_KINDS: &[&str] = &[
+    "coreaudio_input_capture",
+    "wasapi_input_capture",
+    "pulse_input_capture",
+];
+const AUDIO_OUTPUT_KINDS: &[&str] = &[
+    "coreaudio_output_capture",
+    "wasapi_output_capture",
+    "pulse_output_capture",
+];
 const VIDEO_INPUT_KINDS: &[&str] = &["av_capture_input", "dshow_input"];
 const CAPTURE_CARD_KINDS: &[&str] = &["blackmagic-design-capture", "decklink-input"];
 
@@ -156,8 +162,14 @@ pub fn compute_listener_statuses(
                     };
                 }
             };
-            let found = device_list.iter().any(|d| d.item_value == l.device_item_value);
-            DeviceListenerStatus { listener_id: l.id, available: found, last_checked: now }
+            let found = device_list
+                .iter()
+                .any(|d| d.item_value == l.device_item_value);
+            DeviceListenerStatus {
+                listener_id: l.id,
+                available: found,
+                last_checked: now,
+            }
         })
         .collect()
 }

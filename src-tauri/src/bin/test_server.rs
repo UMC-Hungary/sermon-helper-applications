@@ -26,8 +26,7 @@ use metocast_lib::{
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .init();
 
@@ -56,9 +55,10 @@ async fn main() -> anyhow::Result<()> {
     let broadlink_connector = Arc::new(BroadlinkConnector::new());
     let youtube_config = Arc::new(RwLock::new(YouTubeConfig::default()));
     let facebook_config = Arc::new(RwLock::new(FacebookConfig::default()));
-    let oauth_states = Arc::new(RwLock::new(
-        std::collections::HashMap::<String, (String, std::time::Instant)>::new(),
-    ));
+    let oauth_states = Arc::new(RwLock::new(std::collections::HashMap::<
+        String,
+        (String, std::time::Instant),
+    >::new()));
     let cron_scheduler = Arc::new(CronScheduler::new());
 
     let port: u16 = std::env::var("TEST_SERVER_PORT")

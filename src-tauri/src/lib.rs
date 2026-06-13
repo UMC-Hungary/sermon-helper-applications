@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 #[cfg(desktop)]
 mod badge;
 mod bible;
@@ -6,21 +8,21 @@ mod logging;
 
 // Models, database, server, and connectors are desktop-only.
 #[cfg(desktop)]
-mod models;
-#[cfg(desktop)]
-pub mod database;
-#[cfg(desktop)]
-pub mod server;
+mod broadlink;
 #[cfg(desktop)]
 pub mod connectors;
 #[cfg(desktop)]
-pub mod scheduler;
+pub mod database;
 #[cfg(desktop)]
-mod broadlink;
-#[cfg(desktop)]
-pub(crate) mod uploader;
+mod models;
 #[cfg(desktop)]
 mod obs_devices;
+#[cfg(desktop)]
+pub mod scheduler;
+#[cfg(desktop)]
+pub mod server;
+#[cfg(desktop)]
+pub(crate) mod uploader;
 
 use std::sync::Arc;
 use tauri::Manager;
@@ -184,9 +186,7 @@ pub fn run() {
             // UI can call any Tauri command.
             let store = app.store("app-settings.json")?;
 
-            let mode = store
-                .get("mode")
-                .and_then(|v| v.as_str().map(String::from));
+            let mode = store.get("mode").and_then(|v| v.as_str().map(String::from));
             tracing::info!(
                 mode = mode.as_deref().unwrap_or("unset"),
                 "Application mode loaded"
@@ -277,9 +277,10 @@ pub fn run() {
             // Shared OAuth state map — the Tauri command and the Axum callback
             // handler both use the same Arc so CSRF tokens are visible to both.
             #[cfg(desktop)]
-            let oauth_states_arc = Arc::new(RwLock::new(
-                std::collections::HashMap::<String, (String, std::time::Instant)>::new(),
-            ));
+            let oauth_states_arc = Arc::new(RwLock::new(std::collections::HashMap::<
+                String,
+                (String, std::time::Instant),
+            >::new()));
 
             let runtime = Arc::new(RwLock::new(AppRuntime {
                 mode: mode.clone(),
@@ -422,7 +423,9 @@ pub(crate) async fn start_server(
     {
         let yt_cfg = youtube_config.read().await.clone();
         if yt_cfg.is_configured() {
-            youtube_connector.start(pool.clone(), yt_cfg, app.clone()).await;
+            youtube_connector
+                .start(pool.clone(), yt_cfg, app.clone())
+                .await;
         }
     }
     {

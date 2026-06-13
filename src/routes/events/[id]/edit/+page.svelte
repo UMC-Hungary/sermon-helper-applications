@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-  <title>{event ? `Edit: ${event.title}` : 'Edit Event'} — Sermon Helper</title>
+  <title>{event ? `Edit: ${event.title}` : 'Edit Event'} — Metocast</title>
 </svelte:head>
 
 <h1>Edit Event</h1>

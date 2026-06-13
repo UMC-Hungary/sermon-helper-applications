@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-  <title>New Event — Sermon Helper</title>
+  <title>New Event — Metocast</title>
 </svelte:head>
 
 <h1>Create Event</h1>

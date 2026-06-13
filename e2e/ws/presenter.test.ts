@@ -25,6 +25,8 @@ describe.skipIf(!isLive)('Presenter WebSocket Commands', () => {
     expect(msg['state']).toHaveProperty('loaded');
     expect(msg['state']).toHaveProperty('currentSlide');
     expect(msg['state']).toHaveProperty('totalSlides');
+    expect(msg['state']).toHaveProperty('renderMode');
+    expect(Array.isArray((msg['state'] as { svgSlides: unknown[] }).svgSlides)).toBe(true);
     expect(Array.isArray((msg['state'] as { slides: unknown[] }).slides)).toBe(true);
   });
 
@@ -35,6 +37,13 @@ describe.skipIf(!isLive)('Presenter WebSocket Commands', () => {
     );
     expect(msg['type']).toBe('error');
     expect(typeof msg['message']).toBe('string');
+  });
+
+  it('events.presenter_list → backend-selected presenter event list', async () => {
+    const msg = await ws.command({ type: 'events.presenter_list' }, 'events.presenter_list');
+    expect(msg['type']).toBe('events.presenter_list');
+    expect(Array.isArray(msg['events'])).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(msg, 'selectedEventId')).toBe(true);
   });
 
   it('presenter.next on unloaded state → no crash (no-op)', async () => {

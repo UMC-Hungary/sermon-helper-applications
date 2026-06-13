@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
+use std::sync::Arc;
 use tauri::State;
+use tokio::sync::RwLock;
 
 use crate::badge::{self, BadgeInstallResult};
 use crate::AppRuntime;
@@ -22,16 +22,21 @@ pub async fn get_obs_scenes(
 ) -> Result<Vec<ObsScene>, String> {
     let rt = runtime.read().await;
     let obs_connector = Arc::clone(&rt.obs_connector);
-    
+
     let client_guard = obs_connector.client.lock().await;
     let client = client_guard.as_ref().ok_or("OBS not connected")?;
-    
-    let scene_list = client.scenes()
+
+    let scene_list = client
+        .scenes()
         .list()
         .await
         .map_err(|e| format!("Failed to get scenes: {}", e))?;
-    
-    Ok(scene_list.scenes.into_iter().map(|s| ObsScene { name: s.id.name }).collect())
+
+    Ok(scene_list
+        .scenes
+        .into_iter()
+        .map(|s| ObsScene { name: s.id.name })
+        .collect())
 }
 
 #[tauri::command]
@@ -41,10 +46,10 @@ pub async fn create_badge_sources(
 ) -> Result<(), String> {
     let rt = runtime.read().await;
     let obs_connector = Arc::clone(&rt.obs_connector);
-    
+
     let client_guard = obs_connector.client.lock().await;
     let client = client_guard.as_ref().ok_or("OBS not connected")?;
-    
+
     let caption_url = "http://localhost:3737/caption?type=caption&resolution=4k&bold=Textus:&light=Lekcio:&color=red&showLogo=true";
     let shader_path = badge::get_shader_path();
     let shader_path_str = shader_path.to_string_lossy().to_string();
@@ -77,7 +82,11 @@ pub async fn create_badge_sources(
     // shader has a solid-colour canvas to draw its glass card onto.
     // (A browser source cannot work here — the shader only sees the source's own
     //  rendered pixels, not the OBS scene content behind it.)
-    client.inputs().remove("__caption-background".into()).await.ok();
+    client
+        .inputs()
+        .remove("__caption-background".into())
+        .await
+        .ok();
 
     let bg_request = obws::requests::inputs::Create {
         scene: scene_id,
@@ -96,7 +105,10 @@ pub async fn create_badge_sources(
         Err(e) => {
             let error_msg = format!("{:?}", e);
             if !error_msg.contains("ResourceAlreadyExists") {
-                return Err(format!("Failed to create __caption-background source: {}", e));
+                return Err(format!(
+                    "Failed to create __caption-background source: {}",
+                    e
+                ));
             }
             // Source already exists from a previous run — reuse it.
         }
@@ -112,12 +124,18 @@ pub async fn create_badge_sources(
     let shader_kind = all_kinds
         .iter()
         .find(|k| k.as_str() == "obs_shaderfilter")
-        .or_else(|| all_kinds.iter().find(|k| k.to_lowercase().contains("shader")))
+        .or_else(|| {
+            all_kinds
+                .iter()
+                .find(|k| k.to_lowercase().contains("shader"))
+        })
         .map(|s| s.as_str())
         .ok_or_else(|| {
             let shader_related: Vec<&str> = all_kinds
                 .iter()
-                .filter(|k| k.to_lowercase().contains("shader") || k.to_lowercase().contains("filter"))
+                .filter(|k| {
+                    k.to_lowercase().contains("shader") || k.to_lowercase().contains("filter")
+                })
                 .map(|s| s.as_str())
                 .collect();
             if shader_related.is_empty() {
@@ -136,7 +154,11 @@ pub async fn create_badge_sources(
 
     // Remove existing LucidGlass filter (if any) so shader settings are always
     // reloaded from the current file on each call to create_badge_sources.
-    client.filters().remove("__caption-background".into(), "LucidGlass").await.ok();
+    client
+        .filters()
+        .remove("__caption-background".into(), "LucidGlass")
+        .await
+        .ok();
 
     // Add LucidGlass shader filter to the colour source.
     let filter_request = obws::requests::filters::Create {
@@ -148,7 +170,10 @@ pub async fn create_badge_sources(
         })),
     };
 
-    client.filters().create(filter_request).await
+    client
+        .filters()
+        .create(filter_request)
+        .await
         .map_err(|e| format!("Failed to add LucidGlass shader filter: {}", e))?;
 
     Ok(())
