@@ -3,7 +3,7 @@
 	"name": "metocast",
 	"shortname": "Metocast",
 	"description": "Control Broadlink IR/RF devices and presentations through the Metocast application",
-	"version": "2.0.12",
+	"version": "2.0.13",
 	"license": "MIT",
 	"repository": "git+https://github.com/UMC-Hungary/sermon-helper-applications.git",
 	"bugs": "https://github.com/UMC-Hungary/sermon-helper-applications/issues",

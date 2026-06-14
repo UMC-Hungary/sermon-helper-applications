@@ -16,6 +16,7 @@
     'macos-arm64':  'presenter-receiver-macos-arm64',
     'macos-x86_64': 'presenter-receiver-macos-x86_64',
   };
+  const githubRepository = 'UMC-Hungary/sermon-helper-applications';
 
   let selectedPlatform = $state<Platform>('linux-arm64');
   let autoStart = $state(false);
@@ -27,11 +28,11 @@
   );
 
   const installCommand = $derived(
-    `curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/metocast/main/presenter-receiver/install.sh | bash -s -- ${wsUrl}${autoStart ? ' --service' : ''}`
+    `curl -fsSL https://raw.githubusercontent.com/${githubRepository}/main/presenter-receiver/install.sh | bash -s -- ${wsUrl}${autoStart ? ' --service' : ''}`
   );
 
   const manualCommand = $derived(
-    `curl -fsSL https://github.com/UMC-Hungary/metocast/releases/latest/download/${binaryName[selectedPlatform]} -o presenter-receiver\nchmod +x presenter-receiver\n./presenter-receiver ${wsUrl}`
+    `curl -fsSL https://github.com/${githubRepository}/releases/latest/download/${binaryName[selectedPlatform]} -o presenter-receiver\nchmod +x presenter-receiver\n./presenter-receiver ${wsUrl}`
   );
 
   async function copyInstall() {

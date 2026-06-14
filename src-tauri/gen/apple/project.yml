@@ -51,8 +51,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 2.0.12
-        CFBundleVersion: "2.0.12"
+        CFBundleShortVersionString: 2.0.13
+        CFBundleVersion: "2.0.13"
     entitlements:
       path: metocast_iOS/metocast_iOS.entitlements
     scheme:
