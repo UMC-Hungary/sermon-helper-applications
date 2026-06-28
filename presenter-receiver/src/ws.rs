@@ -175,7 +175,7 @@ async fn connect_and_receive(
     };
     let mut svg_frame_cache: HashMap<u32, Frame> = HashMap::new();
 
-    let idle_timeout = std::time::Duration::from_secs(15);
+    let idle_timeout = std::time::Duration::from_secs(60);
 
     loop {
         let raw = match tokio::time::timeout(idle_timeout, read.next()).await {

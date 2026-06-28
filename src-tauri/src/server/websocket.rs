@@ -2975,9 +2975,22 @@ async fn handle_socket(
         }
     });
 
+    let tx_ping = tx.clone();
+    let ping_task = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        interval.tick().await; // skip immediate first tick
+        loop {
+            interval.tick().await;
+            if tx_ping.send(Message::Ping(vec![].into())).is_err() {
+                break;
+            }
+        }
+    });
+
     tokio::select! {
         _ = send_task => {}
         _ = recv_task => {}
+        _ = ping_task => {}
     }
 
     {

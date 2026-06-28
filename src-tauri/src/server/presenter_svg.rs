@@ -216,6 +216,12 @@ pub fn convert_pptx_to_inline_svg(
     let background = read_zip_entry_optional(&mut archive, "ppt/slideMasters/slideMaster1.xml")?
         .and_then(|bytes| parse_background(&bytes, &theme).ok().flatten())
         .unwrap_or_else(|| "000000".to_string());
+    eprintln!(
+        "[svg-gen] theme: dk1={:?} lt1={:?} tx1-resolves={:?} bg=#{background}",
+        theme.colors.get("dk1"),
+        theme.colors.get("lt1"),
+        theme.resolve_scheme("tx1"),
+    );
 
     let (width, height) = read_zip_entry_optional(&mut archive, "ppt/presentation.xml")?
         .map(|bytes| parse_slide_size(&bytes).unwrap_or((DEFAULT_WIDTH_EMU, DEFAULT_HEIGHT_EMU)))
