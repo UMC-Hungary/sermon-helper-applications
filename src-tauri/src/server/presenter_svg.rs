@@ -375,6 +375,12 @@ fn parse_theme_colors(xml: &[u8]) -> Result<HashMap<String, String>, Box<dyn std
                     {
                         colors.insert(slot.clone(), color);
                     }
+                } else if in_main_scheme && name == b"sysClr" {
+                    if let (Some(slot), Some(color)) =
+                        (current_slot.as_ref(), attr_value(&e, b"lastClr"))
+                    {
+                        colors.insert(slot.clone(), color);
+                    }
                 }
             }
             Event::Empty(e) => {
@@ -382,6 +388,12 @@ fn parse_theme_colors(xml: &[u8]) -> Result<HashMap<String, String>, Box<dyn std
                 if in_main_scheme && name == b"srgbClr" {
                     if let (Some(slot), Some(color)) =
                         (current_slot.as_ref(), attr_value(&e, b"val"))
+                    {
+                        colors.insert(slot.clone(), color);
+                    }
+                } else if in_main_scheme && name == b"sysClr" {
+                    if let (Some(slot), Some(color)) =
+                        (current_slot.as_ref(), attr_value(&e, b"lastClr"))
                     {
                         colors.insert(slot.clone(), color);
                     }
@@ -474,6 +486,8 @@ fn parse_background(
                     in_bg = true;
                 } else if in_bg && name == b"srgbClr" {
                     return Ok(attr_value(&e, b"val"));
+                } else if in_bg && name == b"sysClr" {
+                    return Ok(attr_value(&e, b"lastClr"));
                 } else if in_bg && name == b"schemeClr" {
                     if let Some(value) = attr_value(&e, b"val") {
                         return Ok(Some(theme.resolve_scheme(&value)));
@@ -484,6 +498,8 @@ fn parse_background(
                 let name = local_name(e.name().into_inner());
                 if in_bg && name == b"srgbClr" {
                     return Ok(attr_value(&e, b"val"));
+                } else if in_bg && name == b"sysClr" {
+                    return Ok(attr_value(&e, b"lastClr"));
                 } else if in_bg && name == b"schemeClr" {
                     if let Some(value) = attr_value(&e, b"val") {
                         return Ok(Some(theme.resolve_scheme(&value)));
