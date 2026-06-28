@@ -190,8 +190,10 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
 
 /// Render a self-contained SVG slide into a framebuffer-sized 0x00RRGGBB frame.
 pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, String> {
+    eprintln!("[svg] parsing {} bytes for {}x{} display", svg.len(), width, height);
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
+    eprintln!("[svg] fontdb has {} faces", options.fontdb().len());
 
     let tree = usvg::Tree::from_data(svg.as_bytes(), &options)
         .map_err(|err| format!("failed to parse SVG: {err}"))?;
@@ -199,6 +201,10 @@ pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, 
     let scale = (width as f32 / svg_size.width()).min(height as f32 / svg_size.height());
     let render_width = ((svg_size.width() * scale).round().max(1.0) as u32).min(width);
     let render_height = ((svg_size.height() * scale).round().max(1.0) as u32).min(height);
+    eprintln!(
+        "[svg] SVG {}x{} → display scale={:.3} → render {}x{}",
+        svg_size.width(), svg_size.height(), scale, render_width, render_height
+    );
 
     let mut pixmap =
         Pixmap::new(render_width, render_height).ok_or("failed to allocate SVG pixmap")?;

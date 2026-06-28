@@ -197,6 +197,7 @@ async fn connect_and_receive(
         match msg {
             ServerMsg::PresenterState { state } => {
                 presenter_state = state;
+                log_presenter_state("state", &presenter_state);
                 svg_frame_cache.clear();
                 render_state(&presenter_state, tx, dims, &mut svg_frame_cache);
             }
@@ -204,6 +205,13 @@ async fn connect_and_receive(
                 current_slide: new_slide,
             } => {
                 presenter_state.current_slide = new_slide;
+                eprintln!(
+                    "[presenter] slide changed: current={} mode={:?} textSlides={} svgSlides={}",
+                    presenter_state.current_slide,
+                    presenter_state.render_mode,
+                    presenter_state.slides.len(),
+                    presenter_state.svg_slides.len()
+                );
                 render_state(&presenter_state, tx, dims, &mut svg_frame_cache);
             }
             ServerMsg::Ping { ping_id } => {
@@ -220,6 +228,17 @@ async fn connect_and_receive(
     }
 
     Ok(())
+}
+
+fn log_presenter_state(source: &str, state: &PresenterState) {
+    eprintln!(
+        "[presenter] {source}: current={} mode={:?} muted={} textSlides={} svgSlides={}",
+        state.current_slide,
+        state.render_mode,
+        state.muted,
+        state.slides.len(),
+        state.svg_slides.len()
+    );
 }
 
 // ── Render + send ─────────────────────────────────────────────────────────────
@@ -239,16 +258,21 @@ fn render_state(
         let frame = svg_frame_cache
             .entry(state.current_slide)
             .or_insert_with(|| {
-                state
+                let Some(slide) = state
                     .svg_slides
                     .iter()
                     .find(|s| s.index == state.current_slide)
-                    .and_then(|slide| {
-                        crate::renderer::render_svg_slide(&slide.svg, dims.width, dims.height)
-                            .map_err(|err| eprintln!("[render] SVG render failed: {err}"))
-                            .ok()
-                    })
-                    .unwrap_or_else(|| vec![0u32; (dims.width * dims.height) as usize])
+                else {
+                    eprintln!(
+                        "[render] SVG slide missing: current={} available={}",
+                        state.current_slide,
+                        state.svg_slides.len()
+                    );
+                    return vec![0u32; (dims.width * dims.height) as usize];
+                };
+                crate::renderer::render_svg_slide(&slide.svg, dims.width, dims.height)
+                    .map_err(|err| eprintln!("[render] SVG render failed: {err}"))
+                    .unwrap_or_else(|_| vec![0u32; (dims.width * dims.height) as usize])
             })
             .clone();
         let _ = tx.send(frame);
