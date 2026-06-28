@@ -193,7 +193,7 @@ pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, 
     eprintln!("[svg] parsing {} bytes for {}x{} display", svg.len(), width, height);
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
-    eprintln!("[svg] fontdb has {} faces", options.fontdb().len());
+    eprintln!("[svg] fontdb has {} faces", options.fontdb.len());
 
     let tree = usvg::Tree::from_data(svg.as_bytes(), &options)
         .map_err(|err| format!("failed to parse SVG: {err}"))?;
