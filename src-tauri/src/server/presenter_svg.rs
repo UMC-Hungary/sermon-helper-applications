@@ -230,6 +230,8 @@ pub fn convert_pptx_to_inline_svg(
     let media_data_uris = read_media_data_uris(&mut archive)?;
     let slide_names = slide_entry_names(&mut archive)?;
 
+    let flatten_options = build_flatten_options();
+
     let mut slides = Vec::with_capacity(slide_names.len());
     for (idx, slide_name) in slide_names.iter().enumerate() {
         let slide_xml = read_zip_entry(&mut archive, slide_name)?;
@@ -238,9 +240,10 @@ pub fn convert_pptx_to_inline_svg(
             .map(|bytes| parse_relationships(&bytes).unwrap_or_default())
             .unwrap_or_default();
         let items = parse_slide(&slide_xml, &rels, &theme, Some(&media_data_uris))?;
+        let text_svg = render_svg(width, height, &background, &items);
         slides.push(InlineSvgSlide {
             index: idx as u32 + 1,
-            svg: render_svg(width, height, &background, &items),
+            svg: flatten_text_to_paths(&text_svg, &flatten_options),
             width_px,
             height_px,
         });
@@ -857,6 +860,23 @@ fn image_href_for_target(
     Path::new(target)
         .file_name()
         .map(|file_name| format!("../media/{}", escape_attr(&file_name.to_string_lossy())))
+}
+
+fn build_flatten_options() -> usvg::Options<'static> {
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+    options.font_family = "Helvetica".to_string();
+    options
+}
+
+fn flatten_text_to_paths(svg: &str, options: &usvg::Options) -> String {
+    match usvg::Tree::from_data(svg.as_bytes(), options) {
+        Ok(tree) => tree.to_string(&usvg::WriteOptions::default()),
+        Err(err) => {
+            eprintln!("[svg-gen] text-to-path flatten failed, sending text SVG: {err}");
+            svg.to_string()
+        }
+    }
 }
 
 fn render_svg(width: i64, height: i64, background: &str, items: &[SvgItem]) -> String {

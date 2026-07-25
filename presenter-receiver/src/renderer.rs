@@ -220,16 +220,17 @@ pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, 
     let offset_y = ((height - render_height) / 2) as usize;
     let frame_width = width as usize;
 
+    // pixmap.data() is premultiplied RGBA. Compositing over a black background
+    // means premultiplied RGB values are the correct output directly.
     for (row, chunk) in pixmap
-        .take_demultiplied()
+        .data()
         .chunks_exact((render_width * 4) as usize)
         .enumerate()
     {
         for (col, rgba) in chunk.chunks_exact(4).enumerate() {
-            let alpha = rgba[3] as u32;
-            let r = (rgba[0] as u32 * alpha) / 255;
-            let g = (rgba[1] as u32 * alpha) / 255;
-            let b = (rgba[2] as u32 * alpha) / 255;
+            let r = rgba[0] as u32;
+            let g = rgba[1] as u32;
+            let b = rgba[2] as u32;
             frame[(offset_y + row) * frame_width + offset_x + col] = (r << 16) | (g << 8) | b;
         }
     }
@@ -391,4 +392,47 @@ pub fn rgb_to_u32(rgb: &[u8]) -> Vec<u32> {
     rgb.chunks_exact(3)
         .map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn svg_white_text_on_black_produces_white_pixels() {
+        // This SVG matches exactly what the server generates: black background rect,
+        // white text in the center. If resvg renders correctly, the center of the
+        // frame must contain white (or near-white) pixels.
+        let svg = r##"<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+<rect x="0" y="0" width="1280" height="720" fill="#000000"/>
+<text x="640" y="360" text-anchor="middle" dominant-baseline="alphabetic">
+  <tspan font-family="Calibri" font-size="100" font-weight="700" font-style="normal" fill="#FFFFFF">Hello</tspan>
+</text>
+</svg>"##;
+
+        let frame = render_svg_slide(svg, 1920, 1080).expect("render_svg_slide failed");
+
+        assert_eq!(frame.len(), 1920 * 1080);
+
+        let non_zero = frame.iter().filter(|&&p| p != 0).count();
+        println!("non-zero pixels: {}/{}", non_zero, frame.len());
+
+        // The center pixel should be non-zero (white text region or at least
+        // the background rect should produce opaque pixels).
+        // We check a broader region around center to account for font variation.
+        let any_white_near_center = (400..600).any(|y| {
+            (800..1100).any(|x| {
+                let p = frame[y * 1920 + x];
+                let r = (p >> 16) & 0xff;
+                r > 200
+            })
+        });
+
+        assert!(
+            any_white_near_center,
+            "expected white text near center but frame has {} non-zero pixels total",
+            non_zero
+        );
+    }
 }

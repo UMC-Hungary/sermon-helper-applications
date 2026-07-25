@@ -269,7 +269,7 @@ async fn kill_on_port(port: u16) {
 }
 
 #[cfg(all(test, target_os = "macos"))]
-mod tests {
+mod macos_tests {
     use super::*;
     use std::fs::File;
 

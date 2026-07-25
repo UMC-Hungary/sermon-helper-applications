@@ -1,6 +1,6 @@
 [package]
 name = "metocast"
-version = "2.0.13"
+version = "2.0.17"
 description = "Metocast — livestream control desktop application"
 authors = ["you"]
 edition = "2021"
@@ -54,6 +54,7 @@ tauri-plugin-dialog = "2.6.0"
 tokio-cron-scheduler = "0.15.1"
 quick-xml = "0.39.2"
 tauri-plugin-updater = "2.10.0"
+usvg = "0.47"
 
 [patch.crates-io]
 tauri-plugin-liquid-glass = { path = "vendor/tauri-plugin-liquid-glass" }
