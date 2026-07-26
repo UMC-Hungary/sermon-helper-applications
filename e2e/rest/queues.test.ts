@@ -5,8 +5,9 @@
  * migration, the dedup index and the claim/redrive endpoints end to end.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { apiClient } from '../helpers/client.js';
+import { WsTestClient } from '../helpers/ws-client.js';
 
 const isLive = !!process.env.TAURI_TEST_TOKEN;
 
@@ -28,13 +29,22 @@ interface QueueSummary {
 }
 
 describe.skipIf(!isLive)('Queues REST API', () => {
+  let ws: WsTestClient;
+
+  beforeAll(async () => {
+    ws = new WsTestClient();
+    await ws.waitForConnect();
+  });
+
+  afterAll(() => ws.close());
+
   it('GET /api/queues → per-queue depth by status', async () => {
     const res = await apiClient.get<QueueSummary[]>('/api/queues');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  it('creating an event enqueues a youtube.upsert job that survives failure', async () => {
+  it('parks the upsert job while YouTube is logged out, coalescing repeat edits', async () => {
     const dateTime = new Date(Date.now() + 86_400_000).toISOString();
     const created = await apiClient.post<{ id: string }>('/api/events', {
       title: 'Queue test event',
@@ -43,17 +53,24 @@ describe.skipIf(!isLive)('Queues REST API', () => {
     expect(created.status).toBe(201);
     const eventId = created.body.id;
 
-    // YouTube is not connected in the test server, so the job must fail and be
-    // rescheduled rather than vanish — that is the durability the queue buys.
-    const job = await findJob(eventId);
-    expect(job).toBeDefined();
-    expect(job?.attempts).toBeGreaterThanOrEqual(1);
-    expect(job?.lastError).toBeTruthy();
+    for (const title of ['Queue test edit 1', 'Queue test edit 2']) {
+      await apiClient.put(`/api/events/${eventId}`, { title, date_time: dateTime });
+    }
 
-    const retry = await apiClient.post(`/api/jobs/${job?.id}/retry`);
+    // The test server has no YouTube credential, so the worker must not claim
+    // the job: it waits in the queue for the user to log back in. All three
+    // edits share a dedup_key, and the partial unique index makes a second
+    // pending row for that key impossible — so this is exactly the one job the
+    // edits coalesced onto, however late the last enqueue lands.
+    const jobs = await pendingJobs(eventId);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.attempts).toBe(0);
+    expect(jobs[0]?.lastError).toBeNull();
+
+    const retry = await apiClient.post(`/api/jobs/${jobs[0]?.id}/retry`);
     expect(retry.status).toBe(204);
 
-    const purge = await apiClient.delete(`/api/jobs/${job?.id}`);
+    const purge = await apiClient.delete(`/api/jobs/${jobs[0]?.id}`);
     expect(purge.status).toBe(204);
 
     await apiClient.delete(`/api/events/${eventId}`);
@@ -63,17 +80,25 @@ describe.skipIf(!isLive)('Queues REST API', () => {
     const res = await apiClient.post('/api/jobs/00000000-0000-0000-0000-000000000000/retry');
     expect(res.status).toBe(404);
   });
-});
 
-/// The upsert job for one event, once the worker has tried it at least once.
-async function findJob(eventId: string): Promise<Job | undefined> {
-  for (let i = 0; i < 30; i++) {
-    const res = await apiClient.get<Job[]>('/api/queues/platform_sync/jobs');
-    const job = res.body.find(
-      (j) => j.jobType === 'youtube.upsert' && JSON.stringify(j).includes(eventId),
-    );
-    if (job && job.attempts > 0 && job.status !== 'processing') return job;
-    await new Promise((resolve) => setTimeout(resolve, 100));
+  /**
+   * Pending upsert jobs for one event.
+   *
+   * `queue.stats` carries depth counts rather than job rows, so it says "the
+   * queue moved", not "your job landed" — this waits on that push and re-reads
+   * the list, the same way the dashboard page refetches on every stats message.
+   * No timers: an enqueue that never arrives fails via vitest's testTimeout.
+   */
+  async function pendingJobs(eventId: string): Promise<Job[]> {
+    for (;;) {
+      const res = await apiClient.get<Job[]>('/api/queues/platform_sync/jobs', {
+        status: 'pending',
+      });
+      const jobs = res.body.filter(
+        (j) => j.jobType === 'youtube.upsert' && JSON.stringify(j).includes(eventId),
+      );
+      if (jobs.length > 0) return jobs;
+      await ws.waitForMessage('queue.stats');
+    }
   }
-  return undefined;
-}
+});

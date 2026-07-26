@@ -3053,6 +3053,12 @@ pub async fn start_notify_listener(
         let msg_text = if channel == "queue_changed" {
             // Wakes the sync worker and refreshes the Queues dashboard.
             app_state.queue_wake.notify_one();
+            // The trigger fires per row, so draining a batch produces a burst of
+            // these. Skip the stats aggregate entirely when nobody is watching —
+            // which is every run where the dashboard isn't open.
+            if ws_clients.read().await.is_empty() {
+                continue;
+            }
             match crate::queue::stats(&app_state.pool).await {
                 Ok(queues) => json!({ "type": "queue.stats", "queues": queues }).to_string(),
                 Err(e) => {

@@ -30,6 +30,8 @@ const MAX_ATTEMPTS: i32 = 5;
 const VISIBILITY_TIMEOUT_SECS: i64 = 300;
 const TICK: Duration = Duration::from_secs(15);
 const BATCH: i64 = 10;
+const PRUNE_EVERY: Duration = Duration::from_secs(3600);
+const RETAIN_SUCCEEDED_DAYS: i32 = 7;
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
@@ -181,6 +183,20 @@ pub async fn reclaim_stuck(pool: &PgPool, queue: &str) -> anyhow::Result<u64> {
     Ok(res.rows_affected())
 }
 
+/// Drop succeeded jobs past their retention window. Without this the table
+/// grows a row per sync forever, and `stats` scans all of it on every notify.
+/// `dead` rows are kept: a buried job is something someone still has to look at.
+pub async fn prune(pool: &PgPool) -> anyhow::Result<u64> {
+    let res = sqlx::query(
+        "DELETE FROM job_queue WHERE status = 'succeeded' \
+         AND updated_at < now() - make_interval(days => $1)",
+    )
+    .bind(RETAIN_SUCCEEDED_DAYS)
+    .execute(pool)
+    .await?;
+    Ok(res.rows_affected())
+}
+
 pub async fn stats(pool: &PgPool) -> anyhow::Result<Vec<QueueSummary>> {
     let rows = sqlx::query_as::<_, QueueSummary>(
         r#"SELECT queue,
@@ -204,8 +220,17 @@ pub async fn stats(pool: &PgPool) -> anyhow::Result<Vec<QueueSummary>> {
 pub fn spawn_worker(state: AppState) {
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(TICK);
+        let mut last_prune = tokio::time::Instant::now();
         loop {
             run_cycle(&state).await;
+            if last_prune.elapsed() >= PRUNE_EVERY {
+                last_prune = tokio::time::Instant::now();
+                match prune(&state.pool).await {
+                    Ok(n) if n > 0 => tracing::info!("queue: pruned {n} succeeded jobs"),
+                    Ok(_) => {}
+                    Err(e) => tracing::error!("queue: prune failed: {e}"),
+                }
+            }
             tokio::select! {
                 _ = state.queue_wake.notified() => {}
                 _ = ticker.tick() => {}
@@ -218,6 +243,15 @@ async fn run_cycle(state: &AppState) {
     if let Err(e) = reclaim_stuck(&state.pool, PLATFORM_SYNC).await {
         tracing::error!("queue: reclaim_stuck failed: {e}");
     }
+
+    // Logged out of YouTube: leave everything sitting in the queue rather than
+    // claiming jobs that cannot succeed. Nothing burns an attempt, nothing
+    // reaches the dead-letter, and the next tick after the user logs back in
+    // drains the backlog. Every job type in this queue targets YouTube today.
+    if !youtube_ready(state).await {
+        return;
+    }
+
     loop {
         let jobs = match claim_batch(&state.pool, PLATFORM_SYNC, &state.server_id, BATCH).await {
             Ok(j) if j.is_empty() => return,
@@ -243,13 +277,22 @@ async fn run_cycle(state: &AppState) {
     }
 }
 
+/// Whether the queue can make progress at all. Checked before claiming so a
+/// logged-out connector parks the queue instead of draining it into the DLQ.
+async fn youtube_ready(state: &AppState) -> bool {
+    matches!(
+        state.youtube_connector.get_status().await,
+        ConnectorStatus::Connected
+    ) && youtube::load_tokens(&state.pool).await.is_some()
+}
+
 async fn handle_job(state: &AppState, job: &Job) -> anyhow::Result<()> {
-    let token = match youtube_token(state).await {
-        Some(t) => t,
-        // Retryable: a disconnected connector recovers on a later attempt
-        // instead of silently dropping the sync.
-        None => anyhow::bail!("YouTube not connected"),
-    };
+    // Retryable: `youtube_ready` gates the claim, so this only trips when the
+    // connector drops between the gate and here.
+    let token = youtube::load_tokens(&state.pool)
+        .await
+        .ok_or_else(|| anyhow::anyhow!("YouTube token disappeared mid-cycle"))?
+        .access_token;
 
     match job.job_type.as_str() {
         "youtube.upsert" => {
@@ -283,18 +326,6 @@ async fn handle_job(state: &AppState, job: &Job) -> anyhow::Result<()> {
         }
         other => Err(anyhow::anyhow!("unknown job_type '{other}'")),
     }
-}
-
-async fn youtube_token(state: &AppState) -> Option<String> {
-    if !matches!(
-        state.youtube_connector.get_status().await,
-        ConnectorStatus::Connected
-    ) {
-        return None;
-    }
-    youtube::load_tokens(&state.pool)
-        .await
-        .map(|t| t.access_token)
 }
 
 /// Create a broadcast for a future event that has none yet, or push edits to an
