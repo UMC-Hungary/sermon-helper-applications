@@ -707,7 +707,38 @@
 		"presentations": "Prezentációk",
 		"obsCaption": "OBS Felirat",
 		"obsDevices": "Eszközfigyelő",
+		"queues": "Várólisták",
 		"logs": "Naplók"
+	},
+	"queuesPage": {
+		"title": "Várólisták",
+		"refresh": "Frissítés",
+		"available": "Elérhető",
+		"inFlight": "Folyamatban",
+		"dlq": "Sikertelen",
+		"headAge": "Legrégebbi",
+		"noQueues": "Még nincs várólista",
+		"noJobs": "Nincs a szűrőnek megfelelő feladat",
+		"redrive": "Újraindítás",
+		"redriven": "A feladat visszakerült a sorba",
+		"purge": "Feladat törlése",
+		"loadFailed": "A várólista adatai nem tölthetők be",
+		"actionFailed": "A művelet nem sikerült",
+		"filters": {
+			"all": "Összes",
+			"pending": "Várakozó",
+			"processing": "Folyamatban",
+			"succeeded": "Sikeres",
+			"dead": "Sikertelen"
+		},
+		"columns": {
+			"type": "Típus",
+			"status": "Állapot",
+			"attempts": "Próbálkozás",
+			"nextRetry": "Következő próba",
+			"payload": "Adat",
+			"lastError": "Utolsó hiba"
+		}
 	},
 	"presentations": {
 		"title": "Prezentációk",

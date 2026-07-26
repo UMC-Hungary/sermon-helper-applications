@@ -458,6 +458,27 @@ pub async fn schedule_event(
     })
 }
 
+/// Delete a live broadcast. A 404 counts as success — it is already gone.
+pub async fn delete_broadcast(broadcast_id: &str, access_token: &str) -> anyhow::Result<()> {
+    let resp = reqwest::Client::new()
+        .delete("https://www.googleapis.com/youtube/v3/liveBroadcasts")
+        .query(&[("id", broadcast_id)])
+        .bearer_auth(access_token)
+        .send()
+        .await?;
+
+    if resp.status().is_success() || resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(());
+    }
+    let status = resp.status();
+    let detail = resp.text().await.unwrap_or_default();
+    Err(anyhow::anyhow!(
+        "YouTube API {} deleting broadcast: {}",
+        status,
+        detail
+    ))
+}
+
 // ── Channel content (Live Events & Videos page) ───────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1428,6 +1428,7 @@ async fn handle_ws_command(
                 .await;
             match result {
                 Ok(Some(_)) => {
+                    crate::queue::enqueue_youtube_delete(&state.pool, &event).await;
                     broadcast_event_changed(state, "DELETE", &event).await;
                     ws_ok(client_tx);
                 }
@@ -3040,12 +3041,26 @@ pub async fn start_notify_listener(
         tracing::error!("LISTEN recording_changes failed: {e}");
         return;
     }
+    if let Err(e) = client.execute("LISTEN queue_changed", &[]).await {
+        tracing::error!("LISTEN queue_changed failed: {e}");
+        return;
+    }
 
     while let Some(notification) = notify_rx.recv().await {
         let channel = notification.channel();
         let payload = notification.payload();
 
-        let msg_text = if channel == "event_changes" {
+        let msg_text = if channel == "queue_changed" {
+            // Wakes the sync worker and refreshes the Queues dashboard.
+            app_state.queue_wake.notify_one();
+            match crate::queue::stats(&app_state.pool).await {
+                Ok(queues) => json!({ "type": "queue.stats", "queues": queues }).to_string(),
+                Err(e) => {
+                    tracing::warn!("queue stats failed: {e}");
+                    continue;
+                }
+            }
+        } else if channel == "event_changes" {
             match serde_json::from_str::<PgNotify<Event>>(payload) {
                 Ok(n) => {
                     // Spawn non-blocking scheduling tasks for INSERT/UPDATE
@@ -3178,47 +3193,12 @@ pub async fn broadcast_event_changed(state: &AppState, operation: &str, event: &
     }
 }
 
-/// Spawns a detached task that schedules the event on connected social platforms.
-/// Uses SET LOCAL app.skip_sync_notify='true' to prevent re-triggering the NOTIFY loop.
+/// Schedules the event on connected social platforms.
+/// YouTube goes through the durable `platform_sync` job queue (retries, DLQ);
+/// Facebook is still an inline fire-and-forget task.
 pub fn spawn_scheduling_tasks(event: Event, state: AppState) {
     tokio::spawn(async move {
-        // ── YouTube ──────────────────────────────────────────────────────────
-        let yt_status = state.youtube_connector.get_status().await;
-        if matches!(yt_status, ConnectorStatus::Connected) {
-            if let Some(token) = youtube::load_tokens(&state.pool).await {
-                let yt_conn = event.connection("youtube");
-                let yt_schedule_status = yt_conn
-                    .map(|c| c.schedule_status.as_str())
-                    .unwrap_or("not_scheduled");
-                let existing = yt_conn.and_then(|c| c.external_id.as_deref());
-                let privacy_status = yt_conn
-                    .and_then(|c| c.privacy_status.as_deref())
-                    .unwrap_or("private");
-                if yt_schedule_status != "scheduled" && event.date_time > Utc::now() {
-                    match youtube::schedule_event(
-                        &event.id.to_string(),
-                        &event.title,
-                        &event.date_time,
-                        &token.access_token,
-                        existing,
-                        privacy_status,
-                    )
-                    .await
-                    {
-                        Ok(result) => match write_youtube_result(&state, event.id, &result).await {
-                            Ok(updated) => {
-                                broadcast_event_changed(&state, "UPDATE", &updated).await
-                            }
-                            Err(e) => tracing::error!("YouTube DB write failed: {e}"),
-                        },
-                        Err(e) => {
-                            tracing::error!("YouTube auto-schedule failed for {}: {e}", event.id);
-                            let _ = write_youtube_status(&state.pool, event.id, "failed").await;
-                        }
-                    }
-                }
-            }
-        }
+        crate::queue::enqueue_youtube_upsert(&state.pool, event.id).await;
 
         // ── Facebook ─────────────────────────────────────────────────────────
         let fb_status = state.facebook_connector.get_status().await;

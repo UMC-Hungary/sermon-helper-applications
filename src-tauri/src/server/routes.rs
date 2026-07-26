@@ -1117,6 +1117,7 @@ pub async fn delete_event(
 
     match result {
         Ok(Some(_)) => {
+            crate::queue::enqueue_youtube_delete(&state.pool, &event).await;
             broadcast_event_changed(&state, "DELETE", &event).await;
             StatusCode::NO_CONTENT.into_response()
         }

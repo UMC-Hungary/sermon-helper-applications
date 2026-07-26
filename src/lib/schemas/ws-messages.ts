@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { EventSchema, EventSummarySchema, EventActivitySchema } from './event.js';
 import { RecordingSchema, RecordingWithEventSchema } from './recording.js';
 import { UntrackedRecordingSchema } from './untracked-recording.js';
+import { QueueSummarySchema } from './queue.js';
 
 // ── OBS Device types ──────────────────────────────────────────────────────────
 
@@ -369,6 +370,8 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('obs.listeners.create'), listener: DeviceListenerSchema }),
   z.object({ type: z.literal('obs.listeners.update'), listener: DeviceListenerSchema }),
   z.object({ type: z.literal('obs.listeners.delete'), id: z.string().uuid() }),
+  // ── Job queue ──────────────────────────────────────────────────────────────
+  z.object({ type: z.literal('queue.stats'), queues: z.array(QueueSummarySchema) }),
 ]);
 
 export type WsMessage = z.infer<typeof WsMessageSchema>;

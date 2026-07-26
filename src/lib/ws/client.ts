@@ -25,6 +25,7 @@ import { broadlinkDiscoveredDevices, broadlinkLearnResult } from '$lib/stores/br
 import { keynoteStatus, pptResults, pptFolders, pptFilter } from '$lib/stores/presentations.js';
 import { presenterState, connectedClients, useWebPresenter } from '$lib/stores/presenter.js';
 import { uploadProgress } from '$lib/stores/uploads.js';
+import { queues } from '$lib/stores/queues.js';
 import { handleObsDevicesMessage, obsDeviceListeners, obsDeviceListenerStatuses } from '$lib/stores/obs-devices.js';
 import { listFolders } from '$lib/api/presentations.js';
 import { WsMessageSchema } from '$lib/schemas/ws-messages.js';
@@ -278,6 +279,8 @@ function handleMessage(msg: ReturnType<typeof WsMessageSchema.parse>): void {
 	) {
 		handleObsDevicesMessage(msg);
 		syncDeviceListenerErrors();
+	} else if (msg.type === 'queue.stats') {
+		queues.set(msg.queues);
 	}
 }
 

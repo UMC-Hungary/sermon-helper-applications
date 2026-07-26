@@ -69,6 +69,8 @@ pub struct AppState {
     pub use_web_presenter: Arc<AtomicBool>,
     /// Metadata for every currently-connected WebSocket client.
     pub ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>>,
+    /// Wakes the job-queue worker as soon as `queue_changed` fires.
+    pub queue_wake: Arc<tokio::sync::Notify>,
     #[cfg(target_os = "macos")]
     pub keynote_connector: Arc<KeynoteConnector>,
 }
@@ -156,9 +158,12 @@ pub async fn build_and_serve(
         presenter_state: presenter_state.clone(),
         use_web_presenter: use_web_presenter.clone(),
         ws_client_info: ws_client_info.clone(),
+        queue_wake: Arc::new(tokio::sync::Notify::new()),
         #[cfg(target_os = "macos")]
         keynote_connector: keynote_connector.clone(),
     };
+
+    crate::queue::spawn_worker(state.clone());
 
     {
         let clients = ws_clients.clone();
@@ -538,6 +543,10 @@ pub async fn build_and_serve(
             post(routes::flag_upload),
         )
         .route("/uploads/trigger", post(routes::trigger_upload_cycle))
+        .route("/queues", get(crate::queue::list_queues))
+        .route("/queues/{queue}/jobs", get(crate::queue::list_jobs))
+        .route("/jobs/{id}/retry", post(crate::queue::retry_job))
+        .route("/jobs/{id}", delete(crate::queue::purge_job))
         .merge(ppt_routes)
         .merge(keynote_routes)
         .route("/presenter/parse", post(presenter::parse_presentation))

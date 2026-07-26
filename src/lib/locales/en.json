@@ -707,7 +707,38 @@
 		"presentations": "Presentations",
 		"obsCaption": "OBS Caption",
 		"obsDevices": "Device Monitor",
+		"queues": "Queues",
 		"logs": "Logs"
+	},
+	"queuesPage": {
+		"title": "Queues",
+		"refresh": "Refresh",
+		"available": "Available",
+		"inFlight": "In flight",
+		"dlq": "Dead-letter",
+		"headAge": "Head age",
+		"noQueues": "No queues yet",
+		"noJobs": "No jobs match this filter",
+		"redrive": "Redrive",
+		"redriven": "Job re-queued",
+		"purge": "Delete job",
+		"loadFailed": "Could not load queue data",
+		"actionFailed": "Queue action failed",
+		"filters": {
+			"all": "All",
+			"pending": "Pending",
+			"processing": "In flight",
+			"succeeded": "Succeeded",
+			"dead": "Dead-letter"
+		},
+		"columns": {
+			"type": "Type",
+			"status": "Status",
+			"attempts": "Attempts",
+			"nextRetry": "Next retry",
+			"payload": "Payload",
+			"lastError": "Last error"
+		}
 	},
 	"presentations": {
 		"title": "Presentations",

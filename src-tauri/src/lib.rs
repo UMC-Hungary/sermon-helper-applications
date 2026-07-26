@@ -18,6 +18,8 @@ mod models;
 #[cfg(desktop)]
 mod obs_devices;
 #[cfg(desktop)]
+pub mod queue;
+#[cfg(desktop)]
 pub mod scheduler;
 #[cfg(desktop)]
 pub mod server;

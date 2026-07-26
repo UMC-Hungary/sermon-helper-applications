@@ -70,6 +70,9 @@
 				<a href="/connect" class="nav-item" class:active={isActive('/connect')}
 					>{$_('nav.connect')}</a
 				>
+				<a href="/queues" class="nav-item" class:active={isActive('/queues')}
+					>{$_('nav.queues')}</a
+				>
 				<a href="/logs" class="nav-item" class:active={isActive('/logs')}>{$_('nav.logs')}</a>
 				<a href="/settings" class="nav-item" class:active={isActive('/settings')}
 					>{$_('nav.settings')}</a
