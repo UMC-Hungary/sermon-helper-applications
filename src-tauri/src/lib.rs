@@ -98,7 +98,7 @@ pub fn run() {
         commands::server::get_client_url,
         commands::server::get_client_token,
         commands::server::reset_setup,
-        commands::server::get_local_ip,
+        commands::server::get_local_host,
         commands::logs::get_application_log_path,
         commands::logs::read_application_log,
         commands::logs::download_application_log,
@@ -161,7 +161,7 @@ pub fn run() {
         commands::server::get_client_url,
         commands::server::get_client_token,
         commands::server::reset_setup,
-        commands::server::get_local_ip,
+        commands::server::get_local_host,
         commands::logs::get_application_log_path,
         commands::logs::read_application_log,
         commands::logs::download_application_log,
@@ -466,11 +466,9 @@ pub(crate) async fn start_server(
         }
         #[cfg(not(debug_assertions))]
         {
-            // In production, Tauri bundles frontendDist into the resource directory under `_up_`.
-            app.path()
-                .resource_dir()
-                .ok()
-                .map(|p| p.join("_up_").to_string_lossy().into_owned())
+            // In production `frontendDist` is embedded in the executable, not copied to the
+            // resource directory, so the server serves it via the Tauri asset resolver instead.
+            None::<String>
         }
     };
 

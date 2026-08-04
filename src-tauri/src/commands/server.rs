@@ -155,7 +155,32 @@ pub async fn reset_setup(
 }
 
 #[tauri::command]
-pub fn get_local_ip() -> Option<String> {
+pub fn get_local_host() -> Option<String> {
+    mdns_hostname().or_else(local_ip)
+}
+
+/// The Bonjour/mDNS name this machine advertises on the LAN, e.g. `amacmini.local`.
+/// Preferred over the raw IP because it survives DHCP lease changes.
+#[cfg(target_os = "macos")]
+fn mdns_hostname() -> Option<String> {
+    let out = std::process::Command::new("scutil")
+        .args(["--get", "LocalHostName"])
+        .output()
+        .ok()?;
+    let name = String::from_utf8(out.stdout).ok()?.trim().to_string();
+    if name.is_empty() {
+        None
+    } else {
+        Some(format!("{name}.local"))
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn mdns_hostname() -> Option<String> {
+    None
+}
+
+fn local_ip() -> Option<String> {
     use std::net::UdpSocket;
     let socket = UdpSocket::bind("0.0.0.0:0").ok()?;
     socket.connect("8.8.8.8:80").ok()?;
@@ -168,4 +193,14 @@ async fn save_setting(app: &tauri::AppHandle, key: &str, value: &str) -> Result<
     store.set(key, serde_json::Value::String(value.to_string()));
     store.save().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    #[test]
+    fn resolves_a_reachable_mdns_hostname() {
+        let name = super::mdns_hostname().expect("macOS always has a LocalHostName");
+        assert!(name.ends_with(".local"), "got {name}");
+        assert!(!name.starts_with('.'), "got {name}");
+    }
 }

@@ -91,16 +91,16 @@
 			appMode.set(mode as AppMode);
 
 			if (mode === 'server') {
-				const [token, port, localIp] = await Promise.all([
+				const [token, port, localHost] = await Promise.all([
 					invoke<string>('get_token'),
 					invoke<number>('get_server_port'),
-					invoke<string | null>('get_local_ip')
+					invoke<string | null>('get_local_host')
 				]);
 				authToken.set(token);
 				serverPort.set(port);
 				serverUrl.set(`http://localhost:${port}`);
-				if (localIp) {
-					localNetworkUrl.set(`http://${localIp}:${port}`);
+				if (localHost) {
+					localNetworkUrl.set(`http://${localHost}:${port}`);
 				}
 			} else if (mode === 'client') {
 				const [url, token] = await Promise.all([

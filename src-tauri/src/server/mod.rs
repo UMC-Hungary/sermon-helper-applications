@@ -75,6 +75,21 @@ pub struct AppState {
     pub keynote_connector: Arc<KeynoteConnector>,
 }
 
+/// Serve a file from the frontend assets embedded in the executable. The resolver itself
+/// already falls back `/presenter` -> `presenter.html` -> `presenter/index.html` -> `index.html`.
+fn serve_embedded_asset(handle: &tauri::AppHandle, path: &str) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    match handle.asset_resolver().get(path.to_string()) {
+        Some(asset) => (
+            [(axum::http::header::CONTENT_TYPE, asset.mime_type)],
+            asset.bytes,
+        )
+            .into_response(),
+        None => axum::http::StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
 pub async fn build_and_serve(
     pool: PgPool,
     auth_token: Arc<RwLock<String>>,
@@ -573,6 +588,11 @@ pub async fn build_and_serve(
     if let Some(dir) = static_dir {
         let fallback = ServeFile::new(format!("{dir}/index.html"));
         app = app.fallback_service(ServeDir::new(&dir).fallback(fallback));
+    } else if let Some(handle) = state.app_handle.clone() {
+        app = app.fallback(move |uri: axum::http::Uri| {
+            let handle = handle.clone();
+            async move { serve_embedded_asset(&handle, uri.path()) }
+        });
     }
 
     let app = app.layer(cors);
