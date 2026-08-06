@@ -64,3 +64,12 @@ test-server-data/
 # Claude AI
 .claude
 gemini.md
+
+# Intermediate output of scripts/build-ui.mjs
+.ui-staging/
+
+# OpenSpec generated specs
+/openspec/specs/
+
+# Local planning notes (kept on disk, not tracked)
+/plans/
