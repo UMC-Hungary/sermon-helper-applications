@@ -1,7 +1,7 @@
 {
   "name": "metocast",
   "version": "2.1.0",
-  "description": "Metocast \u2014 livestream control desktop application",
+  "description": "Metocast — livestream control desktop application",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -43,6 +43,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.15.0",
     "globals": "^17.3.0",
+    "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "prettier-plugin-svelte": "^3.5.0",
     "svelte": "^5.53.2",

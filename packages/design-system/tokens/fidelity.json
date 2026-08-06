@@ -1,0 +1,189 @@
+{
+	"$description": "Which measurement each component's tokens came from. scripts/check-fidelity.mjs resolves every token to a literal and diffs it against the cited declaration in measurements.json, so a value that drifts from its source fails the build instead of waiting for someone to notice. `index` picks a part out of a shorthand; `breakpoint` defaults to `base`. A difference is only allowed when `deviations` gives a reason.",
+	"components": {
+		"Dot": {
+			"source": "src/components/primitives/Dot.svelte",
+			"tokens": {
+				"c-dot-pulse-inset": { "selector": ".pulse", "property": "inset" },
+				"c-dot-pulse-border": { "selector": ".pulse", "property": "border" },
+				"motion-pulse": { "selector": ".pulse", "property": "animation", "index": 0 }
+			}
+		},
+		"StatusDot": {
+			"source": "src/components/primitives/OverviewCell.svelte",
+			"tokens": {
+				"c-status-dot-gap": { "selector": "p", "property": "gap" },
+				"type-label-sm-size": { "selector": "span", "property": "font-size" },
+				"type-label-sm-track": { "selector": "span", "property": "letter-spacing" }
+			},
+			"deviations": {
+				"type-label-sm-track": "The reference writes the dot-and-word pairing four times, at 1.2px, 1.4px, 1.5px and 1.6px tracking. One component cannot carry four; the shared label-sm role at 1.2px is the value the pairing carries at its smallest and most frequent size."
+			}
+		},
+		"SectionLabel": {
+			"source": "src/components/primitives/SectionLabel.svelte",
+			"tokens": {
+				"c-section-label-padding-top": { "selector": ".label", "property": "padding", "index": 0 },
+				"ui-gutter": { "selector": ".label", "property": "padding", "index": 1 },
+				"c-section-label-padding-bottom": { "selector": ".label", "property": "padding", "index": 2 },
+				"type-label-size": { "selector": "div, span", "property": "font-size" },
+				"type-label-track": { "selector": "div, span", "property": "letter-spacing" },
+				"type-label-weight": { "selector": "div, span", "property": "font-weight" },
+				"c-section-label-hint-track": { "selector": "span", "property": "letter-spacing" }
+			}
+		},
+		"List": {
+			"source": "src/components/primitives/List.svelte",
+			"tokens": {
+				"ui-border-hairline": { "selector": "div", "property": "border-top", "index": 0 },
+				"c-list-flush-gap": { "selector": ".flush", "property": "margin-top" }
+			}
+		},
+		"Row": {
+			"source": "src/components/primitives/Row.svelte",
+			"tokens": {
+				"c-row-padding-block": { "selector": "div, button", "property": "padding", "index": 0 },
+				"ui-gutter": { "selector": "div, button", "property": "padding", "index": 1 },
+				"c-row-min-height": { "selector": "div, button", "property": "min-height" },
+				"ui-stack-loose": { "selector": "div, button", "property": "gap" },
+				"motion-fast": { "selector": "div, button", "property": "transition", "index": 0 },
+				"type-body-size": { "selector": ".title", "property": "font-size" },
+				"type-body-track": { "selector": ".title", "property": "letter-spacing" },
+				"type-body-weight": { "selector": ".title", "property": "font-weight" },
+				"type-body-leading": { "selector": ".title", "property": "line-height" },
+				"type-caption-size": { "selector": ".meta", "property": "font-size" },
+				"c-row-meta-gap": { "selector": ".meta", "property": "margin-top" },
+				"type-body-sm-size": { "selector": ".detail", "property": "font-size" },
+				"c-row-detail-gap": { "selector": ".detail", "property": "margin-top" }
+			}
+		},
+		"PageHeader": {
+			"source": "src/components/primitives/PageHeader.svelte",
+			"tokens": {
+				"ui-gutter": { "selector": "header", "property": "padding", "index": 0 },
+				"c-page-header-padding-bottom": { "selector": "header", "property": "padding", "index": 2 },
+				"c-page-header-top-min-height": { "selector": ".top", "property": "min-height" },
+				"c-page-header-top-gap": { "selector": ".top", "property": "margin-bottom" },
+				"ui-stack": { "selector": ".actions", "property": "gap" },
+				"type-label-size": { "selector": ".eyebrow, .back", "property": "font-size" },
+				"type-label-track": { "selector": ".eyebrow, .back", "property": "letter-spacing" },
+				"c-page-header-back-gap": { "selector": ".back", "property": "gap" },
+				"type-body-sm-size": { "selector": ".back", "property": "font-size" },
+				"ui-track-none": { "selector": ".back", "property": "letter-spacing" },
+				"type-display-size": { "selector": "h1", "property": "font-size" },
+				"type-display-leading": { "selector": "h1", "property": "line-height" },
+				"type-display-weight": { "selector": "h1", "property": "font-weight" },
+				"type-display-track": { "selector": "h1", "property": "letter-spacing" },
+				"c-page-header-title-gap": { "selector": ".title-row", "property": "gap" }
+			}
+		},
+		"TextIcon": {
+			"source": "src/components/primitives/TextIcon.svelte",
+			"tokens": {
+				"c-text-icon-size": { "selector": "span", "property": "width" },
+				"c-text-icon-font-size": { "selector": "span", "property": "font-size" }
+			}
+		},
+		"DateBlock": {
+			"source": "src/components/primitives/DateBlock.svelte",
+			"tokens": {
+				"c-date-block-width": { "selector": "div", "property": "width" },
+				"ui-gutter-inset": { "selector": "div", "property": "padding-right" },
+				"c-date-block-overlap": { "selector": "div", "property": "margin-right" },
+				"type-label-sm-size": { "selector": "span", "property": "font-size" },
+				"type-label-sm-track": { "selector": "span", "property": "letter-spacing" },
+				"type-numeral-size": { "selector": "strong", "property": "font-size" },
+				"type-numeral-leading": { "selector": "strong", "property": "line-height" },
+				"type-numeral-weight": { "selector": "strong", "property": "font-weight" },
+				"c-date-block-gap": { "selector": "strong", "property": "margin-top" }
+			}
+		},
+		"Glyph": {
+			"source": "src/components/primitives/Glyph.svelte",
+			"tokens": {
+				"ui-radius-mark": { "selector": ".glyph", "property": "border-radius" },
+				"ui-border-hairline": { "selector": ".glyph", "property": "border", "index": 0 }
+			}
+		},
+		"Lockup": {
+			"source": "src/components/primitives/Lockup.svelte",
+			"tokens": {
+				"ui-stack": { "selector": ".lockup", "property": "gap" },
+				"type-heading-weight": { "selector": "span span", "property": "font-weight" },
+				"type-numeral-leading": { "selector": "span span", "property": "line-height" }
+			}
+		},
+		"Toggle": {
+			"source": "src/components/primitives/Toggle.svelte",
+			"tokens": {
+				"c-toggle-width": { "selector": "button", "property": "width" },
+				"c-toggle-height": { "selector": "button", "property": "height" },
+				"ui-radius-pill": { "selector": "button", "property": "border-radius" },
+				"motion-base": { "selector": "button", "property": "transition", "index": 0 },
+				"c-toggle-thumb-inset": { "selector": "span", "property": "top" },
+				"c-toggle-thumb-size": { "selector": "span", "property": "width" },
+				"ui-radius-circle": { "selector": "span", "property": "border-radius" },
+				"motion-slide": { "selector": "span", "property": "transition", "index": 0 },
+				"c-toggle-thumb-travel": { "selector": ".checked span", "property": "left" }
+			}
+		},
+		"Stat": {
+			"source": "src/components/primitives/Stat.svelte",
+			"tokens": {
+				"type-label-size": { "selector": ".label", "property": "font-size" },
+				"c-stat-label-track": { "selector": ".label", "property": "letter-spacing" },
+				"c-stat-label-gap": { "selector": ".label", "property": "margin-bottom" },
+				"c-stat-unit-gap": { "selector": ".value", "property": "gap" },
+				"type-figure-size": { "selector": "span", "property": "font-size" },
+				"type-figure-weight": { "selector": "span", "property": "font-weight" },
+				"type-figure-track": { "selector": "span", "property": "letter-spacing" },
+				"type-figure-leading": { "selector": "span", "property": "line-height" }
+			}
+		},
+		"OverviewCell": {
+			"source": "src/components/primitives/OverviewCell.svelte",
+			"tokens": {
+				"c-overview-cell-padding-block": { "selector": "div", "property": "padding", "index": 0 },
+				"ui-gutter-inset": { "selector": "div", "property": "padding", "index": 1 },
+				"c-overview-cell-gap": { "selector": "p", "property": "margin", "index": 2 },
+				"c-status-dot-gap": { "selector": "p", "property": "gap" },
+				"type-label-sm-size": { "selector": "span", "property": "font-size" },
+				"c-overview-cell-label-track": { "selector": "span", "property": "letter-spacing" },
+				"type-title-size": { "selector": "strong", "property": "font-size" },
+				"type-title-leading": { "selector": "strong", "property": "line-height" },
+				"type-title-weight": { "selector": "strong", "property": "font-weight" },
+				"type-title-track": { "selector": "strong", "property": "letter-spacing" }
+			}
+		},
+		"Segmented": {
+			"source": "src/components/primitives/Segmented.svelte",
+			"tokens": {
+				"ui-border-hairline": { "selector": ".seg", "property": "border", "index": 0 },
+				"c-segmented-padding-block": { "selector": "button", "property": "padding", "index": 0 },
+				"ui-stack": { "selector": "button", "property": "padding", "index": 1 },
+				"c-segmented-gap": { "selector": "button", "property": "gap" },
+				"c-segmented-glyph-size": { "selector": "span", "property": "font-size" },
+				"type-numeral-leading": { "selector": "span", "property": "line-height" },
+				"type-label-size": { "selector": "strong", "property": "font-size" },
+				"c-segmented-label-track": { "selector": "strong", "property": "letter-spacing" },
+				"type-label-weight": { "selector": "strong", "property": "font-weight" }
+			}
+		},
+		"Field": {
+			"source": "src/components/primitives/Field.svelte",
+			"tokens": {
+				"c-field-padding-block": { "selector": "label", "property": "padding", "index": 0 },
+				"type-label-sm-size": { "selector": "span", "property": "font-size" },
+				"c-field-label-track": { "selector": "span", "property": "letter-spacing" },
+				"type-label-sm-weight": { "selector": "span", "property": "font-weight" },
+				"c-field-input-padding-top": { "selector": "input", "property": "padding", "index": 0 },
+				"c-field-input-padding-bottom": { "selector": "input", "property": "padding", "index": 2 },
+				"c-field-input-gap": { "selector": "input", "property": "margin-top" },
+				"type-body-size": { "selector": "input", "property": "font-size" },
+				"type-body-track": { "selector": "input", "property": "letter-spacing" },
+				"c-field-hint-track": { "selector": "small", "property": "letter-spacing" },
+				"c-field-hint-gap": { "selector": "small", "property": "margin-top" }
+			}
+		}
+	}
+}
