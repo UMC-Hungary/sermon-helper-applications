@@ -801,8 +801,19 @@
 			"changing": "Visszaállítás…",
 			"note": "A mód módosítása visszahozza a telepítési képernyőt. Ha ez az eszköz szerverként fut, a beágyazott adatbázis tovább fut, amíg újra nem indítja az alkalmazást."
 		},
+		"activeUi": {
+			"title": "Megjelenítő felület",
+			"description": "Ez a build több felületet tartalmaz. Válaszd ki, melyiket nyissa meg ez az ablak.",
+			"appliesOnRestart": "A következő indításkor lép érvénybe."
+		},
 		"connectors": {
 			"title": "Csatlakozók",
+			"saved": "A(z) {connector} beállításai mentve",
+			"saveFailed": "A(z) {connector} beállításait nem sikerült menteni",
+			"secretStored": "Van mentett érték. Hagyd üresen a megtartásához, vagy írj be újat a cseréjéhez — a szerver soha nem küldi vissza.",
+			"clearSecret": "Törlés",
+			"showSecret": "Megmutat",
+			"revealFailed": "A mentett érték nem olvasható",
 			"obs": {
 				"title": "OBS Studio",
 				"subtitle": "Csatlakozás az OBS Studiohoz WebSocket-en (v5)",
@@ -863,14 +874,11 @@
 				"comingSoon": "Az ATEM integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
 			},
 			"broadlink": {
-				"title": "BroadLink",
-				"subtitle": "BroadLink hub támogatás hamarosan",
-				"host": "Gazdagép / IP",
-				"port": "Port",
-				"enabled": "BroadLink csatlakozó engedélyezése",
+				"title": "Broadlink RF/IR",
+				"subtitle": "Vetítők, kijelzők és AV eszközök vezérlése IR és RF jelekkel",
+				"enabled": "Broadlink csatlakozó engedélyezése",
 				"save": "Mentés",
-				"saving": "Mentés…",
-				"comingSoon": "A BroadLink integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+				"saving": "Mentés…"
 			},
 			"discord": {
 				"title": "Discord",
@@ -881,41 +889,25 @@
 				"saving": "Mentés…",
 				"comingSoon": "A Discord integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
 			},
-			"broadlink": {
-				"title": "Broadlink RF/IR",
-				"subtitle": "Vetítők, kijelzők és AV eszközök vezérlése IR és RF jelekkel",
-				"enabled": "Broadlink csatlakozó engedélyezése",
-				"save": "Mentés",
-				"saving": "Mentés…"
-			},
 			"statusLabels": {
 				"connected": "Csatlakozva",
 				"connecting": "Csatlakozás…",
 				"disconnected": "Nincs kapcsolat",
 				"error": "Hiba"
+			},
+			"szentiras": {
+				"title": "Szentírás.eu",
+				"subtitle": "A klasszikus magyar fordítások (RUF, KG, KNB, SZIT, BD, STL) bibliai szövegének forrása.",
+				"enabled": "Engedélyezve",
+				"apiKey": "API kulcs",
+				"apiKeyHint": "Minden lekérdezéshez ingyenes API kulcs szükséges. Igényelhető itt:",
+				"save": "Mentés",
+				"saving": "Mentés…"
 			}
 		},
 		"dependencies": {
 			"title": "Függőségek",
 			"note": "Opcionális csomagok a stream előnézethez és a multi-stream relayhez."
-		},
-		"obsBadge": {
-			"title": "OBS Jelvény",
-			"description": "Liquid glass jelvény létrehozása OBS-ben a LucidGlass shader segítségével. Az OBS-nek csatlakoztatva kell lennie.",
-			"obsNotConnected": "Az OBS-t először csatlakoztatni kell. Kérjük, konfigurálja és csatlakoztassa az OBS-t fent.",
-			"installButton": "Plugin és Shader telepítése",
-			"installing": "Telepítés…",
-			"pluginInstalled": "Plugin: ✓ Telepítve",
-			"pluginNotInstalled": "Plugin: ✗ Nem telepítve — kérjük, telepítse az obs-shaderfilter-t manuálisan",
-			"shaderInstalled": "Shader: ✓ Telepítve",
-			"shaderNotInstalled": "Shader: ✗ A shader fájl írása sikertelen",
-			"targetScene": "Céljelenet",
-			"selectScene": "Válasszon jelenetet…",
-			"loadingScenes": "Jelenetek betöltése…",
-			"selectSceneError": "Kérjük, válasszon jelenetet",
-			"createButton": "Jelvény források létrehozása",
-			"creating": "Létrehozás…",
-			"sourcesCreated": "✓ Jelvény források létrehozva: \u201e{sceneName}\u201d"
 		},
 		"updater": {
 			"title": "Alkalmazás verziója",

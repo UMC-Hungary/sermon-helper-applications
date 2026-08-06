@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { startLearn, cancelLearn, addCommand, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { startLearn, cancelLearn, addCommand, type BroadlinkDevice } from '$lib/core-client/index.js';
 	import { broadlinkLearnResult } from '$lib/stores/broadlink.js';
 
 	interface Props {
@@ -115,7 +115,7 @@
 				<label>
 					Category:
 					<select bind:value={category}>
-						{#each CATEGORIES as cat}
+						{#each CATEGORIES as cat (cat)}
 							<option value={cat}>{cat}</option>
 						{/each}
 					</select>

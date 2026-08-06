@@ -1,3 +1,4 @@
+import { loadHostStore } from '$lib/core-client/index.js';
 import { browser } from '$app/environment';
 
 export type CaptionType = 'caption' | 'preview';
@@ -27,11 +28,6 @@ export function getCaptionHeight(type: CaptionType, resolution: Resolution): num
 	return RESOLUTION_DIMENSIONS[resolution].height;
 }
 
-const isTauriApp = (): boolean =>
-	browser &&
-	typeof (window as unknown as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ !==
-		'undefined';
-
 const STORE_NAME = 'caption-settings.json';
 
 const DEFAULT_SETTINGS: CaptionSettings = {
@@ -54,9 +50,8 @@ async function getSettings(): Promise<CaptionSettings> {
 	if (!browser) return getDefaultSettings();
 
 	try {
-		if (isTauriApp()) {
-			const { load } = await import('@tauri-apps/plugin-store');
-			const store = await load(STORE_NAME);
+		const store = await loadHostStore(STORE_NAME);
+		if (store) {
 
 			const [type, title, boldText, lightText, color, showLogo, logoAlt, svgLogo, resolution] =
 				await Promise.all([
@@ -105,9 +100,8 @@ async function saveSettings(settings: Partial<CaptionSettings>): Promise<void> {
 	const merged = { ...(await getSettings()), ...settings };
 
 	try {
-		if (isTauriApp()) {
-			const { load } = await import('@tauri-apps/plugin-store');
-			const store = await load(STORE_NAME);
+		const store = await loadHostStore(STORE_NAME);
+		if (store) {
 			const keys = Object.keys(merged) as Array<keyof CaptionSettings>;
 			await Promise.all(keys.map((key) => store.set(key, merged[key])));
 			await store.save();

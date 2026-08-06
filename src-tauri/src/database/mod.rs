@@ -1,4 +1,5 @@
 pub mod embedded;
+pub mod settings;
 
 use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;

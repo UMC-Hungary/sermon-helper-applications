@@ -52,7 +52,17 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Context**: Configuration change has been persisted
 - **Frequency**: Per user action
 
-#### 2.3 Clipboard Copy
+#### 2.3 Connector Settings Saved
+- **Type**: Success / Error
+- **Trigger**: Saving any connector's settings (ConnectorSettingsBlock.svelte)
+- **Messages**:
+  - Success: "{connector} settings saved"
+  - Error: "Could not save {connector} settings" with the failure as the description
+- **Data included**: Connector display name
+- **Context**: Confirms the config reached the core, which is otherwise silent — the form has no other success indication
+- **Frequency**: Per user action
+
+#### 2.4 Clipboard Copy
 - **Type**: Success
 - **Trigger**: Caption URL copied to clipboard (obs-caption/+page.svelte)
 - **Message**: "Caption URL copied to clipboard"

@@ -1,0 +1,14 @@
+{
+  "$comment": "Registered rendering UIs. See ui/README.md for how to add one.",
+  "default": "default",
+  "uis": [
+    {
+      "id": "default",
+      "displayName": "Metocast",
+      "description": "The original SvelteKit control surface.",
+      "buildCommand": "pnpm run build:app",
+      "buildDir": "build",
+      "entry": "index.html"
+    }
+  ]
+}

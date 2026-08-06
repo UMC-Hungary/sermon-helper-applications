@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invoke } from '@tauri-apps/api/core';
+  import * as host from '$lib/core-client/index.js';
   import { authToken } from '$lib/stores/server-url.js';
 
   let revealed = $state(false);
@@ -28,7 +28,7 @@
     refreshing = true;
     error = '';
     try {
-      const newToken = await invoke<string>('refresh_token');
+      const newToken = await host.refreshToken();
       authToken.set(newToken);
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);

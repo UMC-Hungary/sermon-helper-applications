@@ -34,9 +34,12 @@ pnpm check:watch      # Watch mode for type checking
 - Rust is the core application backend. It owns the Axum HTTP/WebSocket server, embedded PostgreSQL lifecycle, migrations, models, schedulers, upload workers, and connector orchestration.
 - `server/` - Axum routes, auth, OpenAPI, WebSocket protocol, presenter/PPT/caption endpoints
 - `database/` - embedded PostgreSQL startup plus SQLx migrations
-- `connectors/` - OBS, YouTube, Facebook, Broadlink, Keynote, ATEM/vMix/Discord integrations
+- `connectors/` - OBS, YouTube, Facebook, Broadlink, Keynote, ATEM/vMix/Discord integrations, plus Szentírás.eu (config-only: it just holds the Bible API key)
+- `runtime.rs` - shared display-free bootstrap (Postgres → migrations → pool → connectors → Axum) used by both the Tauri app and the headless `metocast-server` binary (`bin/metocast-server.rs`)
+- Connector configuration lives in the `app_settings` table and is read/written over HTTP (`GET`/`PUT /api/connectors/{name}/config`), not through Tauri IPC, so a headless core and remote UIs see the same values
+- `bible.rs` - Bible passage lookups against the upstream Hungarian APIs, exposed as `GET /api/bible/verses` and `/api/bible/suggest`. UIs never call the upstream directly, so no UI needs a CORS workaround. Classic translations (RUF, KG, KNB, SZIT, BD, STL) come from szentiras.eu, which requires an `X-API-Key` held by the `szentiras` connector config; `*_v2` translations and reference autocomplete need no key
 - `uploader/` and `scheduler/` - resumable upload orchestration and cron-triggered automation
-- Uses Tauri plugins: store, dialog, opener, liquid-glass
+- Uses Tauri plugins: store, dialog, opener, liquid-glass. The Tauri store holds host-side settings only (mode, server URL/token, log paths); it is not the core's config store.
 
 **Key Integrations:**
 
@@ -89,11 +92,14 @@ Two SystemStatus definitions exist:
 ## Rules
 
 - Always fix all `pnpm check` errors before finishing, even if they are unrelated to your changes.
+- UI code (`src/routes/**`, `src/lib/components/**`) reaches the core only through `$lib/core-client`. No `@tauri-apps/*` imports, no raw `fetch`, no `new WebSocket` — ESLint enforces this. Desktop-only features are host capabilities: gate them on `hostCapabilities` and degrade when absent. See `ui/README.md` for the UI authoring contract.
 - Always finish with zero warnings and zero errors from relevant Rust and frontend checks. Do not add `#[allow(dead_code)]`, `#![allow(dead_code)]`, or similar warning suppressions; remove or restructure unused code instead.
 - Always name plan files with the format: PLAN-{feature-name}.md under the `plans` folder.
 - Always use Zod for runtime validation of external, persisted, IPC, API, and WebSocket data.
 - Always keep strict TypeScript types. Do not use `any`, broad casts, or relaxed compiler settings to bypass type errors.
 - Respect server/client mode boundaries: server mode owns Postgres, Axum, connectors, schedulers, and uploads; client mode must call the configured server through typed HTTP/WebSocket clients rather than starting local backend services.
 - Companion communication must go through the app WebSocket protocol. Do not add REST-only, filesystem, or ad hoc side channels for Companion control or status.
+- Upstream credentials (API keys, OAuth secrets, passwords, webhook URLs) must never be readable over the API, except through `GET /api/connectors/{name}/config/secrets`, which requires the admin token *and* a loopback caller and exists so the host desktop app can re-read what it stored. Add new secret field names to `SECRET_FIELDS` in `src-tauri/src/server/routes.rs` so reads are blanked and blank writes keep the stored value, and never log them. See [plans/PLAN-api-access-contracts.md](plans/PLAN-api-access-contracts.md) for the full access contract.
+- New HTTP routes must be added to one of the two lists in `e2e/rest/auth.test.ts` (public or authenticated). Routes merged into the `/api` router *after* its `route_layer(auth_middleware)` call silently bypass authentication — merge before the layer.
 - Any REST or WebSocket contract change must update all matching contract surfaces in the same change: OpenAPI/Swagger generation in `src-tauri/src/server/openapi.rs`, Bruno requests under `bruno/`, project README/docs, frontend Zod schemas and API/WS clients, the presenter web view, the `presenter-receiver` terminal view, and the Companion plugin. Keep these surfaces in sync; do not leave protocol drift for a later task.
 - When fixing release workflow problems, do not mint a new version tag for each CI attempt. Finish the workflow fix first, then republish the latest synchronized release tag set so the app, companion, and presenter receiver tags stay on the same version.

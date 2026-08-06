@@ -43,7 +43,8 @@ pub fn spec() -> Value {
         "tags": [
             { "name": "Events",     "description": "Service events" },
             { "name": "Recordings", "description": "Video recording files linked to events" },
-            { "name": "Connectors", "description": "Streaming software connector status (OBS, VMix)" },
+            { "name": "Connectors", "description": "Connector status, configuration and control" },
+            { "name": "Bible",      "description": "Bible passage lookups and reference autocomplete" },
             { "name": "Presenter",  "description": "Web presenter — parse .pptx files and push slide changes to all connected browsers" },
             { "name": "WebSocket",  "description": "Real-time push stream — requires a WebSocket client, not HTTP" }
         ],
@@ -301,11 +302,79 @@ pub fn spec() -> Value {
                 },
                 "ConnectorStatuses": {
                     "type": "object",
-                    "description": "Current status of all streaming connectors.",
-                    "required": ["obs", "vmix"],
+                    "description": "Current status of all connectors.",
+                    "required": ["obs", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
                     "properties": {
-                        "obs":  { "$ref": "#/components/schemas/ConnectorStatus" },
-                        "vmix": { "$ref": "#/components/schemas/ConnectorStatus" }
+                        "obs":       { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "vmix":      { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "atem":      { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "broadlink": { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "youtube":   { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "facebook":  { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "discord":   { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "szentiras": { "$ref": "#/components/schemas/ConnectorStatus" }
+                    }
+                },
+                "BiblePassage": {
+                    "type": "object",
+                    "description": "A Bible passage normalised across both upstream APIs.",
+                    "required": ["label", "verses"],
+                    "properties": {
+                        "label": { "type": "string", "example": "János 3,16" },
+                        "verses": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": ["chapter", "verse", "text"],
+                                "properties": {
+                                    "chapter": { "type": "integer" },
+                                    "verse":   { "type": "integer" },
+                                    "text":    { "type": "string", "description": "Verse text with all markup stripped" }
+                                }
+                            }
+                        }
+                    }
+                },
+                "BibleSuggestion": {
+                    "type": "object",
+                    "required": ["cat", "label", "link"],
+                    "properties": {
+                        "cat":   { "type": "string", "example": "ref" },
+                        "label": { "type": "string", "example": "1Móz 1" },
+                        "link":  { "type": "string", "description": "Reference to pass back as the `reference` parameter" }
+                    }
+                },
+                "ConnectorConfig": {
+                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
+                    "type": "object",
+                    "required": ["enabled"],
+                    "properties": {
+                        "enabled":      { "type": "boolean" },
+                        "host":         { "type": "string" },
+                        "port":         { "type": "integer" },
+                        "password":     { "type": "string", "nullable": true, "description": "Write-only: reads return an empty string" },
+                        "clientId":     { "type": "string" },
+                        "clientSecret": { "type": "string", "description": "Write-only: reads return an empty string" },
+                        "appId":        { "type": "string" },
+                        "appSecret":    { "type": "string", "description": "Write-only: reads return an empty string" },
+                        "pageId":       { "type": "string" },
+                        "webhookUrl":   { "type": "string", "description": "Write-only: reads return an empty string" },
+                        "apiKey":       { "type": "string", "description": "szentiras.eu API key, sent upstream as X-API-Key. Write-only: reads return an empty string." },
+                        "passwordSet":    { "type": "boolean", "readOnly": true, "description": "Whether a password is stored" },
+                        "clientSecretSet":{ "type": "boolean", "readOnly": true, "description": "Whether a client secret is stored" },
+                        "appSecretSet":   { "type": "boolean", "readOnly": true, "description": "Whether an app secret is stored" },
+                        "webhookUrlSet":  { "type": "boolean", "readOnly": true, "description": "Whether a webhook URL is stored" },
+                        "apiKeySet":      { "type": "boolean", "readOnly": true, "description": "Whether an API key is stored. Send false to clear it." }
+                    }
+                },
+                "ObsStreamSettings": {
+                    "type": "object",
+                    "description": "The RTMP destination OBS streams to.",
+                    "required": ["server", "key"],
+                    "properties": {
+                        "serviceType": { "type": "string", "description": "OBS service type, e.g. `rtmp_custom` (response only)" },
+                        "server":      { "type": "string", "example": "rtmp://a.rtmp.youtube.com/live2" },
+                        "key":         { "type": "string" }
                     }
                 },
                 "WsConnectedMessage": {
@@ -579,11 +648,81 @@ pub fn spec() -> Value {
                     }
                 }
             },
+            "/api/bible/verses": {
+                "get": {
+                    "tags": ["Bible"],
+                    "summary": "Look up a Bible passage",
+                    "description": "Fetches a passage from the upstream Bible API that matches the translation (`*_v2` codes use the V2 API, everything else szentiras.eu) and returns it in one normalised shape. The core performs the upstream request, so UIs need no CORS workaround. szentiras.eu lookups send the API key from the `szentiras` connector config; without a valid key they fail with 502.",
+                    "operationId": "getBiblePassage",
+                    "parameters": [
+                        {
+                            "name": "reference",
+                            "in": "query",
+                            "required": true,
+                            "description": "Passage reference, e.g. `Jn 3,16`",
+                            "schema": { "type": "string" }
+                        },
+                        {
+                            "name": "translation",
+                            "in": "query",
+                            "required": true,
+                            "description": "Translation code",
+                            "schema": { "type": "string", "enum": ["UF_v2", "RUF_v2", "RUF", "KG", "KNB", "SZIT", "BD", "STL"] }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "The passage",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/BiblePassage" }
+                                }
+                            }
+                        },
+                        "400": { "description": "Missing reference or translation" },
+                        "401": { "description": "Unauthorized" },
+                        "502": { "description": "The upstream Bible API failed or returned something unparseable" }
+                    }
+                }
+            },
+            "/api/bible/suggest": {
+                "get": {
+                    "tags": ["Bible"],
+                    "summary": "Autocomplete Bible references",
+                    "description": "Reference suggestions from szentiras.eu. This endpoint is public upstream, so it works without an API key. Terms shorter than 2 characters return an empty list without calling upstream.",
+                    "operationId": "getBibleSuggestions",
+                    "parameters": [
+                        {
+                            "name": "term",
+                            "in": "query",
+                            "required": true,
+                            "description": "Partial reference the user has typed",
+                            "schema": { "type": "string" }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Matching references",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": { "$ref": "#/components/schemas/BibleSuggestion" }
+                                    }
+                                }
+                            }
+                        },
+                        "400": { "description": "Missing term" },
+                        "401": { "description": "Unauthorized" },
+                        "502": { "description": "The upstream Bible API failed or returned something unparseable" }
+                    }
+                }
+            },
             "/api/connectors/status": {
                 "get": {
                     "tags": ["Connectors"],
                     "summary": "Get connector statuses",
-                    "description": "Returns the current connection state of OBS and VMix. Each value is a discriminated union on `type` — see the `ConnectorStatus` schema.",
+                    "description": "Returns the current connection state of every connector. Each value is a discriminated union on `type` — see the `ConnectorStatus` schema.",
                     "operationId": "getConnectorStatuses",
                     "responses": {
                         "200": {
@@ -599,6 +738,156 @@ pub fn spec() -> Value {
                             }
                         },
                         "401": { "description": "Unauthorized" }
+                    }
+                }
+            },
+            "/api/connectors/{name}/config": {
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "path",
+                        "required": true,
+                        "description": "Connector name",
+                        "schema": { "type": "string", "enum": ["obs", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
+                    }
+                ],
+                "get": {
+                    "tags": ["Connectors"],
+                    "summary": "Get connector configuration",
+                    "description": "Returns the stored configuration for one connector, or its defaults when nothing has been saved yet.\n\n**Secrets are never returned here.** `password`, `clientSecret`, `appSecret`, `apiKey` and `webhookUrl` always come back empty, with a companion boolean (`apiKeySet`, `passwordSet`, …) telling you whether one is stored. The host running the server can read them back through `/api/connectors/{name}/config/secrets`.",
+                    "operationId": "getConnectorConfig",
+                    "responses": {
+                        "200": {
+                            "description": "Stored configuration",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/ConnectorConfig" },
+                                    "example": { "enabled": true, "host": "localhost", "port": 4455, "password": null }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized" },
+                        "404": { "description": "Unknown connector" }
+                    }
+                },
+                "put": {
+                    "tags": ["Connectors"],
+                    "summary": "Save connector configuration",
+                    "description": "Persists the configuration and applies it: OBS reconnects (or disconnects when `enabled` is false), YouTube and Facebook refresh the config used by the OAuth routes and stop when disabled.\n\n**Secret handling:** send a non-empty secret to replace it, leave it empty or omit it to keep the stored one, or send `\"<field>Set\": false` to clear it. This lets a client save a config whose secrets it was never allowed to read.",
+                    "operationId": "putConnectorConfig",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/ConnectorConfig" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "204": { "description": "Saved" },
+                        "400": { "description": "Body does not match the connector's config shape" },
+                        "401": { "description": "Unauthorized" },
+                        "404": { "description": "Unknown connector" }
+                    }
+                }
+            },
+            "/api/connectors/{name}/config/secrets": {
+                "get": {
+                    "tags": ["Connectors"],
+                    "summary": "Read a connector's stored secrets (host only)",
+                    "description": "Returns the connector config **including** its secrets.\n\nRestricted to the desktop app hosting this server: it requires the normal auth token, an `X-Admin-Token` header matching the running server's admin token (regenerated every run, delivered to the host window over Tauri IPC, never over the network), and a request originating from loopback. Remote clients cannot obtain the admin token, and a leaked one is unusable off-host.\n\nConnectors that store no credentials (`vmix`, `atem`, `broadlink`) return 204.",
+                    "operationId": "revealConnectorSecrets",
+                    "parameters": [
+                        {
+                            "name": "name",
+                            "in": "path",
+                            "required": true,
+                            "schema": { "type": "string", "enum": ["obs", "youtube", "facebook", "discord", "szentiras"] }
+                        },
+                        {
+                            "name": "X-Admin-Token",
+                            "in": "header",
+                            "required": true,
+                            "description": "The running server's admin token",
+                            "schema": { "type": "string" }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "The config with secrets in the clear",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/ConnectorConfig" }
+                                }
+                            }
+                        },
+                        "204": { "description": "This connector stores no secrets" },
+                        "401": { "description": "Unauthorized" },
+                        "403": { "description": "Missing/invalid admin token, or the request did not come from loopback" },
+                        "404": { "description": "Unknown connector" }
+                    }
+                }
+            },
+            "/api/connectors/obs/connect": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Connect OBS",
+                    "description": "Starts the OBS connector using the stored configuration.",
+                    "operationId": "connectObs",
+                    "responses": {
+                        "204": { "description": "Connection attempt started" },
+                        "401": { "description": "Unauthorized" }
+                    }
+                }
+            },
+            "/api/connectors/obs/disconnect": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Disconnect OBS",
+                    "operationId": "disconnectObs",
+                    "responses": {
+                        "204": { "description": "Disconnected" },
+                        "401": { "description": "Unauthorized" }
+                    }
+                }
+            },
+            "/api/connectors/obs/stream-settings": {
+                "get": {
+                    "tags": ["Connectors"],
+                    "summary": "Get OBS stream destination",
+                    "operationId": "getObsStreamSettings",
+                    "responses": {
+                        "200": {
+                            "description": "Current RTMP destination",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/ObsStreamSettings" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized" },
+                        "409": { "description": "OBS is not connected" },
+                        "502": { "description": "OBS rejected the request" }
+                    }
+                },
+                "put": {
+                    "tags": ["Connectors"],
+                    "summary": "Set OBS stream destination",
+                    "description": "Applies a custom RTMP destination (`rtmp_custom`) to OBS.",
+                    "operationId": "setObsStreamSettings",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/ObsStreamSettings" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "204": { "description": "Applied" },
+                        "401": { "description": "Unauthorized" },
+                        "409": { "description": "OBS is not connected" },
+                        "502": { "description": "OBS rejected the request" }
                     }
                 }
             },

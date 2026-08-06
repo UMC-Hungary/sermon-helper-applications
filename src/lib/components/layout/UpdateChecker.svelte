@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invoke } from '@tauri-apps/api/core';
+	import * as host from '$lib/core-client/index.js';
 	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
-	import { updaterStore, type UpdateInfo } from '$lib/stores/updater.js';
+	import { updaterStore } from '$lib/stores/updater.js';
 	import { get } from 'svelte/store';
 
 	async function installUpdate() {
 		const t = get(_);
 		updaterStore.update((s) => ({ ...s, status: 'installing', error: null }));
 		try {
-			await invoke('install_update');
+			await host.installUpdate();
 			updaterStore.update((s) => ({ ...s, status: 'installed' }));
 			toast.success(t('appSettings.updater.installed'));
 		} catch (e) {
@@ -25,7 +25,7 @@
 
 	onMount(async () => {
 		try {
-			const info = await invoke<UpdateInfo | null>('check_for_updates');
+			const info = await host.checkForUpdates();
 			if (info) {
 				updaterStore.set({
 					status: 'available',

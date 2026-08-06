@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fetchDevices, addDevice, removeDevice, triggerDiscover, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { fetchDevices, addDevice, removeDevice, triggerDiscover, type BroadlinkDevice } from '$lib/core-client/index.js';
 	import { broadlinkDiscoveredDevices } from '$lib/stores/broadlink.js';
 
 	let devices = $state<BroadlinkDevice[]>([]);

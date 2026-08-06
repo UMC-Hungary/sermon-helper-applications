@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { listAllRecordings } from '$lib/api/recordings.js';
+  import { listAllRecordings } from '$lib/core-client/index.js';
   import { lastWsMessage } from '$lib/stores/ws.js';
   import { uploadProgress } from '$lib/stores/uploads.js';
   import type { RecordingWithEvent } from '$lib/schemas/recording.js';

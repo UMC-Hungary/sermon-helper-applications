@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { addCommand, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { addCommand, type BroadlinkDevice } from '$lib/core-client/index.js';
 
 	interface Props {
 		device: BroadlinkDevice;
@@ -58,7 +58,7 @@
 			<label>
 				Category:
 				<select bind:value={category}>
-					{#each CATEGORIES as cat}
+					{#each CATEGORIES as cat (cat)}
 						<option value={cat}>{cat}</option>
 					{/each}
 				</select>

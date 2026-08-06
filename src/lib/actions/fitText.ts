@@ -79,7 +79,6 @@ export function fitText(
 	node: HTMLElement,
 	params?: FitTextParams,
 ): { update: (p?: FitTextParams) => void; destroy: () => void } {
-	let observer: ResizeObserver;
 	let currentFixedSize: number | null | undefined = params?.fixedSize;
 	let currentParagraphs: { text: string }[] | undefined = params?.paragraphs;
 
@@ -126,7 +125,7 @@ export function fitText(
 		node.style.fontSize = `${lo}px`;
 	}
 
-	observer = new ResizeObserver(fit);
+	const observer = new ResizeObserver(fit);
 	observer.observe(node);
 	if (node.parentElement) observer.observe(node.parentElement);
 	fit();

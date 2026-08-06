@@ -63,8 +63,8 @@ impl FacebookConnector {
         }
     }
 
-    pub async fn start(&self, pool: PgPool, app: tauri::AppHandle) {
-        *self.app_handle.lock().await = Some(app.clone());
+    pub async fn start(&self, pool: PgPool, app: Option<tauri::AppHandle>) {
+        *self.app_handle.lock().await = app.clone();
         self.stop_internal().await;
 
         let (stop_tx, stop_rx) = watch::channel(false);
@@ -80,18 +80,13 @@ impl FacebookConnector {
     pub async fn stop(&self) {
         self.stop_internal().await;
         let guard = self.app_handle.lock().await;
-        if let Some(app) = guard.as_ref() {
-            set_status(
-                &self.status,
-                &self.status_tx,
-                app,
-                ConnectorStatus::Disconnected,
-            )
-            .await;
-        } else {
-            *self.status.write().await = ConnectorStatus::Disconnected;
-            let _ = self.status_tx.send(ConnectorStatus::Disconnected);
-        }
+        set_status(
+            &self.status,
+            &self.status_tx,
+            guard.as_ref(),
+            ConnectorStatus::Disconnected,
+        )
+        .await;
     }
 
     async fn stop_internal(&self) {
@@ -117,14 +112,16 @@ impl Default for FacebookConnector {
 async fn set_status(
     status: &Arc<RwLock<ConnectorStatus>>,
     status_tx: &broadcast::Sender<ConnectorStatus>,
-    app: &tauri::AppHandle,
+    app: Option<&tauri::AppHandle>,
     new_status: ConnectorStatus,
 ) {
     *status.write().await = new_status;
     let current = status.read().await.clone();
     let _ = status_tx.send(current.clone());
-    if let Err(e) = app.emit("connector://facebook-status", current) {
-        tracing::warn!("Failed to emit Facebook status: {e}");
+    if let Some(app) = app {
+        if let Err(e) = app.emit("connector://facebook-status", current) {
+            tracing::warn!("Failed to emit Facebook status: {e}");
+        }
     }
 }
 
@@ -243,30 +240,30 @@ async fn run_token_loop(
     status: Arc<RwLock<ConnectorStatus>>,
     status_tx: broadcast::Sender<ConnectorStatus>,
     mut stop_rx: watch::Receiver<bool>,
-    app: tauri::AppHandle,
+    app: Option<tauri::AppHandle>,
 ) {
     let token = match load_tokens(&pool).await {
         Some(t) => t,
         None => {
-            set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+            set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
             return;
         }
     };
 
-    set_status(&status, &status_tx, &app, ConnectorStatus::Connected).await;
+    set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Connected).await;
 
     loop {
         tokio::select! {
             () = tokio::time::sleep(Duration::from_secs(300)) => {}
             result = stop_rx.changed() => {
                 let _ = result;
-                set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+                set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
                 return;
             }
         }
 
         if *stop_rx.borrow() {
-            set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+            set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
             return;
         }
 
@@ -280,7 +277,7 @@ async fn run_token_loop(
             set_status(
                 &status,
                 &status_tx,
-                &app,
+                app.as_ref(),
                 ConnectorStatus::Error {
                     message: "Re-login required".to_string(),
                 },

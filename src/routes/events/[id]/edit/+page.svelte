@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { getEvent } from '$lib/api/events.js';
+  import { getEvent } from '$lib/core-client/index.js';
   import type { Event } from '$lib/schemas/event.js';
   import CreateEventForm from '$lib/components/events/CreateEventForm.svelte';
 

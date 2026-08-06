@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { invoke } from '@tauri-apps/api/core';
+  import { getAppMode, completeSetup } from '$lib/core-client/index.js';
+  import { probeCore } from '$lib/core-client/index.js';
 
   let selectedMode: 'server' | 'client' = 'server';
   let clientUrl = '';
@@ -10,7 +11,7 @@
 
   onMount(async () => {
     try {
-      const mode = await invoke<string | null>('get_app_mode');
+      const mode = await getAppMode();
       if (mode !== null) {
         // Mode already configured — full reload so the layout initialises properly.
         window.location.href = '/';
@@ -38,38 +39,25 @@
           return;
         }
 
-        // Ping the remote server before saving
-        let response: Response;
-        try {
-          response = await fetch(`${trimmedUrl}/api/events`, {
-            headers: { Authorization: `Bearer ${trimmedToken}` },
-          });
-        } catch {
-          errorMessage = 'Server unreachable — check the URL and try again.';
+        // Check the remote core before saving
+        const probe = await probeCore(trimmedUrl, trimmedToken);
+        if (!probe.ok) {
+          errorMessage =
+            probe.reason === 'unreachable'
+              ? 'Server unreachable — check the URL and try again.'
+              : probe.reason === 'unauthorized'
+                ? 'Wrong auth token — check the token and try again.'
+                : `Unexpected response from server (${probe.status}).`;
           return;
         }
 
-        if (response.status === 401) {
-          errorMessage = 'Wrong auth token — check the token and try again.';
-          return;
-        }
-
-        if (!response.ok) {
-          errorMessage = `Unexpected response from server (${response.status}).`;
-          return;
-        }
-
-        await invoke('complete_setup', {
+        await completeSetup({
           mode: 'client',
           serverUrl: trimmedUrl,
           clientToken: trimmedToken,
         });
       } else {
-        await invoke('complete_setup', {
-          mode: 'server',
-          serverUrl: null,
-          clientToken: null,
-        });
+        await completeSetup({ mode: 'server' });
       }
 
       // Full reload so the layout re-runs onMount with the persisted mode,

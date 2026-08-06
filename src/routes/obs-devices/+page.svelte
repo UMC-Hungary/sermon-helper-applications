@@ -3,7 +3,7 @@
 	import { _ } from 'svelte-i18n';
 	import { obsAvailableDevices, obsDeviceListeners, obsDeviceListenerStatuses } from '$lib/stores/obs-devices.js';
 	import { obsStatus } from '$lib/stores/connectors.js';
-	import { sendWsCommand } from '$lib/ws/client.js';
+	import { sendWsCommand } from '$lib/core-client/index.js';
 	import type { ObsAvailableDevices, DeviceListener, DeviceListenerStatus } from '$lib/schemas/ws-messages.js';
 
 	// ── Add listener form state ──────────────────────────────────────────────
@@ -154,7 +154,7 @@
 					<p class="muted">—</p>
 				{:else}
 					<ul>
-						{#each $obsAvailableDevices.displays as d}
+						{#each $obsAvailableDevices.displays as d (d.itemValue)}
 							<li>{d.itemName}</li>
 						{/each}
 					</ul>
@@ -166,7 +166,7 @@
 					<p class="muted">—</p>
 				{:else}
 					<ul>
-						{#each $obsAvailableDevices.audioInputs as d}
+						{#each $obsAvailableDevices.audioInputs as d (d.itemValue)}
 							<li>{d.itemName}</li>
 						{/each}
 					</ul>
@@ -178,7 +178,7 @@
 					<p class="muted">—</p>
 				{:else}
 					<ul>
-						{#each $obsAvailableDevices.audioOutputs as d}
+						{#each $obsAvailableDevices.audioOutputs as d (d.itemValue)}
 							<li>{d.itemName}</li>
 						{/each}
 					</ul>
@@ -190,7 +190,7 @@
 					<p class="muted">—</p>
 				{:else}
 					<ul>
-						{#each $obsAvailableDevices.videoInputs as d}
+						{#each $obsAvailableDevices.videoInputs as d (d.itemValue)}
 							<li>{d.itemName}</li>
 						{/each}
 					</ul>
@@ -202,7 +202,7 @@
 					<p class="muted">—</p>
 				{:else}
 					<ul>
-						{#each $obsAvailableDevices.captureCards as d}
+						{#each $obsAvailableDevices.captureCards as d (d.itemValue)}
 							<li>{d.itemName}</li>
 						{/each}
 					</ul>
@@ -240,7 +240,7 @@
 					<label for="add-device">{$_('obsDevices.listenerForm.device')}</label>
 					<select id="add-device" value={addDeviceValue} onchange={handleDeviceSelect} required>
 						<option value="">—</option>
-						{#each devices as d}
+						{#each devices as d (d.itemValue)}
 							<option value={d.itemValue}>{d.itemName}</option>
 						{/each}
 					</select>
@@ -273,7 +273,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each $obsDeviceListeners as listener}
+				{#each $obsDeviceListeners as listener (listener.id)}
 					{@const status = statusForListener(listener.id, $obsDeviceListenerStatuses)}
 					<tr>
 						<td>

@@ -59,6 +59,8 @@ pub struct AppState {
     /// Pending OAuth state tokens: state_string → (connector_name, created_at)
     pub oauth_states: Arc<RwLock<HashMap<String, (String, Instant)>>>,
     pub app_handle: Option<tauri::AppHandle>,
+    /// Read access to stored upstream credentials — see `routes::reveal_connector_secrets`.
+    pub admin_token: Arc<String>,
     pub cron_scheduler: Arc<CronScheduler>,
     pub upload_service: Arc<UploadService>,
     /// Cached result of the last OBS device scan; `None` until first scan completes.
@@ -105,6 +107,7 @@ pub async fn build_and_serve(
     facebook_config: Arc<RwLock<FacebookConfig>>,
     oauth_states: Arc<RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
     app_handle: Option<tauri::AppHandle>,
+    admin_token: Arc<String>,
     cron_scheduler: Arc<CronScheduler>,
     #[cfg(target_os = "macos")] keynote_connector: Arc<KeynoteConnector>,
 ) -> anyhow::Result<()> {
@@ -167,6 +170,7 @@ pub async fn build_and_serve(
         facebook_config,
         oauth_states,
         app_handle,
+        admin_token,
         cron_scheduler,
         upload_service: upload_service.clone(),
         obs_available_devices: obs_available_devices.clone(),
@@ -523,8 +527,24 @@ pub async fn build_and_serve(
             "/connectors/broadlink/commands/{id}/send",
             post(routes::broadlink_send_command),
         )
+        .route("/bible/verses", get(routes::get_bible_passage))
+        .route("/bible/suggest", get(routes::get_bible_suggestions))
         .route("/connectors/state", get(routes::get_connector_state))
         .route("/connectors/status", get(routes::get_connector_statuses))
+        .route(
+            "/connectors/{name}/config",
+            get(routes::get_connector_config).put(routes::put_connector_config),
+        )
+        .route(
+            "/connectors/{name}/config/secrets",
+            get(routes::reveal_connector_secrets),
+        )
+        .route("/connectors/obs/connect", post(routes::obs_connect))
+        .route("/connectors/obs/disconnect", post(routes::obs_disconnect))
+        .route(
+            "/connectors/obs/stream-settings",
+            get(routes::get_obs_stream_settings).put(routes::set_obs_stream_settings),
+        )
         .route(
             "/connectors/youtube/content",
             get(routes::get_youtube_content),
@@ -565,11 +585,14 @@ pub async fn build_and_serve(
         .merge(ppt_routes)
         .merge(keynote_routes)
         .route("/presenter/parse", post(presenter::parse_presentation))
+        // OAuth routes are UI-initiated (generate a login URL, log out), so they
+        // sit inside the auth layer. Only the browser redirect target itself
+        // (`/callback`, on the fixed OAuth port below) is reachable unauthenticated.
+        .merge(oauth_routes)
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::auth_middleware,
-        ))
-        .merge(oauth_routes);
+        ));
 
     // CorsLayer must be the outermost layer so it intercepts OPTIONS preflight
     // requests before they reach the auth middleware. tower-http's CorsLayer
@@ -619,7 +642,12 @@ pub async fn build_and_serve(
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = TcpListener::bind(addr).await?;
     tracing::info!("Axum server listening on {addr}");
-    axum::serve(listener, app).await?;
+    // ConnectInfo lets the secret-reveal route verify the caller is on loopback.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

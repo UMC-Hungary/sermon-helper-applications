@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { flagRecordingsForUpload } from '$lib/api/recordings.js';
-  import { triggerUploadCycle } from '$lib/api/uploads.js';
+  import { flagRecordingsForUpload } from '$lib/core-client/index.js';
+  import { triggerUploadCycle } from '$lib/core-client/index.js';
   import type { Recording } from '$lib/schemas/recording.js';
   import type { Event } from '$lib/schemas/event.js';
   import { youtubeStatus, facebookStatus } from '$lib/stores/connectors.js';
@@ -38,6 +38,7 @@
   let error = $state('');
 
   function toggleSelection(id: string) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- copy-then-assign; reactivity comes from the $state assignment
     const next = new Set(selectedIds);
     if (next.has(id)) {
       next.delete(id);

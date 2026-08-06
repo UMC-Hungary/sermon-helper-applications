@@ -173,6 +173,21 @@ impl ConnectorConfig for DiscordConfig {
     }
 }
 
+/// Szentiras.eu Bible API. Every `/api/*` call needs a free API key, so the
+/// connector exists purely to hold it.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SzentirasConfig {
+    pub enabled: bool,
+    pub api_key: String,
+}
+
+impl ConnectorConfig for SzentirasConfig {
+    fn is_configured(&self) -> bool {
+        self.enabled && !self.api_key.is_empty()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct BroadlinkConfig {

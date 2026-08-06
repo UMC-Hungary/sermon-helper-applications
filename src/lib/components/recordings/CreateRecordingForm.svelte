@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createRecording } from '$lib/api/recordings.js';
+  import { createRecording } from '$lib/core-client/index.js';
   import type { Recording } from '$lib/schemas/recording.js';
 
   interface Props {

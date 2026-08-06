@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { invoke } from '@tauri-apps/api/core';
-	import { openUrl } from '@tauri-apps/plugin-opener';
+	import { openExternal } from '$lib/core-client/index.js';
 	import { _ } from 'svelte-i18n';
+	import { toast } from 'svelte-sonner';
+	import { appMode } from '$lib/stores/mode.js';
+	import type { Writable } from 'svelte/store';
 	import {
 		obsConfig,
 		obsStatus,
@@ -16,7 +18,9 @@
 		facebookConfig,
 		facebookStatus,
 		discordConfig,
-		discordStatus
+		discordStatus,
+		szentirasConfig,
+		szentirasStatus
 	} from '$lib/stores/connectors.js';
 	import type {
 		ObsConfig,
@@ -25,11 +29,30 @@
 		BroadlinkConfig,
 		YouTubeConfig,
 		FacebookConfig,
-		DiscordConfig
+		DiscordConfig,
+		SzentirasConfig
 	} from '$lib/stores/connectors.js';
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorStatusBadge from './ConnectorStatusBadge.svelte';
-	import { youtubeLogout, facebookLogout, fetchYouTubeStreamKey, fetchFacebookStreamKey } from '$lib/api/connectors.js';
+	import {
+		youtubeLogout,
+		facebookLogout,
+		fetchYouTubeStreamKey,
+		fetchFacebookStreamKey,
+		saveConnectorConfig,
+		connectObs as connectObsRequest,
+		disconnectObs as disconnectObsRequest,
+		fetchObsStreamSettings,
+		applyObsStreamSettings,
+		youtubeAuthUrl,
+		facebookAuthUrl,
+		revealConnectorSecrets
+	} from '$lib/core-client/index.js';
+	import type {
+		ConnectorConfigMap,
+		ConnectorName,
+		ObsStreamSettings
+	} from '$lib/schemas/connectors.js';
 	import BroadlinkDiscoveryPanel from './broadlink/DiscoveryPanel.svelte';
 
 	interface Props {
@@ -41,6 +64,47 @@
 
 	const def = $derived(findConnector(connectorId));
 
+	// Stored secrets are readable only on the machine hosting the server, and only
+	// through Tauri IPC — a client-mode window is talking to someone else's core.
+	const isHost = $derived(
+		$appMode === 'server' &&
+			typeof window !== 'undefined' &&
+			typeof (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ !==
+				'undefined'
+	);
+
+	async function revealSecret<K extends ConnectorName>(
+		name: K,
+		apply: (config: ConnectorConfigMap[K]) => void
+	) {
+		try {
+			apply(await revealConnectorSecrets(name));
+		} catch (e) {
+			toast.error($_('appSettings.connectors.revealFailed'), { description: String(e) });
+		}
+	}
+
+	async function persistConfig<K extends ConnectorName>(
+		name: K,
+		form: ConnectorConfigMap[K],
+		store: Writable<ConnectorConfigMap[K]>
+	): Promise<string> {
+		const connector = def?.name ?? name;
+		try {
+			await saveConnectorConfig(name, form);
+			store.set({ ...form });
+			toast.success($_('appSettings.connectors.saved', { values: { connector } }));
+			onSaveSuccess?.();
+			return '';
+		} catch (e) {
+			const message = String(e);
+			toast.error($_('appSettings.connectors.saveFailed', { values: { connector } }), {
+				description: message
+			});
+			return message;
+		}
+	}
+
 	// ── OBS ────────────────────────────────────────────────────────────────────
 	let obsForm: ObsConfig = $state({ enabled: false, host: 'localhost', port: 4455, password: null });
 	let obsSaving = $state(false);
@@ -48,11 +112,6 @@
 
 	// ── OBS Streaming Destination ─────────────────────────────────────────────
 	type ObsDestination = 'youtube' | 'facebook';
-	interface ObsStreamSettings {
-		serviceType: string;
-		server: string;
-		key: string;
-	}
 	let obsDestination = $state<ObsDestination>('youtube');
 	let obsStreamSettings = $state<ObsStreamSettings | null>(null);
 	let obsDestSaving = $state(false);
@@ -65,7 +124,7 @@
 	$effect(() => {
 		if (connectorId !== 'obs') return;
 		if ($obsStatus === 'connected') {
-			invoke<ObsStreamSettings>('get_obs_stream_settings')
+			fetchObsStreamSettings()
 				.then((s) => {
 					obsStreamSettings = s;
 					const srv = s.server.toLowerCase();
@@ -124,10 +183,9 @@
 				server = lastSlash > 6 ? obsDestFbUrl.slice(0, lastSlash) : obsDestFbUrl;
 				key = lastSlash > 6 ? obsDestFbUrl.slice(lastSlash + 1) : '';
 			}
-			await invoke('set_obs_stream_settings', { server, key });
+			await applyObsStreamSettings(server, key);
 			// Refresh displayed settings
-			const updated = await invoke<ObsStreamSettings>('get_obs_stream_settings');
-			obsStreamSettings = updated;
+			obsStreamSettings = await fetchObsStreamSettings();
 		} catch (e) {
 			obsDestError = String(e);
 		} finally {
@@ -141,22 +199,14 @@
 
 	async function saveObs() {
 		obsSaving = true;
-		obsError = '';
-		try {
-			await invoke('save_obs_config', { config: obsForm });
-			obsConfig.set({ ...obsForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			obsError = String(e);
-		} finally {
-			obsSaving = false;
-		}
+		obsError = await persistConfig('obs', obsForm, obsConfig);
+		obsSaving = false;
 	}
 
 	async function connectObs() {
 		obsError = '';
 		try {
-			await invoke('connect_obs');
+			await connectObsRequest();
 		} catch (e) {
 			obsError = String(e);
 		}
@@ -165,7 +215,7 @@
 	async function disconnectObs() {
 		obsError = '';
 		try {
-			await invoke('disconnect_obs');
+			await disconnectObsRequest();
 		} catch (e) {
 			obsError = String(e);
 		}
@@ -182,16 +232,8 @@
 
 	async function saveVmix() {
 		vmixSaving = true;
-		vmixError = '';
-		try {
-			await invoke('save_vmix_config', { config: vmixForm });
-			vmixConfig.set({ ...vmixForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			vmixError = String(e);
-		} finally {
-			vmixSaving = false;
-		}
+		vmixError = await persistConfig('vmix', vmixForm, vmixConfig);
+		vmixSaving = false;
 	}
 
 	// ── ATEM ───────────────────────────────────────────────────────────────────
@@ -205,16 +247,8 @@
 
 	async function saveAtem() {
 		atemSaving = true;
-		atemError = '';
-		try {
-			await invoke('save_atem_config', { config: atemForm });
-			atemConfig.set({ ...atemForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			atemError = String(e);
-		} finally {
-			atemSaving = false;
-		}
+		atemError = await persistConfig('atem', atemForm, atemConfig);
+		atemSaving = false;
 	}
 
 	// ── YouTube ────────────────────────────────────────────────────────────────
@@ -229,24 +263,15 @@
 
 	async function saveYt() {
 		ytSaving = true;
-		ytError = '';
-		try {
-			await invoke('save_youtube_config', { config: ytForm });
-			youtubeConfig.set({ ...ytForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			ytError = String(e);
-		} finally {
-			ytSaving = false;
-		}
+		ytError = await persistConfig('youtube', ytForm, youtubeConfig);
+		ytSaving = false;
 	}
 
 	async function loginYt() {
 		ytLoggingIn = true;
 		ytError = '';
 		try {
-			const url = await invoke<string>('get_youtube_auth_url');
-			await openUrl(url);
+			await openExternal(await youtubeAuthUrl());
 		} catch (e) {
 			ytError = String(e);
 		} finally {
@@ -258,7 +283,6 @@
 		ytError = '';
 		try {
 			await youtubeLogout();
-			await invoke('youtube_logout');
 		} catch (e) {
 			ytError = String(e);
 		}
@@ -276,24 +300,15 @@
 
 	async function saveFb() {
 		fbSaving = true;
-		fbError = '';
-		try {
-			await invoke('save_facebook_config', { config: fbForm });
-			facebookConfig.set({ ...fbForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			fbError = String(e);
-		} finally {
-			fbSaving = false;
-		}
+		fbError = await persistConfig('facebook', fbForm, facebookConfig);
+		fbSaving = false;
 	}
 
 	async function loginFb() {
 		fbLoggingIn = true;
 		fbError = '';
 		try {
-			const url = await invoke<string>('get_facebook_auth_url');
-			await openUrl(url);
+			await openExternal(await facebookAuthUrl());
 		} catch (e) {
 			fbError = String(e);
 		} finally {
@@ -305,7 +320,6 @@
 		fbError = '';
 		try {
 			await facebookLogout();
-			await invoke('facebook_logout');
 		} catch (e) {
 			fbError = String(e);
 		}
@@ -322,16 +336,8 @@
 
 	async function saveDiscord() {
 		discordSaving = true;
-		discordError = '';
-		try {
-			await invoke('save_discord_config', { config: discordForm });
-			discordConfig.set({ ...discordForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			discordError = String(e);
-		} finally {
-			discordSaving = false;
-		}
+		discordError = await persistConfig('discord', discordForm, discordConfig);
+		discordSaving = false;
 	}
 
 	// ── Broadlink ──────────────────────────────────────────────────────────────
@@ -345,18 +351,41 @@
 
 	async function saveBroadlink() {
 		broadlinkSaving = true;
-		broadlinkError = '';
-		try {
-			await invoke('save_broadlink_config', { config: broadlinkForm });
-			broadlinkConfig.set({ ...broadlinkForm });
-			onSaveSuccess?.();
-		} catch (e) {
-			broadlinkError = String(e);
-		} finally {
-			broadlinkSaving = false;
-		}
+		broadlinkError = await persistConfig('broadlink', broadlinkForm, broadlinkConfig);
+		broadlinkSaving = false;
+	}
+
+	// ── Szentírás.eu ───────────────────────────────────────────────────────────
+	let szentirasForm: SzentirasConfig = $state({ enabled: false, apiKey: '' });
+	let szentirasSaving = $state(false);
+	let szentirasError = $state('');
+
+	$effect(() => {
+		if (connectorId === 'szentiras') szentirasForm = { ...$szentirasConfig };
+	});
+
+	async function saveSzentiras() {
+		szentirasSaving = true;
+		szentirasError = await persistConfig('szentiras', szentirasForm, szentirasConfig);
+		szentirasSaving = false;
 	}
 </script>
+
+{#snippet storedSecret(isSet: boolean | undefined, clear: () => void, reveal: () => void)}
+	{#if isSet}
+		<p class="note">
+			{$_('appSettings.connectors.secretStored')}
+			{#if isHost}
+				<button type="button" class="btn-link" onclick={reveal}>
+					{$_('appSettings.connectors.showSecret')}
+				</button>
+			{/if}
+			<button type="button" class="btn-link" onclick={clear}>
+				{$_('appSettings.connectors.clearSecret')}
+			</button>
+		</p>
+	{/if}
+{/snippet}
 
 {#if def}
 	<div class="settings-block">
@@ -378,6 +407,8 @@
 					<p class="note">{$_('appSettings.connectors.facebook.subtitle')}</p>
 				{:else if connectorId === 'discord'}
 					<p class="note">{$_('appSettings.connectors.discord.subtitle')}</p>
+				{:else if connectorId === 'szentiras'}
+					<p class="note">{$_('appSettings.connectors.szentiras.subtitle')}</p>
 				{/if}
 			</div>
 			{#if connectorId === 'obs'}
@@ -394,6 +425,8 @@
 				<ConnectorStatusBadge name="Facebook" status={$facebookStatus} />
 			{:else if connectorId === 'discord'}
 				<ConnectorStatusBadge name="Discord" status={$discordStatus} />
+			{:else if connectorId === 'szentiras'}
+				<ConnectorStatusBadge name="Szentírás.eu" status={$szentirasStatus} />
 			{/if}
 		</div>
 
@@ -427,6 +460,14 @@
 							obsForm.password = val.length > 0 ? val : null;
 						}}
 					/>
+					{@render storedSecret(
+						$obsConfig.passwordSet,
+						() => {
+							obsForm.password = null;
+							obsForm.passwordSet = false;
+						},
+						() => revealSecret('obs', (c) => (obsForm.password = c.password))
+					)}
 				</div>
 			</div>
 
@@ -620,6 +661,14 @@
 				<div class="field">
 					<label for="yt-client-secret">{$_('appSettings.connectors.youtube.clientSecret')}</label>
 					<input id="yt-client-secret" type="password" bind:value={ytForm.clientSecret} />
+					{@render storedSecret(
+						$youtubeConfig.clientSecretSet,
+						() => {
+							ytForm.clientSecret = '';
+							ytForm.clientSecretSet = false;
+						},
+						() => revealSecret('youtube', (c) => (ytForm.clientSecret = c.clientSecret))
+					)}
 				</div>
 			</div>
 
@@ -663,6 +712,14 @@
 				<div class="field">
 					<label for="fb-app-secret">{$_('appSettings.connectors.facebook.appSecret')}</label>
 					<input id="fb-app-secret" type="password" bind:value={fbForm.appSecret} />
+					{@render storedSecret(
+						$facebookConfig.appSecretSet,
+						() => {
+							fbForm.appSecret = '';
+							fbForm.appSecretSet = false;
+						},
+						() => revealSecret('facebook', (c) => (fbForm.appSecret = c.appSecret))
+					)}
 				</div>
 				<div class="field field--full">
 					<label for="fb-page-id">{$_('appSettings.connectors.facebook.pageId')}</label>
@@ -731,6 +788,14 @@
 					<div class="field field--full">
 						<label for="discord-webhook">{$_('appSettings.connectors.discord.webhookUrl')}</label>
 						<input id="discord-webhook" type="text" bind:value={discordForm.webhookUrl} />
+						{@render storedSecret(
+							$discordConfig.webhookUrlSet,
+							() => {
+								discordForm.webhookUrl = '';
+								discordForm.webhookUrlSet = false;
+							},
+							() => revealSecret('discord', (c) => (discordForm.webhookUrl = c.webhookUrl))
+						)}
 					</div>
 				</div>
 			</fieldset>
@@ -744,6 +809,52 @@
 					{discordSaving
 						? $_('appSettings.connectors.discord.saving')
 						: $_('appSettings.connectors.discord.save')}
+				</button>
+			</div>
+
+		<!-- ── Szentírás.eu form ──────────────────────────────────────────────── -->
+		{:else if connectorId === 'szentiras'}
+			<div class="form-row">
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={szentirasForm.enabled} />
+					{$_('appSettings.connectors.szentiras.enabled')}
+				</label>
+			</div>
+			<div class="form-grid">
+				<div class="field field--full">
+					<label for="szentiras-api-key">{$_('appSettings.connectors.szentiras.apiKey')}</label>
+					<input
+						id="szentiras-api-key"
+						type="password"
+						autocomplete="off"
+						bind:value={szentirasForm.apiKey}
+					/>
+					{@render storedSecret(
+						$szentirasConfig.apiKeySet,
+						() => {
+							szentirasForm.apiKey = '';
+							szentirasForm.apiKeySet = false;
+						},
+						() => revealSecret('szentiras', (c) => (szentirasForm.apiKey = c.apiKey))
+					)}
+					<p class="note">
+						{$_('appSettings.connectors.szentiras.apiKeyHint')}
+						<a href="https://szentiras.eu/profile/api-keys" target="_blank" rel="noreferrer">
+							szentiras.eu/profile/api-keys
+						</a>
+					</p>
+				</div>
+			</div>
+
+			{#if szentirasError}
+				<p class="error" role="alert">{szentirasError}</p>
+			{/if}
+
+			<div class="button-row">
+				<button class="btn-primary" onclick={saveSzentiras} disabled={szentirasSaving}>
+					{szentirasSaving
+						? $_('appSettings.connectors.szentiras.saving')
+						: $_('appSettings.connectors.szentiras.save')}
 				</button>
 			</div>
 
@@ -782,6 +893,16 @@
 		margin: 0;
 		font-size: 0.75rem;
 		color: var(--text-secondary);
+	}
+
+	.btn-link {
+		background: none;
+		border: none;
+		padding: 0;
+		font: inherit;
+		color: var(--accent, #2563eb);
+		text-decoration: underline;
+		cursor: pointer;
 	}
 
 	.btn-fetch {

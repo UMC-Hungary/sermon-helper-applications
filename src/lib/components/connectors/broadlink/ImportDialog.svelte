@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { addCommand, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { addCommand, type BroadlinkDevice } from '$lib/core-client/index.js';
 
 	interface Props {
 		device: BroadlinkDevice;
@@ -64,6 +64,7 @@
 	let result = $state<{ imported: number; skipped: number } | null>(null);
 
 	function toggle(filename: string) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- copy-then-assign; reactivity comes from the $state assignment
 		const next = new Set(selected);
 		if (next.has(filename)) next.delete(filename);
 		else next.add(filename);

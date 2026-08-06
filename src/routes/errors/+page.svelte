@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { invoke } from '@tauri-apps/api/core';
+
 	import { _ } from 'svelte-i18n';
-	import { connectorErrors, clearErrors, clearError } from '$lib/stores/errors.js';
+	import { connectObs, fetchConnectorStatuses } from '$lib/core-client/index.js';
+	import { applyConnectorStatuses } from '$lib/stores/connectors.js';
+	import { connectorErrors, clearError } from '$lib/stores/errors.js';
 	import { findConnector } from '$lib/connectors/registry.js';
 	import ConnectorFixModal from '$lib/components/connectors/ConnectorFixModal.svelte';
 
@@ -9,24 +11,17 @@
 	let recheckingIds = $state(new Set<string>());
 	let expandedInfoIds = $state(new Set<string>());
 
-	/** Map connector IDs to their re-check Tauri command names. */
-	const recheckCommands: Record<string, string> = {
-		obs: 'connect_obs',
-		vmix: 'get_vmix_status',
-		atem: 'get_atem_status',
-		youtube: 'get_youtube_status',
-		facebook: 'get_facebook_status',
-		discord: 'get_discord_status'
-	};
-
 	async function recheck(connectorId: string, errorId: string) {
 		recheckingIds = new Set([...recheckingIds, errorId]);
 		clearError(errorId);
 		try {
-			const cmd = recheckCommands[connectorId];
-			if (cmd) await invoke(cmd);
+			// OBS is the only connector with a manual reconnect; the rest simply
+			// report their current state.
+			if (connectorId === 'obs') await connectObs();
+			applyConnectorStatuses(await fetchConnectorStatuses());
 		} catch {
-			// Status update arrives via Tauri event or WS — ignore invoke errors here.
+			// A failed re-check leaves the existing error in place; status updates
+			// also arrive over WS.
 		} finally {
 			recheckingIds = new Set([...recheckingIds].filter((id) => id !== errorId));
 		}

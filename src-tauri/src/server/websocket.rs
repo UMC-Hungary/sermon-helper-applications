@@ -2006,10 +2006,12 @@ async fn handle_ws_command(
             let vmix = state.vmix_connector.get_status();
             let yt = state.youtube_connector.get_status().await;
             let fb = state.facebook_connector.get_status().await;
+            let broadlink = state.broadlink_connector.get_status().await;
             let msg = json!({
                 "type": "connectors.status",
                 "obs": obs,
                 "vmix": vmix,
+                "broadlink": broadlink,
                 "youtube": yt,
                 "facebook": fb,
             })

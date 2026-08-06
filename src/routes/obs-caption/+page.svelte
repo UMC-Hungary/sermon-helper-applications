@@ -8,8 +8,6 @@
 		RESOLUTION_DIMENSIONS,
 		getCaptionHeight,
 		type CaptionSettings,
-		type CaptionType,
-		type Resolution,
 	} from '$lib/utils/caption-store.js';
 
 	let settings: CaptionSettings = $state(captionSettingsStore.getDefaultSettings());
@@ -39,6 +37,7 @@
 	const baseUrl = $derived($localNetworkUrl || $serverUrl);
 
 	const captionUrl = $derived(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- builds a query string inside a derived, never mutated after
 		const params = new URLSearchParams();
 		params.set('type', settings.type);
 		params.set('resolution', settings.resolution);

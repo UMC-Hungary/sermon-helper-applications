@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fetchCommands, removeCommand, sendCommand, type BroadlinkCommand, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { fetchCommands, removeCommand, sendCommand, type BroadlinkCommand, type BroadlinkDevice } from '$lib/core-client/index.js';
 	import LearnDialog from './LearnDialog.svelte';
 	import CodeEntryDialog from './CodeEntryDialog.svelte';
 	import ImportDialog from './ImportDialog.svelte';

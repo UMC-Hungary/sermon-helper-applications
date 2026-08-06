@@ -5,7 +5,7 @@
  * Run: pnpm test:e2e
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { apiClient } from '../helpers/client.js';
 
 interface Event {

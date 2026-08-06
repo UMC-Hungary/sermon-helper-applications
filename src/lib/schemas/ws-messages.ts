@@ -3,6 +3,7 @@ import { EventSchema, EventSummarySchema, EventActivitySchema } from './event.js
 import { RecordingSchema, RecordingWithEventSchema } from './recording.js';
 import { UntrackedRecordingSchema } from './untracked-recording.js';
 import { QueueSummarySchema } from './queue.js';
+import { ConnectorStatusPayloadSchema } from './connectors.js';
 
 // ── OBS Device types ──────────────────────────────────────────────────────────
 
@@ -41,11 +42,6 @@ export type ObsDeviceItem = z.infer<typeof ObsDeviceItemSchema>;
 export type ObsAvailableDevices = z.infer<typeof ObsAvailableDevicesSchema>;
 export type DeviceListener = z.infer<typeof DeviceListenerSchema>;
 export type DeviceListenerStatus = z.infer<typeof DeviceListenerStatusSchema>;
-
-const ConnectorStatusPayloadSchema = z.object({
-  type: z.enum(['disconnected', 'connecting', 'connected', 'error']),
-  message: z.string().optional(),
-});
 
 export const KeynoteStatusSchema = z.object({
   appRunning: z.boolean(),
@@ -306,6 +302,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('connectors.status'),
     obs: ConnectorStatusPayloadSchema,
     vmix: ConnectorStatusPayloadSchema,
+    broadlink: ConnectorStatusPayloadSchema,
     youtube: ConnectorStatusPayloadSchema,
     facebook: ConnectorStatusPayloadSchema,
   }),

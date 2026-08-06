@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invoke } from '@tauri-apps/api/core';
-	import { save } from '@tauri-apps/plugin-dialog';
+	import {
+		downloadApplicationLog,
+		getApplicationLogPath,
+		hostCapabilities,
+		openApplicationLog,
+		pickSavePath,
+		readApplicationLog,
+		removeApplicationLog
+	} from '$lib/core-client/index.js';
 	import { Copy, Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
@@ -26,11 +33,6 @@
 		{ id: 'error', labelKey: 'logsPage.filters.error' }
 	];
 
-	const isDesktopApp = (): boolean =>
-		typeof window !== 'undefined' &&
-		typeof (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ !==
-			'undefined';
-
 	let rawLog = $state('');
 	let logPath = $state('');
 	let selectedFilter = $state<LogFilter>('all');
@@ -54,7 +56,7 @@
 	});
 
 	onMount(() => {
-		desktopAvailable = isDesktopApp();
+		desktopAvailable = hostCapabilities.logs;
 		void loadLog();
 	});
 
@@ -68,8 +70,8 @@
 		errorMessage = null;
 		try {
 			const [content, path] = await Promise.all([
-				invoke<unknown>('read_application_log'),
-				invoke<unknown>('get_application_log_path')
+				readApplicationLog(),
+				getApplicationLogPath()
 			]);
 			rawLog = ApplicationLogTextSchema.parse(content);
 			logPath = ApplicationLogPathSchema.parse(path);
@@ -89,7 +91,7 @@
 		}
 
 		try {
-			await invoke('open_application_log');
+			await openApplicationLog();
 			toast.success($_('logsPage.toasts.opened'));
 		} catch (e) {
 			toast.error($_('logsPage.toasts.openFailed'), {
@@ -108,13 +110,13 @@
 
 		isDownloading = true;
 		try {
-			const destination = await save({
+			const destination = await pickSavePath({
 				defaultPath: 'metocast.log',
 				filters: [{ name: $_('logsPage.logFileFilter'), extensions: ['log', 'txt'] }]
 			});
 			if (!destination) return;
 
-			await invoke('download_application_log', { destination });
+			await downloadApplicationLog(destination);
 			toast.success($_('logsPage.toasts.downloaded'));
 		} catch (e) {
 			toast.error($_('logsPage.toasts.downloadFailed'), {
@@ -137,7 +139,7 @@
 
 		isRemoving = true;
 		try {
-			await invoke('remove_application_log');
+			await removeApplicationLog();
 			toast.success($_('logsPage.toasts.removed'));
 			await loadLog();
 		} catch (e) {
@@ -163,7 +165,7 @@
 			}
 			const path =
 				logPath ||
-				ApplicationLogPathSchema.parse(await invoke<unknown>('get_application_log_path'));
+				await getApplicationLogPath();
 			await navigator.clipboard.writeText(path);
 			logPath = path;
 			toast.success($_('logsPage.toasts.pathCopied'));

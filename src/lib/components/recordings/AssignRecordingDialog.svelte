@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { assignUntrackedRecording } from '$lib/api/untracked-recordings.js';
-  import { listEvents } from '$lib/api/events.js';
+  import { assignUntrackedRecording } from '$lib/core-client/index.js';
+  import { listEvents } from '$lib/core-client/index.js';
   import type { EventSummary } from '$lib/schemas/event.js';
   import { onMount } from 'svelte';
 

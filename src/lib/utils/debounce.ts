@@ -6,13 +6,13 @@
  * @param wait - The number of milliseconds to delay
  * @returns A debounced version of the function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: never[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
-  return function (this: any, ...args: Parameters<T>) {
+  return function (this: unknown, ...args: Parameters<T>) {
     if (timeout) {
       clearTimeout(timeout);
     }
@@ -30,15 +30,14 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param wait - The number of milliseconds to delay
  * @returns A debounced version of the async function
  */
-export function debounceAsync<T extends (...args: any[]) => Promise<any>>(
+export function debounceAsync<T extends (...args: never[]) => Promise<ReturnType<T>>>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => Promise<ReturnType<T> | undefined> {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  let pendingPromise: Promise<ReturnType<T>> | null = null;
-  let reject: ((reason?: any) => void) | null = null;
+  let reject: ((reason?: unknown) => void) | null = null;
 
-  return function (this: any, ...args: Parameters<T>): Promise<ReturnType<T> | undefined> {
+  return function (this: unknown, ...args: Parameters<T>): Promise<ReturnType<T> | undefined> {
     // Cancel previous pending call
     if (timeout) {
       clearTimeout(timeout);

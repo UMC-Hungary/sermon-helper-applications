@@ -801,8 +801,19 @@
 			"changing": "Resetting…",
 			"note": "Changing the mode will re-show the setup screen. If this device is running as a server, the embedded database will continue until you restart the app."
 		},
+		"activeUi": {
+			"title": "Rendering UI",
+			"description": "This build bundles more than one interface. Pick the one this window should open.",
+			"appliesOnRestart": "Applies the next time the app starts."
+		},
 		"connectors": {
 			"title": "Connectors",
+			"saved": "{connector} settings saved",
+			"saveFailed": "Could not save {connector} settings",
+			"secretStored": "A value is stored. Leave blank to keep it, or type a new one to replace it — the server never sends it back.",
+			"clearSecret": "Clear",
+			"showSecret": "Show",
+			"revealFailed": "Could not read the stored value",
 			"obs": {
 				"title": "OBS Studio",
 				"subtitle": "Connect to OBS Studio via WebSocket (v5)",
@@ -883,25 +894,16 @@
 				"connecting": "Connecting…",
 				"disconnected": "Disconnected",
 				"error": "Error"
+			},
+			"szentiras": {
+				"title": "Szentírás.eu",
+				"subtitle": "Bible text provider for the classic Hungarian translations (RUF, KG, KNB, SZIT, BD, STL).",
+				"enabled": "Enabled",
+				"apiKey": "API key",
+				"apiKeyHint": "Every lookup needs a free API key. Create one at",
+				"save": "Save",
+				"saving": "Saving…"
 			}
-		},
-		"obsBadge": {
-			"title": "OBS Badge",
-			"description": "Create a liquid glass badge in OBS using the LucidGlass shader. Requires OBS to be connected first.",
-			"obsNotConnected": "OBS must be connected first. Please configure and connect OBS above.",
-			"installButton": "Install Plugin & Shader",
-			"installing": "Installing…",
-			"pluginInstalled": "Plugin: ✓ Installed",
-			"pluginNotInstalled": "Plugin: ✗ Not installed — please install obs-shaderfilter manually",
-			"shaderInstalled": "Shader: ✓ Installed",
-			"shaderNotInstalled": "Shader: ✗ Failed to write shader file",
-			"targetScene": "Target Scene",
-			"selectScene": "Select a scene…",
-			"loadingScenes": "Loading scenes…",
-			"selectSceneError": "Please select a scene",
-			"createButton": "Create Badge Sources",
-			"creating": "Creating…",
-			"sourcesCreated": "✓ Badge sources created in \"{sceneName}\""
 		},
 		"updater": {
 			"title": "Application Version",
