@@ -76,42 +76,12 @@ pub async fn complete_setup(
         // server mode — desktop only
         #[cfg(desktop)]
         {
-            let mut rt = runtime.write().await;
-            rt.mode = Some(mode);
-            let auth_token_arc = rt.auth_token.clone();
-            let port = rt.server_port;
-            let obs = Arc::clone(&rt.obs_connector);
-            let vmix = Arc::clone(&rt.vmix_connector);
-            let yt = Arc::clone(&rt.youtube_connector);
-            let fb = Arc::clone(&rt.facebook_connector);
-            let bl = Arc::clone(&rt.broadlink_connector);
-            // Use the shared config Arcs from AppRuntime so that any config
-            // saved via Tauri commands is immediately visible to Axum routes.
-            let yt_cfg = Arc::clone(&rt.youtube_config);
-            let fb_cfg = Arc::clone(&rt.facebook_config);
-            let oauth = Arc::clone(&rt.oauth_states);
-            #[cfg(target_os = "macos")]
-            let kn = Arc::clone(&rt.keynote_connector);
-            drop(rt);
+            runtime.write().await.mode = Some(mode);
 
+            let runtime_clone = Arc::clone(&runtime);
             let handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = crate::start_server(
-                    handle,
-                    auth_token_arc,
-                    port,
-                    obs,
-                    vmix,
-                    yt,
-                    fb,
-                    bl,
-                    yt_cfg,
-                    fb_cfg,
-                    oauth,
-                    #[cfg(target_os = "macos")]
-                    kn,
-                )
-                .await
+                if let Err(e) = crate::runtime::start_from_app_runtime(&runtime_clone, handle).await
                 {
                     tracing::error!("Backend startup failed: {e}");
                 }
@@ -120,6 +90,21 @@ pub async fn complete_setup(
     }
 
     Ok(())
+}
+
+/// Hands the admin token to the host's own webview. IPC is in-process, so no
+/// remote client can reach this. Only valid while this app is the server —
+/// in client mode the secrets live on someone else's machine.
+#[cfg(desktop)]
+#[tauri::command]
+pub async fn get_admin_token(
+    runtime: State<'_, Arc<RwLock<AppRuntime>>>,
+) -> Result<String, String> {
+    let rt = runtime.read().await;
+    if rt.mode.as_deref() != Some("server") {
+        return Err("Admin token is only available in server mode".to_string());
+    }
+    Ok(rt.admin_token.to_string())
 }
 
 #[tauri::command]

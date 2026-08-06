@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invoke } from '@tauri-apps/api/core';
-  import { open } from '@tauri-apps/plugin-dialog';
+  import { pickDirectory, saveBrunoCollection, hostCapabilities } from '$lib/core-client/index.js';
   import { serverUrl, serverPort, authToken, localNetworkUrl } from '$lib/stores/server-url.js';
 
   let copiedCurl = $state(false);
@@ -105,7 +104,7 @@
   }
 
   async function saveBruno() {
-    const dir = await open({ directory: true, title: 'Choose folder for Bruno collection' });
+    const dir = await pickDirectory('Choose folder for Bruno collection');
     if (!dir) return;
 
     const files: Record<string, string> = {
@@ -144,7 +143,7 @@
       'Metocast API/environments/Local.yml': envFile(),
     };
 
-    await invoke('save_bruno_collection', { dir, files });
+    await saveBrunoCollection(dir, files);
   }
 </script>
 
@@ -169,7 +168,9 @@
   <section>
     <h4>Bruno Collection</h4>
     <p class="hint">Choose a folder — a "Metocast API" collection will be created inside it.</p>
-    <button onclick={saveBruno}>Save Bruno Collection…</button>
+    {#if hostCapabilities.dialogs}
+      <button onclick={saveBruno}>Save Bruno Collection…</button>
+    {/if}
   </section>
 
   <section>
@@ -188,7 +189,7 @@
         <tr><td>POST</td><td>/api/events</td><td>Create event</td></tr>
         <tr><td>GET</td><td>/api/events/:id/recordings</td><td>List recordings</td></tr>
         <tr><td>POST</td><td>/api/events/:id/recordings</td><td>Add recording</td></tr>
-        <tr><td>GET</td><td>/api/connectors/status</td><td>Connector statuses (OBS, VMix)</td></tr>
+        <tr><td>GET</td><td>/api/connectors/status</td><td>Connector statuses (all connectors)</td></tr>
         <tr><td>GET</td><td>/ws?token=…</td><td>WebSocket stream</td></tr>
         <tr><td>GET</td><td>/openapi.json</td><td>OpenAPI 3.1 spec (no auth)</td></tr>
         <tr><td>GET</td><td>/docs</td><td>Interactive API reference (no auth)</td></tr>

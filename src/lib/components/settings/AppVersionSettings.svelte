@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { invoke } from '@tauri-apps/api/core';
+	import * as host from '$lib/core-client/index.js';
+	import { hostCapabilities } from '$lib/core-client/index.js';
 	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
-	import { updaterStore, type UpdateInfo } from '$lib/stores/updater.js';
+	import { updaterStore } from '$lib/stores/updater.js';
 
 	async function checkForUpdates() {
 		updaterStore.update((s) => ({ ...s, status: 'checking', error: null }));
 		try {
-			const info = await invoke<UpdateInfo | null>('check_for_updates');
+			const info = await host.checkForUpdates();
 			if (info) {
 				updaterStore.set({
 					status: 'available',
@@ -35,7 +36,7 @@
 	async function installUpdate() {
 		updaterStore.update((s) => ({ ...s, status: 'installing', error: null }));
 		try {
-			await invoke('install_update');
+			await host.installUpdate();
 			updaterStore.update((s) => ({ ...s, status: 'installed' }));
 			toast.success($_('appSettings.updater.installed'));
 		} catch (e) {
@@ -49,6 +50,7 @@
 	}
 </script>
 
+{#if hostCapabilities.updater}
 <section>
 	<h2>{$_('appSettings.updater.title')}</h2>
 
@@ -99,6 +101,7 @@
 			: $_('appSettings.updater.checkForUpdates')}
 	</button>
 </section>
+{/if}
 
 <style>
 	section {

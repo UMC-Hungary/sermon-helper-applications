@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { listEvents } from '$lib/api/events.js';
-  import { listUntrackedRecordings, deleteUntrackedRecording } from '$lib/api/untracked-recordings.js';
+  import { listEvents } from '$lib/core-client/index.js';
+  import { listUntrackedRecordings, deleteUntrackedRecording } from '$lib/core-client/index.js';
   import { events, eventsLoading, untrackedRecordings } from '$lib/stores/events.js';
   import { lastWsMessage } from '$lib/stores/ws.js';
   import EventList from '$lib/components/events/EventList.svelte';

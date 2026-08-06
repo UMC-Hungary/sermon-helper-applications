@@ -3,11 +3,11 @@
   import ConnectorSettingsBlock from '$lib/components/connectors/ConnectorSettingsBlock.svelte';
   import LanguageSettings from '$lib/components/settings/LanguageSettings.svelte';
   import AppModeSettings from '$lib/components/settings/AppModeSettings.svelte';
-  import ObsBadgeSettings from '$lib/components/settings/ObsBadgeSettings.svelte';
+  import ActiveUiSettings from '$lib/components/settings/ActiveUiSettings.svelte';
   import CronJobsSettings from '$lib/components/settings/CronJobsSettings.svelte';
   import AppVersionSettings from '$lib/components/settings/AppVersionSettings.svelte';
   import { useWebPresenter } from '$lib/stores/presenter.js';
-  import { sendWsCommand } from '$lib/ws/client.js';
+  import { sendWsCommand } from '$lib/core-client/index.js';
 
   function handleWebPresenterToggle(e: Event) {
     const enabled = (e.target as HTMLInputElement).checked;
@@ -20,6 +20,7 @@
 
   <LanguageSettings />
   <AppModeSettings />
+  <ActiveUiSettings />
 
   <h2 class="section-heading">{$_('appSettings.connectors.title')}</h2>
   <ConnectorSettingsBlock connectorId="obs" />
@@ -29,6 +30,7 @@
   <ConnectorSettingsBlock connectorId="atem" />
   <ConnectorSettingsBlock connectorId="broadlink" />
   <ConnectorSettingsBlock connectorId="discord" />
+  <ConnectorSettingsBlock connectorId="szentiras" />
 
   <h2 class="section-heading">Presentations</h2>
   <section>
@@ -42,7 +44,6 @@
     </label>
   </section>
 
-  <ObsBadgeSettings />
 
   <CronJobsSettings />
   <AppVersionSettings />

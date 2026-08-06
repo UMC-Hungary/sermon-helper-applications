@@ -1,8 +1,8 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { authToken } from '$lib/stores/server-url.js';
-  import { listCronJobs, createCronJob, updateCronJob, deleteCronJob } from '$lib/api/cron-jobs.js';
-  import type { CronJob } from '$lib/api/cron-jobs.js';
+  import { listCronJobs, createCronJob, updateCronJob, deleteCronJob } from '$lib/core-client/index.js';
+  import type { CronJob } from '$lib/core-client/index.js';
 
   const emptyForm = () => ({
     name: '',

@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { createEvent, updateEvent } from '$lib/api/events.js';
+  import { createEvent, updateEvent } from '$lib/core-client/index.js';
   import type { Event } from '$lib/schemas/event.js';
   import { _ } from 'svelte-i18n';
   import { get } from 'svelte/store';
   import { bibleApi } from '$lib/utils/bible-api.js';
   import { debounce } from '$lib/utils/debounce.js';
-  import { isV2Translation, TRANSLATIONS, type BibleTranslation, type LegacySuggestion, type BibleVerse } from '$lib/types/bible.js';
+  import { isV2Translation, TRANSLATIONS, type BibleTranslation, type BibleVerse } from '$lib/types/bible.js';
+  import type { BibleSuggestion } from '$lib/schemas/bible.js';
   import BibleSuggestions from '$lib/components/events/BibleSuggestions.svelte';
 
   interface Props {
@@ -27,6 +28,7 @@
   function nextSundayAt(hour: number): string {
     const now = new Date();
     const daysUntilSunday = (7 - now.getDay()) % 7;
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain date arithmetic, result is a string
     const sunday = new Date(now);
     sunday.setDate(now.getDate() + daysUntilSunday);
     sunday.setHours(hour, 0, 0, 0);
@@ -55,7 +57,7 @@
   let leckioLoading = $state(false);
 
   // Suggestions state
-  let suggestions = $state<LegacySuggestion[]>([]);
+  let suggestions = $state<BibleSuggestion[]>([]);
   let showSuggestions = $state(false);
   let activeSuggestionField = $state<'textus' | 'leckio' | null>(null);
 
@@ -168,14 +170,14 @@
     }
   }
 
-  async function handleSuggestionSelect(field: 'textus' | 'leckio', suggestion: LegacySuggestion) {
+  async function handleSuggestionSelect(field: 'textus' | 'leckio', suggestion: BibleSuggestion) {
     if (field === 'textus') { textusQuery = suggestion.label; textusLoading = true; }
     else { leckioQuery = suggestion.label; leckioLoading = true; }
     suggestions = [];
     showSuggestions = false;
     const translation = field === 'textus' ? textusTranslation : leckioTranslation;
     try {
-      const result = await bibleApi.fetchLegacy(suggestion.link, translation);
+      const result = await bibleApi.fetchVerses(suggestion.link, translation);
       if (field === 'textus') { textus = result.label; textusVerses = result.verses; textusLoading = false; }
       else { leckio = result.label; leckioVerses = result.verses; leckioLoading = false; }
     } catch {
@@ -357,7 +359,7 @@
           </button>
         </div>
 
-        {#each (['textus', 'leckio'] as const) as field}
+        {#each (['textus', 'leckio'] as const) as field (field)}
           {#if activeTab === field}
             {@const loading = field === 'textus' ? textusLoading : leckioLoading}
             {@const query = field === 'textus' ? textusQuery : leckioQuery}
@@ -375,7 +377,7 @@
                     value={translation}
                     onchange={(e) => handleTranslationChange(field, e.currentTarget.value as BibleTranslation)}
                   >
-                    {#each TRANSLATIONS as t}
+                    {#each TRANSLATIONS as t (t.code)}
                       <option value={t.code}>{t.name}</option>
                     {/each}
                   </select>

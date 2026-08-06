@@ -2,10 +2,10 @@
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { getEvent, deleteEvent } from '$lib/api/events.js';
-  import { listRecordings, deleteRecording } from '$lib/api/recordings.js';
-  import { triggerYouTubeSchedule, triggerFacebookSchedule } from '$lib/api/connectors.js';
-  import { listActivities, createActivity, deleteActivity } from '$lib/api/activities.js';
+  import { getEvent, deleteEvent } from '$lib/core-client/index.js';
+  import { listRecordings, deleteRecording } from '$lib/core-client/index.js';
+  import { triggerYouTubeSchedule, triggerFacebookSchedule } from '$lib/core-client/index.js';
+  import { listActivities, createActivity, deleteActivity } from '$lib/core-client/index.js';
   import type { Event, EventActivity } from '$lib/schemas/event.js';
   import type { Recording } from '$lib/schemas/recording.js';
   import RecordingList from '$lib/components/recordings/RecordingList.svelte';

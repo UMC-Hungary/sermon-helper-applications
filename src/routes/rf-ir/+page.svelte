@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fetchDevices, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { fetchDevices, type BroadlinkDevice } from '$lib/core-client/index.js';
 	import { broadlinkStatus } from '$lib/stores/connectors.js';
 	import DeviceList from '$lib/components/connectors/broadlink/DeviceList.svelte';
 	import CommandList from '$lib/components/connectors/broadlink/CommandList.svelte';

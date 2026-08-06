@@ -6,7 +6,7 @@
 <section>
   <h2>{$_('appSettings.language')}</h2>
   <div class="lang-buttons">
-    {#each availableLocales as lang}
+    {#each availableLocales as lang (lang.code)}
       <button
         class="lang-btn"
         class:active={$locale === lang.code}

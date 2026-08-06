@@ -3,7 +3,7 @@
 	import { RefreshCw, RotateCcw, Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { _ } from 'svelte-i18n';
-	import { listQueues, listJobs, retryJob, purgeJob } from '$lib/api/queues.js';
+	import { listQueues, listJobs, retryJob, purgeJob } from '$lib/core-client/index.js';
 	import { queues } from '$lib/stores/queues.js';
 	import type { Job } from '$lib/schemas/queue.js';
 

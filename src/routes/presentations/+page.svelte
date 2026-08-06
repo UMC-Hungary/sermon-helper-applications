@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { open } from '@tauri-apps/plugin-dialog';
+	import { pickDirectory } from '$lib/core-client/index.js';
 	import { pptFilter, pptResults, pptFolders, keynoteStatus } from '$lib/stores/presentations.js';
 	import { presenterState, useWebPresenter, connectedClients } from '$lib/stores/presenter.js';
 	import { appReady, localNetworkUrl, authToken, serverPort } from '$lib/stores/server-url.js';
 	import { lastWsMessage, wsStatus } from '$lib/stores/ws.js';
-	import { sendWsCommand } from '$lib/ws/client.js';
+	import { sendWsCommand } from '$lib/core-client/index.js';
 	import { onMount, onDestroy, untrack } from 'svelte';
 	import {
 		listFolders,
@@ -13,7 +13,7 @@
 		removeFolder,
 		searchFiles,
 		keynoteCloseAll,
-	} from '$lib/api/presentations.js';
+	} from '$lib/core-client/index.js';
 	import type { BibleReference, Event as ServiceEvent, EventSummary } from '$lib/schemas/event.js';
 	import type { WsMessage } from '$lib/schemas/ws-messages.js';
 	import SlideEditorModal from '$lib/components/presentations/SlideEditorModal.svelte';
@@ -210,7 +210,7 @@
 	async function handleAddFolder() {
 		addingFolder = true;
 		try {
-			const selected = await open({ directory: true, multiple: false });
+			const selected = await pickDirectory();
 			if (!selected || typeof selected !== 'string') return;
 			const name = selected.split('/').pop() ?? selected;
 			const folder = await addFolder(selected, name);
@@ -304,7 +304,7 @@
 			<span class="filter-value">{$pptFilter || '—'}</span>
 		</div>
 		<div class="digit-pad">
-			{#each ['1','2','3','4','5','6','7','8','9','0'] as digit}
+			{#each ['1','2','3','4','5','6','7','8','9','0'] as digit (digit)}
 				<button class="digit-btn" onclick={() => appendDigit(digit)}>{digit}</button>
 			{/each}
 			<button class="digit-btn clear-btn" onclick={handleClear}>CLR</button>
@@ -315,7 +315,7 @@
 	<section class="section">
 		<h2>{$_('presentations.results.title')}</h2>
 		<div class="result-slots">
-			{#each [0,1,2,3,4] as i}
+			{#each [0,1,2,3,4] as i (i)}
 				{@const file = $pptResults[i]}
 				<button
 					class="slot-btn"

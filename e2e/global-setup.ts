@@ -1,6 +1,6 @@
 /**
- * Vitest global setup — starts the test_server binary before all tests and
- * stops it afterwards.
+ * Vitest global setup — starts the headless metocast-server binary before all
+ * tests and stops it afterwards.
  *
  * If the server is already running (e.g. CI started it separately), this
  * module detects that and skips the start/stop lifecycle.
@@ -22,7 +22,7 @@ const BINARY = join(
   'src-tauri',
   'target',
   'debug',
-  process.platform === 'win32' ? 'test_server.exe' : 'test_server',
+  process.platform === 'win32' ? 'metocast-server.exe' : 'metocast-server',
 );
 
 let serverProcess: ChildProcess | undefined;
@@ -58,15 +58,23 @@ export async function setup(): Promise<void> {
 
   if (!existsSync(BINARY)) {
     throw new Error(
-      `Test server binary not found at:\n  ${BINARY}\n` +
-        `Build it first with:\n  pnpm build:test-server`,
+      `Server binary not found at:\n  ${BINARY}\n` +
+        `Build it first with:\n  pnpm build:server`,
     );
   }
 
   console.log('[global-setup] Spawning test server…');
   const port = process.env.TEST_SERVER_PORT ?? '3738';
   serverProcess = spawn(BINARY, [], {
-    env: { ...process.env, TAURI_AUTH_TOKEN: token, TEST_SERVER_PORT: port },
+    env: {
+      ...process.env,
+      METOCAST_AUTH_TOKEN: token,
+      METOCAST_PORT: port,
+      METOCAST_DATA_DIR: './test-server-data',
+      // Normally regenerated per run and handed to the desktop app over IPC;
+      // pinned here so the access-contract tests can exercise both sides.
+      METOCAST_ADMIN_TOKEN: process.env.METOCAST_ADMIN_TOKEN ?? 'e2e-admin-token',
+    },
     stdio: 'inherit',
   });
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { invoke } from '@tauri-apps/api/core';
+  import { getAppMode, resetSetup, hostCapabilities } from '$lib/core-client/index.js';
   import { appMode } from '$lib/stores/mode.js';
   import type { AppMode } from '$lib/stores/mode.js';
   import { _ } from 'svelte-i18n';
@@ -12,8 +12,7 @@
 
   onMount(async () => {
     try {
-      const mode = await invoke<string | null>('get_app_mode');
-      currentMode = (mode as AppMode) ?? null;
+      currentMode = (await getAppMode()) as AppMode | null;
     } catch (e) {
       console.error('Settings load error:', e);
     }
@@ -23,7 +22,7 @@
     resetting = true;
     errorMessage = '';
     try {
-      await invoke('reset_setup');
+      await resetSetup();
       appMode.set('server');
       await goto('/setup');
     } catch (e) {
@@ -33,6 +32,7 @@
   }
 </script>
 
+{#if hostCapabilities.mode}
 <section>
   <h2>{$_('appSettings.appMode.title')}</h2>
   <p>
@@ -50,6 +50,7 @@
     {resetting ? $_('appSettings.appMode.changing') : $_('appSettings.appMode.changeMode')}
   </button>
 </section>
+{/if}
 
 <style>
   section {

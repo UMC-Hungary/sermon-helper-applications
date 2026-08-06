@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
+	import { connectPresenterWs } from '$lib/core-client/index.js';
 	import { WsMessageSchema } from '$lib/schemas/ws-messages.js';
 	import type { PresenterState } from '$lib/schemas/ws-messages.js';
 
@@ -15,26 +16,22 @@
 		// wsPort param lets the presenter page connect to the API server even when
 		// the frontend is served from a different port (e.g. Vite dev server).
 		const wsPort = $page.url.searchParams.get('wsPort');
-		const host = wsPort
-			? `${window.location.hostname}:${wsPort}`
-			: window.location.host;
-		const wsUrl = token
-			? `ws://${host}/ws?token=${encodeURIComponent(token)}`
-			: `ws://${host}/ws`;
-		standaloneSocket = new WebSocket(wsUrl);
-
-		standaloneSocket.addEventListener('message', (ev) => {
-			const result = WsMessageSchema.safeParse(JSON.parse(ev.data as string));
-			if (!result.success) return;
-			const msg = result.data;
-			if (msg.type === 'presenter.state') {
-				standaloneState = msg.state;
-			} else if (msg.type === 'presenter.slide_changed') {
-				if (standaloneState) {
-					standaloneState = { ...standaloneState, currentSlide: msg.currentSlide, totalSlides: msg.totalSlides };
+		standaloneSocket = connectPresenterWs({
+			token,
+			wsPort,
+			onMessage: (raw) => {
+				const result = WsMessageSchema.safeParse(raw);
+				if (!result.success) return;
+				const msg = result.data;
+				if (msg.type === 'presenter.state') {
+					standaloneState = msg.state;
+				} else if (msg.type === 'presenter.slide_changed') {
+					if (standaloneState) {
+						standaloneState = { ...standaloneState, currentSlide: msg.currentSlide, totalSlides: msg.totalSlides };
+					}
+				} else if (msg.type === 'ping') {
+					standaloneSocket?.send(JSON.stringify({ type: 'pong', ping_id: msg.pingId }));
 				}
-			} else if (msg.type === 'ping') {
-				standaloneSocket?.send(JSON.stringify({ type: 'pong', ping_id: msg.pingId }));
 			}
 		});
 
@@ -230,7 +227,7 @@
 								class="slide-text"
 								style="text-align: {para.align}; font-size: {fontSizePx(para.fontSizePt)}px"
 							>
-								{#each para.lines as line, i}
+								{#each para.lines as line, i (i)}
 									{#if i > 0}<br>{/if}{line}
 								{/each}
 							</p>
@@ -243,7 +240,7 @@
 						style:visibility={scaleFactor > 0 ? 'visible' : 'hidden'}
 						style="font-size: {counterFontSizePx()}px"
 					>
-						{#each counterParagraph.lines as line, i}
+						{#each counterParagraph.lines as line, i (i)}
 							{#if i > 0}<br>{/if}{line}
 						{/each}
 					</p>

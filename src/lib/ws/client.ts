@@ -307,3 +307,31 @@ export function sendWsCommand(type: string, data?: Record<string, string | numbe
 	socket.send(JSON.stringify({ type, ...data }));
 	return true;
 }
+
+/**
+ * Opens a read-only presenter socket against the core that served this page.
+ * Used by the standalone presenter view, which runs outside the app shell and so
+ * has no configured server URL to reuse.
+ */
+export function connectPresenterWs(options: {
+  token?: string | null;
+  wsPort?: string | null;
+  onMessage: (raw: unknown) => void;
+}): WebSocket {
+  const host = options.wsPort
+    ? `${window.location.hostname}:${options.wsPort}`
+    : window.location.host;
+  const url = options.token
+    ? `ws://${host}/ws?token=${encodeURIComponent(options.token)}`
+    : `ws://${host}/ws`;
+
+  const socket = new WebSocket(url);
+  socket.addEventListener('message', (ev) => {
+    try {
+      options.onMessage(JSON.parse(ev.data as string));
+    } catch {
+      // Ignore frames that are not JSON.
+    }
+  });
+  return socket;
+}

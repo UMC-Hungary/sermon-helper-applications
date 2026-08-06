@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { sendWsCommand } from '$lib/ws/client.js';
+  import { sendWsCommand } from '$lib/core-client/index.js';
   import type { SlideContent } from '$lib/schemas/ws-messages.js';
 
   interface Props {
@@ -49,7 +49,6 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
   class="backdrop"
   role="presentation"

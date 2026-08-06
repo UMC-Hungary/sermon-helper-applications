@@ -1,8 +1,7 @@
 #![recursion_limit = "256"]
 
 #[cfg(desktop)]
-mod badge;
-mod bible;
+pub mod bible;
 mod commands;
 mod logging;
 
@@ -20,6 +19,8 @@ mod obs_devices;
 #[cfg(desktop)]
 pub mod queue;
 #[cfg(desktop)]
+pub mod runtime;
+#[cfg(desktop)]
 pub mod scheduler;
 #[cfg(desktop)]
 pub mod server;
@@ -32,14 +33,15 @@ use tauri_plugin_store::StoreExt;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-#[cfg(desktop)]
-use connectors::ConnectorConfig;
-
 pub struct AppRuntime {
     pub mode: Option<String>,
     pub server_port: u16,
     pub client_url: Option<String>,
     pub auth_token: Arc<RwLock<String>>,
+    /// Grants the desktop app read access to stored upstream credentials while it
+    /// hosts the server. Regenerated every run — see `runtime::CoreOptions::admin_token`.
+    #[cfg(desktop)]
+    pub admin_token: Arc<String>,
     #[cfg(desktop)]
     pub obs_connector: Arc<connectors::obs::ObsConnector>,
     #[cfg(desktop)]
@@ -85,9 +87,6 @@ pub fn run() {
     // is inferred at the call site — storing it in a let binding loses the type.
     #[cfg(desktop)]
     let builder = builder.invoke_handler(tauri::generate_handler![
-        bible::fetch_bible_v2,
-        bible::fetch_bible_suggestions,
-        bible::fetch_bible_legacy,
         commands::collections::save_bruno_collection,
         commands::token::get_token,
         commands::token::refresh_token,
@@ -97,6 +96,7 @@ pub fn run() {
         commands::server::complete_setup,
         commands::server::get_client_url,
         commands::server::get_client_token,
+        commands::server::get_admin_token,
         commands::server::reset_setup,
         commands::server::get_local_host,
         commands::logs::get_application_log_path,
@@ -104,44 +104,6 @@ pub fn run() {
         commands::logs::download_application_log,
         commands::logs::remove_application_log,
         commands::logs::open_application_log,
-        commands::connectors::get_obs_config,
-        commands::connectors::save_obs_config,
-        commands::connectors::get_obs_status,
-        commands::connectors::connect_obs,
-        commands::connectors::disconnect_obs,
-        commands::connectors::get_vmix_config,
-        commands::connectors::save_vmix_config,
-        commands::connectors::get_vmix_status,
-        commands::connectors::get_atem_config,
-        commands::connectors::save_atem_config,
-        commands::connectors::get_atem_status,
-        commands::connectors::get_broadlink_config,
-        commands::connectors::save_broadlink_config,
-        commands::connectors::get_broadlink_status,
-        commands::connectors::get_discord_config,
-        commands::connectors::save_discord_config,
-        commands::connectors::get_discord_status,
-        commands::connectors::get_youtube_config,
-        commands::connectors::save_youtube_config,
-        commands::connectors::get_youtube_status,
-        commands::connectors::get_youtube_auth_url,
-        commands::connectors::youtube_logout,
-        commands::connectors::get_facebook_config,
-        commands::connectors::save_facebook_config,
-        commands::connectors::get_facebook_status,
-        commands::connectors::get_facebook_auth_url,
-        commands::connectors::facebook_logout,
-        commands::connectors::broadlink_discover,
-        commands::connectors::broadlink_learn,
-        commands::connectors::broadlink_cancel_learn,
-        commands::connectors::broadlink_send,
-        commands::connectors::broadlink_test_device,
-        commands::connectors::broadlink_list_interfaces,
-        commands::connectors::get_obs_stream_settings,
-        commands::connectors::set_obs_stream_settings,
-        commands::badge::install_badge,
-        commands::badge::get_obs_scenes,
-        commands::badge::create_badge_sources,
         commands::updater::check_for_updates,
         commands::updater::install_update,
     ]);
@@ -149,9 +111,6 @@ pub fn run() {
     // Mobile is client-only — no server or Bruno collection commands.
     #[cfg(mobile)]
     let builder = builder.invoke_handler(tauri::generate_handler![
-        bible::fetch_bible_v2,
-        bible::fetch_bible_suggestions,
-        bible::fetch_bible_legacy,
         commands::token::get_token,
         commands::token::refresh_token,
         commands::server::get_server_port,
@@ -256,25 +215,13 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             let keynote_connector = Arc::new(connectors::keynote::KeynoteConnector::new());
 
-            // Config Arcs created here so both AppRuntime (Tauri) and AppState
-            // (Axum) hold the same Arc — writing via a Tauri command is
-            // immediately visible to OAuth routes without any IPC round-trip.
+            // Config Arcs shared by AppRuntime and AppState. `runtime::start` fills
+            // them from the database once the pool is up; until then they hold
+            // defaults (client mode never uses them).
             #[cfg(desktop)]
-            let yt_config_arc = {
-                let cfg: connectors::YouTubeConfig = store
-                    .get("youtube_config")
-                    .and_then(|v| serde_json::from_value(v).ok())
-                    .unwrap_or_default();
-                Arc::new(RwLock::new(cfg))
-            };
+            let yt_config_arc = Arc::new(RwLock::new(connectors::YouTubeConfig::default()));
             #[cfg(desktop)]
-            let fb_config_arc = {
-                let cfg: connectors::FacebookConfig = store
-                    .get("facebook_config")
-                    .and_then(|v| serde_json::from_value(v).ok())
-                    .unwrap_or_default();
-                Arc::new(RwLock::new(cfg))
-            };
+            let fb_config_arc = Arc::new(RwLock::new(connectors::FacebookConfig::default()));
 
             // Shared OAuth state map — the Tauri command and the Axum callback
             // handler both use the same Arc so CSRF tokens are visible to both.
@@ -289,6 +236,11 @@ pub fn run() {
                 server_port: port,
                 client_url,
                 auth_token: auth_token_arc.clone(),
+                #[cfg(desktop)]
+                admin_token: Arc::new(
+                    std::env::var("METOCAST_ADMIN_TOKEN")
+                        .unwrap_or_else(|_| Uuid::new_v4().to_string()),
+                ),
                 #[cfg(desktop)]
                 obs_connector: Arc::clone(&obs_connector),
                 #[cfg(desktop)]
@@ -322,181 +274,19 @@ pub fn run() {
             if mode.as_deref() == Some("server") {
                 tracing::info!(port, "Server mode detected; starting backend");
                 let handle = app.handle().clone();
-                let obs = Arc::clone(&obs_connector);
-                let vmix = Arc::clone(&vmix_connector);
-                let yt = Arc::clone(&youtube_connector);
-                let fb = Arc::clone(&facebook_connector);
-                let bl = Arc::clone(&broadlink_connector);
-                // Pass the shared config Arcs so AppState uses the same Arcs
-                // as AppRuntime — updates from Tauri commands are visible immediately.
-                let yt_cfg = Arc::clone(&yt_config_arc);
-                let fb_cfg = Arc::clone(&fb_config_arc);
-                let oauth = Arc::clone(&oauth_states_arc);
-                #[cfg(target_os = "macos")]
-                let kn = Arc::clone(&keynote_connector);
-
+                let runtime_clone = Arc::clone(&runtime);
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) = start_server(
-                        handle,
-                        auth_token_arc,
-                        port,
-                        obs,
-                        vmix,
-                        yt,
-                        fb,
-                        bl,
-                        yt_cfg,
-                        fb_cfg,
-                        oauth,
-                        #[cfg(target_os = "macos")]
-                        kn,
-                    )
-                    .await
-                    {
+                    if let Err(e) = runtime::start_from_app_runtime(&runtime_clone, handle).await {
                         tracing::error!("Backend startup failed: {e}");
                     }
                 });
             }
 
-            // Auto-start OBS connector if previously configured as enabled.
-            #[cfg(desktop)]
-            {
-                let obs_config: connectors::ObsConfig = store
-                    .get("obs_config")
-                    .and_then(|v| serde_json::from_value(v).ok())
-                    .unwrap_or_default();
-
-                if obs_config.is_configured() {
-                    let runtime_clone = Arc::clone(&runtime);
-                    let handle = app.handle().clone();
-                    tauri::async_runtime::spawn(async move {
-                        let obs_connector = {
-                            let rt = runtime_clone.read().await;
-                            Arc::clone(&rt.obs_connector)
-                        };
-                        obs_connector.start(obs_config, handle).await;
-                    });
-                }
-            }
-
             // YouTube and Facebook connectors require the DB pool (for token loading)
-            // and are therefore started inside start_server(), after the pool is ready.
+            // and are therefore started inside runtime::start(), after the pool is ready.
 
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-#[cfg(desktop)]
-pub(crate) async fn start_server(
-    app: tauri::AppHandle,
-    auth_token: Arc<RwLock<String>>,
-    port: u16,
-    obs_connector: Arc<connectors::obs::ObsConnector>,
-    vmix_connector: Arc<connectors::vmix::VmixConnector>,
-    youtube_connector: Arc<connectors::youtube::YouTubeConnector>,
-    facebook_connector: Arc<connectors::facebook::FacebookConnector>,
-    broadlink_connector: Arc<connectors::broadlink::BroadlinkConnector>,
-    youtube_config: Arc<RwLock<connectors::YouTubeConfig>>,
-    facebook_config: Arc<RwLock<connectors::FacebookConfig>>,
-    oauth_states: Arc<RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
-    #[cfg(target_os = "macos")] keynote_connector: Arc<connectors::keynote::KeynoteConnector>,
-) -> anyhow::Result<()> {
-    use std::path::PathBuf;
-
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("./data"));
-
-    tracing::info!("Starting embedded PostgreSQL in {data_dir:?}");
-    let embedded = database::embedded::EmbeddedDb::start(data_dir).await?;
-    let connection_url = embedded.connection_url.clone();
-
-    tracing::info!("Connecting pool to embedded PostgreSQL");
-    let pool = database::create_pool(&connection_url).await?;
-
-    tracing::info!("Running migrations");
-    database::run_migrations(&pool).await?;
-
-    // Auto-start social connectors now that the pool is available.
-    // Connectors check for stored tokens and stay Disconnected if none exist.
-    {
-        let yt_cfg = youtube_config.read().await.clone();
-        if yt_cfg.is_configured() {
-            youtube_connector
-                .start(pool.clone(), yt_cfg, app.clone())
-                .await;
-        }
-    }
-    {
-        let fb_cfg = facebook_config.read().await.clone();
-        if fb_cfg.is_configured() {
-            facebook_connector.start(pool.clone(), app.clone()).await;
-        }
-    }
-
-    // Initialise Broadlink status from DB: Connected if at least one device exists.
-    {
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM broadlink_devices")
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0);
-        if count > 0 {
-            broadlink_connector
-                .set_status(connectors::ConnectorStatus::Connected)
-                .await;
-        }
-    }
-
-    let static_dir = {
-        #[cfg(debug_assertions)]
-        {
-            // In dev mode, serve from the sibling `build/` directory produced by `pnpm build`.
-            let build_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .unwrap()
-                .join("build");
-            if build_dir.is_dir() {
-                Some(build_dir.to_string_lossy().into_owned())
-            } else {
-                None
-            }
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            // In production `frontendDist` is embedded in the executable, not copied to the
-            // resource directory, so the server serves it via the Tauri asset resolver instead.
-            None::<String>
-        }
-    };
-
-    let cron_scheduler = Arc::new(scheduler::CronScheduler::new());
-
-    tracing::info!("Starting Axum on port {port}");
-    server::build_and_serve(
-        pool,
-        auth_token,
-        connection_url,
-        port,
-        static_dir,
-        obs_connector,
-        vmix_connector,
-        youtube_connector,
-        facebook_connector,
-        broadlink_connector,
-        youtube_config,
-        facebook_config,
-        oauth_states,
-        Some(app.clone()),
-        cron_scheduler,
-        #[cfg(target_os = "macos")]
-        keynote_connector,
-    )
-    .await?;
-
-    embedded.stop().await?;
-
-    Ok(())
 }

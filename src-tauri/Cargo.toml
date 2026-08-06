@@ -1,6 +1,6 @@
 [package]
 name = "metocast"
-version = "2.0.20"
+version = "2.1.0"
 description = "Metocast — livestream control desktop application"
 authors = ["you"]
 edition = "2021"
@@ -11,7 +11,6 @@ name = "metocast_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-base64 = "0.22.1"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
@@ -43,7 +42,6 @@ cipher = "0.4"
 hex = "0.4"
 liblzma = { version = "0.4.6", features = ["static"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
-dirs = "5"
 local-ip-address = "0.6"
 axum = { version = "0.8", features = ["ws"] }
 tower-http = { version = "0.6", features = ["cors", "fs"] }

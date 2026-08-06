@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { openUrl } from '@tauri-apps/plugin-opener';
+  import { openExternal } from '$lib/core-client/index.js';
   import { youtubeStatus } from '$lib/stores/connectors.js';
-  import { fetchYouTubeContent, type ChannelVideoItem } from '$lib/api/connectors.js';
-  import { ApiError } from '$lib/api/client.js';
+  import { fetchYouTubeContent, type ChannelVideoItem } from '$lib/core-client/index.js';
+  import { ApiError } from '$lib/core-client/index.js';
   import { _ } from 'svelte-i18n';
 
   type PlatformId = 'youtube';
@@ -53,7 +53,7 @@
 
   async function openVideo(url: string) {
     try {
-      await openUrl(url);
+      await openExternal(url);
     } catch {
       window.open(url, '_blank');
     }

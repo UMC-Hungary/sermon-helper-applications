@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { invoke } from '@tauri-apps/api/core';
-	import { listen } from '@tauri-apps/api/event';
+	import { getAppMode, getToken, getServerPort, getLocalHost, getClientUrl, getClientToken, listenToHost } from '$lib/core-client/index.js';
 	import { appMode } from '$lib/stores/mode.js';
 	import { serverUrl, serverPort, authToken, localNetworkUrl, appReady } from '$lib/stores/server-url.js';
-	import { connectWs, disconnectWs } from '$lib/ws/client.js';
+	import { connectWs, disconnectWs } from '$lib/core-client/index.js';
 	import type { AppMode } from '$lib/stores/mode.js';
 	import {
 		obsStatus,
@@ -13,13 +12,10 @@
 		obsState,
 		vmixStatus,
 		vmixConfig,
-		vmixState,
 		atemStatus,
 		atemConfig,
-		atemState,
 		broadlinkStatus,
 		broadlinkConfig,
-		broadlinkState,
 		youtubeStatus,
 		youtubeConfig,
 		youtubeState,
@@ -28,22 +24,15 @@
 		facebookState,
 		discordStatus,
 		discordConfig,
-		discordState,
+		szentirasConfig,
 		youtubeLiveActive,
-		mapConnectorStatus
+		mapConnectorStatus,
+		applyConnectorStatuses
 	} from '$lib/stores/connectors.js';
-	import type {
-		ObsConfig,
-		VmixConfig,
-		AtemConfig,
-		BroadlinkConfig,
-		YouTubeConfig,
-		FacebookConfig,
-		DiscordConfig,
-		ConnectorStatus
-	} from '$lib/stores/connectors.js';
-	import { apiFetch } from '$lib/api/client.js';
-	import { z } from 'zod';
+	import type { ConnectorStatus } from '$lib/stores/connectors.js';
+	import type { Writable } from 'svelte/store';
+	import type { ConnectorConfigMap, ConnectorName } from '$lib/schemas/connectors.js';
+	import { fetchConnectorConfig, fetchConnectorStatuses } from '$lib/core-client/index.js';
 	import { loadSavedLocale } from '$lib/i18n';
 	import { findConnector } from '$lib/connectors/registry.js';
 	import { pushError, clearErrors } from '$lib/stores/errors.js';
@@ -81,7 +70,7 @@
 
 	onMount(async () => {
 		try {
-			const mode = await invoke<string | null>('get_app_mode');
+			const mode = await getAppMode();
 
 			if (mode === null) {
 				await goto('/setup');
@@ -92,9 +81,9 @@
 
 			if (mode === 'server') {
 				const [token, port, localHost] = await Promise.all([
-					invoke<string>('get_token'),
-					invoke<number>('get_server_port'),
-					invoke<string | null>('get_local_host')
+					getToken(),
+					getServerPort(),
+					getLocalHost()
 				]);
 				authToken.set(token);
 				serverPort.set(port);
@@ -104,8 +93,8 @@
 				}
 			} else if (mode === 'client') {
 				const [url, token] = await Promise.all([
-					invoke<string | null>('get_client_url'),
-					invoke<string>('get_client_token')
+					getClientUrl(),
+					getClientToken()
 				]);
 				if (url) {
 					serverUrl.set(url);
@@ -119,149 +108,64 @@
 
 		loadSavedLocale();
 
-		const currentMode = await invoke<string | null>('get_app_mode').catch(() => null);
+		const currentMode = await getAppMode().catch(() => null);
 
-		if (currentMode === 'server') {
+		if (currentMode === 'server' || currentMode === 'client') {
 			try {
-				const [cfg, status] = await Promise.all([
-					invoke<ObsConfig>('get_obs_config'),
-					invoke<{ type: string }>('get_obs_status')
-				]);
-				obsConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				obsStatus.set(mapped);
-				obsState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('OBS connector init error:', e);
-			}
-
-			try {
-				const [cfg, status] = await Promise.all([
-					invoke<VmixConfig>('get_vmix_config'),
-					invoke<{ type: string }>('get_vmix_status')
-				]);
-				vmixConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				vmixStatus.set(mapped);
-				vmixState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('VMix connector init error:', e);
-			}
-
-			try {
-				const [cfg, status] = await Promise.all([
-					invoke<AtemConfig>('get_atem_config'),
-					invoke<{ type: string }>('get_atem_status')
-				]);
-				atemConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				atemStatus.set(mapped);
-				atemState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('ATEM connector init error:', e);
-			}
-
-			try {
-				const [cfg, status] = await Promise.all([
-					invoke<BroadlinkConfig>('get_broadlink_config'),
-					invoke<{ type: string }>('get_broadlink_status')
-				]);
-				broadlinkConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				broadlinkStatus.set(mapped);
-				broadlinkState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('BroadLink connector init error:', e);
-			}
-
-			try {
-				const [cfg, status] = await Promise.all([
-					invoke<YouTubeConfig>('get_youtube_config'),
-					invoke<{ type: string }>('get_youtube_status')
-				]);
-				youtubeConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				youtubeStatus.set(mapped);
-				youtubeState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('YouTube connector init error:', e);
-			}
-
-			try {
-				const [cfg, status] = await Promise.all([
-					invoke<FacebookConfig>('get_facebook_config'),
-					invoke<{ type: string }>('get_facebook_status')
-				]);
-				facebookConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				facebookStatus.set(mapped);
-				facebookState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('Facebook connector init error:', e);
-			}
-
-			try {
-				const [cfg, status] = await Promise.all([
-					invoke<DiscordConfig>('get_discord_config'),
-					invoke<{ type: string }>('get_discord_status')
-				]);
-				discordConfig.set(cfg);
-				const mapped = mapConnectorStatus(status as Parameters<typeof mapConnectorStatus>[0]);
-				discordStatus.set(mapped);
-				discordState.update((s) => ({ ...s, connection: mapped }));
-			} catch (e) {
-				console.error('Discord connector init error:', e);
-			}
-
-			unlistenObs = await listen<{ type: string }>('connector://obs-status', (event) => {
-				const mapped = mapConnectorStatus(
-					event.payload as Parameters<typeof mapConnectorStatus>[0]
-				);
-				obsStatus.set(mapped);
-				obsState.update((s) => ({ ...s, connection: mapped }));
-			});
-			unlistenYt = await listen<{ type: string }>('connector://youtube-status', (event) => {
-				const mapped = mapConnectorStatus(
-					event.payload as Parameters<typeof mapConnectorStatus>[0]
-				);
-				youtubeStatus.set(mapped);
-				youtubeState.update((s) => ({ ...s, connection: mapped }));
-			});
-			unlistenFb = await listen<{ type: string }>('connector://facebook-status', (event) => {
-				const mapped = mapConnectorStatus(
-					event.payload as Parameters<typeof mapConnectorStatus>[0]
-				);
-				facebookStatus.set(mapped);
-				facebookState.update((s) => ({ ...s, connection: mapped }));
-			});
-		} else if (currentMode === 'client') {
-			const ConnectorStatusSchema = z.object({
-				type: z.enum(['disconnected', 'connecting', 'connected', 'error'] as const)
-			});
-			const ConnectorsResponseSchema = z.object({
-				obs: ConnectorStatusSchema,
-				vmix: ConnectorStatusSchema,
-				youtube: ConnectorStatusSchema,
-				facebook: ConnectorStatusSchema
-			});
-
-			try {
-				const resp = await apiFetch('/api/connectors/status', ConnectorsResponseSchema);
-				const mapAndSync = (
-					statusStore: typeof obsStatus,
-					stateStore: typeof obsState,
-					raw: ConnectorStatus
-				) => {
-					statusStore.set(raw);
-					stateStore.update((s) => ({ ...s, connection: raw }));
-				};
-				mapAndSync(obsStatus, obsState, resp.obs.type as ConnectorStatus);
-				mapAndSync(vmixStatus, vmixState, resp.vmix.type as ConnectorStatus);
-				mapAndSync(youtubeStatus, youtubeState, resp.youtube.type as ConnectorStatus);
-				mapAndSync(facebookStatus, facebookState, resp.facebook.type as ConnectorStatus);
+				applyConnectorStatuses(await fetchConnectorStatuses());
 			} catch (e) {
 				console.error('Connector status fetch error:', e);
 			}
+
+			async function loadConfig<K extends ConnectorName>(
+				name: K,
+				store: Writable<ConnectorConfigMap[K]>
+			) {
+				try {
+					store.set(await fetchConnectorConfig(name));
+				} catch (e) {
+					console.error(`${name} config load error:`, e);
+				}
+			}
+
+			await Promise.all([
+				loadConfig('obs', obsConfig),
+				loadConfig('vmix', vmixConfig),
+				loadConfig('atem', atemConfig),
+				loadConfig('broadlink', broadlinkConfig),
+				loadConfig('youtube', youtubeConfig),
+				loadConfig('facebook', facebookConfig),
+				loadConfig('discord', discordConfig),
+				loadConfig('szentiras', szentirasConfig)
+			]);
+		}
+
+		// Desktop fast-path: live status pushes from the local core over Tauri events.
+		if (currentMode === 'server') {
+			unlistenObs = await listenToHost<{ type: string }>(
+				'connector://obs-status',
+				(payload) => {
+					const mapped = mapConnectorStatus(payload as Parameters<typeof mapConnectorStatus>[0]);
+					obsStatus.set(mapped);
+					obsState.update((s) => ({ ...s, connection: mapped }));
+				}
+			);
+			unlistenYt = await listenToHost<{ type: string }>(
+				'connector://youtube-status',
+				(payload) => {
+					const mapped = mapConnectorStatus(payload as Parameters<typeof mapConnectorStatus>[0]);
+					youtubeStatus.set(mapped);
+					youtubeState.update((s) => ({ ...s, connection: mapped }));
+				}
+			);
+			unlistenFb = await listenToHost<{ type: string }>(
+				'connector://facebook-status',
+				(payload) => {
+					const mapped = mapConnectorStatus(payload as Parameters<typeof mapConnectorStatus>[0]);
+					facebookStatus.set(mapped);
+					facebookState.update((s) => ({ ...s, connection: mapped }));
+				}
+			);
 		}
 
 		connectWs();

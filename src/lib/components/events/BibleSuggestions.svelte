@@ -1,15 +1,15 @@
 <script lang="ts">
-  import type { LegacySuggestion } from '$lib/types/bible.js';
+  import type { BibleSuggestion } from '$lib/schemas/bible.js';
 
   interface Props {
-    suggestions: LegacySuggestion[];
+    suggestions: BibleSuggestion[];
     visible: boolean;
-    onSelect: (suggestion: LegacySuggestion) => void;
+    onSelect: (suggestion: BibleSuggestion) => void;
   }
 
   let { suggestions, visible, onSelect }: Props = $props();
 
-  function handleKeyDown(event: KeyboardEvent, suggestion: LegacySuggestion) {
+  function handleKeyDown(event: KeyboardEvent, suggestion: BibleSuggestion) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onSelect(suggestion);

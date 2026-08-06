@@ -67,7 +67,7 @@ impl ObsConnector {
         }
     }
 
-    pub async fn start(&self, config: ObsConfig, app: tauri::AppHandle) {
+    pub async fn start(&self, config: ObsConfig, app: Option<tauri::AppHandle>) {
         self.stop_internal().await;
 
         let (stop_tx, stop_rx) = watch::channel(false);
@@ -128,20 +128,22 @@ impl Default for ObsConnector {
 async fn set_status(
     status: &Arc<RwLock<ConnectorStatus>>,
     status_tx: &broadcast::Sender<ConnectorStatus>,
-    app: &tauri::AppHandle,
+    app: Option<&tauri::AppHandle>,
     new_status: ConnectorStatus,
 ) {
     *status.write().await = new_status;
     let current = status.read().await.clone();
     let _ = status_tx.send(current.clone());
-    if let Err(e) = app.emit("connector://obs-status", current) {
-        tracing::warn!("Failed to emit OBS status: {e}");
+    if let Some(app) = app {
+        if let Err(e) = app.emit("connector://obs-status", current) {
+            tracing::warn!("Failed to emit OBS status: {e}");
+        }
     }
 }
 
 async fn run_obs_loop(
     config: ObsConfig,
-    app: tauri::AppHandle,
+    app: Option<tauri::AppHandle>,
     status: Arc<RwLock<ConnectorStatus>>,
     output_state: Arc<RwLock<Option<ObsOutputState>>>,
     client_arc: Arc<Mutex<Option<Arc<obws::Client>>>>,
@@ -153,7 +155,7 @@ async fn run_obs_loop(
     mut stop_rx: watch::Receiver<bool>,
 ) {
     loop {
-        set_status(&status, &status_tx, &app, ConnectorStatus::Connecting).await;
+        set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Connecting).await;
 
         let connect_result = tokio::select! {
             result = obws::Client::connect(
@@ -163,7 +165,7 @@ async fn run_obs_loop(
             ) => result,
             result = stop_rx.changed() => {
                 let _ = result;
-                set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+                set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
                 return;
             }
         };
@@ -172,7 +174,7 @@ async fn run_obs_loop(
             Ok(raw_client) => {
                 let client = Arc::new(raw_client);
                 *client_arc.lock().await = Some(Arc::clone(&client));
-                set_status(&status, &status_tx, &app, ConnectorStatus::Connected).await;
+                set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Connected).await;
 
                 // Query initial streaming/recording state.
                 let initial = query_output_state(&client).await;
@@ -247,7 +249,7 @@ async fn run_obs_loop(
                                     let _ = state_tx.send(ObsStateEvent { is_streaming: false, is_recording: false });
                                     *client_arc.lock().await = None;
                                     *output_state.write().await = None;
-                                    set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+                                    set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
                                     return;
                                 }
                             }
@@ -259,14 +261,14 @@ async fn run_obs_loop(
                         });
                         *client_arc.lock().await = None;
                         *output_state.write().await = None;
-                        set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+                        set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
                     }
                     Err(e) => {
                         *client_arc.lock().await = None;
                         set_status(
                             &status,
                             &status_tx,
-                            &app,
+                            app.as_ref(),
                             ConnectorStatus::Error {
                                 message: e.to_string(),
                             },
@@ -279,7 +281,7 @@ async fn run_obs_loop(
                 set_status(
                     &status,
                     &status_tx,
-                    &app,
+                    app.as_ref(),
                     ConnectorStatus::Error {
                         message: e.to_string(),
                     },
@@ -291,7 +293,7 @@ async fn run_obs_loop(
         if *stop_rx.borrow() {
             *client_arc.lock().await = None;
             *output_state.write().await = None;
-            set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+            set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
             return;
         }
 
@@ -299,7 +301,7 @@ async fn run_obs_loop(
             () = tokio::time::sleep(Duration::from_secs(5)) => {}
             result = stop_rx.changed() => {
                 let _ = result;
-                set_status(&status, &status_tx, &app, ConnectorStatus::Disconnected).await;
+                set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
                 return;
             }
         }

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { invoke } from '@tauri-apps/api/core';
-  import { openUrl } from '@tauri-apps/plugin-opener';
+  import { openExternal } from '$lib/core-client/index.js';
+  import { youtubeAuthUrl, facebookAuthUrl } from '$lib/core-client/index.js';
 
   interface Props {
     connector: 'youtube' | 'facebook';
@@ -21,9 +21,8 @@
     opening = true;
     error = '';
     try {
-      const command = connector === 'youtube' ? 'get_youtube_auth_url' : 'get_facebook_auth_url';
-      const url = await invoke<string>(command);
-      await openUrl(url);
+      const url = connector === 'youtube' ? await youtubeAuthUrl() : await facebookAuthUrl();
+      await openExternal(url);
       onclose();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);

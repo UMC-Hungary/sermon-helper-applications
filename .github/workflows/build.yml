@@ -27,7 +27,7 @@ env:
 jobs:
   # ──────────────────────────────────────────────
   # E2E tests — must pass before any build starts
-  # Runs on Linux only; builds the headless test_server binary,
+  # Runs on Linux only; builds the headless metocast-server binary,
   # starts it, runs pnpm test:e2e, then shuts it down.
   # ──────────────────────────────────────────────
   test:
@@ -80,8 +80,8 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      - name: Build test server
-        run: pnpm build:test-server
+      - name: Build headless server
+        run: pnpm build:server
 
       - name: Cache embedded PostgreSQL binary
         uses: actions/cache@v5

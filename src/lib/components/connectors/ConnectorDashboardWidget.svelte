@@ -2,8 +2,6 @@
   import {
     obsConfig,
     obsState,
-    obsBadgeConfig,
-    obsBadgeState,
     vmixConfig,
     vmixState,
     atemConfig,
@@ -15,7 +13,9 @@
     facebookConfig,
     facebookState,
     discordConfig,
+    szentirasConfig,
     discordState,
+    szentirasState,
   } from '$lib/stores/connectors.js';
   import { authToken } from '$lib/stores/server-url.js';
   import { appMode } from '$lib/stores/mode.js';
@@ -28,7 +28,7 @@
     sendCommand,
     type BroadlinkDevice,
     type BroadlinkCommand,
-  } from '$lib/api/broadlink.js';
+  } from '$lib/core-client/index.js';
 
   const CATEGORY_LABELS: Record<string, string> = {
     projector: 'Projector',
@@ -51,25 +51,25 @@
 
   const config = $derived.by((): BaseConfig => {
     if (connectorId === 'obs') return $obsConfig;
-    if (connectorId === 'obs-badge') return $obsBadgeConfig;
     if (connectorId === 'vmix') return $vmixConfig;
     if (connectorId === 'atem') return $atemConfig;
     if (connectorId === 'broadlink') return $broadlinkConfig;
     if (connectorId === 'youtube') return $youtubeConfig;
     if (connectorId === 'facebook') return $facebookConfig;
     if (connectorId === 'discord') return $discordConfig;
+    if (connectorId === 'szentiras') return $szentirasConfig;
     return { enabled: false };
   });
 
   const connState = $derived.by((): ConnectorState => {
     if (connectorId === 'obs') return $obsState;
-    if (connectorId === 'obs-badge') return $obsBadgeState;
     if (connectorId === 'vmix') return $vmixState;
     if (connectorId === 'atem') return $atemState;
     if (connectorId === 'broadlink') return $broadlinkState;
     if (connectorId === 'youtube') return $youtubeState;
     if (connectorId === 'facebook') return $facebookState;
     if (connectorId === 'discord') return $discordState;
+    if (connectorId === 'szentiras') return $szentirasState;
     return { connection: 'disconnected' };
   });
 
@@ -132,6 +132,7 @@
   }
 
   const blGrouped = $derived.by(() => {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local grouping inside a derived, never mutated after
     const map = new Map<string, BroadlinkCommand[]>();
     for (const cmd of blCommands) {
       const cat = cmd.category || 'other';

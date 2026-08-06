@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { broadlinkDiscoveredDevices } from '$lib/stores/broadlink.js';
-	import { triggerDiscover, addDevice, fetchDevices, type BroadlinkDevice } from '$lib/api/broadlink.js';
+	import { triggerDiscover, addDevice, fetchDevices, type BroadlinkDevice } from '$lib/core-client/index.js';
 
 	interface Props {
 		/** Called when a device is successfully added so the parent can refresh its list. */
@@ -71,7 +71,8 @@
 
 	async function handleAdd(dev: { name: string; host: string; mac: string; deviceType: string; model: string | null }) {
 		addingMac = dev.mac;
-		const { [dev.mac]: _removed, ...rest } = addErrors;
+		const rest = { ...addErrors };
+		delete rest[dev.mac];
 		addErrors = rest;
 
 		try {

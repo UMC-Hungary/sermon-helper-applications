@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{ConnectInfo, Path, Query, State},
     http::StatusCode,
     response::{Html, IntoResponse},
     Json,
@@ -7,10 +7,16 @@ use axum::{
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
-use crate::connectors::{facebook, youtube};
+use crate::connectors::{
+    facebook, youtube, AtemConfig, BroadlinkConfig, DiscordConfig, FacebookConfig, ObsConfig,
+    SzentirasConfig, VmixConfig, YouTubeConfig,
+};
+use crate::connectors::{ConnectorConfig, ConnectorStatus};
+use crate::database::settings;
 use crate::models::{
     activity::{self, CreateEventActivity},
     cron_job::{self, CreateCronJob, UpdateCronJob},
@@ -83,7 +89,438 @@ pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoR
     let vmix = state.vmix_connector.get_status();
     let yt = state.youtube_connector.get_status().await;
     let fb = state.facebook_connector.get_status().await;
-    Json(json!({ "obs": obs, "vmix": vmix, "youtube": yt, "facebook": fb }))
+    let broadlink = state.broadlink_connector.get_status().await;
+    // ATEM, Discord and Szentírás have no connector worker: they report Connected
+    // when configured, so a UI can render them without a separate config round-trip.
+    let configured = |ok: bool| {
+        if ok {
+            ConnectorStatus::Connected
+        } else {
+            ConnectorStatus::Disconnected
+        }
+    };
+    let atem = configured(
+        settings::get_json::<AtemConfig>(&state.pool, "atem_config")
+            .await
+            .is_configured(),
+    );
+    let discord = configured(
+        settings::get_json::<DiscordConfig>(&state.pool, "discord_config")
+            .await
+            .is_configured(),
+    );
+    let szentiras = configured(
+        settings::get_json::<SzentirasConfig>(&state.pool, "szentiras_config")
+            .await
+            .is_configured(),
+    );
+    Json(json!({
+        "obs": obs,
+        "vmix": vmix,
+        "atem": atem,
+        "broadlink": broadlink,
+        "youtube": yt,
+        "facebook": fb,
+        "discord": discord,
+        "szentiras": szentiras,
+    }))
+}
+
+// ── Bible lookups ─────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct BiblePassageQuery {
+    pub reference: String,
+    pub translation: String,
+}
+
+fn upstream_error(e: String) -> axum::response::Response {
+    (StatusCode::BAD_GATEWAY, Json(json!({ "error": e }))).into_response()
+}
+
+/// Looks a passage up through the core so no UI needs its own CORS workaround.
+/// The szentiras.eu API key comes from the `szentiras` connector config.
+pub async fn get_bible_passage(
+    State(state): State<AppState>,
+    Query(query): Query<BiblePassageQuery>,
+) -> impl IntoResponse {
+    let szentiras: SzentirasConfig = settings::get_json(&state.pool, "szentiras_config").await;
+    let api_key = Some(szentiras.api_key.as_str()).filter(|key| !key.is_empty());
+
+    match crate::bible::fetch_passage(&query.reference, &query.translation, api_key).await {
+        Ok(passage) => Json(passage).into_response(),
+        Err(e) => upstream_error(e),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct BibleSuggestQuery {
+    pub term: String,
+}
+
+/// Autocomplete suggestions; terms shorter than 2 characters return an empty list.
+pub async fn get_bible_suggestions(Query(query): Query<BibleSuggestQuery>) -> impl IntoResponse {
+    match crate::bible::fetch_suggestions(&query.term).await {
+        Ok(suggestions) => Json(suggestions).into_response(),
+        Err(e) => upstream_error(e),
+    }
+}
+
+// ── Connector configuration ───────────────────────────────────────────────────
+
+/// Credential fields that never leave the server. Reading a config blanks them
+/// and reports only whether one is stored; writing an empty one keeps what is
+/// already there, so a client can save a config it was never allowed to read.
+const SECRET_FIELDS: [&str; 5] = [
+    "password",
+    "clientSecret",
+    "appSecret",
+    "apiKey",
+    "webhookUrl",
+];
+
+/// Blanks every secret and adds a `<field>Set` boolean beside it.
+fn redact_secrets(config: &mut serde_json::Value) {
+    let Some(object) = config.as_object_mut() else {
+        return;
+    };
+    for field in SECRET_FIELDS {
+        let Some(value) = object.get_mut(field) else {
+            continue;
+        };
+        let is_set = !matches!(value.as_str(), None | Some(""));
+        *value = serde_json::Value::String(String::new());
+        object.insert(format!("{field}Set"), serde_json::Value::Bool(is_set));
+    }
+}
+
+/// Restores secrets the client left blank from what is already stored, so saving
+/// a redacted config does not wipe the credential. Sending `"<field>Set": false`
+/// is the explicit "clear this secret" signal.
+fn restore_omitted_secrets(incoming: &mut serde_json::Value, stored: &serde_json::Value) {
+    let (Some(incoming), Some(stored)) = (incoming.as_object_mut(), stored.as_object()) else {
+        return;
+    };
+    for field in SECRET_FIELDS {
+        // The `<field>Set` markers are instructions, never stored values.
+        let clear_requested = incoming
+            .remove(&format!("{field}Set"))
+            .is_some_and(|marker| marker == serde_json::Value::Bool(false));
+
+        let submitted_blank = match incoming.get(field) {
+            None => true,
+            Some(value) => matches!(value.as_str(), None | Some("")),
+        };
+        if !submitted_blank || clear_requested {
+            continue;
+        }
+
+        match stored.get(field) {
+            Some(previous) => {
+                incoming.insert(field.to_string(), previous.clone());
+            }
+            None => {
+                incoming.remove(field);
+            }
+        }
+    }
+}
+
+async fn stored_config<T>(pool: &sqlx::PgPool, key: &str) -> axum::response::Response
+where
+    T: serde::de::DeserializeOwned + Default + Serialize,
+{
+    let config = settings::get_json::<T>(pool, key).await;
+    match serde_json::to_value(&config) {
+        Ok(mut value) => {
+            redact_secrets(&mut value);
+            Json(value).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn save_config<T>(
+    pool: &sqlx::PgPool,
+    key: &str,
+    mut body: serde_json::Value,
+) -> Result<T, String>
+where
+    T: serde::de::DeserializeOwned + Default + Serialize,
+{
+    let stored = serde_json::to_value(settings::get_json::<T>(pool, key).await)
+        .map_err(|e| e.to_string())?;
+    restore_omitted_secrets(&mut body, &stored);
+
+    let config: T = serde_json::from_value(body).map_err(|e| e.to_string())?;
+    settings::set_json(pool, key, &config)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(config)
+}
+
+fn unknown_connector(name: &str) -> axum::response::Response {
+    (
+        StatusCode::NOT_FOUND,
+        Json(json!({ "error": format!("Unknown connector: {name}") })),
+    )
+        .into_response()
+}
+
+/// Compares without an early exit, so a wrong guess reveals nothing through timing.
+fn secret_eq(a: &str, b: &str) -> bool {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+/// Returns a connector config **with its secrets**, for the desktop app that is
+/// hosting this server. Two gates, both required: the caller must present the
+/// admin token, which only ever reaches the host webview over Tauri IPC, and the
+/// request must arrive on loopback so a leaked token is useless from the network.
+pub async fn reveal_connector_secrets(
+    State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Path(name): Path<String>,
+    headers: axum::http::HeaderMap,
+) -> impl IntoResponse {
+    if !peer.ip().is_loopback() {
+        tracing::warn!(%peer, connector = %name, "Refused off-host secret read");
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "error": "Secrets are readable only on the host running the server" })),
+        )
+            .into_response();
+    }
+
+    let presented = headers
+        .get("x-admin-token")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+    if !secret_eq(presented, &state.admin_token) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({ "error": "Missing or invalid admin token" })),
+        )
+            .into_response();
+    }
+
+    let pool = &state.pool;
+    match name.as_str() {
+        "obs" => Json(settings::get_json::<ObsConfig>(pool, "obs_config").await).into_response(),
+        "youtube" => {
+            Json(settings::get_json::<YouTubeConfig>(pool, "youtube_config").await).into_response()
+        }
+        "facebook" => {
+            Json(settings::get_json::<FacebookConfig>(pool, "facebook_config").await).into_response()
+        }
+        "discord" => {
+            Json(settings::get_json::<DiscordConfig>(pool, "discord_config").await).into_response()
+        }
+        "szentiras" => Json(settings::get_json::<SzentirasConfig>(pool, "szentiras_config").await)
+            .into_response(),
+        // vmix, atem and broadlink hold no credentials.
+        "vmix" | "atem" | "broadlink" => (
+            StatusCode::NO_CONTENT,
+            Json(json!({ "error": "This connector stores no secrets" })),
+        )
+            .into_response(),
+        _ => unknown_connector(&name),
+    }
+}
+
+pub async fn get_connector_config(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> impl IntoResponse {
+    let pool = &state.pool;
+    match name.as_str() {
+        "obs" => stored_config::<ObsConfig>(pool, "obs_config").await,
+        "vmix" => stored_config::<VmixConfig>(pool, "vmix_config").await,
+        "atem" => stored_config::<AtemConfig>(pool, "atem_config").await,
+        "broadlink" => stored_config::<BroadlinkConfig>(pool, "broadlink_config").await,
+        "discord" => stored_config::<DiscordConfig>(pool, "discord_config").await,
+        "szentiras" => stored_config::<SzentirasConfig>(pool, "szentiras_config").await,
+        "youtube" => stored_config::<YouTubeConfig>(pool, "youtube_config").await,
+        "facebook" => stored_config::<FacebookConfig>(pool, "facebook_config").await,
+        _ => unknown_connector(&name),
+    }
+}
+
+/// Persists a connector config and applies it: OBS reconnects (or disconnects),
+/// YouTube/Facebook refresh the config shared with the OAuth routes and stop when
+/// disabled. The remaining connectors are configuration-only today.
+pub async fn put_connector_config(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let pool = &state.pool;
+    let applied = match name.as_str() {
+        "obs" => match save_config::<ObsConfig>(pool, "obs_config", body).await {
+            Ok(config) => {
+                if config.enabled {
+                    state
+                        .obs_connector
+                        .start(config, state.app_handle.clone())
+                        .await;
+                } else {
+                    state.obs_connector.stop().await;
+                }
+                Ok(())
+            }
+            Err(e) => Err(e),
+        },
+        "youtube" => match save_config::<YouTubeConfig>(pool, "youtube_config", body).await {
+            Ok(config) => {
+                *state.youtube_config.write().await = config.clone();
+                if !config.enabled {
+                    state.youtube_connector.stop().await;
+                }
+                Ok(())
+            }
+            Err(e) => Err(e),
+        },
+        "facebook" => match save_config::<FacebookConfig>(pool, "facebook_config", body).await {
+            Ok(config) => {
+                *state.facebook_config.write().await = config.clone();
+                if !config.enabled {
+                    state.facebook_connector.stop().await;
+                }
+                Ok(())
+            }
+            Err(e) => Err(e),
+        },
+        "vmix" => save_config::<VmixConfig>(pool, "vmix_config", body)
+            .await
+            .map(|_| ()),
+        "atem" => save_config::<AtemConfig>(pool, "atem_config", body)
+            .await
+            .map(|_| ()),
+        "broadlink" => save_config::<BroadlinkConfig>(pool, "broadlink_config", body)
+            .await
+            .map(|_| ()),
+        "discord" => save_config::<DiscordConfig>(pool, "discord_config", body)
+            .await
+            .map(|_| ()),
+        "szentiras" => save_config::<SzentirasConfig>(pool, "szentiras_config", body)
+            .await
+            .map(|_| ()),
+        _ => return unknown_connector(&name),
+    };
+
+    match applied {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, Json(json!({ "error": e }))).into_response(),
+    }
+}
+
+// ── OBS connection control ────────────────────────────────────────────────────
+
+pub async fn obs_connect(State(state): State<AppState>) -> impl IntoResponse {
+    let config: ObsConfig = settings::get_json(&state.pool, "obs_config").await;
+    state
+        .obs_connector
+        .start(config, state.app_handle.clone())
+        .await;
+    StatusCode::NO_CONTENT
+}
+
+pub async fn obs_disconnect(State(state): State<AppState>) -> impl IntoResponse {
+    state.obs_connector.stop().await;
+    StatusCode::NO_CONTENT
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObsStreamSettings {
+    #[serde(default, skip_deserializing)]
+    pub service_type: String,
+    pub server: String,
+    pub key: String,
+}
+
+/// Returns the RTMP destination OBS is currently configured to stream to.
+pub async fn get_obs_stream_settings(State(state): State<AppState>) -> impl IntoResponse {
+    let client = {
+        let guard = state.obs_connector.client.lock().await;
+        guard.as_ref().map(std::sync::Arc::clone)
+    };
+    let Some(client) = client else {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "OBS is not connected" })),
+        )
+            .into_response();
+    };
+
+    match client
+        .config()
+        .stream_service_settings::<serde_json::Value>()
+        .await
+    {
+        Ok(settings) => {
+            let field = |name: &str| {
+                settings
+                    .settings
+                    .get(name)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string()
+            };
+            Json(ObsStreamSettings {
+                service_type: settings.r#type,
+                server: field("server"),
+                key: field("key"),
+            })
+            .into_response()
+        }
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+/// Applies a custom RTMP stream destination to OBS.
+pub async fn set_obs_stream_settings(
+    State(state): State<AppState>,
+    Json(body): Json<ObsStreamSettings>,
+) -> impl IntoResponse {
+    let client = {
+        let guard = state.obs_connector.client.lock().await;
+        guard.as_ref().map(std::sync::Arc::clone)
+    };
+    let Some(client) = client else {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "OBS is not connected" })),
+        )
+            .into_response();
+    };
+
+    match client
+        .config()
+        .set_stream_service_settings(
+            "rtmp_custom",
+            &json!({ "server": body.server, "key": body.key }),
+        )
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }
 
 // ── YouTube OAuth ─────────────────────────────────────────────────────────────
@@ -151,12 +588,10 @@ pub async fn oauth_callback(
             let config = state.youtube_config.read().await.clone();
             match youtube::exchange_code(&state.pool, &config, &code, OAUTH_REDIRECT_URI).await {
                 Ok(_) => {
-                    if let Some(handle) = state.app_handle.clone() {
-                        state
-                            .youtube_connector
-                            .start(state.pool.clone(), config, handle)
-                            .await;
-                    }
+                    state
+                        .youtube_connector
+                        .start(state.pool.clone(), config, state.app_handle.clone())
+                        .await;
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
                 Err(e) => {
@@ -169,12 +604,10 @@ pub async fn oauth_callback(
             let config = state.facebook_config.read().await.clone();
             match facebook::exchange_code(&state.pool, &config, &code, OAUTH_REDIRECT_URI).await {
                 Ok(_) => {
-                    if let Some(handle) = state.app_handle.clone() {
-                        state
-                            .facebook_connector
-                            .start(state.pool.clone(), handle)
-                            .await;
-                    }
+                    state
+                        .facebook_connector
+                        .start(state.pool.clone(), state.app_handle.clone())
+                        .await;
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
                 Err(e) => {
@@ -2115,5 +2548,88 @@ pub async fn broadlink_send_command(
             tracing::error!("broadlink_send_command send: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn secret_comparison_rejects_wrong_and_shorter_values() {
+        assert!(secret_eq("s3cret", "s3cret"));
+        assert!(!secret_eq("s3cret", "s3crev"));
+        assert!(!secret_eq("s3cret", "s3cre"));
+        assert!(!secret_eq("", "s3cret"));
+        // An absent header arrives as "" — it must never match a real token.
+        assert!(!secret_eq("", "any-token"));
+        assert!(secret_eq("", ""));
+    }
+
+    #[test]
+    fn reading_a_config_blanks_secrets_and_reports_whether_they_are_set() {
+        let mut config = json!({
+            "enabled": true,
+            "host": "localhost",
+            "password": "hunter2",
+            "apiKey": "",
+        });
+        redact_secrets(&mut config);
+
+        assert_eq!(config["host"], "localhost");
+        assert_eq!(config["password"], "");
+        assert_eq!(config["passwordSet"], true);
+        assert_eq!(config["apiKey"], "");
+        assert_eq!(config["apiKeySet"], false);
+    }
+
+    #[test]
+    fn saving_a_blank_secret_keeps_the_stored_one() {
+        let stored = json!({ "enabled": true, "apiKey": "stored-key" });
+        let mut incoming = json!({ "enabled": false, "apiKey": "", "apiKeySet": true });
+        restore_omitted_secrets(&mut incoming, &stored);
+
+        assert_eq!(incoming["enabled"], false);
+        assert_eq!(incoming["apiKey"], "stored-key");
+        // The read-only marker must never be persisted.
+        assert!(incoming.get("apiKeySet").is_none());
+    }
+
+    #[test]
+    fn an_explicit_set_false_clears_the_stored_secret() {
+        let stored = json!({ "apiKey": "stored-key" });
+        let mut incoming = json!({ "apiKey": "", "apiKeySet": false });
+        restore_omitted_secrets(&mut incoming, &stored);
+
+        assert_eq!(incoming["apiKey"], "");
+        assert!(incoming.get("apiKeySet").is_none());
+    }
+
+    #[test]
+    fn saving_a_new_secret_replaces_the_stored_one() {
+        let stored = json!({ "apiKey": "stored-key" });
+        let mut incoming = json!({ "apiKey": "fresh-key" });
+        restore_omitted_secrets(&mut incoming, &stored);
+
+        assert_eq!(incoming["apiKey"], "fresh-key");
+    }
+
+    #[test]
+    fn an_omitted_secret_falls_back_to_the_stored_value() {
+        let stored = json!({ "password": "hunter2" });
+        let mut incoming = json!({ "enabled": true });
+        restore_omitted_secrets(&mut incoming, &stored);
+
+        assert_eq!(incoming["password"], "hunter2");
+    }
+
+    #[test]
+    fn a_null_secret_is_treated_as_blank() {
+        // ObsConfig.password is Option<String>, so null arrives for "unchanged".
+        let stored = json!({ "password": "hunter2" });
+        let mut incoming = json!({ "password": null });
+        restore_omitted_secrets(&mut incoming, &stored);
+
+        assert_eq!(incoming["password"], "hunter2");
     }
 }
