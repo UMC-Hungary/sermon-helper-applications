@@ -17,7 +17,16 @@ const preview: Preview = {
     controls: { matchers: { color: /(background|colou?r)$/i, date: /Date$/i } },
     viewport: { options: viewports },
     // Every story is checked; a violation fails the run rather than being reported and ignored.
-    a11y: { test: 'error' },
+    a11y: {
+      test: 'error',
+      options: {
+        rules: {
+          // Off by default in axe's WCAG-only set, and it is exactly the rule that catches the
+          // 32px targets the reference is full of.
+          'target-size': { enabled: true },
+        },
+      },
+    },
     backgrounds: { disable: true },
   },
   initialGlobals: {

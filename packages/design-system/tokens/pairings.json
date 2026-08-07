@@ -47,7 +47,12 @@
 		{ "fg": "status-off", "bg": "surface-sunken", "level": "ui" },
 		{ "fg": "border-control", "bg": "surface-base", "level": "ui" },
 		{ "fg": "border-control", "bg": "surface-raised", "level": "ui" },
-		{ "fg": "border-control", "bg": "surface-sunken", "level": "ui" }
+		{ "fg": "border-control", "bg": "surface-sunken", "level": "ui" },
+		{ "fg": "surface-raised", "bg": "status-live", "level": "text" },
+		{ "fg": "surface-raised", "bg": "status-ok", "level": "text" },
+		{ "fg": "surface-raised", "bg": "status-warn", "level": "text" },
+		{ "fg": "surface-raised", "bg": "status-error", "level": "text" },
+		{ "fg": "text-inverse", "bg": "status-ok", "level": "text" }
 	],
 	"hueSeparation": {
 		"accent": "accent",

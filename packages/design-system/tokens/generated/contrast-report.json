@@ -342,6 +342,51 @@
 		"passes": true
 	},
 	{
+		"scheme": "light",
+		"fg": "surface-raised",
+		"bg": "status-live",
+		"level": "text",
+		"ratio": 5.46,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "light",
+		"fg": "surface-raised",
+		"bg": "status-ok",
+		"level": "text",
+		"ratio": 5.47,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "light",
+		"fg": "surface-raised",
+		"bg": "status-warn",
+		"level": "text",
+		"ratio": 5.63,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "light",
+		"fg": "surface-raised",
+		"bg": "status-error",
+		"level": "text",
+		"ratio": 5.46,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "light",
+		"fg": "text-inverse",
+		"bg": "status-ok",
+		"level": "text",
+		"ratio": 5.06,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
 		"scheme": "dark",
 		"fg": "text-primary",
 		"bg": "surface-base",
@@ -681,6 +726,51 @@
 		"level": "ui",
 		"ratio": 3.06,
 		"threshold": 3,
+		"passes": true
+	},
+	{
+		"scheme": "dark",
+		"fg": "surface-raised",
+		"bg": "status-live",
+		"level": "text",
+		"ratio": 5.34,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "dark",
+		"fg": "surface-raised",
+		"bg": "status-ok",
+		"level": "text",
+		"ratio": 6.11,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "dark",
+		"fg": "surface-raised",
+		"bg": "status-warn",
+		"level": "text",
+		"ratio": 7.63,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "dark",
+		"fg": "surface-raised",
+		"bg": "status-error",
+		"level": "text",
+		"ratio": 5.34,
+		"threshold": 4.5,
+		"passes": true
+	},
+	{
+		"scheme": "dark",
+		"fg": "text-inverse",
+		"bg": "status-ok",
+		"level": "text",
+		"ratio": 6.66,
+		"threshold": 4.5,
 		"passes": true
 	}
 ]

@@ -17,8 +17,13 @@ body[data-surface='sunken'] {
 	background: var(--surface-sunken);
 }
 
-.sb-story {
+/*
+ * Breathing room around a story, and a ceiling so a full-width component is seen at a width the
+ * design actually reflows at rather than stretched across the whole window.
+ */
+#storybook-root {
 	padding: var(--space-16);
+	max-width: var(--size-620);
 }
 
 /* Story scaffolding: a labelled column of states, and a measurement panel. */
