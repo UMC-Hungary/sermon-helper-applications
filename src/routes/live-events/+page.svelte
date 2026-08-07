@@ -207,6 +207,7 @@
                     src={item.thumbnailUrl}
                     alt={item.title}
                     loading="lazy"
+                    onerror={(e) => e.currentTarget.remove()}
                   />
                 {:else}
                   <div class="thumbnail-placeholder" aria-hidden="true"></div>
