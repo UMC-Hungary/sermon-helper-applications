@@ -68,8 +68,8 @@ gemini.md
 # Intermediate output of scripts/build-ui.mjs
 .ui-staging/
 
-# OpenSpec generated specs
-/openspec/specs/
+# OpenSpec (local planning only, not tracked)
+/openspec/
 
 # Local planning notes (kept on disk, not tracked)
 /plans/
