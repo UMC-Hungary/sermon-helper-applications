@@ -27,7 +27,7 @@ const preview: Preview = {
         },
       },
     },
-    backgrounds: { disable: true },
+    backgrounds: { disabled: true },
   },
   initialGlobals: {
     viewport: { value: 'phone' },

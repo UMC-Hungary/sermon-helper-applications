@@ -31,7 +31,7 @@ export const Flush: Story = {
 
 export const AsList: Story = {
   args: {
-    children: s('A lista tartalma'),
+    children: s('<li>A lista tartalma</li>'),
     as: "ul",
     "aria-label": "Források",
   },

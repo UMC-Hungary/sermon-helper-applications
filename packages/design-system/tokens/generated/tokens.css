@@ -511,7 +511,7 @@
 	--status-ok: #386d42;
 	--status-warn: #855611;
 	--status-error: #b5321c;
-	--status-off: #857c68;
+	--status-off: #67604e;
 	--shadow-overlay: rgba(40, 30, 10, 0.18);
 }
 
@@ -538,7 +538,7 @@
 	--status-ok: #6aa876;
 	--status-warn: #d9a358;
 	--status-error: #e66a4f;
-	--status-off: #716b5e;
+	--status-off: #8d8779;
 	--shadow-overlay: rgba(0, 0, 0, 0.5);
 }
 
@@ -566,7 +566,7 @@
 			--status-ok: #6aa876;
 			--status-warn: #d9a358;
 			--status-error: #e66a4f;
-			--status-off: #716b5e;
+			--status-off: #8d8779;
 			--shadow-overlay: rgba(0, 0, 0, 0.5);
 	}
 }

@@ -143,11 +143,11 @@
 			"$description": "measured: --live — the reference uses it for danger as well as for on-air; kept as one value so the two read identically, as they do there"
 		},
 		"status-off": {
-			"$value": "#857c68",
+			"$value": "#67604e",
 			"$description": "measured: --off #b8b2a4",
 			"$extensions": {
 				"sanctum": {
-					"deviation": "1.56:1 on --card-deep as a meaningful status dot. Darkened to 3.06:1 for WCAG 1.4.11."
+					"deviation": "1.56:1 on --card-deep. Darkened to 4.62:1: it is a status dot, but Badge also sets 8.5px text in it, so it is held to the text threshold rather than 1.4.11\u2019s 3:1."
 				}
 			}
 		},
@@ -286,11 +286,11 @@
 			"$description": "measured: --live — the reference uses it for danger as well as for on-air"
 		},
 		"status-off": {
-			"$value": "#716b5e",
+			"$value": "#8d8779",
 			"$description": "measured: --off #4a463e",
 			"$extensions": {
 				"sanctum": {
-					"deviation": "1.73:1 on --card-deep as a meaningful status dot. Lightened to 3.07:1."
+					"deviation": "1.73:1 on --card-deep. Lightened to 4.54:1, held to the text threshold for the same reason as the light scheme."
 				}
 			}
 		},

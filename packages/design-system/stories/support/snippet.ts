@@ -7,5 +7,5 @@ import { createRawSnippet } from 'svelte';
  */
 export const s = (text: string) =>
   createRawSnippet(() => ({
-    render: () => `<span>${text}</span>`,
+    render: () => (text.startsWith('<') ? text : `<span>${text}</span>`),
   }));

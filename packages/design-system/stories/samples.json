@@ -368,7 +368,8 @@
 			},
 			"AsList": {
 				"as": "ul",
-				"aria-label": "Források"
+				"aria-label": "Források",
+				"children": "!s('<li>A lista tartalma</li>')"
 			}
 		}
 	},

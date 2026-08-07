@@ -291,27 +291,27 @@
 		"scheme": "light",
 		"fg": "status-off",
 		"bg": "surface-base",
-		"level": "ui",
-		"ratio": 3.42,
-		"threshold": 3,
+		"level": "text",
+		"ratio": 5.17,
+		"threshold": 4.5,
 		"passes": true
 	},
 	{
 		"scheme": "light",
 		"fg": "status-off",
 		"bg": "surface-raised",
-		"level": "ui",
-		"ratio": 3.7,
-		"threshold": 3,
+		"level": "text",
+		"ratio": 5.59,
+		"threshold": 4.5,
 		"passes": true
 	},
 	{
 		"scheme": "light",
 		"fg": "status-off",
 		"bg": "surface-sunken",
-		"level": "ui",
-		"ratio": 3.06,
-		"threshold": 3,
+		"level": "text",
+		"ratio": 4.62,
+		"threshold": 4.5,
 		"passes": true
 	},
 	{
@@ -678,27 +678,27 @@
 		"scheme": "dark",
 		"fg": "status-off",
 		"bg": "surface-base",
-		"level": "ui",
-		"ratio": 3.53,
-		"threshold": 3,
+		"level": "text",
+		"ratio": 5.23,
+		"threshold": 4.5,
 		"passes": true
 	},
 	{
 		"scheme": "dark",
 		"fg": "status-off",
 		"bg": "surface-raised",
-		"level": "ui",
-		"ratio": 3.24,
-		"threshold": 3,
+		"level": "text",
+		"ratio": 4.8,
+		"threshold": 4.5,
 		"passes": true
 	},
 	{
 		"scheme": "dark",
 		"fg": "status-off",
 		"bg": "surface-sunken",
-		"level": "ui",
-		"ratio": 3.07,
-		"threshold": 3,
+		"level": "text",
+		"ratio": 4.54,
+		"threshold": 4.5,
 		"passes": true
 	},
 	{

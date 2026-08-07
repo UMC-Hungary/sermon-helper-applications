@@ -35,7 +35,7 @@ Static only.
 | `--c-badge-track` | `1.4px` |
 | `--status-error` | `#b5321c / #e66a4f` |
 | `--status-live` | `#b5321c / #e66a4f` |
-| `--status-off` | `#857c68 / #716b5e` |
+| `--status-off` | `#67604e / #8d8779` |
 | `--status-ok` | `#386d42 / #6aa876` |
 | `--status-warn` | `#855611 / #d9a358` |
 | `--text-muted` | `#615e56 / #918b7e` |

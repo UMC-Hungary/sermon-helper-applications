@@ -1,3 +1,4 @@
+import storybook from 'eslint-plugin-storybook';
 import tseslint from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
@@ -100,4 +101,6 @@ export default tseslint.config(
 
   // Prettier last — disables formatting rules that conflict
   prettier,
+
+  ...storybook.configs['flat/recommended'],
 );
