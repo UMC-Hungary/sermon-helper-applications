@@ -45,7 +45,7 @@
 		if (settings.boldText) params.set('bold', settings.boldText);
 		if (settings.lightText) params.set('light', settings.lightText);
 		params.set('color', settings.color);
-		params.set('showLogo', settings.showLogo ? 'true' : 'false');
+		params.set('showLogo', settings.showLogo && settings.svgLogo ? 'true' : 'false');
 		if (settings.logoAlt) params.set('alt', settings.logoAlt);
 		return `${baseUrl}/caption?${params.toString()}`;
 	});
