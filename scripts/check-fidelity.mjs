@@ -120,13 +120,18 @@ const TOKENISED = new Set([
  */
 const LITERAL = /^(#[0-9a-f]{3,8}|-?\d*\.?\d+(px|rem|em|%|ms|s|vh|vw|dvh|svh|lvh|ch|ex))$/i;
 const COLOR_FUNCTION = /\b(rgba?|hsla?|oklch|oklab)\(/i;
-/** `100%` means "all of the parent", which is a layout instruction rather than a measurement. */
-const NOT_A_MEASUREMENT = /^100%$/;
+/**
+ * `100%` means "all of the parent" and `50%` on an offset means "centred" — both are layout
+ * instructions rather than measurements. `50%` on a radius is still checked, because there it is
+ * a shape decision the scale has a token for.
+ */
+const LAYOUT_PERCENT = new Set(['100%', '50%']);
+const LAYOUT_PROPERTY = /^(width|height|min-|max-|top|right|bottom|left|inset|flex-basis)/;
 /**
  * The WCAG visually-hidden recipe is a fixed set of values with one correct answer; treating its
  * 1px clip box as a design decision would put a meaningless token in the scale.
  */
-const HIDDEN_IDIOM = /\.(visually-hidden|sr-only)\b/;
+const HIDDEN_IDIOM = /\.(visually-hidden|sr-only|table-head)\b/;
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -161,7 +166,11 @@ for (const file of walk(srcDir)) {
     const leftovers = remainder
       .split(/[\s,/()*+]+/)
       .filter(Boolean)
-      .filter((part) => LITERAL.test(part) && !NOT_A_MEASUREMENT.test(part));
+      .filter(
+        (part) =>
+          LITERAL.test(part) &&
+          !(LAYOUT_PERCENT.has(part) && LAYOUT_PROPERTY.test(decl.prop)),
+      );
     if (COLOR_FUNCTION.test(remainder)) leftovers.push(remainder.match(COLOR_FUNCTION)[0]);
     if (leftovers.length > 0) {
       failures.push(

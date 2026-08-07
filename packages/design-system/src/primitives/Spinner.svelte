@@ -48,24 +48,9 @@
   }
 
   /*
-   * Reduced motion stills the rotation through the duration token, which would leave a static
-   * arc with no indication that anything is happening — so the arc pulses in opacity instead.
+   * Reduced motion stills the rotation through the duration token. The ring stays drawn and the
+   * status region keeps announcing, so the state is still indicated — it just does not move.
    */
-  @media (prefers-reduced-motion: reduce) {
-    svg {
-      animation: sanctum-spinner-breathe 2s ease-in-out infinite;
-    }
-  }
-
-  @keyframes sanctum-spinner-breathe {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.4;
-    }
-  }
 
   .visually-hidden {
     position: absolute;
