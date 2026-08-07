@@ -4,13 +4,20 @@
   "private": true,
   "type": "module",
   "description": "Sanctum design system — tokens and accessible components measured from the design reference",
-  "sideEffects": ["*.css"],
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./tokens.css": "./tokens/generated/tokens.css",
     "./fonts.css": "./static/fonts/fonts.css"
   },
-  "files": ["src", "tokens", "static", "docs"],
+  "files": [
+    "src",
+    "tokens",
+    "static",
+    "docs"
+  ],
   "scripts": {
     "measure": "node ../../scripts/extract-reference.mjs",
     "measure:check": "node ../../scripts/extract-reference.mjs --check",
@@ -18,8 +25,13 @@
     "tokens:check": "node ../../scripts/build-tokens.mjs --check && node ../../scripts/check-tokens.mjs",
     "contrast": "node ../../scripts/check-contrast.mjs",
     "fidelity": "node ../../scripts/check-fidelity.mjs",
+    "docs": "node ../../scripts/build-docs.mjs",
+    "docs:check": "node ../../scripts/build-docs.mjs --check",
+    "stories": "node ../../scripts/build-stories.mjs",
+    "stories:check": "node ../../scripts/build-stories.mjs --check",
     "catalog:check": "node ../../scripts/check-catalog.mjs",
-    "verify": "pnpm tokens:check && pnpm contrast && pnpm fidelity && pnpm catalog:check",
+    "fonts": "node ../../scripts/fetch-fonts.mjs",
+    "verify": "pnpm tokens:check && pnpm contrast && pnpm fidelity && pnpm docs:check && pnpm stories:check && pnpm catalog:check",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:a11y": "vitest run --project storybook"
@@ -34,6 +46,7 @@
     "@storybook/svelte-vite": "^9.1.10",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@vitest/browser": "^4.1.0",
+    "@vitest/browser-playwright": "^4.1.10",
     "@vitest/coverage-v8": "^4.1.0",
     "playwright": "^1.50.0",
     "storybook": "^9.1.10",

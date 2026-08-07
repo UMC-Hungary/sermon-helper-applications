@@ -31,7 +31,7 @@
     trailing,
   }: Props = $props();
 
-  const noteId = `${id}-note`;
+  const noteId = $derived(`${id}-note`);
   const note = $derived(error || hint);
 </script>
 

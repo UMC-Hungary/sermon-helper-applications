@@ -21,7 +21,7 @@
     id = `sanctum-labelled-input-${crypto.randomUUID()}`,
   }: Props = $props();
 
-  const errorId = `${id}-error`;
+  const errorId = $derived(`${id}-error`);
 </script>
 
 <div class="chamber" class:invalid={Boolean(error)}>

@@ -44,7 +44,7 @@
 
   const verses = $derived(result && !result.invalid ? (result.verses ?? []) : []);
   const invalid = $derived(Boolean(result?.invalid));
-  const statusId = `${id}-status`;
+  const statusId = $derived(`${id}-status`);
 </script>
 
 <section class:invalid>

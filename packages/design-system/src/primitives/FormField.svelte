@@ -30,8 +30,8 @@
     children,
   }: Props = $props();
 
-  const hintId = `${id}-hint`;
-  const errorId = `${id}-error`;
+  const hintId = $derived(`${id}-hint`);
+  const errorId = $derived(`${id}-error`);
   const describedby = $derived(
     [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined,
   );

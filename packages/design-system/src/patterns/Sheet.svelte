@@ -82,7 +82,8 @@
 
 {#if open}
   <div class="shade">
-    <section
+    <div
+      class="panel"
       bind:this={sheet}
       class:dragging
       class:rounded
@@ -120,7 +121,7 @@
         {#if action}{@render action()}{/if}
       </header>
       {@render children()}
-    </section>
+    </div>
   </div>
 {/if}
 
@@ -137,7 +138,7 @@
     animation: sanctum-fade var(--motion-slide) var(--motion-ease-default);
   }
 
-  section {
+  .panel {
     width: 100%;
     overflow: auto;
     background: var(--surface-base);

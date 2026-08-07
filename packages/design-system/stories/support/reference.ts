@@ -2,6 +2,13 @@ import fidelity from '../../tokens/fidelity.json';
 import measurements from '../../tokens/measurements.json';
 import tokens from '../../tokens/tokens.json';
 
+/** The shape `tokens/fidelity.json` holds for one component. */
+interface FidelityEntry {
+  source: string;
+  tokens?: Record<string, { selector: string; property: string; index?: number; breakpoint?: string }>;
+  deviations?: Record<string, string>;
+}
+
 interface Row {
   token: string;
   property: string;
@@ -50,10 +57,10 @@ for (const row of measurements.rows) {
  * here is what continuous integration enforces.
  */
 export function referenceFor(component: string): { source: string; rows: Row[] } | null {
-  const entry = (fidelity.components as Record<string, any>)[component];
+  const entry = (fidelity.components as Record<string, FidelityEntry | undefined>)[component];
   if (!entry) return null;
   const rows: Row[] = [];
-  for (const [token, spec] of Object.entries<any>(entry.tokens ?? {})) {
+  for (const [token, spec] of Object.entries(entry.tokens ?? {})) {
     const row = byKey.get(
       `${entry.source}|${spec.selector}|${spec.property}|${spec.breakpoint ?? 'base'}`,
     );

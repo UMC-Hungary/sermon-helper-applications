@@ -108,6 +108,22 @@
     }
   }
 
+  /** The listbox is one element with one set of handlers, so pointer and keyboard agree. */
+  function indexOfTarget(event: Event) {
+    const option = (event.target as HTMLElement).closest<HTMLElement>('[data-index]');
+    return option ? Number(option.dataset.index) : null;
+  }
+
+  function onListClick(event: MouseEvent) {
+    const index = indexOfTarget(event);
+    if (index !== null) commit(index);
+  }
+
+  function onListHover(event: MouseEvent) {
+    const index = indexOfTarget(event);
+    if (index !== null && !options[index]?.disabled) active = index;
+  }
+
   $effect(() => {
     if (open) list?.focus();
   });
@@ -120,8 +136,10 @@
     type="button"
     class:invalid
     {disabled}
+    role="combobox"
     aria-haspopup="listbox"
     aria-expanded={open}
+    aria-controls={`${id}-listbox`}
     aria-label={label}
     aria-describedby={describedby}
     aria-invalid={invalid ? 'true' : undefined}
@@ -135,22 +153,24 @@
   {#if open}
     <ul
       bind:this={list}
+      id={`${id}-listbox`}
       role="listbox"
       tabindex="-1"
       aria-label={label}
       aria-activedescendant={`${id}-option-${active}`}
       onkeydown={onListKeydown}
+      onclick={onListClick}
+      onmousemove={onListHover}
       use:dismissable={{ ondismiss: () => close(false) }}
     >
       {#each options as option, index (option.value)}
         <li
           id={`${id}-option-${index}`}
           role="option"
+          data-index={index}
           aria-selected={option.value === value}
           aria-disabled={option.disabled || undefined}
           class:active={index === active}
-          onclick={() => commit(index)}
-          onmousemove={() => (active = index)}
         >
           {option.label}
         </li>

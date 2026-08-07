@@ -27,6 +27,7 @@
 -->
 <span
   class="wrap"
+  role="presentation"
   onmouseenter={() => (open = true)}
   onmouseleave={() => (open = false)}
   onfocusin={() => (open = true)}

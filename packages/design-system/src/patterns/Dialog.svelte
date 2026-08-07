@@ -37,7 +37,8 @@
 
 {#if open}
   <div class="shade">
-    <section
+    <div
+      class="panel"
       role="dialog"
       aria-modal="true"
       aria-labelledby={`${id}-title`}
@@ -54,7 +55,7 @@
       </header>
       <div class="body">{@render children()}</div>
       {#if footer}<footer>{@render footer()}</footer>{/if}
-    </section>
+    </div>
   </div>
 {/if}
 
@@ -72,7 +73,7 @@
     animation: sanctum-fade var(--motion-slide) var(--motion-ease-default);
   }
 
-  section {
+  .panel {
     width: 100%;
     max-width: var(--c-dialog-max-width);
     max-height: 100%;
