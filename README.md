@@ -4,18 +4,26 @@ Church livestream control desktop application built with Tauri 2 + SvelteKit 5 +
 
 ## Rendering UIs
 
-The front-end is swappable. A rendering UI is a static bundle that talks to the core through
-one SDK (`$lib/core-client`) and never touches Tauri, `fetch` or `WebSocket` directly, so the
-same UI runs in the desktop app, a browser, or a remote client-mode window.
+The front-end is swappable. Each rendering UI is a self-contained static app under `ui/` that
+talks to the core through one package (`@metocast/core-client`) and never touches Tauri, `fetch`
+or `WebSocket` directly, so the same UI runs in the desktop app, a browser, or a remote
+client-mode window. This is a pnpm workspace:
+
+```
+ui/classic/            the original control surface (frozen; full coverage)
+ui/sanctum/            the new Sanctum design UI
+packages/core-client/  the only boundary to the core (framework-agnostic: HTTP, WS transport, Zod schemas, host, locales)
+packages/design-system/ Sanctum's tokens + components (@metocast/design-system)
+```
 
 ```bash
-pnpm build                            # the registry's default UI
-METOCAST_UI=my-ui pnpm build          # a different registered UI
-METOCAST_UI=default,my-ui pnpm build  # both, with a chooser in Settings
+pnpm build                              # the registry's default UI (classic)
+METOCAST_UI=sanctum pnpm build          # a different registered UI
+METOCAST_UI=classic,sanctum pnpm build  # both, with a chooser + in-app selector
 ```
 
 Registered UIs live in [`ui/registry.json`](ui/registry.json); [`ui/README.md`](ui/README.md) is
-the contract for writing one.
+the contract for writing one and what belongs in the shared package.
 
 ## API access and secrets
 

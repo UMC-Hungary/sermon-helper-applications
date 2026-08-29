@@ -29,7 +29,12 @@
     ondismiss?: () => void;
     /** The tile that identifies the source, usually a `Glyph`. */
     mark?: Snippet;
-    /** The numbered "why" list, shown when the caller expands it. */
+    /** Numbered remediation steps, disclosed by the "why" toggle in the footer. */
+    remediation?: string[];
+    /** The disclosure toggle's labels — closed then open. */
+    whyLabel?: string;
+    hideWhyLabel?: string;
+    /** Extra content between the body and footer, e.g. a folded group of sources. */
     detail?: Snippet;
   }
 
@@ -38,15 +43,21 @@
     source,
     title,
     body = '',
-    state,
+    state: stateLabel,
     tone = 'ok',
     mono = false,
     actions = [],
     dismissLabel = 'Dismiss',
     ondismiss,
     mark,
+    remediation,
+    whyLabel = 'Why?',
+    hideWhyLabel = 'Hide why',
     detail,
   }: Props = $props();
+
+  let expanded = $state(false);
+  const numeral = (i: number) => String(i + 1).padStart(2, '0');
 
   const accents: Record<ToastTone, string> = {
     live: 'var(--status-live)',
@@ -65,10 +76,10 @@
         <small>{kind}</small>
         <strong>{source}</strong>
       </p>
-      {#if state}
+      {#if stateLabel}
         <span class="state">
-          <Dot color={accents[tone]} size={4} pulse={tone === 'live'} />
-          {state}
+          <Dot color={accents[tone]} size={4} pulse={stateLabel === 'reconnecting'} />
+          {stateLabel}
         </span>
       {/if}
       {#if ondismiss}
@@ -80,13 +91,25 @@
     <h3>{title}</h3>
     {#if body}<p class="body" class:mono>{body}</p>{/if}
     {#if detail}{@render detail()}{/if}
-    {#if actions.length > 0}
+    {#if expanded && remediation?.length}
+      <ol class="why">
+        {#each remediation as step, i (i)}
+          <li><code>{numeral(i)}</code>{step}</li>
+        {/each}
+      </ol>
+    {/if}
+    {#if actions.length > 0 || remediation?.length}
       <footer>
         {#each actions as action (action.label)}
           <button type="button" class:primary={action.primary} onclick={action.onclick}>
             {action.label}
           </button>
         {/each}
+        {#if remediation?.length}
+          <button type="button" class="toggle" aria-expanded={expanded} onclick={() => (expanded = !expanded)}>
+            {expanded ? hideWhyLabel : whyLabel}
+          </button>
+        {/if}
       </footer>
     {/if}
   </div>
@@ -99,6 +122,7 @@
     background: var(--surface-raised);
     border: var(--ui-border-hairline) solid var(--border-control);
     width: 100%;
+    min-width: 340px;
   }
 
   i {
@@ -192,6 +216,33 @@
     font-size: var(--c-toast-mono-size);
   }
 
+  .why {
+    margin: var(--c-toast-why-margin) 0 0;
+    padding: var(--c-toast-why-padding-block) var(--c-toast-why-padding-inline);
+    background: var(--surface-sunken);
+    border-left: var(--ui-border-emphasis) solid var(--sanctum-toast-accent);
+    list-style: none;
+  }
+
+  .why li {
+    display: flex;
+    gap: var(--c-toast-why-step-gap);
+    margin-bottom: var(--c-toast-why-step-margin);
+    font-family: var(--type-quote-family);
+    font-style: italic;
+    font-size: var(--c-toast-why-step-size);
+    color: var(--text-secondary);
+  }
+
+  .why li:last-child {
+    margin-bottom: 0;
+  }
+
+  .why code {
+    font-family: var(--type-label-family);
+    color: var(--text-muted);
+  }
+
   footer {
     display: flex;
     gap: var(--c-toast-footer-gap);
@@ -201,11 +252,10 @@
   }
 
   footer button {
-    min-height: var(--ui-target-min);
     border: var(--ui-border-hairline) solid var(--sanctum-toast-accent);
     background: transparent;
     color: var(--sanctum-toast-accent);
-    padding: 0 var(--c-toast-action-padding);
+    padding: var(--c-toast-action-padding-block) var(--c-toast-action-padding);
     cursor: pointer;
     font-family: var(--type-label-family);
     font-size: var(--c-toast-action-size);
@@ -216,5 +266,13 @@
   footer .primary {
     background: var(--sanctum-toast-accent);
     color: var(--surface-raised);
+  }
+
+  footer .toggle {
+    margin-left: auto;
+    border: 0;
+    color: var(--text-muted);
+    padding-left: 0;
+    padding-right: 0;
   }
 </style>

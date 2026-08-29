@@ -23,7 +23,10 @@ A tone-coloured rule down the left, then a header — mark, kind and source, a s
 | `dismissLabel` | `string` | `'Dismiss'` | — |
 | `ondismiss` | `() => void` | — | — |
 | `mark` | `Snippet` | — | The tile that identifies the source, usually a `Glyph`. |
-| `detail` | `Snippet` | — | The numbered "why" list, shown when the caller expands it. |
+| `remediation` | `string[]` | — | Numbered remediation steps, disclosed by the "why" toggle in the footer. |
+| `whyLabel` | `string` | `'Why?'` | The disclosure toggle's labels — closed then open. |
+| `hideWhyLabel` | `string` | `'Hide why'` | — |
+| `detail` | `Snippet` | — | Extra content between the body and footer, e.g. a folded group of sources. |
 
 ## Variants
 
@@ -41,6 +44,7 @@ Default, with state chip, with actions, with detail, dismissible.
 | `--border-control` | `#857c68 / #716b5c` |
 | `--c-toast-accent-width` | `4px` |
 | `--c-toast-action-padding` | `11px` |
+| `--c-toast-action-padding-block` | `5px` |
 | `--c-toast-action-size` | `9.5px` |
 | `--c-toast-action-track` | `1.3px` |
 | `--c-toast-body-gap` | `4px` |
@@ -55,7 +59,14 @@ Default, with state chip, with actions, with detail, dismissible.
 | `--c-toast-state-padding-block` | `2px` |
 | `--c-toast-state-padding-inline` | `7px` |
 | `--c-toast-state-track` | `1.4px` |
+| `--c-toast-why-margin` | `10px` |
+| `--c-toast-why-padding-block` | `10px` |
+| `--c-toast-why-padding-inline` | `12px` |
+| `--c-toast-why-step-gap` | `9px` |
+| `--c-toast-why-step-margin` | `5px` |
+| `--c-toast-why-step-size` | `12.5px` |
 | `--surface-raised` | `#f6f2e8 / #1e1b16` |
+| `--surface-sunken` | `#e4ddcd / #23201a` |
 | `--text-muted` | `#615e56 / #918b7e` |
 | `--text-primary` | `#1c1a16 / #ede6d6` |
 | `--text-secondary` | `#5c574e / #a8a294` |
@@ -72,6 +83,8 @@ Default, with state chip, with actions, with detail, dismissible.
 | `--type-label-xs-size` | `8.5px` |
 | `--type-label-xs-track` | `1.5px` |
 | `--type-label-xs-transform` | `uppercase` |
+| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--ui-border-emphasis` | `2px` |
 | `--ui-border-hairline` | `1px` |
 | `--ui-focus-offset` | `2px` |
 | `--ui-focus-width` | `2px` |

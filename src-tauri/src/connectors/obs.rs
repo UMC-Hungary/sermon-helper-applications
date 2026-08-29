@@ -154,6 +154,7 @@ async fn run_obs_loop(
     devices_tx: broadcast::Sender<()>,
     mut stop_rx: watch::Receiver<bool>,
 ) {
+    let mut backoff = Duration::from_secs(5);
     loop {
         set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Connecting).await;
 
@@ -174,6 +175,7 @@ async fn run_obs_loop(
             Ok(raw_client) => {
                 let client = Arc::new(raw_client);
                 *client_arc.lock().await = Some(Arc::clone(&client));
+                backoff = Duration::from_secs(5);
                 set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Connected).await;
 
                 // Query initial streaming/recording state.
@@ -298,13 +300,14 @@ async fn run_obs_loop(
         }
 
         tokio::select! {
-            () = tokio::time::sleep(Duration::from_secs(5)) => {}
+            () = tokio::time::sleep(backoff) => {}
             result = stop_rx.changed() => {
                 let _ = result;
                 set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
                 return;
             }
         }
+        backoff = (backoff * 2).min(Duration::from_secs(60));
     }
 }
 

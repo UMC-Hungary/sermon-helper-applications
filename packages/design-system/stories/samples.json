@@ -394,7 +394,7 @@
 	"NativeDateInput": {
 		"args": {
 			"label": "2026. március 14.",
-			"hint": "Módosít",
+			"icon": "calendar",
 			"accessibleName": "Az esemény dátuma",
 			"value": "2026-03-14"
 		},
@@ -402,6 +402,7 @@
 			"Date": {},
 			"Time": {
 				"type": "time",
+				"icon": "clock",
 				"label": "09:30",
 				"value": "09:30",
 				"accessibleName": "Kezdés időpontja"
@@ -935,9 +936,10 @@
 	"SlideSearch": {
 		"args": {
 			"label": "Dia keresés",
-			"triggerLabel": "Jelenlegi",
-			"selection": "Vasárnapi diák · 12. dia",
-			"openLabel": "Megjelenítés",
+			"searchLabel": "Fájl keresése",
+			"placeholder": "Koppints a legutóbbi diák megjelenítéséhez",
+			"filter": "",
+			"openLabel": "Megnyitás",
 			"queueLabel": "Sorba",
 			"emptyMessage": "Nincs találat erre a keresésre.",
 			"results": [

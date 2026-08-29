@@ -2,5 +2,5 @@
   "identifier": "mobile",
   "description": "Capability for the mobile client app (iOS and Android)",
   "platforms": ["iOS", "android"],
-  "permissions": ["core:default", "store:default"]
+  "permissions": ["core:default", "store:default", "deep-link:default"]
 }

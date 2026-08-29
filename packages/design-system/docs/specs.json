@@ -239,7 +239,7 @@
 	},
 	"NativeDateInput": {
 		"purpose": "A date or time picked with the platform's own control, presented as a row that shows the current value.",
-		"anatomy": "A row showing the formatted value and a mono affordance, with a transparent native input laid over it.",
+		"anatomy": "A row showing the formatted value and an icon affordance, with a transparent native input laid over it.",
 		"variants": "`date`, `time`, `datetime-local`.",
 		"states": "Default, focus-visible, disabled.",
 		"keyboard": "| Key | Behaviour |\n| --- | --- |\n| `Tab` | Moves to and from the input, which becomes visible while focused. |\n| Platform keys | The native picker's own behaviour, unchanged. |",
@@ -252,6 +252,10 @@
 			[
 				"The affordance text is a prop.",
 				"The reference hard-codes \"Tap ↻\", which cannot be translated and assumes a touch pointer."
+			],
+			[
+				"The affordance is a stroked icon, not mono text.",
+				"The reference's 9px \"Tap ↻\" label was too small to read as an affordance; a calendar/clock icon at 22px reads at a glance and needs no translation."
 			]
 		]
 	},

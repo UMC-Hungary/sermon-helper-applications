@@ -6,14 +6,14 @@ A date or time picked with the platform's own control, presented as a row that s
 
 ## Anatomy
 
-A row showing the formatted value and a mono affordance, with a transparent native input laid over it.
+A row showing the formatted value and an icon affordance, with a transparent native input laid over it.
 
 ## Props
 
 | Prop | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `label` *(required)* | `string` | — | The visible label — the reference shows the formatted value here. |
-| `hint` *(required)* | `string` | — | The mono affordance on the right. Passed in, so it can be translated. |
+| `icon` *(required)* | `IconName` | — | The icon affordance on the right, hinting the field opens a picker. |
 | `type` | `'date' \| 'time' \| 'datetime-local'` | `'date'` | — |
 | `value` | `string` | `$bindable('')` | — |
 | `disabled` | `boolean` | `false` | — |
@@ -39,10 +39,6 @@ Default, focus-visible, disabled.
 | `--type-body-strong-size` | `14.5px` |
 | `--type-body-strong-track` | `-0.1px` |
 | `--type-body-strong-weight` | `500` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-sm-track` | `1.2px` |
-| `--type-label-sm-transform` | `uppercase` |
 | `--ui-focus-offset` | `2px` |
 | `--ui-focus-width` | `2px` |
 | `--ui-stack` | `8px` |
@@ -79,8 +75,6 @@ Source: `src/components/forms/ChamberNative.svelte`.
 | `span` | `font-size` | `14.5px` | `14.5px` | `--type-body-strong-size` |
 | `span` | `font-weight` | `500` | `500` | `--type-body-strong-weight` |
 | `span` | `letter-spacing` | `-0.1px` | `-0.1px` | `--type-body-strong-track` |
-| `em` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
-| `em` | `letter-spacing` | `1.2px` | `1.2px` | `--type-label-sm-track` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
@@ -90,4 +84,5 @@ Re-checked mechanically by `scripts/check-fidelity.mjs`.
 | --- | --- |
 | The input becomes visible on focus. | The reference leaves it at zero opacity always, so a keyboard user focuses something they cannot see. |
 | The affordance text is a prop. | The reference hard-codes "Tap ↻", which cannot be translated and assumes a touch pointer. |
+| The affordance is a stroked icon, not mono text. | The reference's 9px "Tap ↻" label was too small to read as an affordance; a calendar/clock icon at 22px reads at a glance and needs no translation. |
 

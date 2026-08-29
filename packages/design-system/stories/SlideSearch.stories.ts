@@ -18,9 +18,10 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     label: "Dia keresés",
-    triggerLabel: "Jelenlegi",
-    selection: "Vasárnapi diák · 12. dia",
-    openLabel: "Megjelenítés",
+    searchLabel: "Fájl keresése",
+    placeholder: "Koppints a legutóbbi diák megjelenítéséhez",
+    filter: "",
+    openLabel: "Megnyitás",
     queueLabel: "Sorba",
     emptyMessage: "Nincs találat erre a keresésre.",
     results: [
@@ -49,9 +50,10 @@ export const Default: Story = {
 export const Empty: Story = {
   args: {
     label: "Dia keresés",
-    triggerLabel: "Jelenlegi",
-    selection: "Vasárnapi diák · 12. dia",
-    openLabel: "Megjelenítés",
+    searchLabel: "Fájl keresése",
+    placeholder: "Koppints a legutóbbi diák megjelenítéséhez",
+    filter: "",
+    openLabel: "Megnyitás",
     queueLabel: "Sorba",
     emptyMessage: "Nincs találat erre a keresésre.",
     results: [],
@@ -61,9 +63,10 @@ export const Empty: Story = {
 export const QueueDisabled: Story = {
   args: {
     label: "Dia keresés",
-    triggerLabel: "Jelenlegi",
-    selection: "Vasárnapi diák · 12. dia",
-    openLabel: "Megjelenítés",
+    searchLabel: "Fájl keresése",
+    placeholder: "Koppints a legutóbbi diák megjelenítéséhez",
+    filter: "",
+    openLabel: "Megnyitás",
     queueLabel: "Sorba",
     emptyMessage: "Nincs találat erre a keresésre.",
     results: [

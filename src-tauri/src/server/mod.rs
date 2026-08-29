@@ -609,6 +609,11 @@ pub async fn build_and_serve(
         .with_state(state.clone());
 
     if let Some(dir) = static_dir {
+        // Without this the SPA fallback answers, losing the route.
+        app = app.route_service(
+            "/presenter",
+            ServeFile::new(format!("{dir}/presenter.html")),
+        );
         let fallback = ServeFile::new(format!("{dir}/index.html"));
         app = app.fallback_service(ServeDir::new(&dir).fallback(fallback));
     } else if let Some(handle) = state.app_handle.clone() {

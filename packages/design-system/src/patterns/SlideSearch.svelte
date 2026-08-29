@@ -10,18 +10,24 @@
 </script>
 
 <script lang="ts">
+  import Icon from '../primitives/Icon.svelte';
+
   interface Props {
     results: SlideResult[];
     /** Names the search region. */
     label: string;
-    /** The mono line above the current selection in the trigger. */
-    triggerLabel: string;
-    /** What is selected now, shown in the trigger. */
-    selection: string;
+    /** Mono eyebrow inside the trigger — "SEARCH FILES". */
+    searchLabel: string;
+    /** Placeholder shown in the trigger when filter is empty. */
+    placeholder: string;
+    /** Current filter value — bindable so parent can run search. */
+    filter?: string;
     emptyMessage: string;
     openLabel: string;
     queueLabel: string;
     queueDisabled?: boolean;
+    /** Always render the digit numpad (for mobile). */
+    numpad?: boolean;
     ontrigger?: () => void;
     onopen?: (result: SlideResult) => void;
     onqueue?: (result: SlideResult) => void;
@@ -30,29 +36,45 @@
   let {
     results,
     label,
-    triggerLabel,
-    selection,
+    searchLabel,
+    placeholder,
+    filter = $bindable(''),
     emptyMessage,
     openLabel,
     queueLabel,
     queueDisabled = false,
+    numpad = false,
     ontrigger,
     onopen,
     onqueue,
   }: Props = $props();
+
+  const keys = ['1', '2', '3', '⌫', '4', '5', '6', 'CLR', '7', '8', '9', '0'];
+
+  function press(ch: string) {
+    if (ch === 'CLR') filter = '';
+    else if (ch === '⌫') filter = filter.slice(0, -1);
+    else filter = (filter + ch).slice(0, 6);
+  }
 </script>
 
 <section class="search" aria-label={label}>
   <button class="trigger" type="button" onclick={ontrigger}>
+    <Icon name="search" size={18} stroke={1.6} />
     <span>
-      <em>{triggerLabel}</em>
-      <strong>{selection}</strong>
+      <em>{searchLabel}</em>
+      <strong>{filter || placeholder}</strong>
     </span>
+    <em class="right">{openLabel}</em>
   </button>
 
-  {#if results.length === 0}
+  {#if !numpad}
+    <input class="text" type="search" bind:value={filter} placeholder={placeholder} aria-label={searchLabel} />
+  {/if}
+
+  {#if results.length === 0 && filter.length > 0}
     <p class="empty">{emptyMessage}</p>
-  {:else}
+  {:else if results.length > 0}
     <ul class="results">
       {#each results as result (result.id)}
         <li>
@@ -78,6 +100,19 @@
         </li>
       {/each}
     </ul>
+  {/if}
+
+  {#if numpad}
+    <div class="digits">
+      {#each keys as ch (ch)}
+        <button
+          type="button"
+          class:danger={ch === '⌫'}
+          class:warn={ch === 'CLR'}
+          onclick={() => press(ch)}
+        >{ch}</button>
+      {/each}
+    </div>
   {/if}
 </section>
 
@@ -110,6 +145,10 @@
     text-transform: var(--type-label-sm-transform);
     color: var(--text-muted);
     font-style: normal;
+  }
+
+  .trigger .right {
+    flex-shrink: 0;
   }
 
   strong {
@@ -183,11 +222,61 @@
     outline-offset: calc(var(--ui-focus-offset) * -1);
   }
 
+  .text {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--c-search-item-padding-block) var(--ui-gutter-inset);
+    background: var(--surface-raised);
+    border: var(--ui-border-hairline) solid var(--border-control);
+    border-top: 0;
+    color: var(--text-primary);
+    font-family: var(--type-body-family);
+    font-size: var(--type-body-size);
+    outline: none;
+  }
+
   .empty {
     margin: 0;
     padding: var(--c-search-empty-padding-block) var(--ui-gutter-inset);
     color: var(--text-muted);
     font-family: var(--type-quote-family);
     font-style: italic;
+  }
+
+  .digits {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: var(--ui-gutter-inset);
+    padding: 0 var(--ui-gutter-inset);
+  }
+
+  .digits button {
+    min-height: 48px;
+    border: var(--ui-border-hairline) solid var(--border-control);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: var(--type-title-family);
+    font-size: var(--type-title-size);
+    font-weight: var(--type-title-weight);
+  }
+
+  .digits .danger,
+  .digits .warn {
+    font-family: var(--type-label-family);
+    font-size: var(--type-label-size);
+    letter-spacing: var(--c-dock-button-label-track);
+    text-transform: var(--type-label-transform);
+  }
+
+  .digits .danger {
+    color: var(--status-error);
+  }
+
+  .digits .warn {
+    color: var(--status-warn);
   }
 </style>

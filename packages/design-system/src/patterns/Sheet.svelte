@@ -140,7 +140,8 @@
 
   .panel {
     width: 100%;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: var(--surface-base);
     border-top: var(--ui-border-hairline) solid var(--border-strong);
     padding-bottom: var(--c-sheet-padding-bottom);

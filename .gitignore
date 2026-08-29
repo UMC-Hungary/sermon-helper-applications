@@ -11,6 +11,8 @@ pnpm-debug.log*
 
 # SvelteKit
 /build
+ui/*/build
+storybook-static
 /.svelte-kit
 /package
 .svelte-kit

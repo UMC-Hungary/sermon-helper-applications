@@ -13,7 +13,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -73,6 +73,13 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 cpSync(STAGE, join(OUT, 'ui'), { recursive: true });
 rmSync(STAGE, { recursive: true, force: true });
+
+// The copied `/presenter` URL must work whichever UI is active.
+const withPresenter = selected.find((ui) => existsSync(join(OUT, 'ui', ui.id, 'presenter.html')));
+if (withPresenter) {
+  cpSync(join(OUT, 'ui', withPresenter.id, 'presenter.html'), join(OUT, 'presenter.html'));
+  cpSync(join(OUT, 'ui', withPresenter.id, '_app'), join(OUT, '_app'), { recursive: true });
+}
 
 writeFileSync(
   join(OUT, 'bundled-uis.json'),

@@ -43,7 +43,9 @@
   button {
     width: var(--c-toggle-width);
     height: var(--c-toggle-height);
-    border: var(--ui-border-hairline) solid var(--border-control);
+    /* No border — the reference toggle is borderless; a border would also eat the
+       inner height under border-box and push the thumb off-centre. */
+    border: 0;
     border-radius: var(--ui-radius-pill);
     padding: 0;
     background: var(--border-strong);

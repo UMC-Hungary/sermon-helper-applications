@@ -32,7 +32,6 @@ Off, on, disabled, focus-visible.
 | Token | Resolves to |
 | --- | --- |
 | `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
 | `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
 | `--c-toggle-height` | `28px` |
 | `--c-toggle-thumb-inset` | `2px` |
@@ -45,7 +44,6 @@ Off, on, disabled, focus-visible.
 | `--motion-slide` | `220ms` |
 | `--surface-inverse` | `#1c1a16 / #ede6d6` |
 | `--surface-raised` | `#f6f2e8 / #1e1b16` |
-| `--ui-border-hairline` | `1px` |
 | `--ui-focus-offset` | `2px` |
 | `--ui-focus-width` | `2px` |
 | `--ui-radius-circle` | `50%` |

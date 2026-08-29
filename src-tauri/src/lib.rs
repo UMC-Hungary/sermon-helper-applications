@@ -75,6 +75,7 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_liquid_glass::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init());
 
     #[cfg(desktop)]
@@ -97,6 +98,7 @@ pub fn run() {
         commands::server::get_client_url,
         commands::server::get_client_token,
         commands::server::get_admin_token,
+        commands::server::can_host_server,
         commands::server::reset_setup,
         commands::server::get_local_host,
         commands::logs::get_application_log_path,
@@ -119,6 +121,7 @@ pub fn run() {
         commands::server::complete_setup,
         commands::server::get_client_url,
         commands::server::get_client_token,
+        commands::server::can_host_server,
         commands::server::reset_setup,
         commands::server::get_local_host,
         commands::logs::get_application_log_path,

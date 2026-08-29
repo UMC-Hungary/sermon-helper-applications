@@ -685,14 +685,6 @@
 				"type-body-strong-track": {
 					"selector": "span",
 					"property": "letter-spacing"
-				},
-				"type-label-sm-size": {
-					"selector": "em",
-					"property": "font-size"
-				},
-				"type-label-sm-track": {
-					"selector": "em",
-					"property": "letter-spacing"
 				}
 			}
 		},

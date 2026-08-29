@@ -22,7 +22,10 @@ export function dismissable(node: HTMLElement, options: DismissableOptions) {
 
   function onPointerdown(event: PointerEvent) {
     if (!opts.closeOnOutsideClick || !isTopmost()) return;
-    if (!node.contains(event.target as Node)) opts.ondismiss();
+    if (!node.contains(event.target as Node)) {
+      opts.ondismiss();
+      document.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); }, { capture: true, once: true });
+    }
   }
 
   document.addEventListener('keydown', onKeydown, true);

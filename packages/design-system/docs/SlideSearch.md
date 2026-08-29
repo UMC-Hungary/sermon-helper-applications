@@ -14,12 +14,14 @@ A trigger showing the current selection, then a list of results, each with an op
 | --- | --- | --- | --- |
 | `results` *(required)* | `SlideResult[]` | — | — |
 | `label` *(required)* | `string` | — | Names the search region. |
-| `triggerLabel` *(required)* | `string` | — | The mono line above the current selection in the trigger. |
-| `selection` *(required)* | `string` | — | What is selected now, shown in the trigger. |
+| `searchLabel` *(required)* | `string` | — | Mono eyebrow inside the trigger — "SEARCH FILES". |
+| `placeholder` *(required)* | `string` | — | Placeholder shown in the trigger when filter is empty. |
+| `filter` | `string` | `$bindable('')` | Current filter value — bindable so parent can run search. |
 | `emptyMessage` *(required)* | `string` | — | — |
 | `openLabel` *(required)* | `string` | — | — |
 | `queueLabel` *(required)* | `string` | — | — |
 | `queueDisabled` | `boolean` | `false` | — |
+| `numpad` | `boolean` | `false` | Always render the digit numpad (for mobile). |
 | `ontrigger` | `() => void` | — | — |
 | `onopen` | `(result: SlideResult) => void` | — | — |
 | `onqueue` | `(result: SlideResult) => void` | — | — |
@@ -39,22 +41,31 @@ With results, empty.
 | `--accent` | `#5c5c84 / #a9a6d6` |
 | `--border-control` | `#857c68 / #716b5c` |
 | `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-dock-button-label-track` | `1px` |
 | `--c-search-empty-padding-block` | `16px` |
 | `--c-search-item-column-gap` | `10px` |
 | `--c-search-item-padding-block` | `12px` |
 | `--c-search-item-row-gap` | `3px` |
 | `--c-search-label-track` | `1.4px` |
 | `--c-search-title-gap` | `3px` |
+| `--status-error` | `#b5321c / #e66a4f` |
+| `--status-warn` | `#855611 / #d9a358` |
 | `--surface-raised` | `#f6f2e8 / #1e1b16` |
 | `--text-muted` | `#615e56 / #918b7e` |
 | `--text-primary` | `#1c1a16 / #ede6d6` |
 | `--type-body-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
 | `--type-body-size` | `15px` |
 | `--type-body-strong-weight` | `500` |
+| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size` | `10px` |
 | `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
 | `--type-label-sm-size` | `9px` |
 | `--type-label-sm-transform` | `uppercase` |
+| `--type-label-transform` | `uppercase` |
 | `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-title-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-title-size` | `30px` |
+| `--type-title-weight` | `500` |
 | `--ui-border-hairline` | `1px` |
 | `--ui-focus-offset` | `2px` |
 | `--ui-focus-width` | `2px` |

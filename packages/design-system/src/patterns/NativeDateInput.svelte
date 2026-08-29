@@ -1,9 +1,11 @@
 <script lang="ts">
+  import Icon, { type IconName } from '../primitives/Icon.svelte';
+
   interface Props {
     /** The visible label — the reference shows the formatted value here. */
     label: string;
-    /** The mono affordance on the right. Passed in, so it can be translated. */
-    hint: string;
+    /** The icon affordance on the right, hinting the field opens a picker. */
+    icon: IconName;
     type?: 'date' | 'time' | 'datetime-local';
     value?: string;
     disabled?: boolean;
@@ -14,7 +16,7 @@
 
   let {
     label,
-    hint,
+    icon,
     type = 'date',
     value = $bindable(''),
     disabled = false,
@@ -26,7 +28,7 @@
 <div class="native">
   <label for={id}>
     <span aria-hidden="true">{label}</span>
-    <em aria-hidden="true">{hint}</em>
+    <Icon name={icon} size={22} />
     <span class="visually-hidden">{accessibleName}</span>
   </label>
   <input {id} {type} {disabled} bind:value />
@@ -56,13 +58,8 @@
     letter-spacing: var(--type-body-strong-track);
   }
 
-  em {
-    font-family: var(--type-label-sm-family);
-    font-size: var(--type-label-sm-size);
-    letter-spacing: var(--type-label-sm-track);
+  label :global(svg) {
     color: var(--text-muted);
-    text-transform: var(--type-label-sm-transform);
-    font-style: normal;
   }
 
   /*
@@ -81,10 +78,18 @@
     margin: 0;
   }
 
+  /*
+   * Revealed on any focus, not just :focus-visible — macOS Safari doesn't grant
+   * :focus-visible to a date/time widget on a mouse click, only on keyboard focus,
+   * which left the control focused but invisible and unusable with a pointer.
+   */
+  input:focus {
+    opacity: 1;
+  }
+
   input:focus-visible {
     outline: var(--ui-focus-width) solid var(--accent);
     outline-offset: var(--ui-focus-offset);
-    opacity: 1;
   }
 
   .visually-hidden {

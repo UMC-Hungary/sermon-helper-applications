@@ -11,6 +11,8 @@
     type?: 'button' | 'submit' | 'reset';
     /** Fills the available width, as the reference's primary action does. */
     block?: boolean;
+    /** The reference's small inline control (mono, uppercase) used inside rows — its `.mini`. */
+    compact?: boolean;
     disabled?: boolean;
     /** Keeps the button's width while it works, and marks it busy. */
     loading?: boolean;
@@ -24,6 +26,7 @@
     variant = 'secondary',
     type = 'button',
     block = false,
+    compact = false,
     disabled = false,
     loading = false,
     loadingLabel = 'Working',
@@ -41,11 +44,12 @@
 {/snippet}
 
 {#if href}
-  <a class="btn {variant}" class:block {href}>{@render content()}</a>
+  <a class="btn {variant}" class:block class:compact {href}>{@render content()}</a>
 {:else}
   <button
     class="btn {variant}"
     class:block
+    class:compact
     {type}
     disabled={disabled || loading}
     aria-busy={loading || undefined}
@@ -70,10 +74,21 @@
     white-space: nowrap;
     text-decoration: none;
     border-radius: var(--ui-radius-square);
+    transition: background 120ms;
   }
 
   .block {
     width: 100%;
+  }
+
+  /* The reference's `.mini`: a compact mono, uppercase inline control. */
+  .btn.compact {
+    min-height: 0;
+    padding: var(--space-7, 7px) var(--space-10, 10px);
+    font-family: var(--type-label-family);
+    font-size: var(--type-label-size);
+    letter-spacing: var(--c-button-quiet-track);
+    text-transform: var(--type-label-transform);
   }
 
   .btn:disabled {
@@ -92,16 +107,28 @@
     border: 0;
   }
 
+  .primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--surface-inverse) 88%, var(--text-inverse));
+  }
+
   .secondary {
     background: transparent;
     color: var(--text-primary);
     border: var(--ui-border-hairline) solid var(--border-control);
   }
 
+  .secondary:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+
   .danger {
     background: transparent;
     color: var(--status-error);
     border: var(--ui-border-hairline) solid var(--status-error);
+  }
+
+  .danger:hover:not(:disabled) {
+    background: var(--surface-hover);
   }
 
   .quiet {
@@ -114,6 +141,10 @@
     font-size: var(--type-label-size);
     letter-spacing: var(--c-button-quiet-track);
     text-transform: var(--type-label-transform);
+  }
+
+  .quiet:hover:not(:disabled) {
+    background: var(--surface-hover);
   }
 
   .working {

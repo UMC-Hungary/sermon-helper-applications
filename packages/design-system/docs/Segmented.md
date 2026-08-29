@@ -16,6 +16,7 @@ A bordered grid of equal columns, one button per option, each stacking glyph, la
 | `value` *(required)* | `T` | — | — |
 | `label` | `string` | — | Required unless the group is labelled by another element through `labelledby`. |
 | `labelledby` | `string` | — | — |
+| `compact` | `boolean` | — | The reference's compact inline tabs (as in Settings) rather than the full control. |
 | `onchange` | `(value: T) => void` | — | — |
 
 ## Variants
@@ -36,6 +37,8 @@ Unselected, selected, disabled, focus-visible.
 | `--c-segmented-glyph-size` | `15px` |
 | `--c-segmented-label-track` | `1.4px` |
 | `--c-segmented-padding-block` | `12px` |
+| `--space-10` | `10px` |
+| `--space-7` | `7px` |
 | `--surface-inverse` | `#1c1a16 / #ede6d6` |
 | `--text-inverse` | `#efe9dd / #14120f` |
 | `--text-inverse-muted` | `#afaba5 / #514d47` |

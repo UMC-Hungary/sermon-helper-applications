@@ -476,6 +476,13 @@
 	--c-toast-action-padding: var(--space-11);
 	--c-toast-action-size: var(--text-9-5);
 	--c-toast-action-track: var(--track-1-3);
+	--c-toast-action-padding-block: var(--space-5);
+	--c-toast-why-margin: var(--space-10);
+	--c-toast-why-padding-block: var(--space-10);
+	--c-toast-why-padding-inline: var(--space-12);
+	--c-toast-why-step-gap: var(--space-9);
+	--c-toast-why-step-margin: var(--space-5);
+	--c-toast-why-step-size: var(--text-12-5);
 	--c-toast-overlay-top: var(--space-50);
 	--c-toast-overlay-inset: var(--space-12);
 	--c-toast-overlay-shadow-blur: var(--size-26);

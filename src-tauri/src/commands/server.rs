@@ -10,6 +10,12 @@ pub async fn get_server_port(runtime: State<'_, Arc<RwLock<AppRuntime>>>) -> Res
     Ok(rt.server_port)
 }
 
+/// Server mode needs the embedded PostgreSQL + Axum stack; mobile is client-only.
+#[tauri::command]
+pub fn can_host_server() -> bool {
+    cfg!(desktop)
+}
+
 #[tauri::command]
 pub async fn get_app_mode(
     runtime: State<'_, Arc<RwLock<AppRuntime>>>,
@@ -132,10 +138,23 @@ pub async fn reset_setup(
     use tauri_plugin_store::StoreExt;
     let store = app.store("app-settings.json").map_err(|e| e.to_string())?;
     store.delete("mode");
+    store.delete("server_url");
+    store.delete("client_auth_token");
     store.save().map_err(|e| e.to_string())?;
 
-    let mut rt = runtime.write().await;
-    rt.mode = None;
+    {
+        let mut rt = runtime.write().await;
+        rt.mode = None;
+        rt.client_url = None;
+        rt.auth_token.write().await.clear();
+    }
+
+    // The embedded PostgreSQL + Axum stack starts once per process and has no
+    // teardown; setting up again in the same process kills its own PG and dies.
+    #[cfg(desktop)]
+    app.restart();
+
+    #[cfg(mobile)]
     Ok(())
 }
 

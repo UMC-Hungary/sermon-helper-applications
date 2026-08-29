@@ -96,9 +96,11 @@
     caret-color: var(--text-primary);
   }
 
-  input:focus-visible {
-    outline: var(--ui-focus-width) solid var(--accent);
-    outline-offset: var(--ui-focus-offset);
+  /* The reference uses no focus box on the input — the field's underline turns to
+     the accent (`.field:focus-within`) as the focus indicator. A box outline here
+     would also fire on mouse click, since text inputs match :focus-visible then. */
+  input:focus {
+    outline: 0;
   }
 
   input:disabled {

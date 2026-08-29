@@ -15,6 +15,7 @@ A single label, centred. While loading, a `Spinner` replaces it in place so the 
 | `variant` | `'primary' \| 'secondary' \| 'quiet' \| 'danger'` | `'secondary'` | `primary` is the ink fill the reference uses for the committing action; `secondary` is its outlined counterpart; `quiet` is the mono text button it uses inside cards and toasts. |
 | `type` | `'button' \| 'submit' \| 'reset'` | `'button'` | — |
 | `block` | `boolean` | `false` | Fills the available width, as the reference's primary action does. |
+| `compact` | `boolean` | `false` | The reference's small inline control (mono, uppercase) used inside rows — its `.mini`. |
 | `disabled` | `boolean` | `false` | — |
 | `loading` | `boolean` | `false` | Keeps the button's width while it works, and marks it busy. |
 | `loadingLabel` | `string` | `'Working'` | — |
@@ -40,7 +41,10 @@ Default, hover, focus-visible, active, disabled, loading.
 | `--c-button-padding-inline` | `18px` |
 | `--c-button-quiet-track` | `1.4px` |
 | `--c-button-track` | `0.2px` |
+| `--space-10` | `10px` |
+| `--space-7` | `7px` |
 | `--status-error` | `#b5321c / #e66a4f` |
+| `--surface-hover` | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
 | `--surface-inverse` | `#1c1a16 / #ede6d6` |
 | `--text-inverse` | `#efe9dd / #14120f` |
 | `--text-primary` | `#1c1a16 / #ede6d6` |

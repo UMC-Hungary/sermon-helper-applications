@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 export const Date: Story = {
   args: {
     label: "2026. március 14.",
-    hint: "Módosít",
+    icon: "calendar",
     accessibleName: "Az esemény dátuma",
     value: "2026-03-14",
   },
@@ -27,7 +27,7 @@ export const Date: Story = {
 export const Time: Story = {
   args: {
     label: "09:30",
-    hint: "Módosít",
+    icon: "clock",
     accessibleName: "Kezdés időpontja",
     value: "09:30",
     type: "time",
@@ -37,7 +37,7 @@ export const Time: Story = {
 export const Disabled: Story = {
   args: {
     label: "2026. március 14.",
-    hint: "Módosít",
+    icon: "calendar",
     accessibleName: "Az esemény dátuma",
     value: "2026-03-14",
     disabled: true,

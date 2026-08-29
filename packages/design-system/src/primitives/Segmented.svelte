@@ -19,10 +19,12 @@
     /** Required unless the group is labelled by another element through `labelledby`. */
     label?: string;
     labelledby?: string;
+    /** The reference's compact inline tabs (as in Settings) rather than the full control. */
+    compact?: boolean;
     onchange?: (value: T) => void;
   }
 
-  let { options, value = $bindable(), label, labelledby, onchange }: Props = $props();
+  let { options, value = $bindable(), label, labelledby, compact = false, onchange }: Props = $props();
 
   function select(option: SegmentedOption<T>) {
     if (option.disabled) return;
@@ -39,6 +41,7 @@
 
 <div
   class="seg"
+  class:compact
   role="radiogroup"
   aria-label={label}
   aria-labelledby={labelledby}
@@ -87,6 +90,12 @@
 
   button:last-child {
     border-right: 0;
+  }
+
+  /* The reference's inline tabs: compact, no 44px target. */
+  .compact button {
+    min-height: 0;
+    padding: var(--space-7, 7px) var(--space-10, 10px);
   }
 
   button[aria-disabled='true'] {

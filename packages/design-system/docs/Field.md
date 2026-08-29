@@ -57,8 +57,6 @@ Default, focus-within, readonly, disabled, invalid.
 | `--type-label-sm-transform` | `uppercase` |
 | `--type-label-sm-weight` | `500` |
 | `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
