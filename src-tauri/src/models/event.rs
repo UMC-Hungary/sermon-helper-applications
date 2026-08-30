@@ -9,6 +9,7 @@ use uuid::Uuid;
 struct EventRow {
     pub id: Uuid,
     pub title: String,
+    pub computed_title: String,
     pub date_time: DateTime<Utc>,
     pub speaker: String,
     pub description: String,
@@ -47,6 +48,8 @@ pub struct BibleReference {
 pub struct Event {
     pub id: Uuid,
     pub title: String,
+    #[serde(default)]
+    pub computed_title: String,
     pub date_time: DateTime<Utc>,
     pub speaker: String,
     pub description: String,
@@ -66,6 +69,7 @@ impl Event {
         Self {
             id: row.id,
             title: row.title,
+            computed_title: row.computed_title,
             date_time: row.date_time,
             speaker: row.speaker,
             description: row.description,
@@ -80,6 +84,16 @@ impl Event {
     /// Find a connection by platform name.
     pub fn connection(&self, platform: &str) -> Option<&EventConnection> {
         self.connections.iter().find(|c| c.platform == platform)
+    }
+
+    /// What gets published to the platforms. Events created before the composed
+    /// title existed — and any created outside the editor — fall back to `title`.
+    pub fn published_title(&self) -> &str {
+        if self.computed_title.is_empty() {
+            &self.title
+        } else {
+            &self.computed_title
+        }
     }
 }
 
@@ -115,6 +129,7 @@ pub async fn fetch_event(id: Uuid, pool: &PgPool) -> anyhow::Result<Option<Event
 pub struct EventSummary {
     pub id: Uuid,
     pub title: String,
+    pub computed_title: String,
     pub date_time: DateTime<Utc>,
     pub speaker: String,
     pub recording_count: i64,
@@ -128,7 +143,8 @@ pub struct EventSummary {
 pub async fn find_current_event(pool: &PgPool) -> anyhow::Result<Option<EventSummary>> {
     let event = sqlx::query_as::<_, EventSummary>(
         r#"
-        SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
+        SELECT e.id, e.title, e.computed_title, e.date_time, e.speaker,
+               e.created_at, e.updated_at,
                COUNT(r.id) AS recording_count,
                false AS is_completed
         FROM events e
@@ -168,6 +184,7 @@ pub struct CreateBibleReference {
 #[derive(Debug, Deserialize)]
 pub struct CreateEvent {
     pub title: String,
+    pub computed_title: Option<String>,
     pub date_time: DateTime<Utc>,
     pub speaker: Option<String>,
     pub description: Option<String>,
@@ -179,6 +196,7 @@ pub struct CreateEvent {
 #[derive(Debug, Deserialize)]
 pub struct UpdateEvent {
     pub title: String,
+    pub computed_title: Option<String>,
     pub date_time: DateTime<Utc>,
     pub speaker: Option<String>,
     pub description: Option<String>,

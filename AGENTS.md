@@ -44,7 +44,7 @@ The frontend is no longer at the repo root. Each rendering UI is a self-containe
 - Rust is the core application backend. It owns the Axum HTTP/WebSocket server, embedded PostgreSQL lifecycle, migrations, models, schedulers, upload workers, and connector orchestration.
 - `server/` - Axum routes, auth, OpenAPI, WebSocket protocol, presenter/PPT/caption endpoints
 - `database/` - embedded PostgreSQL startup plus SQLx migrations
-- `connectors/` - OBS, YouTube, Facebook, Broadlink, Keynote, ATEM/vMix/Discord integrations, plus Szentírás.eu (config-only: it just holds the Bible API key)
+- `connectors/` - OBS, Blackmagic cameras (REST + livestream control, via the `blackmagic-camera` crate), YouTube, Facebook, Broadlink, Keynote, ATEM/vMix/Discord integrations, plus Szentírás.eu (config-only: it just holds the Bible API key)
 - `runtime.rs` - shared display-free bootstrap (Postgres → migrations → pool → connectors → Axum) used by both the Tauri app and the headless `metocast-server` binary (`bin/metocast-server.rs`)
 - Connector configuration lives in the `app_settings` table and is read/written over HTTP (`GET`/`PUT /api/connectors/{name}/config`), not through Tauri IPC, so a headless core and remote UIs see the same values
 - `bible.rs` - Bible passage lookups against the upstream Hungarian APIs, exposed as `GET /api/bible/verses` and `/api/bible/suggest`. UIs never call the upstream directly, so no UI needs a CORS workaround. Classic translations (RUF, KG, KNB, SZIT, BD, STL) come from szentiras.eu, which requires an `X-API-Key` held by the `szentiras` connector config; `*_v2` translations and reference autocomplete need no key

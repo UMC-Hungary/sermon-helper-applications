@@ -44,6 +44,8 @@
       : undefined,
   );
 
+  const shown = (e: { title: string; computedTitle: string }) => e.computedTitle || e.title;
+
   function inFilter(e: EventSummary): boolean {
     const future = new Date(e.dateTime).getTime() >= Date.now();
     if (filter === 'live') return e.id === currentId;
@@ -56,7 +58,7 @@
       .filter(inFilter)
       .filter((e) => {
         const q = query.trim().toLowerCase();
-        return !q || e.title.toLowerCase().includes(q) || e.speaker.toLowerCase().includes(q);
+        return !q || shown(e).toLowerCase().includes(q) || e.speaker.toLowerCase().includes(q);
       })
       .sort((a, b) => a.dateTime.localeCompare(b.dateTime)),
   );
@@ -133,7 +135,7 @@
           <Row meta={`${timeShort(e.dateTime, loc)} · ${e.speaker || $_('events.noSpeaker')}`} href={`/events/${e.id}`} last={i === visible.length - 1}>
             {#snippet icon()}<DateBlock month={monthAbbr(e.dateTime, loc)} day={dayNum(e.dateTime, loc)} />{/snippet}
             <span class="rowtitle">
-              {e.title}
+              {shown(e)}
               {#if e.id === currentId}<Dot color="var(--status-live)" size={6} pulse />{/if}
             </span>
           </Row>
@@ -149,7 +151,7 @@
         <DateBlock month={monthLabel} day={dayNum(featured.dateTime, loc)} />
         <div>
           <small>{timeShort(featured.dateTime, loc)}{destinations ? ` · ${destinations}` : ''}</small>
-          <h2>{featured.title}</h2>
+          <h2>{shown(featured)}</h2>
           <p>
             {#if featured.id === currentId}
               <Badge tone="live" dot>{$_('events.status.live')}</Badge>

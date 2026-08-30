@@ -158,6 +158,7 @@ pub fn spec() -> Value {
                     "properties": {
                         "id":               { "type": "string", "format": "uuid" },
                         "title":            { "type": "string", "example": "Sunday Morning Service" },
+                        "computedTitle":    { "type": "string", "description": "Composed \"date · reference · title · — speaker\" line published to YouTube. Empty falls back to title.", "example": "Sun, September 6, 2026 · 2Kor 1,1-10 · Worship Service — Pastor Smith" },
                         "dateTime":         { "type": "string", "format": "date-time", "description": "Scheduled date and time (ISO 8601 / UTC)" },
                         "speaker":          { "type": "string", "example": "Pastor Smith" },
                         "description":      { "type": "string" },
@@ -175,6 +176,7 @@ pub fn spec() -> Value {
                     "properties": {
                         "id":             { "type": "string", "format": "uuid" },
                         "title":          { "type": "string", "example": "Sunday Morning Service" },
+                        "computedTitle":  { "type": "string", "description": "Composed title published to YouTube. Empty falls back to title." },
                         "dateTime":       { "type": "string", "format": "date-time" },
                         "speaker":        { "type": "string" },
                         "recordingCount": { "type": "integer", "format": "int64", "description": "Number of recording files attached to this event" },
@@ -188,6 +190,7 @@ pub fn spec() -> Value {
                     "required": ["title", "date_time"],
                     "properties": {
                         "title":             { "type": "string", "example": "Sunday Morning Service" },
+                        "computed_title":    { "type": "string", "default": "", "description": "Composed title to publish to YouTube. Omit or leave empty to publish `title` instead." },
                         "date_time":         { "type": "string", "format": "date-time", "description": "Scheduled date and time" },
                         "speaker":           { "type": "string", "default": "" },
                         "description":       { "type": "string", "default": "" },
@@ -303,9 +306,10 @@ pub fn spec() -> Value {
                 "ConnectorStatuses": {
                     "type": "object",
                     "description": "Current status of all connectors.",
-                    "required": ["obs", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
+                    "required": ["obs", "blackmagic-camera", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
                     "properties": {
                         "obs":       { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "blackmagic-camera": { "$ref": "#/components/schemas/ConnectorStatus" },
                         "vmix":      { "$ref": "#/components/schemas/ConnectorStatus" },
                         "atem":      { "$ref": "#/components/schemas/ConnectorStatus" },
                         "broadlink": { "$ref": "#/components/schemas/ConnectorStatus" },
@@ -345,13 +349,15 @@ pub fn spec() -> Value {
                     }
                 },
                 "ConnectorConfig": {
-                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
+                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `blackmagic-camera` (enabled, host, fingerprint, username, password), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
                     "type": "object",
                     "required": ["enabled"],
                     "properties": {
                         "enabled":      { "type": "boolean" },
                         "host":         { "type": "string" },
                         "port":         { "type": "integer" },
+                        "fingerprint":  { "type": "string", "description": "Blackmagic camera: pinned SHA-256 of the camera's self-signed certificate. Blank means trust-on-first-use." },
+                        "username":     { "type": "string" },
                         "password":     { "type": "string", "nullable": true, "description": "Write-only: reads return an empty string" },
                         "clientId":     { "type": "string" },
                         "clientSecret": { "type": "string", "description": "Write-only: reads return an empty string" },
@@ -365,6 +371,33 @@ pub fn spec() -> Value {
                         "appSecretSet":   { "type": "boolean", "readOnly": true, "description": "Whether an app secret is stored" },
                         "webhookUrlSet":  { "type": "boolean", "readOnly": true, "description": "Whether a webhook URL is stored" },
                         "apiKeySet":      { "type": "boolean", "readOnly": true, "description": "Whether an API key is stored. Send false to clear it." }
+                    }
+                },
+                "CameraStreamTarget": {
+                    "type": "object",
+                    "description": "The camera's livestream destination after YouTube settings were pushed.",
+                    "required": ["rtmpUrl", "platform", "server", "quality"],
+                    "properties": {
+                        "rtmpUrl":  { "type": "string", "description": "Ingestion address and stream key joined — what the camera pushes to", "example": "rtmp://a.rtmp.youtube.com/live2/abcd-1234-efgh-5678" },
+                        "platform": { "type": "string", "example": "YouTube" },
+                        "server":   { "type": "string", "description": "The platform's server name, or `Custom` when the URL was overridden" },
+                        "quality":  { "type": "string", "description": "Quality profile the camera will encode at" },
+                        "url":      { "type": "string", "nullable": true, "description": "Set only when the destination is a custom URL rather than a platform entry" }
+                    }
+                },
+                "DiscoveredCamera": {
+                    "type": "object",
+                    "description": "A Blackmagic camera found by mDNS. `host` is what the connector config's `host` field takes.",
+                    "required": ["host", "hostname", "addresses", "port", "deviceName", "productName", "uniqueId", "softwareVersion"],
+                    "properties": {
+                        "host":            { "type": "string", "example": "http://Cinema-Camera-6K.local" },
+                        "hostname":        { "type": "string", "example": "Cinema-Camera-6K.local." },
+                        "addresses":       { "type": "array", "items": { "type": "string" } },
+                        "port":            { "type": "integer" },
+                        "deviceName":      { "type": "string" },
+                        "productName":     { "type": "string", "example": "Cinema Camera 6K" },
+                        "uniqueId":        { "type": "string", "description": "Stable across renames and DHCP" },
+                        "softwareVersion": { "type": "string", "example": "10.2.2" }
                     }
                 },
                 "ObsStreamSettings": {
@@ -748,7 +781,7 @@ pub fn spec() -> Value {
                         "in": "path",
                         "required": true,
                         "description": "Connector name",
-                        "schema": { "type": "string", "enum": ["obs", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
+                        "schema": { "type": "string", "enum": ["obs", "blackmagic-camera", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
                     }
                 ],
                 "get": {
@@ -802,7 +835,7 @@ pub fn spec() -> Value {
                             "name": "name",
                             "in": "path",
                             "required": true,
-                            "schema": { "type": "string", "enum": ["obs", "youtube", "facebook", "discord", "szentiras"] }
+                            "schema": { "type": "string", "enum": ["obs", "blackmagic-camera", "youtube", "facebook", "discord", "szentiras"] }
                         },
                         {
                             "name": "X-Admin-Token",
@@ -825,6 +858,65 @@ pub fn spec() -> Value {
                         "401": { "description": "Unauthorized" },
                         "403": { "description": "Missing/invalid admin token, or the request did not come from loopback" },
                         "404": { "description": "Unknown connector" }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/stream/youtube": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Push YouTube settings to the camera",
+                    "description": "Copies the channel's RTMP ingestion address and stream key into the camera's livestream settings, preferring the camera's own YouTube platform entry (which needs only the key) and falling back to a custom RTMP URL on models that list no YouTube platform.\n\nSets the destination only — the camera does not go live. Requires a connected camera (409 otherwise) and a linked YouTube account.",
+                    "operationId": "pushBlackmagicCameraYouTubeSettings",
+                    "responses": {
+                        "200": {
+                            "description": "Where the camera's livestream now points",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/CameraStreamTarget" }
+                                }
+                            }
+                        },
+                        "409": { "description": "No camera connected" },
+                        "502": { "description": "The camera or the YouTube API rejected the request" }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/discover": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Scan the LAN for Blackmagic cameras",
+                    "description": "mDNS scan (5s). Every connected WebSocket client also receives the result as `blackmagic-camera.discovered`.\n\nWhen no camera is configured yet, the first one found is stored and connected — a scan is how a camera gets connected. An already-configured camera is never repointed.\n\nAn empty list is a normal outcome: mDNS does not cross VLANs, and on macOS the app needs Local Network permission. Adding a camera by host works without discovery.",
+                    "operationId": "discoverBlackmagicCameras",
+                    "responses": {
+                        "200": {
+                            "description": "Cameras found, possibly none",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["cameras"],
+                                        "properties": {
+                                            "cameras": {
+                                                "type": "array",
+                                                "items": { "$ref": "#/components/schemas/DiscoveredCamera" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/connect": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Connect the Blackmagic camera",
+                    "description": "Starts the Blackmagic camera connector using the stored configuration.",
+                    "operationId": "connectBlackmagicCamera",
+                    "responses": {
+                        "204": { "description": "Connection attempt started" },
+                        "401": { "description": "Unauthorized" }
                     }
                 }
             },

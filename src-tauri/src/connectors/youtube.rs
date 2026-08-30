@@ -830,3 +830,61 @@ fn to_channel_video_item(v: VideoItem) -> ChannelVideoItem {
         privacy_status,
     }
 }
+
+/// The RTMP ingestion endpoint of the channel's first live stream: the address and
+/// the stream key OBS, a camera or any encoder needs to push to.
+#[derive(Debug, Clone)]
+pub struct Ingestion {
+    pub address: String,
+    pub key: String,
+}
+
+impl Ingestion {
+    /// The single RTMP URL form, for encoders that take address and key together.
+    pub fn rtmp_url(&self) -> String {
+        format!("{}/{}", self.address.trim_end_matches('/'), self.key)
+    }
+}
+
+pub async fn live_stream_ingestion(access_token: &str) -> anyhow::Result<Ingestion> {
+    #[derive(Deserialize)]
+    struct IngestionInfo {
+        #[serde(rename = "ingestionAddress")]
+        ingestion_address: String,
+        #[serde(rename = "streamName")]
+        stream_name: String,
+    }
+    #[derive(Deserialize)]
+    struct Cdn {
+        #[serde(rename = "ingestionInfo")]
+        ingestion_info: IngestionInfo,
+    }
+    #[derive(Deserialize)]
+    struct StreamItem {
+        cdn: Cdn,
+    }
+    #[derive(Deserialize)]
+    struct StreamList {
+        items: Option<Vec<StreamItem>>,
+    }
+
+    let response = reqwest::Client::new()
+        .get("https://www.googleapis.com/youtube/v3/liveStreams")
+        .query(&[("part", "cdn"), ("mine", "true")])
+        .bearer_auth(access_token)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        anyhow::bail!("youtube_api_{}", response.status());
+    }
+
+    let list = response.json::<StreamList>().await?;
+    let item = list
+        .items
+        .and_then(|items| items.into_iter().next())
+        .ok_or_else(|| anyhow::anyhow!("no_stream_found"))?;
+    Ok(Ingestion {
+        address: item.cdn.ingestion_info.ingestion_address,
+        key: item.cdn.ingestion_info.stream_name,
+    })
+}

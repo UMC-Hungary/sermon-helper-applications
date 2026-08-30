@@ -27,6 +27,16 @@ export const AtemConfigSchema = z.object({
   port: z.number(),
 });
 
+/** Blackmagic camera. A blank `fingerprint` means trust-on-first-use. */
+export const BlackmagicCameraConfigSchema = z.object({
+  enabled: z.boolean(),
+  host: z.string(),
+  fingerprint: z.string(),
+  username: z.string(),
+  password: z.string(),
+  passwordSet: secretSet,
+});
+
 export const BroadlinkConfigSchema = z.object({
   enabled: z.boolean(),
 });
@@ -64,6 +74,7 @@ export const ConnectorConfigSchemas = {
   vmix: VmixConfigSchema,
   atem: AtemConfigSchema,
   broadlink: BroadlinkConfigSchema,
+  'blackmagic-camera': BlackmagicCameraConfigSchema,
   youtube: YouTubeConfigSchema,
   facebook: FacebookConfigSchema,
   discord: DiscordConfigSchema,
@@ -74,6 +85,33 @@ export type ConnectorName = keyof typeof ConnectorConfigSchemas;
 export type ConnectorConfigMap = {
   [K in ConnectorName]: z.infer<(typeof ConnectorConfigSchemas)[K]>;
 };
+
+/** One camera returned by an mDNS scan. `host` is what the config field takes. */
+export const DiscoveredCameraSchema = z.object({
+  host: z.string(),
+  hostname: z.string(),
+  addresses: z.array(z.string()),
+  port: z.number().int(),
+  deviceName: z.string(),
+  productName: z.string(),
+  uniqueId: z.string(),
+  softwareVersion: z.string(),
+});
+
+export const DiscoveredCamerasSchema = z.object({ cameras: z.array(DiscoveredCameraSchema) });
+
+export type DiscoveredCamera = z.infer<typeof DiscoveredCameraSchema>;
+
+/** Where the camera's livestream now points, after YouTube settings were pushed. */
+export const CameraStreamTargetSchema = z.object({
+  rtmpUrl: z.string(),
+  platform: z.string(),
+  server: z.string(),
+  quality: z.string(),
+  url: z.string().nullable(),
+});
+
+export type CameraStreamTarget = z.infer<typeof CameraStreamTargetSchema>;
 
 export const ConnectorStatusPayloadSchema = z.object({
   type: z.enum(['disconnected', 'connecting', 'connected', 'error']),

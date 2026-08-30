@@ -29,9 +29,12 @@
     fetchFacebookStreamKey,
     fetchDevices,
     triggerDiscover,
+    discoverCameras,
+    pushCameraYouTubeSettings,
     type ConnectorName,
     type ConnectorConfigMap,
     type BroadlinkDevice,
+    type DiscoveredCamera,
   } from '@metocast/core-client';
   import LoginSheet from '$lib/LoginSheet.svelte';
   import { pushToast } from '$lib/notifications.svelte';
@@ -58,6 +61,7 @@
     { id: 'youtube', name: 'YouTube', cat: 'streaming', supported: true, brand: siYoutube.path, fields: [fld('clientId'), fld('clientSecret', 'password', true)] },
     { id: 'facebook', name: 'Facebook', cat: 'streaming', supported: true, brand: siFacebook.path, fields: [fld('appId'), fld('appSecret', 'password', true), fld('pageId')] },
     { id: 'broadlink', name: 'Broadlink RF/IR', cat: 'devices', supported: true, char: '⌁', fields: [] },
+    { id: 'blackmagic-camera', name: 'Blackmagic Camera', cat: 'devices', supported: true, brand: siBlackmagicdesign.path, fields: [fld('host'), fld('username'), fld('password', 'password', true), fld('fingerprint')] },
     { id: 'vmix', name: 'vMix', cat: 'future', supported: false, char: '▣', fields: [fld('host'), fld('port', 'number')] },
     { id: 'atem', name: 'Blackmagic ATEM', cat: 'future', supported: false, brand: siBlackmagicdesign.path, fields: [fld('host'), fld('port', 'number')] },
     { id: 'discord', name: 'Discord', cat: 'future', supported: false, brand: siDiscord.path, fields: [fld('webhookUrl', 'password', true)] },
@@ -70,6 +74,7 @@
     vmix: (form, enabled) => ({ enabled, host: form.host ?? '', port: Number(form.port) || 0 }),
     atem: (form, enabled) => ({ enabled, host: form.host ?? '', port: Number(form.port) || 0 }),
     broadlink: (_form, enabled) => ({ enabled }),
+    'blackmagic-camera': (form, enabled) => ({ enabled, host: form.host ?? '', fingerprint: form.fingerprint ?? '', username: form.username ?? '', password: form.password ?? '' }),
     youtube: (form, enabled) => ({ enabled, clientId: form.clientId ?? '', clientSecret: form.clientSecret ?? '' }),
     facebook: (form, enabled) => ({ enabled, appId: form.appId ?? '', appSecret: form.appSecret ?? '', pageId: form.pageId ?? '' }),
     discord: (form, enabled) => ({ enabled, webhookUrl: form.webhookUrl ?? '' }),
@@ -89,7 +94,11 @@
   let destination = $state<'youtube' | 'facebook'>('youtube');
   let rtmp = $state('');
   let devices = $state<BroadlinkDevice[]>([]);
+  let cameras = $state<DiscoveredCamera[]>([]);
+  let cameraRtmp = $state('');
+  let pushingCamera = $state(false);
   let scanning = $state(false);
+  let scanningCameras = $state(false);
 
   function fail(meta: ConnMeta, titleKey: string, message: string) {
     pushToast({ kind: $_('toast.connector'), source: meta.name, title: $_(titleKey), body: message, tone: 'error' });
@@ -217,6 +226,34 @@
     }
   }
 
+  const cameraMeta = CONNECTORS.find((c) => c.id === 'blackmagic-camera')!;
+  // A scan is also the connect action: the core adopts the first camera it finds
+  // when none is configured, so reload the config and status afterwards.
+  async function scanCameras() {
+    scanningCameras = true;
+    try {
+      cameras = await discoverCameras();
+      await loadConfig(cameraMeta);
+      await refreshStatuses();
+    } catch (e) {
+      fail(cameraMeta, 'conn.toast.scanFail', String(e));
+    } finally {
+      scanningCameras = false;
+    }
+  }
+
+  // Sets the camera's livestream destination; it does not go live.
+  async function pushCameraYoutube() {
+    pushingCamera = true;
+    try {
+      cameraRtmp = (await pushCameraYouTubeSettings()).rtmpUrl;
+    } catch (e) {
+      fail(cameraMeta, 'conn.toast.saveFail', String(e));
+    } finally {
+      pushingCamera = false;
+    }
+  }
+
   const broadlinkMeta = CONNECTORS.find((c) => c.id === 'broadlink')!;
   async function scan() {
     scanning = true;
@@ -308,6 +345,40 @@
                     onchange={(v) => pickDestination(v as 'youtube' | 'facebook')}
                   />
                   <Field label={$_('conn.encoder.rtmp', { values: { dest: destination } })} value={rtmp} readonly />
+                {/if}
+
+                {#if meta.id === 'blackmagic-camera'}
+                  <div class="actions">
+                    <Button
+                      variant="secondary"
+                      compact
+                      disabled={statuses['blackmagic-camera'] !== 'connected' || pushingCamera}
+                      onclick={pushCameraYoutube}
+                    >
+                      {$_('conn.camera.pushYoutube')}
+                    </Button>
+                    <Button variant="secondary" compact onclick={() => save(meta)}>{$_('conn.encoder.reconnect')}</Button>
+                  </div>
+                  <Field label={$_('conn.camera.rtmp')} value={cameraRtmp} readonly />
+
+                  <DiscoveryPanel
+                    title={$_('conn.cameraDiscovery.title')}
+                    description={$_('conn.cameraDiscovery.description')}
+                    scanLabel={cameras.length ? $_('conn.discovery.scanAgain') : $_('conn.discovery.scan')}
+                    scanning={scanningCameras}
+                    scanningLabel={$_('conn.discovery.scanning')}
+                    onscan={scanCameras}
+                  >
+                    {#if cameras.length === 0}
+                      <p class="empty">{$_('conn.cameraDiscovery.empty')}</p>
+                    {:else}
+                      <ul class="devices">
+                        {#each cameras as c (c.uniqueId)}
+                          <li><strong>{c.deviceName || c.productName}</strong><code>{c.host}</code>{#if c.softwareVersion}<em>{$_('conn.cameraDiscovery.firmware', { values: { version: c.softwareVersion } })}</em>{/if}</li>
+                        {/each}
+                      </ul>
+                    {/if}
+                  </DiscoveryPanel>
                 {/if}
 
                 {#if meta.id === 'broadlink'}

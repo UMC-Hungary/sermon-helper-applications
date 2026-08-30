@@ -12,10 +12,16 @@
     ToggleRow,
     StickyActionBar,
     Skeleton,
+    List,
+    Row,
+    StatusDot,
+    Badge,
   } from '@metocast/design-system';
   import type { ReferenceResult } from '@metocast/design-system';
-  import { getEvent, createEvent, updateEvent, bibleApi } from '@metocast/core-client';
-  import type { Event, BibleVerse } from '@metocast/core-client/schemas/event';
+  import { getEvent, createEvent, updateEvent, bibleApi, listJobs, openExternal } from '@metocast/core-client';
+  import type { Event, BibleVerse, EventConnection } from '@metocast/core-client/schemas/event';
+  import type { Job } from '@metocast/core-client/schemas/queue';
+  import { live } from '$lib/live.svelte';
   import { goto } from '$app/navigation';
   import { notify } from '$lib/notifications.svelte';
   import { dateLong, toDateInput, toTimeInput, fromDateTimeInput } from '$lib/format';
@@ -54,13 +60,13 @@
     if (title.length > TITLE_LIMIT) title = title.slice(0, TITLE_LIMIT);
   });
 
-  const titleRemaining = $derived(TITLE_LIMIT - title.length);
   const autoTitle = $derived(
     [date ? dateLong(fromDateTimeInput(date, time), loc) : '', textus.trim(), title.trim(), speaker.trim() ? `— ${speaker.trim()}` : '']
       .filter(Boolean)
       .join(' · ')
       .replace('· —', '—'),
   );
+  const titleRemaining = $derived(TITLE_LIMIT - autoTitle.length);
   const fields = $derived([
     { key: 'date', on: !!date },
     { key: 'textus', on: !!textus.trim() },
@@ -121,18 +127,21 @@
     { value: 'private' as const, label: $_('editor.privacy.private'), glyph: '○', hint: $_('editor.privacy.privateHint') },
   ]);
 
-  function nextSundayDate(): string {
+  function nextService(): Date {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain date arithmetic, not reactive state
+    const service = new Date();
+    service.setHours(10, 0, 0, 0);
     const now = new Date();
-    const daysUntilSunday = (7 - now.getDay()) % 7;
-    const sunday = new Date(now.getTime() + daysUntilSunday * 24 * 60 * 60 * 1000);
-    return toDateInput(sunday.toISOString());
+    while (service.getDay() !== 0 || service <= now) service.setDate(service.getDate() + 1);
+    return service;
   }
 
   onMount(async () => {
     if (!eventId) {
+      const service = nextService();
       title = get(_)('editor.defaultTitle');
-      date = nextSundayDate();
-      time = '10:00';
+      date = service.toLocaleDateString('en-CA');
+      time = toTimeInput(service.toISOString());
       return;
     }
     loading = true;
@@ -145,6 +154,7 @@
       description = e.description;
       autoUpload = e.autoUploadEnabled;
       existingConnections = e.connections;
+      jobs = await listJobs('platform_sync').catch(() => []);
       const yt = e.connections.find((c) => c.platform === 'youtube');
       if (yt?.privacyStatus === 'unlisted' || yt?.privacyStatus === 'private' || yt?.privacyStatus === 'public') privacy = yt.privacyStatus;
       const t = e.bibleReferences.find((r) => r.type === 'textus');
@@ -162,6 +172,71 @@
     } finally {
       loading = false;
     }
+  });
+
+  const PLATFORMS = [
+    {
+      id: 'youtube',
+      label: 'YouTube',
+      link: (c: EventConnection) =>
+        c.externalId ? `https://studio.youtube.com/video/${c.externalId}/livestreaming` : c.streamUrl,
+    },
+    { id: 'facebook', label: 'Facebook', link: (c: EventConnection) => c.eventUrl },
+  ] as const;
+
+  const CONNECTOR_TONE = {
+    connected: 'ok',
+    connecting: 'warn',
+    error: 'error',
+    disconnected: 'off',
+  } as const;
+
+  const STATUS_TONE = {
+    not_scheduled: 'off',
+    scheduled: 'ok',
+    ready: 'ok',
+    created: 'warn',
+    testing: 'warn',
+    live: 'live',
+    liveStarting: 'live',
+    complete: 'neutral',
+    revoked: 'neutral',
+    failed: 'error',
+  } as const;
+
+  let jobs = $state<Job[]>([]);
+
+  const statusTone = (s: string) => STATUS_TONE[s as keyof typeof STATUS_TONE];
+  // Anything YouTube's lifeCycleStatus adds later shows through raw rather than as a missing key.
+  const statusLabel = (s: string) => (statusTone(s) ? $_(`editor.platform.status.${s}`) : s);
+
+  const platforms = $derived(
+    PLATFORMS.map((p) => {
+      const conn = existingConnections.find((c) => c.platform === p.id);
+      return {
+        id: p.id,
+        label: p.label,
+        connector: live.connectorStatus[p.id] ?? 'disconnected',
+        status: conn?.scheduleStatus ?? 'not_scheduled',
+        url: conn ? p.link(conn) : null,
+      };
+    }),
+  );
+
+  // The queue is the only thing that knows an edit has not reached YouTube yet:
+  // schedule_status still reads 'scheduled' while the push is outstanding.
+  const sync = $derived.by(() => {
+    const mine = jobs.filter((j) => j.payload.event_id === eventId);
+    const dead = mine.find((j) => j.status === 'dead');
+    if (dead) return { tone: 'error' as const, key: 'failed', detail: dead.lastError ?? '' };
+    const queued = mine.find((j) => j.status === 'pending' || j.status === 'processing');
+    if (queued)
+      return live.connectorStatus.youtube === 'connected'
+        ? { tone: 'warn' as const, key: 'syncing', detail: '' }
+        : { tone: 'off' as const, key: 'parked', detail: '' };
+    const yt = existingConnections.find((c) => c.platform === 'youtube');
+    if (yt?.externalId) return { tone: 'ok' as const, key: 'synced', detail: '' };
+    return { tone: 'warn' as const, key: 'notScheduled', detail: '' };
   });
 
   function buildRefs() {
@@ -188,6 +263,7 @@
     saving = true;
     const payload = {
       title: title.trim(),
+      computed_title: autoTitle,
       date_time: fromDateTimeInput(date, time),
       speaker: speaker.trim(),
       description: description.trim(),
@@ -216,7 +292,7 @@
   <div class="pad"><Skeleton height="120px" lines={4} /></div>
 {:else}
   <section class="preview sticky-preview">
-    <small>{$_('editor.previewLabel')} <span class:warn={titleRemaining < 10}>{title.length}/{TITLE_LIMIT}</span></small>
+    <small>{$_('editor.previewLabel')} <span class:warn={titleRemaining < 10}>{autoTitle.length}/{TITLE_LIMIT}</span></small>
     <p>{autoTitle || $_('editor.previewEmpty')}</p>
     <div class="tags">
       {#each fields as f (f.key)}<em class:on={f.on}>{$_(`editor.tag.${f.key}`)}</em>{/each}
@@ -228,7 +304,7 @@
       <FormSection number="01" label={$_('editor.details')}>
         <div class="field">
           <TextArea bind:value={title} rows={3} label={$_('editor.eventTitle')} placeholder={$_('editor.titlePlaceholder')} invalid={titleRemaining < 0} />
-          <small class:warn={titleRemaining < 10}>{title.length} / {TITLE_LIMIT}</small>
+          <small class:warn={titleRemaining < 10}>{autoTitle.length} / {TITLE_LIMIT}</small>
         </div>
         <div class="two">
           <div class="field">
@@ -282,9 +358,39 @@
         <Segmented bind:value={privacy} options={privacyOptions} label={$_('editor.privacyLabel')} />
       </FormSection>
 
-      <FormSection number="05" label={$_('editor.recording')} last>
+      <FormSection number="05" label={$_('editor.recording')} last={!eventId}>
         <ToggleRow label={$_('editor.autoUpload')} sub={$_('editor.autoUploadHint')} bind:checked={autoUpload} />
       </FormSection>
+
+      {#if eventId}
+        <FormSection number="06" label={$_('editor.platform.label')} last>
+          <List>
+            {#each platforms as p, i (p.id)}
+              {@const url = p.url}
+              <Row
+                title={p.label}
+                meta={statusLabel(p.status)}
+                detail={url ? $_('editor.platform.open') : undefined}
+                chevron={!!url}
+                onclick={url ? () => void openExternal(url) : undefined}
+                last={i === platforms.length - 1}
+              >
+                {#snippet icon()}
+                  <StatusDot
+                    status={CONNECTOR_TONE[p.connector]}
+                    label={$_(`editor.platform.connector.${p.connector}`)}
+                    labelHidden
+                  />
+                {/snippet}
+              </Row>
+            {/each}
+          </List>
+          <p class="sync">
+            <Badge tone={sync.tone} dot>{$_(`editor.platform.sync.${sync.key}`)}</Badge>
+            {#if sync.detail}<small>{sync.detail}</small>{/if}
+          </p>
+        </FormSection>
+      {/if}
     </aside>
   </form>
 

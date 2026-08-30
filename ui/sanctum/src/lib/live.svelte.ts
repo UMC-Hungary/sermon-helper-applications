@@ -1,5 +1,5 @@
 import { goto } from '$app/navigation';
-import { sendWsCommand, connectObs, youtubeAuthUrl, openExternal } from '@metocast/core-client';
+import { sendWsCommand, connectObs, connectCamera, youtubeAuthUrl, openExternal } from '@metocast/core-client';
 import type { WsMessage } from '@metocast/core-client';
 import type { PresenterState, KeynoteStatus, WsClientInfo, PptFile } from '@metocast/core-client/schemas/ws-messages';
 import { siObsstudio, siYoutube, siFacebook, siBlackmagicdesign, siDiscord } from 'simple-icons';
@@ -10,6 +10,7 @@ const CONNECTOR_META: Record<string, { name: string; kind: string; brand?: strin
   obs: { name: 'OBS Studio', kind: 'Encoder', brand: siObsstudio.path },
   youtube: { name: 'YouTube', kind: 'Streaming', brand: siYoutube.path },
   facebook: { name: 'Facebook Live', kind: 'Streaming', brand: siFacebook.path },
+  'blackmagic-camera': { name: 'Blackmagic Camera', kind: 'Camera', brand: siBlackmagicdesign.path },
   atem: { name: 'Blackmagic ATEM', kind: 'Switcher', brand: siBlackmagicdesign.path },
   discord: { name: 'Discord', kind: 'Webhooks', brand: siDiscord.path },
 };
@@ -73,6 +74,16 @@ export function handleWs(msg: WsMessage): void {
         if (msg.isRecording !== undefined) obsRecording = msg.isRecording;
       }
       break;
+    case 'connectors.status':
+      connectorStatus = {
+        obs: msg.obs.type,
+        vmix: msg.vmix.type,
+        broadlink: msg.broadlink.type,
+        youtube: msg.youtube.type,
+        facebook: msg.facebook.type,
+        'blackmagic-camera': msg['blackmagic-camera'].type,
+      };
+      break;
     case 'connector.status': {
       const prev = connectorStatus[msg.connector];
       const next = msg.status.type;
@@ -84,7 +95,12 @@ export function handleWs(msg: WsMessage): void {
             { label: 'Reconnect', primary: true, run: () => void connectObs() },
             { label: 'Edit', run: () => void goto('/settings/connectors') },
           ]
-        : msg.connector === 'youtube'
+        : msg.connector === 'blackmagic-camera'
+          ? [
+              { label: 'Reconnect', primary: true, run: () => void connectCamera() },
+              { label: 'Edit', run: () => void goto('/settings/connectors?open=blackmagic-camera') },
+            ]
+          : msg.connector === 'youtube'
           ? [
               { label: 'Re-login', primary: true, run: () => void youtubeAuthUrl().then(openExternal) },
               { label: 'Edit', run: () => void goto('/settings/connectors?open=youtube') },
@@ -165,4 +181,5 @@ export function handleWs(msg: WsMessage): void {
 export function registerLive(): void {
   sendWsCommand('presenter.register', { label: 'Sanctum' });
   sendWsCommand('clients.list');
+  sendWsCommand('connectors.status');
 }

@@ -8,9 +8,9 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 
 use crate::connectors::{
-    broadlink::BroadlinkConnector, facebook::FacebookConnector, obs::ObsConnector,
-    vmix::VmixConnector, youtube::YouTubeConnector, ConnectorConfig, ConnectorStatus,
-    FacebookConfig, YouTubeConfig,
+    blackmagic_camera::BlackmagicCameraConnector, broadlink::BroadlinkConnector,
+    facebook::FacebookConnector, obs::ObsConnector, vmix::VmixConnector, youtube::YouTubeConnector,
+    ConnectorConfig, ConnectorStatus, FacebookConfig, YouTubeConfig,
 };
 use crate::{database, scheduler::CronScheduler, server};
 
@@ -31,6 +31,7 @@ pub struct CoreOptions {
     /// operators and tests.
     pub admin_token: Arc<String>,
     pub obs_connector: Arc<ObsConnector>,
+    pub blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
     pub vmix_connector: Arc<VmixConnector>,
     pub youtube_connector: Arc<YouTubeConnector>,
     pub facebook_connector: Arc<FacebookConnector>,
@@ -57,6 +58,7 @@ impl CoreOptions {
                     .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string()),
             ),
             obs_connector: Arc::new(ObsConnector::new()),
+            blackmagic_camera_connector: Arc::new(BlackmagicCameraConnector::new()),
             vmix_connector: Arc::new(VmixConnector::new()),
             youtube_connector: Arc::new(YouTubeConnector::new()),
             facebook_connector: Arc::new(FacebookConnector::new()),
@@ -76,6 +78,7 @@ impl CoreOptions {
         Self {
             app_handle: Some(app),
             obs_connector: Arc::clone(&rt.obs_connector),
+            blackmagic_camera_connector: Arc::clone(&rt.blackmagic_camera_connector),
             vmix_connector: Arc::clone(&rt.vmix_connector),
             youtube_connector: Arc::clone(&rt.youtube_connector),
             facebook_connector: Arc::clone(&rt.facebook_connector),
@@ -193,6 +196,14 @@ pub async fn start(options: CoreOptions) -> anyhow::Result<()> {
             .start(obs_cfg, options.app_handle.clone())
             .await;
     }
+    let camera_cfg: crate::connectors::BlackmagicCameraConfig =
+        database::settings::get_json(&pool, "blackmagic_camera_config").await;
+    if camera_cfg.is_configured() {
+        options
+            .blackmagic_camera_connector
+            .start(camera_cfg, options.app_handle.clone())
+            .await;
+    }
     let yt_cfg = options.youtube_config.read().await.clone();
     if yt_cfg.is_configured() {
         options
@@ -227,6 +238,7 @@ pub async fn start(options: CoreOptions) -> anyhow::Result<()> {
         options.port,
         options.static_dir,
         options.obs_connector,
+        options.blackmagic_camera_connector,
         options.vmix_connector,
         options.youtube_connector,
         options.facebook_connector,

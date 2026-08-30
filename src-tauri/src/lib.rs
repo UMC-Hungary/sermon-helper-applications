@@ -45,6 +45,8 @@ pub struct AppRuntime {
     #[cfg(desktop)]
     pub obs_connector: Arc<connectors::obs::ObsConnector>,
     #[cfg(desktop)]
+    pub blackmagic_camera_connector: Arc<connectors::blackmagic_camera::BlackmagicCameraConnector>,
+    #[cfg(desktop)]
     pub vmix_connector: Arc<connectors::vmix::VmixConnector>,
     #[cfg(desktop)]
     pub atem_connector: Arc<connectors::atem::AtemConnector>,
@@ -204,6 +206,9 @@ pub fn run() {
             #[cfg(desktop)]
             let obs_connector = Arc::new(connectors::obs::ObsConnector::new());
             #[cfg(desktop)]
+            let blackmagic_camera_connector =
+                Arc::new(connectors::blackmagic_camera::BlackmagicCameraConnector::new());
+            #[cfg(desktop)]
             let vmix_connector = Arc::new(connectors::vmix::VmixConnector::new());
             #[cfg(desktop)]
             let atem_connector = Arc::new(connectors::atem::AtemConnector::new());
@@ -246,6 +251,8 @@ pub fn run() {
                 ),
                 #[cfg(desktop)]
                 obs_connector: Arc::clone(&obs_connector),
+                #[cfg(desktop)]
+                blackmagic_camera_connector: Arc::clone(&blackmagic_camera_connector),
                 #[cfg(desktop)]
                 vmix_connector: Arc::clone(&vmix_connector),
                 #[cfg(desktop)]

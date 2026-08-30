@@ -32,6 +32,7 @@ export type EventConnection = z.infer<typeof EventConnectionSchema>;
 export const EventSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
+  computedTitle: z.string().default(''),
   dateTime: z.string(),
   speaker: z.string(),
   description: z.string(),
@@ -47,6 +48,7 @@ export type Event = z.infer<typeof EventSchema>;
 export const EventSummarySchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
+  computedTitle: z.string().default(''),
   dateTime: z.string(),
   speaker: z.string(),
   recordingCount: z.number().int().nonnegative(),
@@ -81,6 +83,7 @@ const BibleReferencePayloadSchema = z.object({
 
 export const CreateEventPayloadSchema = z.object({
   title: z.string().min(1),
+  computed_title: z.string().optional(),
   date_time: z.string(),
   speaker: z.string().optional(),
   description: z.string().optional(),

@@ -59,8 +59,10 @@ export * from './uis.js';
 
 // ── Boundary types, inferred from the Zod schemas ─────────────────────────────
 export type {
+  CameraStreamTarget,
   ConnectorConfigMap,
   ConnectorName,
+  DiscoveredCamera,
   ObsStreamSettings,
 } from './schemas/connectors.js';
 export type { BiblePassage, BibleSuggestion } from './schemas/bible.js';

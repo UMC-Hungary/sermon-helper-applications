@@ -3,7 +3,11 @@ import { EventSchema, EventSummarySchema, EventActivitySchema } from './event.js
 import { RecordingSchema, RecordingWithEventSchema } from './recording.js';
 import { UntrackedRecordingSchema } from './untracked-recording.js';
 import { QueueSummarySchema } from './queue.js';
-import { ConnectorStatusPayloadSchema } from './connectors.js';
+import {
+  CameraStreamTargetSchema,
+  ConnectorStatusPayloadSchema,
+  DiscoveredCameraSchema,
+} from './connectors.js';
 
 // ── OBS Device types ──────────────────────────────────────────────────────────
 
@@ -179,12 +183,12 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('connector.status'),
-    connector: z.enum(['obs', 'vmix', 'atem', 'youtube', 'facebook', 'discord', 'broadlink']),
+    connector: z.enum(['obs', 'vmix', 'atem', 'youtube', 'facebook', 'discord', 'broadlink', 'blackmagic-camera']),
     status: ConnectorStatusPayloadSchema,
   }),
   z.object({
     type: z.literal('connector.state'),
-    connector: z.enum(['obs', 'vmix', 'atem', 'broadlink', 'youtube', 'facebook', 'discord']),
+    connector: z.enum(['obs', 'vmix', 'atem', 'broadlink', 'youtube', 'facebook', 'discord', 'blackmagic-camera']),
     isStreaming: z.boolean().optional(),
     isRecording: z.boolean().optional(),
   }),
@@ -305,10 +309,14 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     broadlink: ConnectorStatusPayloadSchema,
     youtube: ConnectorStatusPayloadSchema,
     facebook: ConnectorStatusPayloadSchema,
+    'blackmagic-camera': ConnectorStatusPayloadSchema,
   }),
   z.object({
     type: z.literal('connectors.state'),
     obs: z.object({ isStreaming: z.boolean(), isRecording: z.boolean() }).nullable(),
+    'blackmagic-camera': z
+      .object({ isStreaming: z.boolean(), isRecording: z.boolean() })
+      .nullable(),
   }),
   z.object({ type: z.literal('connectors.youtube.stream_key'), rtmpUrl: z.string() }),
   z.object({ type: z.literal('connectors.facebook.stream_key'), rtmpUrl: z.string() }),
@@ -353,6 +361,14 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('broadlink.commands.list'), commands: z.array(BroadlinkCommandSchema) }),
   z.object({ type: z.literal('broadlink.commands.add'), command: BroadlinkCommandSchema }),
   z.object({ type: z.literal('broadlink.commands.update'), command: BroadlinkCommandSchema }),
+  // ── Blackmagic camera (WS command responses) ───────────────────────────────
+  z.object({
+    type: z.literal('blackmagic-camera.discovered'),
+    cameras: z.array(DiscoveredCameraSchema),
+  }),
+  CameraStreamTargetSchema.extend({
+    type: z.literal('blackmagic-camera.stream.platform'),
+  }),
   // ── OBS Devices ────────────────────────────────────────────────────────────
   z.object({
     type: z.literal('obs.devices.available'),

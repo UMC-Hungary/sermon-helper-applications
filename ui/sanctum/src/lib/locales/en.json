@@ -146,7 +146,36 @@
     "saveNew": "Schedule event →",
     "saveEdit": "Save changes →",
     "cancel": "Cancel",
-    "footNote": "Events can be rescheduled or deleted from the event detail after saving."
+    "footNote": "Events can be rescheduled or deleted from the event detail after saving.",
+    "platform": {
+      "label": "Platforms",
+      "open": "Open",
+      "connector": {
+        "connected": "Connector online",
+        "connecting": "Connector connecting",
+        "error": "Connector error",
+        "disconnected": "Connector off"
+      },
+      "status": {
+        "not_scheduled": "Not scheduled",
+        "scheduled": "Scheduled",
+        "created": "Created",
+        "ready": "Ready",
+        "testing": "Testing",
+        "live": "Live",
+        "liveStarting": "Going live",
+        "complete": "Ended",
+        "revoked": "Revoked",
+        "failed": "Failed"
+      },
+      "sync": {
+        "synced": "In sync with YouTube",
+        "syncing": "Syncing to YouTube…",
+        "parked": "Waiting for YouTube sign-in",
+        "failed": "Sync failed",
+        "notScheduled": "Not on YouTube yet"
+      }
+    }
   },
   "presentations": {
     "title": "Slides",
@@ -317,7 +346,8 @@
       "broadlink": "Projector, screen and AV commands",
       "vmix": "Configuration stored for future support",
       "atem": "Switcher support coming soon",
-      "discord": "Webhook support coming soon"
+      "discord": "Webhook support coming soon",
+      "blackmagic-camera": "REST API · record and livestream control"
     },
     "lockedNote": "This connector is not implemented yet. Metocast keeps the configuration ready for a future build.",
     "note": "Connector settings are saved locally first, then reconciled through Tauri commands or the server API.",
@@ -366,7 +396,19 @@
       "appSecret": "App Secret",
       "pageId": "Page ID",
       "webhookUrl": "Webhook URL",
-      "apiKey": "API key"
+      "apiKey": "API key",
+      "username": "Username",
+      "fingerprint": "Certificate fingerprint"
+    },
+    "cameraDiscovery": {
+      "title": "Find cameras",
+      "description": "Scans the local network. The first camera found is connected automatically when none is configured yet.",
+      "empty": "No camera answered. Cameras only appear once Web Media Manager is enabled in Blackmagic Camera Setup; you can also enter the host by hand.",
+      "firmware": "Firmware {version}"
+    },
+    "camera": {
+      "pushYoutube": "Push YouTube settings",
+      "rtmp": "YouTube RTMP URL on the camera"
     }
   },
   "setup": {

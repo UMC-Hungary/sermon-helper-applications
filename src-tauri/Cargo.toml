@@ -54,6 +54,7 @@ tokio-cron-scheduler = "0.15.1"
 quick-xml = "0.39.2"
 tauri-plugin-updater = "2.10.0"
 usvg = "0.47"
+blackmagic-camera = { path = "../blackmagic-camera" }
 
 [patch.crates-io]
 tauri-plugin-liquid-glass = { path = "vendor/tauri-plugin-liquid-glass" }

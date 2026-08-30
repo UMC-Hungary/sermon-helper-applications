@@ -306,7 +306,7 @@ async fn handle_job(state: &AppState, job: &Job) -> anyhow::Result<()> {
             let conn = event.connection("youtube");
             let result = youtube::schedule_event(
                 &event.id.to_string(),
-                &event.title,
+                event.published_title(),
                 &event.date_time,
                 &token,
                 conn.and_then(|c| c.external_id.as_deref()),

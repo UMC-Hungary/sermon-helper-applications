@@ -1,11 +1,17 @@
 import { z } from 'zod';
 
+/** Only the platform_sync job types exist today; both key off one of these. */
+export const JobPayloadSchema = z.object({
+  event_id: z.string().uuid().optional(),
+  broadcast_id: z.string().optional(),
+});
+
 export const JobSchema = z.object({
   id: z.string().uuid(),
   queue: z.string(),
   jobType: z.string(),
   dedupKey: z.string().nullable(),
-  payload: z.unknown(),
+  payload: JobPayloadSchema,
   status: z.string(),
   attempts: z.number().int(),
   maxAttempts: z.number().int(),

@@ -38,11 +38,12 @@ Companion and the presenter receiver alike. Access has three tiers:
 | **Nobody** | — | Everything else about credentials. See below. |
 
 **Upstream credentials never leave the server.** The szentiras.eu API key, YouTube client
-secret, Facebook app secret, OBS password and Discord webhook URL are stored server-side and
-used only for the core's own outbound requests. `GET /api/connectors/{name}/config` always
-returns them blank, with a `<field>Set` boolean saying whether one is stored — holding the auth
-token is not enough to read them. When saving, send a new value to replace a secret, leave it
-blank to keep the stored one, or send `"<field>Set": false` to clear it.
+secret, Facebook app secret, OBS and Blackmagic camera passwords, and the Discord webhook URL
+are stored server-side and used only for the core's own outbound requests.
+`GET /api/connectors/{name}/config` always returns them blank, with a `<field>Set` boolean
+saying whether one is stored — holding the auth token is not enough to read them. When saving,
+send a new value to replace a secret, leave it blank to keep the stored one, or send
+`"<field>Set": false` to clear it.
 
 The one exception is the machine actually running the server: its own desktop app can re-read a
 credential it stored, via `GET /api/connectors/{name}/config/secrets`. That needs a second

@@ -27,11 +27,10 @@
 
   function nextSundayAt(hour: number): string {
     const now = new Date();
-    const daysUntilSunday = (7 - now.getDay()) % 7;
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain date arithmetic, result is a string
     const sunday = new Date(now);
-    sunday.setDate(now.getDate() + daysUntilSunday);
     sunday.setHours(hour, 0, 0, 0);
+    while (sunday.getDay() !== 0 || sunday <= now) sunday.setDate(sunday.getDate() + 1);
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${sunday.getFullYear()}-${pad(sunday.getMonth() + 1)}-${pad(sunday.getDate())}T${pad(hour)}:00`;
   }

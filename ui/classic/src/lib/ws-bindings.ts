@@ -80,6 +80,7 @@ function handleMessage(msg: WsMessage): void {
 				const summary: EventSummary = {
 					id: rec.id,
 					title: rec.title,
+					computedTitle: rec.computedTitle,
 					dateTime: rec.dateTime,
 					speaker: rec.speaker,
 					recordingCount: existing?.recordingCount ?? 0,

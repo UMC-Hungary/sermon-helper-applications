@@ -2,11 +2,15 @@ import { z } from 'zod';
 import { apiFetch } from './client.js';
 import { getAdminToken } from '../host/index.js';
 import {
+  CameraStreamTargetSchema,
   ConnectorConfigSchemas,
+  DiscoveredCamerasSchema,
   ConnectorStatusesSchema,
   ObsStreamSettingsSchema,
   type ConnectorConfigMap,
   type ConnectorName,
+  type CameraStreamTarget,
+  type DiscoveredCamera,
   type ObsStreamSettings,
 } from '../schemas/connectors.js';
 
@@ -49,6 +53,33 @@ export function connectObs(): Promise<void> {
 
 export function disconnectObs(): Promise<void> {
   return apiFetch('/api/connectors/obs/disconnect', z.void(), { method: 'POST' });
+}
+
+/** Starts the Blackmagic camera connector from the stored configuration. */
+export function connectCamera(): Promise<void> {
+  return apiFetch('/api/connectors/blackmagic-camera/connect', z.void(), { method: 'POST' });
+}
+
+/**
+ * Scans the LAN for Blackmagic cameras. The core adopts and connects the first
+ * one found when no camera is configured yet, so a scan is also how a camera
+ * gets connected. Every client is told the result over `/ws` as well.
+ */
+export async function discoverCameras(): Promise<DiscoveredCamera[]> {
+  const { cameras } = await apiFetch('/api/connectors/blackmagic-camera/discover', DiscoveredCamerasSchema, {
+    method: 'POST',
+  });
+  return cameras;
+}
+
+/**
+ * Copies the channel's RTMP ingestion address and stream key into the camera's
+ * livestream settings. Sets the destination only — the camera does not go live.
+ */
+export function pushCameraYouTubeSettings(): Promise<CameraStreamTarget> {
+  return apiFetch('/api/connectors/blackmagic-camera/stream/youtube', CameraStreamTargetSchema, {
+    method: 'POST',
+  });
 }
 
 export function fetchObsStreamSettings(): Promise<ObsStreamSettings> {

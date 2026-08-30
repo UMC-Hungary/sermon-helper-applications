@@ -146,7 +146,36 @@
     "saveNew": "Esemény ütemezése →",
     "saveEdit": "Módosítások mentése →",
     "cancel": "Mégse",
-    "footNote": "Az események mentés után átütemezhetők vagy törölhetők a részleteknél."
+    "footNote": "Az események mentés után átütemezhetők vagy törölhetők a részleteknél.",
+    "platform": {
+      "label": "Platformok",
+      "open": "Megnyitás",
+      "connector": {
+        "connected": "Kapcsolat él",
+        "connecting": "Kapcsolódás",
+        "error": "Kapcsolati hiba",
+        "disconnected": "Kapcsolat kikapcsolva"
+      },
+      "status": {
+        "not_scheduled": "Nincs ütemezve",
+        "scheduled": "Ütemezve",
+        "created": "Létrehozva",
+        "ready": "Kész",
+        "testing": "Teszt",
+        "live": "Élő",
+        "liveStarting": "Indul az élő adás",
+        "complete": "Véget ért",
+        "revoked": "Visszavonva",
+        "failed": "Sikertelen"
+      },
+      "sync": {
+        "synced": "Szinkronban a YouTube-bal",
+        "syncing": "Szinkronizálás a YouTube-ra…",
+        "parked": "Várakozás a YouTube bejelentkezésre",
+        "failed": "A szinkronizálás nem sikerült",
+        "notScheduled": "Még nincs fenn a YouTube-on"
+      }
+    }
   },
   "presentations": {
     "title": "Diák",
@@ -317,7 +346,8 @@
       "broadlink": "Projektor, vászon és AV parancsok",
       "vmix": "Konfiguráció eltárolva későbbi támogatáshoz",
       "atem": "Switcher támogatás hamarosan",
-      "discord": "Webhook támogatás hamarosan"
+      "discord": "Webhook támogatás hamarosan",
+      "blackmagic-camera": "REST API · felvétel- és élő adás vezérlés"
     },
     "lockedNote": "Ez a csatlakozó még nincs megvalósítva. A Metocast készen tartja a konfigurációt egy jövőbeli verzióhoz.",
     "note": "A csatlakozó beállításai először helyben mentődnek, majd Tauri parancsokon vagy a szerver API-n keresztül egyeztetődnek.",
@@ -366,7 +396,19 @@
       "appSecret": "Alkalmazás titok",
       "pageId": "Oldal azonosító",
       "webhookUrl": "Webhook URL",
-      "apiKey": "API kulcs"
+      "apiKey": "API kulcs",
+      "username": "Felhasználónév",
+      "fingerprint": "Tanúsítvány ujjlenyomat"
+    },
+    "cameraDiscovery": {
+      "title": "Kamerák keresése",
+      "description": "Végigpásztázza a helyi hálózatot. Ha még nincs kamera beállítva, az első megtalált automatikusan csatlakozik.",
+      "empty": "Egy kamera sem válaszolt. A kamerák csak akkor jelennek meg, ha a Blackmagic Camera Setup-ban be van kapcsolva a Web Media Manager; a hosztot kézzel is megadhatod.",
+      "firmware": "Firmware {version}"
+    },
+    "camera": {
+      "pushYoutube": "YouTube beállítások küldése",
+      "rtmp": "YouTube RTMP URL a kamerán"
     }
   },
   "setup": {

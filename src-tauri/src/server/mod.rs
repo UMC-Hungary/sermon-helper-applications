@@ -29,8 +29,9 @@ use sqlx::PgPool;
 #[cfg(target_os = "macos")]
 use crate::connectors::keynote::KeynoteConnector;
 use crate::connectors::{
-    broadlink::BroadlinkConnector, facebook::FacebookConnector, obs::ObsConnector,
-    vmix::VmixConnector, youtube::YouTubeConnector, FacebookConfig, YouTubeConfig,
+    blackmagic_camera::BlackmagicCameraConnector, broadlink::BroadlinkConnector,
+    facebook::FacebookConnector, obs::ObsConnector, vmix::VmixConnector, youtube::YouTubeConnector,
+    FacebookConfig, YouTubeConfig,
 };
 use crate::models::event::find_current_event;
 use crate::obs_devices::ObsAvailableDevices;
@@ -49,6 +50,7 @@ pub struct AppState {
     pub ws_clients: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
     pub server_id: String,
     pub obs_connector: Arc<ObsConnector>,
+    pub blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
     pub vmix_connector: Arc<VmixConnector>,
     pub youtube_connector: Arc<YouTubeConnector>,
     pub facebook_connector: Arc<FacebookConnector>,
@@ -99,6 +101,7 @@ pub async fn build_and_serve(
     port: u16,
     static_dir: Option<String>,
     obs_connector: Arc<ObsConnector>,
+    blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
     vmix_connector: Arc<VmixConnector>,
     youtube_connector: Arc<YouTubeConnector>,
     facebook_connector: Arc<FacebookConnector>,
@@ -161,6 +164,7 @@ pub async fn build_and_serve(
         ws_clients: ws_clients.clone(),
         server_id,
         obs_connector: obs_connector.clone(),
+        blackmagic_camera_connector: blackmagic_camera_connector.clone(),
         vmix_connector,
         youtube_connector: youtube_connector.clone(),
         facebook_connector: facebook_connector.clone(),
@@ -222,6 +226,46 @@ pub async fn build_and_serve(
                 let msg = json!({
                     "type": "connector.state",
                     "connector": "obs",
+                    "isStreaming": state.is_streaming,
+                    "isRecording": state.is_recording,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    // Forward Blackmagic camera status and record/livestream state to WS clients.
+    {
+        let clients = ws_clients.clone();
+        let mut status_rx = blackmagic_camera_connector.status_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(status) = status_rx.recv().await {
+                let msg = json!({
+                    "type": "connector.status",
+                    "connector": "blackmagic-camera",
+                    "status": status,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    {
+        let clients = ws_clients.clone();
+        let mut state_rx = blackmagic_camera_connector.state_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(state) = state_rx.recv().await {
+                let msg = json!({
+                    "type": "connector.state",
+                    "connector": "blackmagic-camera",
                     "isStreaming": state.is_streaming,
                     "isRecording": state.is_recording,
                 })
@@ -504,6 +548,14 @@ pub async fn build_and_serve(
             delete(routes::broadlink_remove_device),
         )
         .route(
+            "/connectors/blackmagic-camera/stream/youtube",
+            post(routes::blackmagic_camera_push_youtube),
+        )
+        .route(
+            "/connectors/blackmagic-camera/discover",
+            post(routes::blackmagic_camera_discover),
+        )
+        .route(
             "/connectors/broadlink/discover",
             post(routes::broadlink_discover),
         )
@@ -538,6 +590,10 @@ pub async fn build_and_serve(
         .route(
             "/connectors/{name}/config/secrets",
             get(routes::reveal_connector_secrets),
+        )
+        .route(
+            "/connectors/blackmagic-camera/connect",
+            post(routes::blackmagic_camera_connect),
         )
         .route("/connectors/obs/connect", post(routes::obs_connect))
         .route("/connectors/obs/disconnect", post(routes::obs_disconnect))

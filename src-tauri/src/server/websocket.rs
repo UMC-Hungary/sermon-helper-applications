@@ -113,6 +113,7 @@ enum WsCommand {
     #[serde(rename = "events.create")]
     EventsCreate {
         title: String,
+        computed_title: Option<String>,
         date_time: chrono::DateTime<Utc>,
         speaker: Option<String>,
         description: Option<String>,
@@ -124,6 +125,7 @@ enum WsCommand {
     EventsUpdate {
         id: Uuid,
         title: String,
+        computed_title: Option<String>,
         date_time: chrono::DateTime<Utc>,
         speaker: Option<String>,
         description: Option<String>,
@@ -277,6 +279,23 @@ enum WsCommand {
     BroadlinkLearnCancel,
     #[serde(rename = "broadlink.commands.send")]
     BroadlinkCommandsSend { id: Uuid },
+    // ── Blackmagic camera ────────────────────────────────────────────────────
+    /// mDNS scan for cameras on the LAN. Returns nothing on networks where
+    /// multicast does not arrive — a camera added by host still works.
+    #[serde(rename = "blackmagic-camera.discover")]
+    BlackmagicCameraDiscover { timeout_secs: Option<u64> },
+    #[serde(rename = "blackmagic-camera.record.start")]
+    BlackmagicCameraRecordStart { clip_name: Option<String> },
+    #[serde(rename = "blackmagic-camera.record.stop")]
+    BlackmagicCameraRecordStop,
+    #[serde(rename = "blackmagic-camera.stream.start")]
+    BlackmagicCameraStreamStart,
+    #[serde(rename = "blackmagic-camera.stream.stop")]
+    BlackmagicCameraStreamStop,
+    /// Copy the channel's RTMP ingestion address and stream key into the camera's
+    /// livestream settings. Does not go live — send `blackmagic.stream.start` for that.
+    #[serde(rename = "blackmagic-camera.stream.push_youtube")]
+    BlackmagicCameraStreamPushYoutube,
     // ── Presenter ────────────────────────────────────────────────────────────
     /// Register a human-readable label and hostname for this connection (shown in the UI).
     #[serde(rename = "presenter.register")]
@@ -536,7 +555,8 @@ struct PresenterEventList {
 
 async fn fetch_event_summaries(pool: &PgPool) -> Result<Vec<EventSummary>, sqlx::Error> {
     sqlx::query_as::<_, EventSummary>(
-        r#"SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
+        r#"SELECT e.id, e.title, e.computed_title, e.date_time, e.speaker,
+                  e.created_at, e.updated_at,
                   COUNT(r.id) AS recording_count,
                   EXISTS (
                       SELECT 1 FROM event_activities ea
@@ -645,6 +665,7 @@ mod tests {
         EventSummary {
             id,
             title: id.to_string(),
+            computed_title: String::new(),
             date_time,
             speaker: String::new(),
             recording_count: 0,
@@ -652,6 +673,35 @@ mod tests {
             created_at: date_time,
             updated_at: date_time,
         }
+    }
+
+    #[test]
+    fn blackmagic_camera_commands_parse_from_their_wire_names() {
+        let parsed = |text: &str| serde_json::from_str::<WsCommand>(text).expect(text);
+
+        assert!(matches!(
+            parsed(r#"{"type":"blackmagic-camera.discover"}"#),
+            WsCommand::BlackmagicCameraDiscover { timeout_secs: None }
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"blackmagic-camera.record.start","clip_name":"service"}"#),
+            WsCommand::BlackmagicCameraRecordStart { clip_name: Some(name) } if name == "service"
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"blackmagic-camera.record.stop"}"#),
+            WsCommand::BlackmagicCameraRecordStop
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"blackmagic-camera.stream.start"}"#),
+            WsCommand::BlackmagicCameraStreamStart
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"blackmagic-camera.stream.push_youtube"}"#),
+            WsCommand::BlackmagicCameraStreamPushYoutube
+        ));
+        // The old un-suffixed names must not resolve — `blackmagic` alone is ambiguous
+        // once an ATEM connector exists.
+        assert!(serde_json::from_str::<WsCommand>(r#"{"type":"blackmagic.record.stop"}"#).is_err());
     }
 
     #[test]
@@ -1262,6 +1312,7 @@ async fn handle_ws_command(
         },
         WsCommand::EventsCreate {
             title,
+            computed_title,
             date_time,
             speaker,
             description,
@@ -1271,6 +1322,7 @@ async fn handle_ws_command(
         } => {
             let body = CreateEvent {
                 title,
+                computed_title,
                 date_time,
                 speaker,
                 description,
@@ -1284,10 +1336,11 @@ async fn handle_ws_command(
                     .execute(&mut *tx)
                     .await?;
                 let event_id: Uuid = sqlx::query_scalar(
-                    "INSERT INTO events (title, date_time, speaker, description, auto_upload_enabled) \
-                     VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                    "INSERT INTO events (title, computed_title, date_time, speaker, description, \
+                     auto_upload_enabled) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
                 )
                 .bind(&body.title)
+                .bind(body.computed_title.unwrap_or_default())
                 .bind(body.date_time)
                 .bind(body.speaker.unwrap_or_default())
                 .bind(body.description.unwrap_or_default())
@@ -1342,6 +1395,7 @@ async fn handle_ws_command(
         WsCommand::EventsUpdate {
             id,
             title,
+            computed_title,
             date_time,
             speaker,
             description,
@@ -1351,6 +1405,7 @@ async fn handle_ws_command(
         } => {
             let body = UpdateEvent {
                 title,
+                computed_title,
                 date_time,
                 speaker,
                 description,
@@ -1364,10 +1419,12 @@ async fn handle_ws_command(
                     .execute(&mut *tx)
                     .await?;
                 let updated_id: Option<Uuid> = sqlx::query_scalar(
-                    "UPDATE events SET title=$1, date_time=$2, speaker=$3, description=$4, \
-                     auto_upload_enabled=$5, updated_at=NOW() WHERE id=$6 RETURNING id",
+                    "UPDATE events SET title=$1, computed_title=$2, date_time=$3, speaker=$4, \
+                     description=$5, auto_upload_enabled=$6, updated_at=NOW() WHERE id=$7 \
+                     RETURNING id",
                 )
                 .bind(&body.title)
+                .bind(body.computed_title.unwrap_or_default())
                 .bind(body.date_time)
                 .bind(body.speaker.unwrap_or_default())
                 .bind(body.description.unwrap_or_default())
@@ -2007,6 +2064,7 @@ async fn handle_ws_command(
             let yt = state.youtube_connector.get_status().await;
             let fb = state.facebook_connector.get_status().await;
             let broadlink = state.broadlink_connector.get_status().await;
+            let blackmagic_camera = state.blackmagic_camera_connector.get_status().await;
             let msg = json!({
                 "type": "connectors.status",
                 "obs": obs,
@@ -2014,15 +2072,18 @@ async fn handle_ws_command(
                 "broadlink": broadlink,
                 "youtube": yt,
                 "facebook": fb,
+                "blackmagic-camera": blackmagic_camera,
             })
             .to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
         }
         WsCommand::ConnectorsState => {
             let obs_output = state.obs_connector.get_output_state().await;
+            let camera = state.blackmagic_camera_connector.get_state().await;
             let msg = json!({
                 "type": "connectors.state",
                 "obs": obs_output.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
+                "blackmagic-camera": camera.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
             })
             .to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
@@ -2053,7 +2114,7 @@ async fn handle_ws_command(
                 .unwrap_or("private");
             match youtube::schedule_event(
                 &event.id.to_string(),
-                &event.title,
+                event.published_title(),
                 &event.date_time,
                 &token.access_token,
                 existing_id,
@@ -2132,50 +2193,11 @@ async fn handle_ws_command(
                     return;
                 }
             };
-            #[derive(serde::Deserialize)]
-            struct IngestionInfo {
-                #[serde(rename = "ingestionAddress")]
-                ingestion_address: String,
-                #[serde(rename = "streamName")]
-                stream_name: String,
-            }
-            #[derive(serde::Deserialize)]
-            struct Cdn {
-                #[serde(rename = "ingestionInfo")]
-                ingestion_info: IngestionInfo,
-            }
-            #[derive(serde::Deserialize)]
-            struct StreamItem {
-                cdn: Cdn,
-            }
-            #[derive(serde::Deserialize)]
-            struct StreamList {
-                items: Option<Vec<StreamItem>>,
-            }
-            let client = reqwest::Client::new();
-            let resp = client
-                .get("https://www.googleapis.com/youtube/v3/liveStreams")
-                .query(&[("part", "cdn"), ("mine", "true")])
-                .bearer_auth(&token.access_token)
-                .send()
-                .await;
-            match resp {
-                Ok(r) if r.status().is_success() => match r.json::<StreamList>().await {
-                    Ok(list) => match list.items.and_then(|items| items.into_iter().next()) {
-                        Some(item) => {
-                            let rtmp_url = format!(
-                                "{}/{}",
-                                item.cdn.ingestion_info.ingestion_address,
-                                item.cdn.ingestion_info.stream_name,
-                            );
-                            let msg = json!({ "type": "connectors.youtube.stream_key", "rtmpUrl": rtmp_url }).to_string();
-                            let _ = client_tx.send(Message::Text(msg.into()));
-                        }
-                        None => ws_error(client_tx, "no_stream_found"),
-                    },
-                    Err(e) => ws_error(client_tx, &e.to_string()),
-                },
-                Ok(r) => ws_error(client_tx, &format!("youtube_api_{}", r.status())),
+            match youtube::live_stream_ingestion(&token.access_token).await {
+                Ok(ingestion) => {
+                    let msg = json!({ "type": "connectors.youtube.stream_key", "rtmpUrl": ingestion.rtmp_url() }).to_string();
+                    let _ = client_tx.send(Message::Text(msg.into()));
+                }
                 Err(e) => ws_error(client_tx, &e.to_string()),
             }
         }
@@ -2765,6 +2787,70 @@ async fn handle_ws_command(
                 }
                 Ok(None) => ws_error(client_tx, "not_found"),
                 Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        // ── Blackmagic camera ────────────────────────────────────────────────
+        WsCommand::BlackmagicCameraDiscover { timeout_secs } => {
+            // Results reach every client as `blackmagic-camera.discovered`, and an
+            // unconfigured camera is adopted and connected — see `discover_cameras`.
+            let state = state.clone();
+            let timeout = std::time::Duration::from_secs(timeout_secs.unwrap_or(5).clamp(1, 30));
+            tokio::spawn(async move {
+                crate::server::routes::discover_cameras(&state, timeout).await;
+            });
+            ws_ok(client_tx);
+        }
+        WsCommand::BlackmagicCameraRecordStart { clip_name } => {
+            let Some(camera) = state.blackmagic_camera_connector.client().await else {
+                ws_error(client_tx, "blackmagic_camera_not_connected");
+                return;
+            };
+            match camera.start_recording(clip_name.as_deref()).await {
+                Ok(()) => ws_ok(client_tx),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BlackmagicCameraRecordStop => {
+            let Some(camera) = state.blackmagic_camera_connector.client().await else {
+                ws_error(client_tx, "blackmagic_camera_not_connected");
+                return;
+            };
+            match camera.stop_recording().await {
+                Ok(()) => ws_ok(client_tx),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BlackmagicCameraStreamStart => {
+            let Some(camera) = state.blackmagic_camera_connector.client().await else {
+                ws_error(client_tx, "blackmagic_camera_not_connected");
+                return;
+            };
+            match camera.livestream_start().await {
+                Ok(()) => ws_ok(client_tx),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BlackmagicCameraStreamStop => {
+            let Some(camera) = state.blackmagic_camera_connector.client().await else {
+                ws_error(client_tx, "blackmagic_camera_not_connected");
+                return;
+            };
+            match camera.livestream_stop().await {
+                Ok(()) => ws_ok(client_tx),
+                Err(e) => ws_error(client_tx, &e.to_string()),
+            }
+        }
+        WsCommand::BlackmagicCameraStreamPushYoutube => {
+            let Some(camera) = state.blackmagic_camera_connector.client().await else {
+                ws_error(client_tx, "blackmagic_camera_not_connected");
+                return;
+            };
+            match crate::server::routes::push_youtube_to_camera(&state.pool, &camera).await {
+                Ok(mut payload) => {
+                    payload["type"] = json!("blackmagic-camera.stream.platform");
+                    let _ = client_tx.send(Message::Text(payload.to_string().into()));
+                }
+                Err(e) => ws_error(client_tx, &e),
             }
         }
     }

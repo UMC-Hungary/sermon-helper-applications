@@ -51,6 +51,11 @@
     await load();
   }
 
+  const studioUrl = (item: ChannelVideoItem) =>
+    `https://studio.youtube.com/video/${item.id}/${
+      item.liveStatus === 'live' || item.liveStatus === 'upcoming' ? 'livestreaming' : 'edit'
+    }`;
+
   async function openVideo(url: string) {
     try {
       await openExternal(url);
@@ -199,7 +204,7 @@
       {:else}
         <div class="video-grid">
           {#each visibleItems as item (item.id)}
-            <button class="video-card" onclick={() => openVideo(item.watchUrl)}>
+            <button class="video-card" onclick={() => openVideo(studioUrl(item))}>
               <div class="thumbnail-wrap">
                 {#if item.thumbnailUrl}
                   <img

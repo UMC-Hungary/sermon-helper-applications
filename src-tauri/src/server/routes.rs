@@ -12,8 +12,8 @@ use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
 use crate::connectors::{
-    facebook, youtube, AtemConfig, BroadlinkConfig, DiscordConfig, FacebookConfig, ObsConfig,
-    SzentirasConfig, VmixConfig, YouTubeConfig,
+    blackmagic_camera, facebook, youtube, AtemConfig, BlackmagicCameraConfig, BroadlinkConfig,
+    DiscordConfig, FacebookConfig, ObsConfig, SzentirasConfig, VmixConfig, YouTubeConfig,
 };
 use crate::connectors::{ConnectorConfig, ConnectorStatus};
 use crate::database::settings;
@@ -79,8 +79,10 @@ const OAUTH_ERROR_HTML: &str = r#"<!DOCTYPE html>
 
 pub async fn get_connector_state(State(state): State<AppState>) -> impl IntoResponse {
     let obs_state = state.obs_connector.get_output_state().await;
+    let camera_state = state.blackmagic_camera_connector.get_state().await;
     Json(json!({
-        "obs": obs_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording}))
+        "obs": obs_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
+        "blackmagic-camera": camera_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording}))
     }))
 }
 
@@ -90,6 +92,7 @@ pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoR
     let yt = state.youtube_connector.get_status().await;
     let fb = state.facebook_connector.get_status().await;
     let broadlink = state.broadlink_connector.get_status().await;
+    let blackmagic_camera = state.blackmagic_camera_connector.get_status().await;
     // ATEM, Discord and Szentírás have no connector worker: they report Connected
     // when configured, so a UI can render them without a separate config round-trip.
     let configured = |ok: bool| {
@@ -116,6 +119,7 @@ pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoR
     );
     Json(json!({
         "obs": obs,
+        "blackmagic-camera": blackmagic_camera,
         "vmix": vmix,
         "atem": atem,
         "broadlink": broadlink,
@@ -314,6 +318,10 @@ pub async fn reveal_connector_secrets(
     let pool = &state.pool;
     match name.as_str() {
         "obs" => Json(settings::get_json::<ObsConfig>(pool, "obs_config").await).into_response(),
+        "blackmagic-camera" => Json(
+            settings::get_json::<BlackmagicCameraConfig>(pool, "blackmagic_camera_config").await,
+        )
+        .into_response(),
         "youtube" => {
             Json(settings::get_json::<YouTubeConfig>(pool, "youtube_config").await).into_response()
         }
@@ -342,6 +350,9 @@ pub async fn get_connector_config(
     let pool = &state.pool;
     match name.as_str() {
         "obs" => stored_config::<ObsConfig>(pool, "obs_config").await,
+        "blackmagic-camera" => {
+            stored_config::<BlackmagicCameraConfig>(pool, "blackmagic_camera_config").await
+        }
         "vmix" => stored_config::<VmixConfig>(pool, "vmix_config").await,
         "atem" => stored_config::<AtemConfig>(pool, "atem_config").await,
         "broadlink" => stored_config::<BroadlinkConfig>(pool, "broadlink_config").await,
@@ -377,6 +388,24 @@ pub async fn put_connector_config(
             }
             Err(e) => Err(e),
         },
+        "blackmagic-camera" => {
+            match save_config::<BlackmagicCameraConfig>(pool, "blackmagic_camera_config", body)
+                .await
+            {
+                Ok(config) => {
+                    if config.enabled {
+                        state
+                            .blackmagic_camera_connector
+                            .start(config, state.app_handle.clone())
+                            .await;
+                    } else {
+                        state.blackmagic_camera_connector.stop().await;
+                    }
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        }
         "youtube" => match save_config::<YouTubeConfig>(pool, "youtube_config", body).await {
             Ok(config) => {
                 *state.youtube_config.write().await = config.clone();
@@ -434,6 +463,16 @@ pub async fn obs_connect(State(state): State<AppState>) -> impl IntoResponse {
 
 pub async fn obs_disconnect(State(state): State<AppState>) -> impl IntoResponse {
     state.obs_connector.stop().await;
+    StatusCode::NO_CONTENT
+}
+
+pub async fn blackmagic_camera_connect(State(state): State<AppState>) -> impl IntoResponse {
+    let config: BlackmagicCameraConfig =
+        settings::get_json(&state.pool, "blackmagic_camera_config").await;
+    state
+        .blackmagic_camera_connector
+        .start(config, state.app_handle.clone())
+        .await;
     StatusCode::NO_CONTENT
 }
 
@@ -521,6 +560,121 @@ pub async fn set_obs_stream_settings(
         )
             .into_response(),
     }
+}
+
+// ── Blackmagic camera discovery ───────────────────────────────────────────────
+
+/// Scans the LAN, tells every connected client what turned up, and adopts the
+/// first camera found when none is configured yet — a scan is what gets a camera
+/// connected, the same way a Broadlink scan is.
+///
+/// An empty result is normal, not an error: mDNS does not cross VLANs, and on
+/// macOS it needs Local Network permission. Adding a camera by host still works.
+pub(crate) async fn discover_cameras(
+    state: &AppState,
+    timeout: std::time::Duration,
+) -> Vec<serde_json::Value> {
+    let found = match blackmagic_camera::discover(timeout).await {
+        Ok(found) => found,
+        Err(e) => {
+            tracing::error!("blackmagic-camera discover: {e}");
+            Vec::new()
+        }
+    };
+
+    let cameras: Vec<serde_json::Value> = found
+        .iter()
+        .map(|camera| {
+            json!({
+                "host": camera.host(),
+                "hostname": camera.hostname,
+                "addresses": camera.addresses,
+                "port": camera.port,
+                "deviceName": camera.device_name,
+                "productName": camera.product_name,
+                "uniqueId": camera.unique_id,
+                "softwareVersion": camera.software_version,
+            })
+        })
+        .collect();
+
+    let msg = json!({ "type": "blackmagic-camera.discovered", "cameras": cameras }).to_string();
+    for tx in state.ws_clients.read().await.values() {
+        let _ = tx.send(axum::extract::ws::Message::Text(msg.clone().into()));
+    }
+
+    adopt_camera(state, found.first()).await;
+    cameras
+}
+
+/// Stores the discovered camera and connects to it, unless one is already
+/// configured — a scan must never repoint an operator's chosen camera.
+async fn adopt_camera(state: &AppState, found: Option<&blackmagic_camera::Discovered>) {
+    let Some(camera) = found else { return };
+    let stored: BlackmagicCameraConfig =
+        settings::get_json(&state.pool, "blackmagic_camera_config").await;
+    if !stored.host.is_empty() {
+        return;
+    }
+
+    let config = BlackmagicCameraConfig {
+        enabled: true,
+        host: camera.host(),
+        ..stored
+    };
+    if let Err(e) = settings::set_json(&state.pool, "blackmagic_camera_config", &config).await {
+        tracing::error!("adopt_camera: {e}");
+        return;
+    }
+    tracing::info!("Adopted Blackmagic camera {}", config.host);
+    state
+        .blackmagic_camera_connector
+        .start(config, state.app_handle.clone())
+        .await;
+}
+
+/// Copies the channel's RTMP ingestion address and stream key into the camera's
+/// livestream settings, and reports what the camera will stream to. Setting the
+/// destination is all this does — going live is a separate action.
+pub(crate) async fn push_youtube_to_camera(
+    pool: &sqlx::PgPool,
+    camera: &blackmagic_camera::Camera,
+) -> Result<serde_json::Value, String> {
+    let token = youtube::load_tokens(pool)
+        .await
+        .ok_or_else(|| "not_authenticated".to_string())?;
+    let ingestion = youtube::live_stream_ingestion(&token.access_token)
+        .await
+        .map_err(|e| e.to_string())?;
+    let platform = blackmagic_camera::push_youtube(camera, &ingestion.address, &ingestion.key)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(json!({
+        "rtmpUrl": ingestion.rtmp_url(),
+        "platform": platform.platform,
+        "server": platform.server,
+        "quality": platform.quality,
+        "url": platform.url,
+    }))
+}
+
+pub async fn blackmagic_camera_push_youtube(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(camera) = state.blackmagic_camera_connector.client().await else {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "Blackmagic camera is not connected" })),
+        )
+            .into_response();
+    };
+    match push_youtube_to_camera(&state.pool, &camera).await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(e) => upstream_error(e),
+    }
+}
+
+pub async fn blackmagic_camera_discover(State(state): State<AppState>) -> impl IntoResponse {
+    let cameras = discover_cameras(&state, std::time::Duration::from_secs(5)).await;
+    Json(json!({ "cameras": cameras }))
 }
 
 // ── YouTube OAuth ─────────────────────────────────────────────────────────────
@@ -702,7 +856,7 @@ pub async fn trigger_youtube_schedule(
 
     match youtube::schedule_event(
         &event.id.to_string(),
-        &event.title,
+        event.published_title(),
         &event.date_time,
         &token.access_token,
         existing_id,
@@ -1094,7 +1248,8 @@ pub async fn get_facebook_stream_key(State(state): State<AppState>) -> impl Into
 pub async fn list_events(State(state): State<AppState>) -> impl IntoResponse {
     let result = sqlx::query_as::<_, EventSummary>(
         r#"
-        SELECT e.id, e.title, e.date_time, e.speaker, e.created_at, e.updated_at,
+        SELECT e.id, e.title, e.computed_title, e.date_time, e.speaker,
+               e.created_at, e.updated_at,
                COUNT(r.id) AS recording_count,
                EXISTS (
                    SELECT 1 FROM event_activities ea
@@ -1180,11 +1335,12 @@ pub async fn create_event(
             .await?;
 
         let event_id: Uuid = sqlx::query_scalar(
-            r#"INSERT INTO events (title, date_time, speaker, description, auto_upload_enabled)
-            VALUES ($1, $2, $3, $4, $5)
+            r#"INSERT INTO events (title, computed_title, date_time, speaker, description, auto_upload_enabled)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id"#,
         )
         .bind(&body.title)
+        .bind(body.computed_title.unwrap_or_default())
         .bind(body.date_time)
         .bind(body.speaker.unwrap_or_default())
         .bind(body.description.unwrap_or_default())
@@ -1262,15 +1418,17 @@ pub async fn update_event(
         let updated_id: Option<Uuid> = sqlx::query_scalar(
             r#"UPDATE events SET
                 title = $1,
-                date_time = $2,
-                speaker = $3,
-                description = $4,
-                auto_upload_enabled = $5,
+                computed_title = $2,
+                date_time = $3,
+                speaker = $4,
+                description = $5,
+                auto_upload_enabled = $6,
                 updated_at = NOW()
-            WHERE id = $6
+            WHERE id = $7
             RETURNING id"#,
         )
         .bind(&body.title)
+        .bind(body.computed_title.unwrap_or_default())
         .bind(body.date_time)
         .bind(body.speaker.unwrap_or_default())
         .bind(body.description.unwrap_or_default())
