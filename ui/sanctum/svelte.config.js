@@ -6,6 +6,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
   preprocess: vitePreprocess(),
   kit: {
+    appDir: '_sanctum',
     adapter: adapter({
       fallback: 'index.html',
     }),

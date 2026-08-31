@@ -60,6 +60,7 @@ Add an entry to [`registry.json`](registry.json):
   "description": "One line, honest about what it does and does not cover.",
   "buildCommand": "pnpm --filter @metocast/my-ui build",
   "buildDir": "ui/my-ui/build",
+  "appDir": "_my-ui",
   "entry": "index.html"
 }
 ```
@@ -71,7 +72,12 @@ Add an entry to [`registry.json`](registry.json):
 | `description` | One-liner under the name — describe coverage honestly, since UIs need not match |
 | `buildCommand` | Run from the repo root; must produce static files |
 | `buildDir` | Where that command writes them, relative to the repo root |
+| `appDir` | The UI's SvelteKit `kit.appDir`; **must be unique** across the registry |
 | `entry` | The HTML file to open, relative to `buildDir` |
+
+`appDir` is what makes a multi-UI bundle possible. SvelteKit writes asset URLs absolute
+(`/_my-ui/immutable/...`), so every bundled UI's asset directory has to sit at the bundle root —
+leave two UIs on the default `_app` and one overwrites the other.
 
 ## Building
 
@@ -81,13 +87,18 @@ Add an entry to [`registry.json`](registry.json):
 ```bash
 pnpm build                              # the registry's default UI (classic)
 METOCAST_UI=sanctum pnpm build          # one other registered UI
-METOCAST_UI=classic,sanctum pnpm build  # both, with a chooser in settings
+METOCAST_UI=sanctum,classic pnpm build  # both, with a chooser in settings
 ```
 
 With a single UI the output is staged at `build/` exactly as before — an ordinary build is
-unchanged. With several, each lands in `build/ui/<id>/`, `build/bundled-uis.json` lists them,
+unchanged. With several, each lands in `build/ui/<id>/` with its `appDir` copied to the bundle
+root, `build/bundled-uis.json` lists them,
 and `build/index.html` becomes a small chooser page that sends the window to the UI selected in
 each UI's own settings. Every bundled UI must offer that selector (over the shared
 `metocast.activeUi` key), so no UI can be entered without a way out. Selecting a different UI
 persists the choice and **loads it immediately** — the chosen UI is its own bundle, so switching
-navigates to it rather than waiting for the next launch.
+navigates to it rather than waiting for the next launch. The **first id listed** is the one a
+fresh install opens, before anyone has chosen.
+
+Release builds set `METOCAST_UI: sanctum,classic` in `.github/workflows/build.yml`, so every
+installer ships both UIs and opens Sanctum by default.

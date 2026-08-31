@@ -21,6 +21,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # Bundle both rendering UIs; the first one listed is what a fresh install opens
+  # and the settings selector switches between them (see ui/README.md).
+  METOCAST_UI: sanctum,classic
   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 

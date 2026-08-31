@@ -74,11 +74,16 @@ mkdirSync(OUT, { recursive: true });
 cpSync(STAGE, join(OUT, 'ui'), { recursive: true });
 rmSync(STAGE, { recursive: true, force: true });
 
+// SvelteKit writes asset URLs absolute, so every UI's appDir must also exist at
+// the bundle root — distinct appDirs are what let them share it.
+for (const ui of selected) {
+  cpSync(join(OUT, 'ui', ui.id, ui.appDir), join(OUT, ui.appDir), { recursive: true });
+}
+
 // The copied `/presenter` URL must work whichever UI is active.
 const withPresenter = selected.find((ui) => existsSync(join(OUT, 'ui', ui.id, 'presenter.html')));
 if (withPresenter) {
   cpSync(join(OUT, 'ui', withPresenter.id, 'presenter.html'), join(OUT, 'presenter.html'));
-  cpSync(join(OUT, 'ui', withPresenter.id, '_app'), join(OUT, '_app'), { recursive: true });
 }
 
 writeFileSync(

@@ -8,6 +8,7 @@
       "description": "The original control surface. Full feature coverage: events, presentations, connectors, queues, logs, OBS devices, RF/IR, caption, connect and setup.",
       "buildCommand": "pnpm --filter @metocast/classic build",
       "buildDir": "ui/classic/build",
+      "appDir": "_classic",
       "entry": "index.html"
     },
     {
@@ -16,6 +17,7 @@
       "description": "The new design. Covers the dashboard, events, event editor, presentations, settings and connectors — not queues, logs, OBS devices, OBS caption, RF/IR, connect or setup.",
       "buildCommand": "pnpm --filter @metocast/sanctum build",
       "buildDir": "ui/sanctum/build",
+      "appDir": "_sanctum",
       "entry": "index.html"
     }
   ]

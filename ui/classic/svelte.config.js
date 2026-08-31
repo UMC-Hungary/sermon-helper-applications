@@ -8,6 +8,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
   preprocess: vitePreprocess(),
   kit: {
+    appDir: '_classic',
     adapter: adapter({
       fallback: 'index.html',
     }),
