@@ -16,15 +16,28 @@
     Row,
     StatusDot,
     Badge,
+    Button,
   } from '@metocast/design-system';
   import type { ReferenceResult } from '@metocast/design-system';
-  import { getEvent, createEvent, updateEvent, bibleApi, listJobs, openExternal } from '@metocast/core-client';
+  import {
+    getEvent,
+    createEvent,
+    updateEvent,
+    createEventSlides,
+    bibleApi,
+    listJobs,
+    openExternal,
+    getTitleTemplate,
+    renderTitle,
+    DEFAULT_TITLE_TEMPLATE,
+  } from '@metocast/core-client';
   import type { Event, BibleVerse, EventConnection } from '@metocast/core-client/schemas/event';
   import type { Job } from '@metocast/core-client/schemas/queue';
   import { live } from '$lib/live.svelte';
   import { goto } from '$app/navigation';
   import { notify } from '$lib/notifications.svelte';
   import { dateLong, toDateInput, toTimeInput, fromDateTimeInput } from '$lib/format';
+  import TitlePreview from '$lib/TitlePreview.svelte';
 
   let { eventId }: { eventId?: string } = $props();
 
@@ -40,6 +53,7 @@
   }
 
   let loading = $state(false);
+  let previewHeight = $state(0);
   let title = $state('');
   let date = $state('');
   let time = $state('');
@@ -52,6 +66,7 @@
   let textusData = $state<RefData | null>(null);
   let leckioData = $state<RefData | null>(null);
   let existingConnections = $state<Event['connections']>([]);
+  let template = $state(DEFAULT_TITLE_TEMPLATE);
 
   const loc = $derived($locale ?? 'en');
 
@@ -61,10 +76,17 @@
   });
 
   const autoTitle = $derived(
-    [date ? dateLong(fromDateTimeInput(date, time), loc) : '', textus.trim(), title.trim(), speaker.trim() ? `— ${speaker.trim()}` : '']
-      .filter(Boolean)
-      .join(' · ')
-      .replace('· —', '—'),
+    renderTitle(
+      template,
+      {
+        date: date ? new Date(fromDateTimeInput(date, time)) : null,
+        title,
+        textus,
+        leckio,
+        speaker,
+      },
+      loc,
+    ),
   );
   const titleRemaining = $derived(TITLE_LIMIT - autoTitle.length);
   const fields = $derived([
@@ -137,6 +159,7 @@
   }
 
   onMount(async () => {
+    template = (await getTitleTemplate().catch(() => null))?.template || DEFAULT_TITLE_TEMPLATE;
     if (!eventId) {
       const service = nextService();
       title = get(_)('editor.defaultTitle');
@@ -258,6 +281,24 @@
   let saving = $state(false);
   const canSave = $derived(title.trim().length > 0 && !!date && !saving);
 
+  // The core writes the decks from what is *stored*, so this only makes sense on
+  // a saved event — an unsaved edit would generate the previous references.
+  let generating = $state(false);
+  const canGenerate = $derived(!!eventId && buildRefs().length > 0 && !generating);
+
+  async function generateSlides() {
+    if (!canGenerate || !eventId) return;
+    generating = true;
+    try {
+      const { files } = await createEventSlides(eventId);
+      notify({ tier: 'ok', kind: 'Slides', source: 'Core', title: $_('editor.slides.created'), body: files.join('\n'), mono: true });
+    } catch (e) {
+      notify({ tier: 'error', kind: 'Slides', source: 'Core', title: $_('editor.slides.failed'), body: e instanceof Error ? e.message : String(e) });
+    } finally {
+      generating = false;
+    }
+  }
+
   async function save() {
     if (!canSave) return;
     saving = true;
@@ -291,15 +332,17 @@
 {#if loading}
   <div class="pad"><Skeleton height="120px" lines={4} /></div>
 {:else}
-  <section class="preview sticky-preview">
-    <small>{$_('editor.previewLabel')} <span class:warn={titleRemaining < 10}>{autoTitle.length}/{TITLE_LIMIT}</span></small>
-    <p>{autoTitle || $_('editor.previewEmpty')}</p>
-    <div class="tags">
-      {#each fields as f (f.key)}<em class:on={f.on}>{$_(`editor.tag.${f.key}`)}</em>{/each}
-    </div>
-  </section>
+  <div class="sticky-preview" bind:clientHeight={previewHeight}>
+    <TitlePreview
+      label={$_('editor.previewLabel')}
+      text={autoTitle || $_('editor.previewEmpty')}
+      count={`${autoTitle.length}/${TITLE_LIMIT}`}
+      warn={titleRemaining < 10}
+      tags={fields.map((f) => ({ key: f.key, label: $_(`editor.tag.${f.key}`), on: f.on }))}
+    />
+  </div>
 
-  <form onsubmit={(e) => { e.preventDefault(); save(); }}>
+  <form onsubmit={(e) => { e.preventDefault(); save(); }} style="--preview-h: {previewHeight}px">
     <div class="main-col">
       <FormSection number="01" label={$_('editor.details')}>
         <div class="field">
@@ -343,6 +386,13 @@
           errorMessage={$_('editor.refNotFound')}
           notFoundLabel={$_('editor.refNotFound')}
         />
+        {#if eventId}
+          <div class="slides">
+            <Button variant="secondary" compact onclick={generateSlides} disabled={!canGenerate}>
+              {generating ? $_('editor.slides.creating') : $_('editor.slides.create')}
+            </Button>
+          </div>
+        {/if}
       </FormSection>
 
       <FormSection number="03" label={$_('editor.description')} hint={$_('editor.descriptionHint')}>
@@ -412,6 +462,9 @@
   form {
     padding: 0 20px;
   }
+  .slides {
+    margin-top: 12px;
+  }
   .two {
     display: grid;
     grid-template-columns: 1.35fr 1fr;
@@ -438,55 +491,14 @@
     text-align: right;
     margin-top: 6px;
   }
-  small.warn,
-  .preview span.warn {
+  small.warn {
     color: var(--status-warn);
-  }
-  .preview {
-    padding-block: 14px;
-    padding-inline: 16px;
-    background: var(--text-primary);
-    color: var(--surface-base, var(--surface-outside));
   }
   .sticky-preview {
     position: sticky;
     top: 0;
     z-index: 5;
     margin: 0 20px 20px;
-  }
-  .preview small {
-    color: color-mix(in srgb, currentColor 55%, transparent);
-    text-transform: uppercase;
-    text-align: left;
-    margin: 0 0 8px;
-    display: flex;
-    justify-content: space-between;
-  }
-  .preview p {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: 18px;
-    line-height: 1.3;
-    font-weight: 500;
-    overflow-wrap: anywhere;
-  }
-  .tags {
-    display: flex;
-    gap: 14px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-  }
-  .preview em {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: color-mix(in srgb, currentColor 40%, transparent);
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-    font-style: normal;
-  }
-  .preview em.on {
-    color: currentColor;
   }
   .note {
     padding: 24px 32px;
@@ -497,7 +509,7 @@
     font-size: 13px;
     line-height: 1.5;
   }
-.main-col,
+  .main-col,
   .publish-col {
     display: contents;
   }
@@ -507,8 +519,6 @@
       grid-template-columns: minmax(340px, 1fr) minmax(280px, 380px);
       gap: 0 22px;
       padding-inline: 24px;
-      max-width: 1120px;
-      margin: 0 auto;
       align-items: start;
     }
     .main-col,
@@ -518,15 +528,14 @@
     }
     .publish-col {
       position: sticky;
-      top: 18px;
+      top: calc(var(--preview-h, 0px) + 18px);
     }
     .note {
       max-width: 620px;
       margin: 0 auto;
     }
     .sticky-preview {
-      max-width: 1120px;
-      margin: 0 auto 20px;
+      margin: 0 0 20px;
       padding-inline: 24px;
     }
   }
@@ -537,7 +546,6 @@
       padding-inline: 32px;
     }
     .sticky-preview {
-      max-width: 1260px;
       padding-inline: 32px;
     }
   }

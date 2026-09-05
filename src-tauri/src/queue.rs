@@ -332,7 +332,9 @@ async fn handle_job(state: &AppState, job: &Job) -> anyhow::Result<()> {
 /// existing broadcast that has not gone live or ended.
 fn should_sync(event: &Event) -> bool {
     let conn = event.connection("youtube");
-    let status = conn.map(|c| c.schedule_status.as_str()).unwrap_or("not_scheduled");
+    let status = conn
+        .map(|c| c.schedule_status.as_str())
+        .unwrap_or("not_scheduled");
     if conn.and_then(|c| c.external_id.as_deref()).is_some() {
         matches!(status, "scheduled" | "created" | "ready")
     } else {

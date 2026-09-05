@@ -768,6 +768,37 @@ mod tests {
         assert_eq!(slide.paragraphs[0].align, "left");
         assert!(slide.paragraphs[1].lines[0].contains("Jn 3:16-17"));
     }
+
+    #[test]
+    fn written_pptx_reparses_to_the_same_slides() {
+        let state = PresenterState::from_bible_reference(
+            "Sunday",
+            BibleReferenceType::Textus,
+            "Jn 3:16",
+            vec![verse(3, 16, "For God so loved the world.")],
+        );
+        let path = std::env::temp_dir().join(format!("metocast-test-{}.pptx", std::process::id()));
+        write_pptx(
+            &path,
+            &state.slides,
+            state.slide_width_emu,
+            state.slide_height_emu,
+        )
+        .unwrap();
+
+        let parsed = parse_pptx(path.to_str().unwrap()).unwrap();
+        std::fs::remove_file(&path).ok();
+
+        assert_eq!(parsed.total_slides, state.total_slides);
+        assert_eq!(parsed.slide_width_emu, state.slide_width_emu);
+        let written = &parsed.slides[0].paragraphs;
+        let expected = &state.slides[0].paragraphs;
+        assert_eq!(written.len(), expected.len());
+        assert_eq!(written[0].lines, expected[0].lines);
+        assert_eq!(written[0].align, expected[0].align);
+        assert_eq!(written[0].font_size_pt, expected[0].font_size_pt);
+        assert_eq!(written[1].align, "center");
+    }
 }
 
 // ── HTTP handler ──────────────────────────────────────────────────────────────
@@ -799,4 +830,164 @@ pub async fn parse_presentation(
             Json(json!({ "success": false, "error": e.to_string() })),
         ),
     }
+}
+
+// ── PPTX writing ──────────────────────────────────────────────────────────────
+
+const THEME_XML: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Metocast"><a:themeElements><a:clrScheme name="Metocast"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="000000"/></a:dk2><a:lt2><a:srgbClr val="FFFFFF"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="Metocast"><a:majorFont><a:latin typeface="Helvetica Neue"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Helvetica"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="Metocast"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>"#;
+
+const EMPTY_TREE: &str = r#"<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>"#;
+
+const NS: &str = r#"xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main""#;
+
+const REL_NS: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">"#;
+
+/// `algn` attribute value for a CSS alignment keyword — the inverse of `map_align`.
+fn pptx_align(css: &str) -> &'static str {
+    match css {
+        "center" => "ctr",
+        "right" => "r",
+        "justify" => "just",
+        _ => "l",
+    }
+}
+
+fn slide_xml(slide: &SlideContent, width_emu: u64, height_emu: u64) -> String {
+    let margin_x = width_emu / 12;
+    let margin_y = height_emu / 12;
+    let paragraphs = slide
+        .paragraphs
+        .iter()
+        .map(|p| {
+            let sz = (p.font_size_pt * 100.0).round().max(100.0) as u32;
+            let algn = pptx_align(&p.align);
+            let runs = p
+                .lines
+                .iter()
+                .enumerate()
+                .map(|(i, line)| {
+                    format!(
+                        r#"{}<a:r><a:rPr lang="hu-HU" sz="{sz}" b="1" dirty="0"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>{}</a:t></a:r>"#,
+                        if i > 0 { "<a:br/>" } else { "" },
+                        quick_xml::escape::escape(line),
+                    )
+                })
+                .collect::<String>();
+            format!(r#"<a:p><a:pPr algn="{algn}"/>{runs}</a:p>"#)
+        })
+        .collect::<String>();
+
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld {NS}><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree>{EMPTY_TREE}<p:sp><p:nvSpPr><p:cNvPr id="2" name="Body"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="{margin_x}" y="{margin_y}"/><a:ext cx="{}" cy="{}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr wrap="square" anchor="ctr"><a:normAutofit/></a:bodyPr><a:lstStyle/>{paragraphs}</p:txBody></p:sp></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>"#,
+        width_emu - 2 * margin_x,
+        height_emu - 2 * margin_y,
+    )
+}
+
+/// Write `slides` as a minimal but valid `.pptx` package: one blank layout, one
+/// master, white text on black, one full-bleed text box per slide.
+pub fn write_pptx(
+    path: &Path,
+    slides: &[SlideContent],
+    width_emu: u64,
+    height_emu: u64,
+) -> Result<(), String> {
+    let file = std::fs::File::create(path).map_err(|e| format!("Cannot write {path:?}: {e}"))?;
+    let mut zip = zip::ZipWriter::new(file);
+    let opts = zip::write::SimpleFileOptions::default();
+    let n = slides.len();
+
+    let mut add = |name: &str, body: &str| -> Result<(), String> {
+        zip.start_file(name, opts).map_err(|e| e.to_string())?;
+        std::io::Write::write_all(&mut zip, body.as_bytes()).map_err(|e| e.to_string())
+    };
+
+    let overrides = (1..=n)
+        .map(|i| format!(r#"<Override PartName="/ppt/slides/slide{i}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>"#))
+        .collect::<String>();
+    add(
+        "[Content_Types].xml",
+        &format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>{overrides}</Types>"#
+        ),
+    )?;
+
+    add(
+        "_rels/.rels",
+        &format!(
+            r#"{REL_NS}<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>"#
+        ),
+    )?;
+
+    let sld_ids = (1..=n)
+        .map(|i| format!(r#"<p:sldId id="{}" r:id="rId{}"/>"#, 255 + i, i + 1))
+        .collect::<String>();
+    add(
+        "ppt/presentation.xml",
+        &format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation {NS}><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst>{sld_ids}</p:sldIdLst><p:sldSz cx="{width_emu}" cy="{height_emu}"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>"#
+        ),
+    )?;
+
+    let slide_rels = (1..=n)
+        .map(|i| format!(r#"<Relationship Id="rId{}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide{i}.xml"/>"#, i + 1))
+        .collect::<String>();
+    add(
+        "ppt/_rels/presentation.xml.rels",
+        &format!(
+            r#"{REL_NS}<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>{slide_rels}<Relationship Id="rId{}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>"#,
+            n + 2
+        ),
+    )?;
+
+    add(
+        "ppt/slideMasters/slideMaster1.xml",
+        &format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster {NS}><p:cSld><p:spTree>{EMPTY_TREE}</p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>"#
+        ),
+    )?;
+    add(
+        "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+        &format!(
+            r#"{REL_NS}<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/></Relationships>"#
+        ),
+    )?;
+
+    add(
+        "ppt/slideLayouts/slideLayout1.xml",
+        &format!(
+            r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldLayout {NS} type="blank" preserve="1"><p:cSld name="Blank"><p:spTree>{EMPTY_TREE}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>"#
+        ),
+    )?;
+    add(
+        "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+        &format!(
+            r#"{REL_NS}<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>"#
+        ),
+    )?;
+
+    add("ppt/theme/theme1.xml", THEME_XML)?;
+
+    for (i, slide) in slides.iter().enumerate() {
+        add(
+            &format!("ppt/slides/slide{}.xml", i + 1),
+            &slide_xml(slide, width_emu, height_emu),
+        )?;
+        add(
+            &format!("ppt/slides/_rels/slide{}.xml.rels", i + 1),
+            &format!(
+                r#"{REL_NS}<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>"#
+            ),
+        )?;
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
 }

@@ -28,3 +28,10 @@ export function updateEvent(id: string, payload: UpdateEventPayload): Promise<Ev
 export function deleteEvent(id: string): Promise<void> {
   return apiFetch(`/api/events/${id}`, z.void(), { method: 'DELETE' });
 }
+
+/** Writes one .pptx per Bible reference into the configured slide folder. */
+export function createEventSlides(id: string): Promise<{ files: string[] }> {
+  return apiFetch(`/api/events/${id}/slides`, z.object({ files: z.array(z.string()) }), {
+    method: 'POST',
+  });
+}

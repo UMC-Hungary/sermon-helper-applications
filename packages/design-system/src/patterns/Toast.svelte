@@ -4,13 +4,15 @@
   export interface ToastAction {
     label: string;
     primary?: boolean;
-    onclick: () => void;
+    /** Return the promise to have the button animate until the work settles. */
+    onclick: () => void | Promise<unknown>;
   }
 </script>
 
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import Dot from '../primitives/Dot.svelte';
+  import Spinner from '../primitives/Spinner.svelte';
 
   interface Props {
     /** The mono kind label above the source name — "Connector", "Upload". */
@@ -57,7 +59,22 @@
   }: Props = $props();
 
   let expanded = $state(false);
+  /** The action whose promise is still outstanding; only one runs at a time. */
+  let pending = $state('');
   const numeral = (i: number) => String(i + 1).padStart(2, '0');
+
+  async function run(action: ToastAction) {
+    const result = action.onclick();
+    if (!(result instanceof Promise)) return;
+    pending = action.label;
+    try {
+      await result;
+    } catch {
+      /* the action reports its own failure; the button only has to stop spinning */
+    } finally {
+      pending = '';
+    }
+  }
 
   const accents: Record<ToastTone, string> = {
     live: 'var(--status-live)',
@@ -101,8 +118,17 @@
     {#if actions.length > 0 || remediation?.length}
       <footer>
         {#each actions as action (action.label)}
-          <button type="button" class:primary={action.primary} onclick={action.onclick}>
-            {action.label}
+          <button
+            type="button"
+            class:primary={action.primary}
+            disabled={pending === action.label}
+            aria-busy={pending === action.label || undefined}
+            onclick={() => run(action)}
+          >
+            {#if pending === action.label}
+              <span class="spinner"><Spinner label={action.label} size={12} /></span>
+            {/if}
+            <span class:working={pending === action.label}>{action.label}</span>
           </button>
         {/each}
         {#if remediation?.length}
@@ -252,6 +278,7 @@
   }
 
   footer button {
+    position: relative;
     border: var(--ui-border-hairline) solid var(--sanctum-toast-accent);
     background: transparent;
     color: var(--sanctum-toast-accent);
@@ -261,6 +288,27 @@
     font-size: var(--c-toast-action-size);
     letter-spacing: var(--c-toast-action-track);
     text-transform: var(--type-label-transform);
+  }
+
+  footer button:disabled {
+    cursor: default;
+  }
+
+  /* The label keeps the button's width while the spinner sits over it. */
+  .working {
+    visibility: hidden;
+  }
+
+  .spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* The ring reads the same tokens everywhere; inside a coloured action it has to
+       take the button's own ink rather than the surface's. */
+    --text-primary: currentColor;
+    --border-control: color-mix(in srgb, currentColor 30%, transparent);
   }
 
   footer .primary {

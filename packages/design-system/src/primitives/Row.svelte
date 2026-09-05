@@ -6,7 +6,7 @@
     title?: string;
     /** The second line, one tone lighter. Truncates rather than wrapping. */
     meta?: string;
-    /** A trailing value, aligned to the row's top edge alongside the chevron. */
+    /** A trailing value, aligned to the row's right edge alongside the chevron. */
     detail?: string;
     chevron?: boolean;
     /** Renders the title in the danger colour; pair it with wording that says so too. */
@@ -54,8 +54,8 @@
   </span>
   {#if detail}<span class="detail">{detail}</span>{/if}
   {#if control}{@render control()}{/if}
-  {#if chevron && interactive}
-    <span class="chev"><Icon name="chev" size={14} stroke={1.6} /></span>
+  {#if interactive}
+    <span class="chev">{#if chevron}<Icon name="chev" size={14} stroke={1.6} />{/if}</span>
   {/if}
 {/snippet}
 
@@ -74,7 +74,7 @@
 <style>
   .row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--ui-stack-loose);
     padding: var(--c-row-padding-block) var(--ui-gutter);
     min-height: var(--c-row-min-height);
@@ -116,6 +116,9 @@
 
   .chev {
     color: var(--text-faint);
+    display: flex;
+    justify-content: center;
+    flex: 0 0 var(--size-14);
   }
 
   .body {
@@ -154,6 +157,7 @@
     font-size: var(--type-body-sm-size);
     color: var(--text-muted);
     white-space: nowrap;
-    margin-top: var(--c-row-detail-gap);
+    margin-left: auto;
+    text-align: right;
   }
 </style>

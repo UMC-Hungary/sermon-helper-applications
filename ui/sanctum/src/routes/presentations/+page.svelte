@@ -499,8 +499,6 @@
       grid-template-columns: minmax(300px, 1fr) minmax(250px, 330px);
       gap: 0 18px;
       align-items: start;
-      max-width: 1080px;
-      margin: 0 auto;
       padding: 0 18px 56px;
     }
     .remote-col,
@@ -520,7 +518,6 @@
     .workspace {
       grid-template-columns: minmax(620px, 1fr) 400px;
       gap: 0 32px;
-      max-width: 1260px;
       padding-inline: 32px;
     }
   }

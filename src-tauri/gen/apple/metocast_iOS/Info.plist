@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.0.13</string>
+	<string>2.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>2.0.13</string>
+	<string>2.1.0</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Metocast uses the camera to scan QR codes for connecting to a server.</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -53,5 +53,7 @@
 			<string>metocast</string>
 		</dict>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Metocast discovers Blackmagic cameras and other production devices on your local network.</string>
 </dict>
 </plist>

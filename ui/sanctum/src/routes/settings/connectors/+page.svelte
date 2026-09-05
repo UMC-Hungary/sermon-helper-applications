@@ -7,6 +7,7 @@
     PageHeader,
     SectionLabel,
     List,
+    Row,
     Glyph,
     Dot,
     Toggle,
@@ -36,6 +37,7 @@
     type BroadlinkDevice,
     type DiscoveredCamera,
   } from '@metocast/core-client';
+  import { live } from '$lib/live.svelte';
   import LoginSheet from '$lib/LoginSheet.svelte';
   import { pushToast } from '$lib/notifications.svelte';
   import NotifBell from '$lib/NotifBell.svelte';
@@ -124,10 +126,10 @@
 
   function detailText(meta: ConnMeta): string {
     if (!enabled[meta.id]) return $_('conn.disabled');
-    if (meta.id === 'obs') {
-      const f = forms.obs ?? {};
-      const state = statuses.obs ?? 'disconnected';
-      return `${f.host || 'localhost'}:${f.port || '4455'} · ${state}`;
+    if (meta.id === 'obs' || meta.id === 'blackmagic-camera') {
+      const f = forms[meta.id] ?? {};
+      const address = meta.id === 'obs' ? `${f.host || 'localhost'}:${f.port || '4455'}` : f.host || '—';
+      return `${address} · ${statuses[meta.id] ?? 'disconnected'}`;
     }
     return $_(`conn.descriptor.${meta.id}`);
   }
@@ -352,7 +354,9 @@
                     <Button
                       variant="secondary"
                       compact
-                      disabled={statuses['blackmagic-camera'] !== 'connected' || pushingCamera}
+                      disabled={statuses['blackmagic-camera'] !== 'connected' ||
+                        pushingCamera ||
+                        live.cameraStreaming}
                       onclick={pushCameraYoutube}
                     >
                       {$_('conn.camera.pushYoutube')}
@@ -360,6 +364,18 @@
                     <Button variant="secondary" compact onclick={() => save(meta)}>{$_('conn.encoder.reconnect')}</Button>
                   </div>
                   <Field label={$_('conn.camera.rtmp')} value={cameraRtmp} readonly />
+
+                  <List>
+                    <Row
+                      title={$_('conn.camera.control')}
+                      meta={$_('conn.camera.controlMeta')}
+                      detail={$_('conn.camera.open')}
+                      href="/settings/connectors/camera"
+                      last
+                    >
+                      {#snippet icon()}<Glyph char="▶" size={28} />{/snippet}
+                    </Row>
+                  </List>
 
                   <DiscoveryPanel
                     title={$_('conn.cameraDiscovery.title')}
@@ -500,6 +516,9 @@
     padding: 14px 24px 18px 72px;
     border-bottom: 1px solid var(--border-hairline);
     display: grid;
+    /* An auto column takes its content's max-content width, which on a phone pushes
+       the whole page sideways; this holds it to the column it was given. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
   .detail p {
@@ -512,10 +531,13 @@
   }
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
+  /* The labels never wrap, so on a narrow column the pair stacks rather than
+     pushing the page sideways. */
   .actions :global(button) {
-    flex: 1;
+    flex: 1 1 140px;
   }
   .outcome {
     font-family: var(--font-body) !important;
@@ -550,6 +572,14 @@
     font-size: 11px;
     color: var(--text-muted);
   }
+  /* The 72px indent aligns the panel with the connector's name, which a phone
+     cannot spare — a translated action label would spill out of its button. */
+  @media (max-width: 480px) {
+    .detail {
+      padding-left: 24px;
+    }
+  }
+
   .note {
     padding: 28px 32px 12px;
     text-align: center;
@@ -625,8 +655,6 @@
       grid-template-columns: minmax(286px, 1fr) minmax(206px, 260px);
       gap: 0 12px;
       align-items: start;
-      max-width: 1040px;
-      margin: 0 auto;
       padding: 0 14px 64px;
     }
     .main-col,
@@ -659,7 +687,6 @@
     .connectors-workspace {
       grid-template-columns: minmax(620px, 1fr) 360px;
       gap: 0 30px;
-      max-width: 1220px;
       padding-inline: 32px;
     }
     .detail {

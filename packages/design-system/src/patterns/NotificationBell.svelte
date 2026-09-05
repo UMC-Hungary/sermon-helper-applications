@@ -57,6 +57,8 @@
 
   .mark {
     position: absolute;
+    display: flex;
+    box-sizing: content-box;
     top: var(--c-bell-mark-offset);
     right: var(--c-bell-mark-offset);
     width: var(--c-bell-mark-size);

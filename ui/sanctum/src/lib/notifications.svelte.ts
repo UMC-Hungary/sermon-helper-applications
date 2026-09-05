@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity';
 import type { ToastTone } from '@metocast/design-system';
 
 // Tier drives both the toast accent and the bell's worst-active mark. `live` is the
@@ -8,7 +9,8 @@ const RANK: Record<Tier, number> = { live: 0, ok: 1, warn: 2, error: 3 };
 export interface NotifAction {
   label: string;
   primary?: boolean;
-  run: () => void;
+  /** Return the promise to have the toast's button animate until the work settles. */
+  run: () => void | Promise<unknown>;
 }
 
 export interface Notification {
@@ -20,6 +22,9 @@ export interface Notification {
   body?: string;
   /** Technical line, set in the mono face. */
   detail?: string;
+  /** Renders `body` in the mono face — for a raw path, code, or identifier a serif
+   * numeral could be misread in (a "0" as "o"). */
+  mono?: boolean;
   /** Numbered remediation steps, disclosed on demand. */
   remediation?: string[];
   actions?: NotifAction[];
@@ -41,6 +46,11 @@ export interface Notification {
 }
 
 let items = $state<Notification[]>([]);
+/** Keys deleted from the centre, for notifications that track an ongoing machine
+ *  condition (`state` is set — a connector that is still down). Recovery lifts the
+ *  mute, so the next genuine failure is news again. Toasts answering a click never
+ *  mute: pressing Copy twice has to report twice. */
+const muted = new SvelteSet<string>();
 let seq = 0;
 const RAIL_CAP = 3;
 
@@ -70,9 +80,16 @@ export function topTier(): Tier | 'off' {
 
 export function notify(n: Omit<Notification, 'id' | 'createdAt' | 'railDismissed' | 'read' | 'persistent'> & { persistent?: boolean }): number {
   if (n.key) {
+    // A connector that is still down re-broadcasts the same failure every few
+    // seconds. Without the mute the card the operator just deleted returns before
+    // the sheet has finished closing, so it cannot be cleared at all.
+    if (muted.has(n.key)) return 0;
     const active = items.find((i) => i.key === n.key && !i.resolved);
     if (active) {
-      Object.assign(active, n);
+      // Dedupe collapses a repeat onto the card that is already showing — it must not
+      // silence one the operator dismissed earlier. A fresh occurrence is news again,
+      // so it returns to the rail unread rather than updating a hidden record.
+      Object.assign(active, n, { railDismissed: false, read: false });
       return active.id;
     }
   }
@@ -85,6 +102,7 @@ export function notify(n: Omit<Notification, 'id' | 'createdAt' | 'railDismissed
 
 /** Clears a keyed failure when its source recovers, and announces the recovery. */
 export function resolveByKey(key: string, recovery?: Pick<Notification, 'kind' | 'source' | 'title' | 'body'>): void {
+  muted.delete(key);
   for (const n of items) if (n.key === key) { n.railDismissed = true; n.resolved = true; }
   if (recovery) notify({ ...recovery, tier: 'ok', persistent: false });
 }
@@ -95,11 +113,19 @@ export function dismissRail(id: number): void {
   if (n) n.railDismissed = true;
 }
 
+/** Deletes a notification outright — the centre's dismiss. */
+export function dismiss(id: number): void {
+  const n = items.find((i) => i.id === id);
+  if (n?.key && n.state) muted.add(n.key);
+  items = items.filter((i) => i.id !== id);
+}
+
 export function markAllRead(): void {
   for (const n of items) n.read = true;
 }
 
 export function clearAll(): void {
+  for (const n of items) if (n.key && n.state) muted.add(n.key);
   items = [];
 }
 

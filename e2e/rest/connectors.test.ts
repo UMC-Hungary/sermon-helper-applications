@@ -33,6 +33,13 @@ interface VmixConfig {
   port: number;
 }
 
+interface CameraSettings {
+  recording: boolean;
+  record: { supported: { supportedFormats: unknown[] } };
+  storage: { slots: unknown[] };
+  stream: { platforms: string[]; active: { platform: string } };
+}
+
 interface ConnectorState {
   obs: { isStreaming: boolean; isRecording: boolean } | null;
 }
@@ -159,5 +166,25 @@ describe.skipIf(!isLive)('Connectors REST API', () => {
   it('GET /api/connectors/obs/stream-settings while OBS is offline → 409', async () => {
     const res = await apiClient.get('/api/connectors/obs/stream-settings');
     expect(res.status).toBe(409);
+  });
+
+  // A camera is rarely on the test network, so the interesting assertion is the
+  // shape when one answers — and the 409 contract when none is connected.
+  it('GET /api/connectors/blackmagic-camera/settings → 409, or the camera settings', async () => {
+    const res = await apiClient.get<CameraSettings>('/api/connectors/blackmagic-camera/settings');
+    if (res.status === 409) return;
+    expect(res.status).toBe(200);
+    expect(typeof res.body.recording).toBe('boolean');
+    expect(res.body.record.supported.supportedFormats.length).toBeGreaterThan(0);
+    expect(res.body.storage.slots.length).toBeGreaterThan(0);
+    expect(res.body.stream.active.platform.length).toBeGreaterThan(0);
+    expect(res.body.stream.platforms).toContain(res.body.stream.active.platform);
+  });
+
+  it('PUT /api/connectors/blackmagic-camera/settings with no camera → 409', async () => {
+    const res = await apiClient.get('/api/connectors/blackmagic-camera/settings');
+    if (res.status !== 409) return;
+    const written = await apiClient.put('/api/connectors/blackmagic-camera/settings', {});
+    expect(written.status).toBe(409);
   });
 });

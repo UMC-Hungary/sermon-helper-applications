@@ -148,6 +148,25 @@ pub fn spec() -> Value {
                         }
                     }
                 },
+                "TitleTemplate": {
+                    "type": "object",
+                    "description": "Template for the published event title. Placeholders are `{name}`; `{date}` takes an optional pipe (`{date|YYYY.MM.DD.}`). Text in `[ ... ]` is dropped whole when a placeholder inside it is empty.",
+                    "required": ["template"],
+                    "properties": {
+                        "template": {
+                            "type": "string",
+                            "example": "{date|YYYY.MM.DD.} {title}[ | Textus: {textus}][ Lekció: {leckio}][ | {speaker}]"
+                        }
+                    }
+                },
+                "SlideFolder": {
+                    "type": "object",
+                    "description": "Folder on the core's machine where generated Bible slide decks are written. Empty means not configured.",
+                    "required": ["path"],
+                    "properties": {
+                        "path": { "type": "string", "example": "/Users/me/Documents/Slides" }
+                    }
+                },
                 "Event": {
                     "type": "object",
                     "description": "Full event record including platform connections and bible references.",
@@ -385,6 +404,84 @@ pub fn spec() -> Value {
                         "url":      { "type": "string", "nullable": true, "description": "Set only when the destination is a custom URL rather than a platform entry" }
                     }
                 },
+                "CameraResolution": {
+                    "type": "object",
+                    "required": ["width", "height"],
+                    "properties": {
+                        "width":  { "type": "integer", "example": 6048 },
+                        "height": { "type": "integer", "example": 4032 }
+                    }
+                },
+                "CameraPlatformEntry": {
+                    "type": "object",
+                    "description": "The camera's active livestream platform entry.",
+                    "required": ["platform", "server", "quality"],
+                    "properties": {
+                        "platform":   { "type": "string", "example": "YouTube RTMP" },
+                        "server":     { "type": "string", "example": "Primary" },
+                        "quality":    { "type": "string", "example": "Streaming High" },
+                        "key":        { "type": "string", "nullable": true, "description": "Stream key" },
+                        "passphrase": { "type": "string", "nullable": true, "description": "SRT streams only" },
+                        "url":        { "type": "string", "nullable": true, "description": "Set only when the platform's URL is customizable" }
+                    }
+                },
+                "CameraSettings": {
+                    "type": "object",
+                    "description": "The camera's own payloads, forwarded unchanged: record format, media working set and livestream settings.",
+                    "required": ["recording", "record", "storage", "stream"],
+                    "properties": {
+                        "recording": { "type": "boolean", "description": "Whether the camera is recording now" },
+                        "record": {
+                            "type": "object",
+                            "description": "`/system/format` and `/system/supportedFormats` as the camera returns them",
+                            "required": ["format", "supported"],
+                            "properties": {
+                                "format":    { "type": "object", "additionalProperties": true },
+                                "supported": { "type": "object", "additionalProperties": true }
+                            }
+                        },
+                        "storage": {
+                            "type": "object",
+                            "description": "`/media/slots`, `/media/workingset` and `/media/active`",
+                            "required": ["slots", "workingset", "active"],
+                            "properties": {
+                                "slots":      { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+                                "workingset": { "type": "object", "additionalProperties": true },
+                                "active":     { "type": "object", "nullable": true, "additionalProperties": true }
+                            }
+                        },
+                        "stream": {
+                            "type": "object",
+                            "description": "Livestream status, availability, the platform list, the active platform and that platform's servers and quality profiles",
+                            "required": ["status", "available", "platforms", "active", "platform"],
+                            "properties": {
+                                "status":    { "type": "object", "additionalProperties": true },
+                                "available": { "type": "object", "additionalProperties": true },
+                                "platforms": { "type": "array", "items": { "type": "string" } },
+                                "active":    { "$ref": "#/components/schemas/CameraPlatformEntry" },
+                                "platform":  { "type": "object", "additionalProperties": true }
+                            }
+                        }
+                    }
+                },
+                "CameraSettingsUpdate": {
+                    "type": "object",
+                    "description": "What to write. Both halves are optional; whichever is present is sent to the camera.",
+                    "properties": {
+                        "record": {
+                            "type": "object",
+                            "description": "The camera validates a format as a whole, so all four fields travel together.",
+                            "required": ["codec", "frameRate", "recordResolution", "sensorResolution"],
+                            "properties": {
+                                "codec":            { "type": "string", "example": "BRaw:8_1" },
+                                "frameRate":        { "type": "string", "example": "24" },
+                                "recordResolution": { "$ref": "#/components/schemas/CameraResolution" },
+                                "sensorResolution": { "$ref": "#/components/schemas/CameraResolution" }
+                            }
+                        },
+                        "stream": { "$ref": "#/components/schemas/CameraPlatformEntry" }
+                    }
+                },
                 "DiscoveredCamera": {
                     "type": "object",
                     "description": "A Blackmagic camera found by mDNS. `host` is what the connector config's `host` field takes.",
@@ -464,6 +561,169 @@ pub fn spec() -> Value {
             }
         },
         "paths": {
+            "/api/logs": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Read the core's application log",
+                    "description": "Returns the tail of the log file this core writes, plus its path on the host. Lets a client device read the server's log rather than its own.",
+                    "operationId": "getApplicationLog",
+                    "responses": {
+                        "200": {
+                            "description": "Log path and contents",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["path", "content"],
+                                        "properties": {
+                                            "path": { "type": "string" },
+                                            "content": { "type": "string" }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "503": { "description": "This core has no application log" }
+                    }
+                },
+                "delete": {
+                    "tags": ["Settings"],
+                    "summary": "Clear the core's application log",
+                    "operationId": "clearApplicationLog",
+                    "responses": {
+                        "204": { "description": "Log cleared" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "503": { "description": "This core has no application log" }
+                    }
+                }
+            },
+            "/api/settings/title-template": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Get the event title template",
+                    "description": "The template the editor renders `computedTitle` from. Never 404s — an unset key returns the built-in default.",
+                    "operationId": "getTitleTemplate",
+                    "responses": {
+                        "200": {
+                            "description": "The stored template, or the default when unset",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/TitleTemplate" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" }
+                    }
+                },
+                "put": {
+                    "tags": ["Settings"],
+                    "summary": "Replace the event title template",
+                    "operationId": "setTitleTemplate",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/TitleTemplate" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "The stored template",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/TitleTemplate" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "500": { "description": "Database error" }
+                    }
+                }
+            },
+            "/api/settings/slide-folder": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Get the slide output folder",
+                    "description": "Never 404s — an unset key returns an empty path.",
+                    "operationId": "getSlideFolder",
+                    "responses": {
+                        "200": {
+                            "description": "The stored folder, or an empty path when unset",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" }
+                    }
+                },
+                "put": {
+                    "tags": ["Settings"],
+                    "summary": "Set the slide output folder",
+                    "description": "The core checks the folder exists on its own machine; an empty path clears the setting.",
+                    "operationId": "setSlideFolder",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "The stored folder",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                                }
+                            }
+                        },
+                        "400": { "description": "The folder does not exist on the core's machine" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "500": { "description": "Database error" }
+                    }
+                }
+            },
+            "/api/events/{id}/slides": {
+                "post": {
+                    "tags": ["Events"],
+                    "summary": "Generate Bible slide decks for an event",
+                    "description": "Writes one `.pptx` per Bible reference into the configured slide folder, paginated the same way the web presenter shows them. Names are fixed — `textus.pptx` and `lekcio.pptx` — so regenerating replaces the previous deck.",
+                    "operationId": "createEventSlides",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": { "type": "string", "format": "uuid" }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Paths of the written files",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["files"],
+                                        "properties": {
+                                            "files": { "type": "array", "items": { "type": "string" } }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "400": { "description": "No slide folder configured, or the event has no Bible references with verses" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "404": { "description": "Event not found" },
+                        "500": { "description": "Could not write the deck" }
+                    }
+                }
+            },
             "/api/events": {
                 "get": {
                     "tags": ["Events"],
@@ -878,6 +1138,52 @@ pub fn spec() -> Value {
                         },
                         "409": { "description": "No camera connected" },
                         "502": { "description": "The camera or the YouTube API rejected the request" }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/settings": {
+                "get": {
+                    "tags": ["Connectors"],
+                    "summary": "Read the camera's storage, record format and livestream settings",
+                    "description": "One pass over the camera's own control API: record format plus every supported format, the media slots and working set, and the livestream status, platform list, active platform and that platform's servers and quality profiles.\n\nPayloads are the camera's, forwarded unchanged. Only the active platform's profile list is fetched — the others cost a round trip each.",
+                    "operationId": "getBlackmagicCameraSettings",
+                    "responses": {
+                        "200": {
+                            "description": "Camera settings",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/CameraSettings" }
+                                }
+                            }
+                        },
+                        "409": { "description": "No camera connected" },
+                        "502": { "description": "The camera rejected the request" }
+                    }
+                },
+                "put": {
+                    "tags": ["Connectors"],
+                    "summary": "Write the camera's record format, livestream platform, or both",
+                    "description": "Both halves are optional; whichever is present is written. `record` is the camera's own `FormatRequest` — codec, frameRate and both resolutions travel together, as the camera validates the combination as a whole. `stream` is the full active-platform entry, so send back the one from GET with the fields you changed (dropping `key` clears the stream key).\n\nAnswers with the settings read back from the camera.",
+                    "operationId": "putBlackmagicCameraSettings",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/CameraSettingsUpdate" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Settings after the write",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/CameraSettings" }
+                                }
+                            }
+                        },
+                        "409": { "description": "No camera connected" },
+                        "502": { "description": "The camera rejected the format or platform" }
                     }
                 }
             },

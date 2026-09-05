@@ -2836,8 +2836,14 @@ async fn handle_ws_command(
                 return;
             };
             match camera.livestream_stop().await {
-                Ok(()) => ws_ok(client_tx),
-                Err(e) => ws_error(client_tx, &e.to_string()),
+                Ok(()) => {
+                    tracing::info!("camera livestream stop: accepted (204)");
+                    ws_ok(client_tx)
+                }
+                Err(e) => {
+                    tracing::info!("camera livestream stop: refused — {e}");
+                    ws_error(client_tx, &e.to_string())
+                }
             }
         }
         WsCommand::BlackmagicCameraStreamPushYoutube => {

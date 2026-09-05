@@ -78,6 +78,7 @@ pub fn run() {
         .plugin(tauri_plugin_liquid_glass::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_native_nav::init())
         .plugin(tauri_plugin_opener::init());
 
     #[cfg(desktop)]

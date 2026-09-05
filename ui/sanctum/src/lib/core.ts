@@ -20,6 +20,13 @@ const cfg: CoreClientConfig = {
 
 configureCoreClient(() => cfg);
 
+/**
+ * Whether this window holds a token for the core. Everything that reads the core's
+ * own machine — the connect code, the version, the log — stays hidden without one.
+ * Safe to read during render: initCore() resolves before the app phase starts.
+ */
+export const hasToken = (): boolean => cfg.authToken.length > 0;
+
 /** Which core this window drives — 'server' means the local machine owns the files. */
 export const appMode = (): CoreClientConfig['mode'] => cfg.mode;
 

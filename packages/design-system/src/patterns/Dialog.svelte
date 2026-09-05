@@ -1,7 +1,5 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { dismissable } from '../a11y/dismissable.js';
-  import { focusTrap } from '../a11y/focus-trap.js';
 
   interface Props {
     open?: boolean;
@@ -30,25 +28,22 @@
   const id = `sanctum-dialog-${crypto.randomUUID()}`;
 
   function close() {
+    if (!open) return;
     open = false;
     onclose?.();
   }
 </script>
 
 {#if open}
-  <div class="shade">
-    <div
-      class="panel"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={`${id}-title`}
-      use:focusTrap
-      use:dismissable={{
-        ondismiss: close,
-        closeOnOutsideClick: !modalOnly,
-        closeOnEscape: !modalOnly,
-      }}
-    >
+  <dialog
+    class="shade"
+    aria-labelledby={`${id}-title`}
+    {@attach (el) => el.showModal()}
+    onclose={close}
+    oncancel={(event) => { event.preventDefault(); if (!modalOnly) close(); }}
+    onclick={(event) => { if (!modalOnly && event.target === event.currentTarget) close(); }}
+  >
+    <div class="panel">
       <header>
         {#if eyebrow}<small>{eyebrow}</small>{/if}
         <h2 id={`${id}-title`}>{title}</h2>
@@ -56,14 +51,20 @@
       <div class="body">{@render children()}</div>
       {#if footer}<footer>{@render footer()}</footer>{/if}
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <style>
   .shade {
     position: fixed;
     inset: 0;
-    z-index: var(--z-overlay);
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    color: inherit;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -71,6 +72,10 @@
     background: var(--surface-scrim);
     overscroll-behavior: contain;
     animation: sanctum-fade var(--motion-slide) var(--motion-ease-default);
+  }
+
+  .shade::backdrop {
+    background: transparent;
   }
 
   .panel {

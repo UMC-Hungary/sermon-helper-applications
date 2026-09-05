@@ -164,6 +164,32 @@ pub async fn find_current_event(pool: &PgPool) -> anyhow::Result<Option<EventSum
     Ok(event)
 }
 
+/// Template for the published title. Kept in step with `DEFAULT_TITLE_TEMPLATE`
+/// in packages/core-client/src/utils/title-template.ts, which does the rendering.
+pub const DEFAULT_TITLE_TEMPLATE: &str =
+    "{date|YYYY.MM.DD.} {title}[ | Textus: {textus}][ Lekció: {leckio}][ | {speaker}]";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TitleTemplate {
+    pub template: String,
+}
+
+impl Default for TitleTemplate {
+    fn default() -> Self {
+        Self {
+            template: DEFAULT_TITLE_TEMPLATE.to_string(),
+        }
+    }
+}
+
+/// Where generated Bible slide decks are written. Empty means "not configured";
+/// the core holds the path because the core is what writes the file.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct SlideFolder {
+    #[serde(default)]
+    pub path: String,
+}
+
 /// Connection spec in a create/update request body.
 #[derive(Debug, Deserialize)]
 pub struct CreateConnection {

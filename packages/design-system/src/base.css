@@ -12,6 +12,7 @@
 
 /* measured: global.css body */
 body {
+	margin: 0;
 	font-family: var(--font-body);
 	background: var(--surface-outside);
 	color: var(--text-primary);

@@ -63,7 +63,6 @@ export { default as TransportDock } from './patterns/TransportDock.svelte';
 // Accessibility behaviours, carried over unchanged from the previous design system.
 export { default as LiveRegion } from './a11y/LiveRegion.svelte';
 export { dismissable } from './a11y/dismissable.js';
-export { focusTrap } from './a11y/focus-trap.js';
 export { announce, assertiveMessage, politeMessage } from './a11y/live-region.js';
 export { rovingTabindex } from './a11y/roving-tabindex.js';
 

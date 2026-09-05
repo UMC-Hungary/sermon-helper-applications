@@ -501,6 +501,15 @@ pub async fn build_and_serve(
             get(routes::list_events).post(routes::create_event),
         )
         .route(
+            "/settings/title-template",
+            get(routes::get_title_template).put(routes::set_title_template),
+        )
+        .route(
+            "/settings/slide-folder",
+            get(routes::get_slide_folder).put(routes::set_slide_folder),
+        )
+        .route("/events/{id}/slides", post(routes::create_event_slides))
+        .route(
             "/events/{id}",
             get(routes::get_event)
                 .put(routes::update_event)
@@ -550,6 +559,10 @@ pub async fn build_and_serve(
         .route(
             "/connectors/blackmagic-camera/stream/youtube",
             post(routes::blackmagic_camera_push_youtube),
+        )
+        .route(
+            "/connectors/blackmagic-camera/settings",
+            get(routes::blackmagic_camera_settings).put(routes::blackmagic_camera_apply_settings),
         )
         .route(
             "/connectors/blackmagic-camera/discover",
@@ -632,6 +645,10 @@ pub async fn build_and_serve(
         .route(
             "/events/{id}/recordings/flag-upload",
             post(routes::flag_upload),
+        )
+        .route(
+            "/logs",
+            get(routes::get_application_log).delete(routes::clear_application_log),
         )
         .route("/uploads/trigger", post(routes::trigger_upload_cycle))
         .route("/queues", get(crate::queue::list_queues))

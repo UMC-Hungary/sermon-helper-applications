@@ -1,7 +1,5 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { dismissable } from '../a11y/dismissable.js';
-  import { focusTrap } from '../a11y/focus-trap.js';
 
   interface Props {
     open?: boolean;
@@ -44,6 +42,7 @@
   let pointer: number | null = null;
 
   function close() {
+    if (!open) return;
     dragging = false;
     pointer = null;
     dragY = 0;
@@ -81,19 +80,21 @@
 </script>
 
 {#if open}
-  <div class="shade">
+  <dialog
+    class="shade"
+    aria-label={ariaLabel ?? title}
+    {@attach (el) => el.showModal()}
+    onclose={close}
+    oncancel={(event) => { event.preventDefault(); close(); }}
+    onclick={(event) => { if (event.target === event.currentTarget) close(); }}
+  >
     <div
       class="panel"
       bind:this={sheet}
       class:dragging
       class:rounded
-      role="dialog"
-      aria-modal="true"
-      aria-label={ariaLabel ?? title}
       style:max-height={maxHeight}
       style:--sanctum-sheet-drag={`${dragY}px`}
-      use:focusTrap
-      use:dismissable={{ ondismiss: close }}
     >
       {#if grabber}
         <button
@@ -122,20 +123,31 @@
       </header>
       {@render children()}
     </div>
-  </div>
+  </dialog>
 {/if}
 
 <style>
   .shade {
     position: fixed;
     inset: 0;
-    z-index: var(--z-overlay);
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: inherit;
     overflow: hidden;
     display: flex;
     align-items: flex-end;
     background: var(--surface-scrim);
     overscroll-behavior: contain;
     animation: sanctum-fade var(--motion-slide) var(--motion-ease-default);
+  }
+
+  .shade::backdrop {
+    background: transparent;
   }
 
   .panel {

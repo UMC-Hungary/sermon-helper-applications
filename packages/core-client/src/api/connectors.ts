@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiFetch } from './client.js';
 import { getAdminToken } from '../host/index.js';
 import {
+  CameraSettingsSchema,
   CameraStreamTargetSchema,
   ConnectorConfigSchemas,
   DiscoveredCamerasSchema,
@@ -9,6 +10,8 @@ import {
   ObsStreamSettingsSchema,
   type ConnectorConfigMap,
   type ConnectorName,
+  type CameraSettings,
+  type CameraSettingsUpdate,
   type CameraStreamTarget,
   type DiscoveredCamera,
   type ObsStreamSettings,
@@ -70,6 +73,19 @@ export async function discoverCameras(): Promise<DiscoveredCamera[]> {
     method: 'POST',
   });
   return cameras;
+}
+
+/** Storage, record format and livestream settings, read from the camera in one pass. */
+export function fetchCameraSettings(): Promise<CameraSettings> {
+  return apiFetch('/api/connectors/blackmagic-camera/settings', CameraSettingsSchema);
+}
+
+/** Writes the record format, the livestream platform, or both, and reads the camera back. */
+export function applyCameraSettings(update: CameraSettingsUpdate): Promise<CameraSettings> {
+  return apiFetch('/api/connectors/blackmagic-camera/settings', CameraSettingsSchema, {
+    method: 'PUT',
+    body: update,
+  });
 }
 
 /**

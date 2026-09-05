@@ -18,7 +18,7 @@
   import { listEvents, fetchConnectorStatuses } from '@metocast/core-client';
   import type { EventSummary } from '@metocast/core-client/schemas/event';
   import { live } from '$lib/live.svelte';
-  import { monthAbbr, dayNum, timeShort } from '$lib/format';
+  import { monthAbbr, dayNum, timeShort, eventTitle } from '$lib/format';
   import NotifBell from '$lib/NotifBell.svelte';
 
   let events = $state<EventSummary[]>([]);
@@ -26,8 +26,18 @@
   let phase = $state<'loading' | 'ready' | 'error'>('loading');
 
   const loc = $derived($locale ?? 'en');
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'greetingMorning' : hour < 18 ? 'greetingAfternoon' : 'greetingEvening';
+  const now = new Date();
+  const hour = now.getHours() + now.getMinutes() / 60;
+  const greeting =
+    hour >= 23 || hour < 4.5
+      ? 'greetingNight'
+      : hour < 8
+        ? 'greetingEarly'
+        : hour < 12
+          ? 'greetingMorning'
+          : hour < 18
+            ? 'greetingAfternoon'
+            : 'greetingEvening';
   const nextEvent = $derived(
     events
       .filter((e) => new Date(e.dateTime).getTime() >= Date.now())
@@ -87,7 +97,7 @@
     {:else if nextEvent}
       <List>
         <Row
-          title={nextEvent.title}
+          title={eventTitle(nextEvent)}
           meta={`${timeShort(nextEvent.dateTime, loc)} · ${nextEvent.speaker || $_('dash.noSpeaker')}`}
           href={`/events/${nextEvent.id}`}
           last
@@ -210,8 +220,6 @@
   }
   @media (min-width: 1360px) {
     .dashboard-grid {
-      max-width: 1120px;
-      margin: 0 auto;
       grid-template-columns: minmax(560px, 1fr) 360px;
       gap: 28px;
       padding-inline: 32px;

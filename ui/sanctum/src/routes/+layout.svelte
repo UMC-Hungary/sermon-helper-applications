@@ -21,6 +21,7 @@
   import {
     railItems,
     dismissRail,
+    dismiss,
     allNotifications,
     unreadCount,
     isCentreOpen,
@@ -121,6 +122,7 @@
           source={t.source}
           title={t.title}
           body={t.body}
+          mono={t.mono}
           tone={t.tier}
           state={t.state}
           actions={(t.actions ?? []).map((a) => ({
@@ -159,6 +161,7 @@
         source={t.source}
         title={t.title}
         body={t.body}
+        mono={t.mono}
         tone={t.tier}
         state={t.state}
         actions={(t.actions ?? []).map((a) => ({
@@ -170,7 +173,7 @@
         whyLabel={$_('notif.showSteps')}
         hideWhyLabel={$_('notif.hideSteps')}
         dismissLabel={$_('toast.dismiss')}
-        ondismiss={() => dismissRail(t.id)}
+        ondismiss={() => dismiss(t.id)}
       >
         {#snippet mark()}{@render connectorGlyph(t)}{/snippet}
         {#snippet detail()}
@@ -210,6 +213,12 @@
     inset: 0 0 auto 0;
     height: max(44px, env(safe-area-inset-top, 44px));
     z-index: 100;
+  }
+
+  /* The host webview is transparent, so a page shorter than the screen would let
+     the window show through below the content. */
+  :global(body) {
+    min-height: 100dvh;
   }
 
   :global(body.glass) {
@@ -252,7 +261,9 @@
   @media (min-width: 760px) {
     .toast-host :global(.overlay) {
       left: auto;
-      max-width: 380px;
+      /* A definite width, not shrink-to-fit: every toast in the rail is the same
+         width whether or not it carries a body line. */
+      width: 380px;
     }
   }
 
@@ -262,5 +273,20 @@
       padding-bottom: 0;
       margin-left: 226px;
     }
+  }
+
+  /* The host draws the nav itself: no in-page bar or rail to leave room for —
+     only the toolbar strip the macOS window grew at the top. iOS keeps the
+     bottom inset, which the native tab bar occupies instead. */
+  :global(body.native-nav-top) .content {
+    padding-top: 64px;
+    padding-bottom: 0;
+    margin-left: 0;
+  }
+
+  :global(body.native-nav-bottom) .content {
+    margin-left: 0;
+    /* The native bar's own height plus the gap it keeps above the home indicator. */
+    padding-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
   }
 </style>

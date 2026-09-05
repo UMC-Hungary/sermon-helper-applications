@@ -34,6 +34,10 @@
     "connectors": {
       "title": "Connectors",
       "note": "Category groups, per-connector configuration, status and remediation."
+    },
+    "eventSettings": {
+      "title": "Event settings",
+      "note": "Published title template and where generated slide decks are written."
     }
   },
   "common": {
@@ -43,6 +47,8 @@
   },
   "dash": {
     "greetingMorning": "Good morning.",
+    "greetingEarly": "Up early, early bird.",
+    "greetingNight": "Still up, night owl?",
     "greetingAfternoon": "Good afternoon.",
     "greetingEvening": "Good evening.",
     "onAir": "On air",
@@ -175,6 +181,12 @@
         "failed": "Sync failed",
         "notScheduled": "Not on YouTube yet"
       }
+    },
+    "slides": {
+      "create": "Generate slides",
+      "creating": "Generating…",
+      "created": "Slide decks written",
+      "failed": "Could not generate slides"
     }
   },
   "presentations": {
@@ -310,7 +322,56 @@
       "download": "Download",
       "available": "{v} available"
     },
-    "back": "Settings"
+    "back": "Settings",
+    "template": {
+      "section": "Event title template",
+      "hint": "Used for YouTube",
+      "field": "Template",
+      "optional": "optional",
+      "save": "Save template",
+      "reset": "Reset to default",
+      "sampleTitle": "(Sunday) Worship Service",
+      "sampleSpeaker": "Pastor Mira Okafor"
+    },
+    "eventsRow": {
+      "title": "Event settings",
+      "meta": "Title template, slide output folder"
+    }
+  },
+  "logs": {
+    "title": "Application logs",
+    "rowMeta": "Read, filter and clear this core's log",
+    "fileSection": "Log file",
+    "file": "Log file",
+    "loading": "Loading logs…",
+    "refresh": "Refresh",
+    "download": "Download",
+    "open": "Open",
+    "copyPath": "Copy path",
+    "remove": "Clear log",
+    "removing": "Clearing…",
+    "removeConfirm": "Clear the current application log contents? This cannot be undone.",
+    "cancel": "Cancel",
+    "empty": "The log is quiet.",
+    "emptyHint": "Lines will appear as the core works",
+    "noMatches": "No lines match this filter.",
+    "unavailable": "Logs unavailable",
+    "noToken": "This device has no token for the core, so it cannot read the log.",
+    "retry": "Try again",
+    "filters": {
+      "label": "Log level filter",
+      "all": "All",
+      "info": "Info",
+      "warn": "Warnings",
+      "error": "Errors"
+    },
+    "toasts": {
+      "removed": "Application log cleared",
+      "removeFailed": "Failed to clear the application log",
+      "pathCopied": "Log path copied",
+      "copyFailed": "Failed to copy the log path",
+      "openFailed": "Failed to open the application log"
+    }
   },
   "toast": {
     "region": "Notifications",
@@ -408,7 +469,10 @@
     },
     "camera": {
       "pushYoutube": "Push YouTube settings",
-      "rtmp": "YouTube RTMP URL on the camera"
+      "rtmp": "YouTube RTMP URL on the camera",
+      "control": "Camera control",
+      "controlMeta": "Transport, storage, record and stream quality",
+      "open": "Open"
     }
   },
   "setup": {
@@ -475,5 +539,84 @@
     "saveCreds": "Save credentials",
     "show": "Show",
     "hide": "Hide"
+  },
+  "camera": {
+    "title": "Camera control",
+    "back": "Connectors",
+    "loading": "Reading the camera",
+    "unavailable": "Camera settings unavailable",
+    "notConnected": "The Blackmagic camera connector is not connected. Enable it under Connectors and scan for the camera.",
+    "retry": "Try again",
+    "transport": "Camera transport",
+    "startRecord": "Record",
+    "record": {
+      "label": "Recording",
+      "sensor": "Sensor",
+      "resolution": "Resolution",
+      "frameRate": "Frame rate",
+      "fps": "{r} fps",
+      "codec": "Codec",
+      "remaining": "Record time left"
+    },
+    "stopRecord": "Stop record",
+    "goLive": "Go live",
+    "stopStream": "Stop stream",
+    "apply": "Apply to camera",
+    "applying": "Applying",
+    "revert": "Revert",
+    "applyFailed": "Couldn't apply settings",
+    "note": "Settings are staged here and written to the camera when you apply. Recording and streaming keep running on whatever the camera already has.",
+    "state": {
+      "standby": "Standby",
+      "recording": "Recording",
+      "live": "Live",
+      "both": "Recording · Live",
+      "rec": "Rec",
+      "ready": "Ready"
+    },
+    "overview": {
+      "stream": "Stream",
+      "record": "Record",
+      "free": "Free"
+    },
+    "storage": {
+      "label": "Storage",
+      "slots": "{n} slots",
+      "empty": "Empty slot",
+      "meta": "{type} · {clips} clips · {free} free of {total}",
+      "noCard": "{type} · no card",
+      "used": "{volume} used",
+      "freeOf": "{free} free of {total}"
+    },
+    "stream": {
+      "label": "Streaming",
+      "server": "Server",
+      "quality": "Quality profile",
+      "noTable": "{profile} — no format table",
+      "noTableNote": "This profile carries no format table on the camera, so it picks the rate itself. The Streaming profiles list one.",
+      "rung": "{resolution} · {fps} fps",
+      "mbps": "{rate} Mbps",
+      "output": "Camera output",
+      "ready": "Ready"
+    }
+  },
+  "eventSettings": {
+    "templateSaved": "Template saved",
+    "folderSaved": "Slide folder saved",
+    "saveFailed": "Could not save",
+    "slides": {
+      "section": "Slide decks",
+      "hint": "Textus and Lekció",
+      "title": "Output folder",
+      "none": "Not set — slide decks cannot be generated",
+      "choose": "Choose folder",
+      "clear": "Clear",
+      "field": "Folder on the core’s machine",
+      "placeholder": "/Users/you/Documents/Slides",
+      "save": "Save folder"
+    },
+    "copied": "Copied {token}",
+    "copyFailed": "Could not copy",
+    "copyHint": "Copy to clipboard"
   }
 }

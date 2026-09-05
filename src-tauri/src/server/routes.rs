@@ -1,7 +1,7 @@
 use axum::{
     extract::{ConnectInfo, Path, Query, State},
     http::StatusCode,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Response},
     Json,
 };
 use chrono::Utc;
@@ -20,10 +20,14 @@ use crate::database::settings;
 use crate::models::{
     activity::{self, CreateEventActivity},
     cron_job::{self, CreateCronJob, UpdateCronJob},
-    event::{fetch_event, CreateBibleReference, CreateEvent, EventSummary, UpdateEvent},
+    event::{
+        fetch_event, CreateBibleReference, CreateEvent, EventSummary, SlideFolder, TitleTemplate,
+        UpdateEvent,
+    },
     recording::{CreateRecording, FlagUploadRequest, Recording, RecordingUpload},
     untracked_recording,
 };
+use crate::server::presenter::{self, BibleReferenceType, BibleVerseContent, PresenterState};
 use crate::server::websocket::{
     broadcast_event_changed, broadcast_untracked_removed, spawn_scheduling_tasks,
 };
@@ -325,9 +329,8 @@ pub async fn reveal_connector_secrets(
         "youtube" => {
             Json(settings::get_json::<YouTubeConfig>(pool, "youtube_config").await).into_response()
         }
-        "facebook" => {
-            Json(settings::get_json::<FacebookConfig>(pool, "facebook_config").await).into_response()
-        }
+        "facebook" => Json(settings::get_json::<FacebookConfig>(pool, "facebook_config").await)
+            .into_response(),
         "discord" => {
             Json(settings::get_json::<DiscordConfig>(pool, "discord_config").await).into_response()
         }
@@ -453,6 +456,7 @@ pub async fn put_connector_config(
 // ── OBS connection control ────────────────────────────────────────────────────
 
 pub async fn obs_connect(State(state): State<AppState>) -> impl IntoResponse {
+    tracing::info!("obs: manual reconnect requested");
     let config: ObsConfig = settings::get_json(&state.pool, "obs_config").await;
     state
         .obs_connector
@@ -467,6 +471,7 @@ pub async fn obs_disconnect(State(state): State<AppState>) -> impl IntoResponse 
 }
 
 pub async fn blackmagic_camera_connect(State(state): State<AppState>) -> impl IntoResponse {
+    tracing::info!("blackmagic camera: manual reconnect requested");
     let config: BlackmagicCameraConfig =
         settings::get_json(&state.pool, "blackmagic_camera_config").await;
     state
@@ -658,17 +663,61 @@ pub(crate) async fn push_youtube_to_camera(
     }))
 }
 
+/// The connected camera, or the 409 every camera route answers without one.
+async fn connected_camera(
+    state: &AppState,
+) -> Result<std::sync::Arc<blackmagic_camera::Camera>, Response> {
+    state
+        .blackmagic_camera_connector
+        .client()
+        .await
+        .ok_or_else(|| {
+            (
+                StatusCode::CONFLICT,
+                Json(json!({ "error": "Blackmagic camera is not connected" })),
+            )
+                .into_response()
+        })
+}
+
 pub async fn blackmagic_camera_push_youtube(State(state): State<AppState>) -> impl IntoResponse {
-    let Some(camera) = state.blackmagic_camera_connector.client().await else {
-        return (
-            StatusCode::CONFLICT,
-            Json(json!({ "error": "Blackmagic camera is not connected" })),
-        )
-            .into_response();
+    let camera = match connected_camera(&state).await {
+        Ok(camera) => camera,
+        Err(response) => return response,
     };
     match push_youtube_to_camera(&state.pool, &camera).await {
         Ok(payload) => Json(payload).into_response(),
         Err(e) => upstream_error(e),
+    }
+}
+
+/// Storage, record format and livestream settings the camera control screen shows.
+pub async fn blackmagic_camera_settings(State(state): State<AppState>) -> impl IntoResponse {
+    let camera = match connected_camera(&state).await {
+        Ok(camera) => camera,
+        Err(response) => return response,
+    };
+    match blackmagic_camera::settings(&camera).await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(e) => upstream_error(e.to_string()),
+    }
+}
+
+/// Writes the record format, the livestream platform, or both.
+pub async fn blackmagic_camera_apply_settings(
+    State(state): State<AppState>,
+    Json(update): Json<blackmagic_camera::SettingsUpdate>,
+) -> impl IntoResponse {
+    let camera = match connected_camera(&state).await {
+        Ok(camera) => camera,
+        Err(response) => return response,
+    };
+    match blackmagic_camera::apply_settings(&camera, &update).await {
+        Ok(()) => match blackmagic_camera::settings(&camera).await {
+            Ok(payload) => Json(payload).into_response(),
+            Err(e) => upstream_error(e.to_string()),
+        },
+        Err(e) => upstream_error(e.to_string()),
     }
 }
 
@@ -1243,6 +1292,128 @@ pub async fn get_facebook_stream_key(State(state): State<AppState>) -> impl Into
         )
             .into_response(),
     }
+}
+
+/// The template the editor renders `computed_title` from. Unset falls back to
+/// `TitleTemplate::default()`, so this never 404s.
+pub async fn get_title_template(State(state): State<AppState>) -> impl IntoResponse {
+    Json(settings::get_json::<TitleTemplate>(&state.pool, "title_template").await)
+}
+
+pub async fn set_title_template(
+    State(state): State<AppState>,
+    Json(body): Json<TitleTemplate>,
+) -> impl IntoResponse {
+    match settings::set_json(&state.pool, "title_template", &body).await {
+        Ok(()) => (StatusCode::OK, Json(body)).into_response(),
+        Err(e) => {
+            tracing::error!("set_title_template: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// The folder generated Bible slide decks are written into. An unset key returns
+/// an empty path, so this never 404s.
+pub async fn get_slide_folder(State(state): State<AppState>) -> impl IntoResponse {
+    Json(settings::get_json::<SlideFolder>(&state.pool, "slide_folder").await)
+}
+
+/// Every window sends a plain string — the desktop shell that *is* the core fills
+/// it from a native picker, everyone else types it — so the core is what checks
+/// the path actually exists on the machine that will do the writing.
+pub async fn set_slide_folder(
+    State(state): State<AppState>,
+    Json(body): Json<SlideFolder>,
+) -> impl IntoResponse {
+    let folder = SlideFolder {
+        path: body.path.trim().to_string(),
+    };
+    if !folder.path.is_empty() && !std::path::Path::new(&folder.path).is_dir() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("No such folder: {}", folder.path)})),
+        )
+            .into_response();
+    }
+    match settings::set_json(&state.pool, "slide_folder", &folder).await {
+        Ok(()) => (StatusCode::OK, Json(folder)).into_response(),
+        Err(e) => {
+            tracing::error!("set_slide_folder: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// Writes one `.pptx` per Bible reference on the event into the configured slide
+/// folder, using the same pagination the web presenter shows. The names are fixed
+/// — `textus.pptx` and `lekcio.pptx` — so a regenerated deck replaces the one a
+/// projector is already pointed at.
+pub async fn create_event_slides(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let folder = settings::get_json::<SlideFolder>(&state.pool, "slide_folder").await;
+    if folder.path.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "No slide folder configured"})),
+        )
+            .into_response();
+    }
+    let dir = std::path::PathBuf::from(&folder.path);
+    if !dir.is_dir() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("No such folder: {}", folder.path)})),
+        )
+            .into_response();
+    }
+
+    let event = match fetch_event(id, &state.pool).await {
+        Ok(Some(event)) => event,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("create_event_slides: {e}");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let mut files: Vec<String> = Vec::new();
+    for reference in &event.bible_references {
+        let (kind, file_name) = match reference.r#type.as_str() {
+            "textus" => (BibleReferenceType::Textus, "textus.pptx"),
+            "leckio" => (BibleReferenceType::Leckio, "lekcio.pptx"),
+            _ => continue,
+        };
+        let verses: Vec<BibleVerseContent> =
+            serde_json::from_value(reference.verses.clone()).unwrap_or_default();
+        if verses.is_empty() {
+            continue;
+        }
+        let deck =
+            PresenterState::from_bible_reference(&event.title, kind, &reference.reference, verses);
+        let path = dir.join(file_name);
+        if let Err(e) = presenter::write_pptx(
+            &path,
+            &deck.slides,
+            deck.slide_width_emu,
+            deck.slide_height_emu,
+        ) {
+            tracing::error!("create_event_slides: {e}");
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response();
+        }
+        files.push(path.to_string_lossy().into_owned());
+    }
+
+    if files.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Event has no Bible references with verses"})),
+        )
+            .into_response();
+    }
+    (StatusCode::OK, Json(json!({ "files": files }))).into_response()
 }
 
 pub async fn list_events(State(state): State<AppState>) -> impl IntoResponse {
@@ -2789,5 +2960,44 @@ mod tests {
         restore_omitted_secrets(&mut incoming, &stored);
 
         assert_eq!(incoming["password"], "hunter2");
+    }
+}
+
+/// The core's own application log, so a client device can read the server's log
+/// rather than its own. Reads the same file the desktop log commands do.
+pub async fn get_application_log(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(app) = state.app_handle.as_ref() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "Application log is unavailable on this core"})),
+        )
+            .into_response();
+    };
+    match (
+        crate::logging::ensure_application_log(app),
+        crate::logging::read_application_log(app),
+    ) {
+        (Ok(path), Ok(content)) => Json(json!({
+            "path": path.to_string_lossy(),
+            "content": content,
+        }))
+        .into_response(),
+        (Err(e), _) | (_, Err(e)) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response()
+        }
+    }
+}
+
+pub async fn clear_application_log(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(app) = state.app_handle.as_ref() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "Application log is unavailable on this core"})),
+        )
+            .into_response();
+    };
+    match crate::logging::clear_application_log(app) {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response(),
     }
 }

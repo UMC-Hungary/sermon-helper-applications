@@ -37,6 +37,7 @@
   import type { CronJob, UpdateInfo } from '@metocast/core-client';
   import { scheme, setScheme, type Scheme } from '$lib/scheme.svelte';
   import { setLocale, locales } from '$lib/i18n';
+  import { hasToken } from '$lib/core';
   import LoginSheet from '$lib/LoginSheet.svelte';
   import { live } from '$lib/live.svelte';
   import NotifBell from '$lib/NotifBell.svelte';
@@ -206,24 +207,26 @@
       </Row>
     </List>
 
-    <SectionLabel hint={mode}>{$_('settings.modeSection')}</SectionLabel>
-    <List>
-      <Row
-        title={$_('settings.mode.title', { values: { mode } })}
-        meta={mode === 'client' ? $_('settings.mode.clientMeta') : $_('settings.mode.meta')}
-        chevron={false}
-        last
-      >
-        {#snippet icon()}<TextIcon char={mode === 'server' ? 'S' : 'C'} />{/snippet}
-        {#snippet control()}
-          <Button variant={mode === 'client' ? 'danger' : 'secondary'} compact onclick={openModeSheet}>
-            {mode === 'client' ? $_('settings.mode.removeAccess') : $_('settings.mode.change')}
-          </Button>
-        {/snippet}
-      </Row>
-    </List>
+    {#if hasToken()}
+      <SectionLabel hint={mode}>{$_('settings.modeSection')}</SectionLabel>
+      <List>
+        <Row
+          title={$_('settings.mode.title', { values: { mode } })}
+          meta={mode === 'client' ? $_('settings.mode.clientMeta') : $_('settings.mode.meta')}
+          chevron={false}
+          last
+        >
+          {#snippet icon()}<TextIcon char={mode === 'server' ? 'S' : 'C'} />{/snippet}
+          {#snippet control()}
+            <Button variant={mode === 'client' ? 'danger' : 'secondary'} compact onclick={openModeSheet}>
+              {mode === 'client' ? $_('settings.mode.removeAccess') : $_('settings.mode.change')}
+            </Button>
+          {/snippet}
+        </Row>
+      </List>
+    {/if}
 
-    {#if mode === 'server'}
+    {#if mode === 'server' && hasToken()}
       <SectionLabel hint={$_('settings.connect.hint')}>{$_('settings.connect.section')}</SectionLabel>
       <List>
         <Row title={$_('settings.connect.section')} meta={$_('settings.connect.hint')} chevron={false} last>
@@ -239,30 +242,34 @@
       </List>
     {/if}
 
-    <SectionLabel hint={$_('settings.account.signedCount', { values: { n: signedCount } })}>
-      {$_('settings.accountsSection')}
-    </SectionLabel>
-    <List>
-      {#each accounts as acc, i (acc.id)}
-        <Row
-          title={acc.name}
-          meta={signedIn[acc.id] ? $_('settings.account.ready') : $_('settings.account.needsKey')}
-          chevron={false}
-          last={i === accounts.length - 1}
-        >
-          {#snippet icon()}<Glyph char={acc.char} size={34} />{/snippet}
-          {#snippet control()}
-            <Button variant="secondary" compact onclick={() => (loginProvider = acc.id)}>
-              {signedIn[acc.id] ? $_('settings.account.manage') : $_('settings.account.login')}
-            </Button>
-          {/snippet}
-        </Row>
-      {/each}
-    </List>
+    {#if hasToken()}
+      <SectionLabel hint={$_('settings.account.signedCount', { values: { n: signedCount } })}>
+        {$_('settings.accountsSection')}
+      </SectionLabel>
+      <List>
+        {#each accounts as acc, i (acc.id)}
+          <Row
+            title={acc.name}
+            meta={signedIn[acc.id] ? $_('settings.account.ready') : $_('settings.account.needsKey')}
+            chevron={false}
+            last={i === accounts.length - 1}
+          >
+            {#snippet icon()}<Glyph char={acc.char} size={34} />{/snippet}
+            {#snippet control()}
+              <Button variant="secondary" compact onclick={() => (loginProvider = acc.id)}>
+                {signedIn[acc.id] ? $_('settings.account.manage') : $_('settings.account.login')}
+              </Button>
+            {/snippet}
+          </Row>
+        {/each}
+      </List>
+    {/if}
   </div>
 
   <aside class="side-col">
-    <SectionLabel hint="7">{$_('settings.connectors')}</SectionLabel>
+    <div class="side-head">
+      <SectionLabel hint="7">{$_('settings.connectors')}</SectionLabel>
+    </div>
     <List>
       <Row
         title={$_('settings.connectorsRow.title')}
@@ -274,6 +281,23 @@
         {#snippet icon()}<TextIcon char="↳" />{/snippet}
       </Row>
     </List>
+
+    <div class="side-head">
+      <SectionLabel>{$_('screens.eventSettings.title')}</SectionLabel>
+    </div>
+    <div class="side-stack">
+      <List>
+        <Row
+          title={$_('settings.eventsRow.title')}
+          meta={$_('settings.eventsRow.meta')}
+          detail={$_('settings.connectorsRow.open')}
+          href="/settings/events"
+          last
+        >
+          {#snippet icon()}<TextIcon char="↳" />{/snippet}
+        </Row>
+      </List>
+    </div>
 
     <SectionLabel>{$_('settings.presentations')}</SectionLabel>
     <List>
@@ -289,34 +313,36 @@
       </Row>
     </List>
 
-    <SectionLabel hint={$_('settings.cron.configured', { values: { n: cronJobs.length } })}>
-      {$_('settings.cron.section')}
-    </SectionLabel>
-    <List>
-      {#each cronJobs as job (job.id)}
-        <Row title={job.name} meta={`${job.cronExpression} · ${cronTags(job)}`} chevron={false}>
-          {#snippet icon()}<TextIcon char={job.enabled ? '✓' : '·'} />{/snippet}
-          {#snippet control()}
-            <Toggle checked={job.enabled} label={job.name} onchange={(v) => toggleCron(job, v)} />
-          {/snippet}
-        </Row>
-      {/each}
-      <form class="draft" onsubmit={(e) => { e.preventDefault(); addCron(); }}>
-        <Field label={$_('settings.cron.name')} bind:value={draft.name} placeholder={$_('settings.cron.namePlaceholder')} />
-        <Field
-          label={$_('settings.cron.expr')}
-          bind:value={draft.cronExpression}
-          placeholder={$_('settings.cron.exprPlaceholder')}
-        />
-        <div class="cron-options">
-          <Checkbox label={$_('settings.cron.pullYoutube')} bind:checked={draft.pullYoutube} />
-          <Checkbox label={$_('settings.cron.autoUpload')} bind:checked={draft.autoUpload} />
-        </div>
-        <Button type="submit" variant="primary" block disabled={!canSaveCron}>
-          {$_('settings.cron.save')}
-        </Button>
-      </form>
-    </List>
+    {#if hasToken()}
+      <SectionLabel hint={$_('settings.cron.configured', { values: { n: cronJobs.length } })}>
+        {$_('settings.cron.section')}
+      </SectionLabel>
+      <List>
+        {#each cronJobs as job (job.id)}
+          <Row title={job.name} meta={`${job.cronExpression} · ${cronTags(job)}`} chevron={false}>
+            {#snippet icon()}<TextIcon char={job.enabled ? '✓' : '·'} />{/snippet}
+            {#snippet control()}
+              <Toggle checked={job.enabled} label={job.name} onchange={(v) => toggleCron(job, v)} />
+            {/snippet}
+          </Row>
+        {/each}
+        <form class="draft" onsubmit={(e) => { e.preventDefault(); addCron(); }}>
+          <Field label={$_('settings.cron.name')} bind:value={draft.name} placeholder={$_('settings.cron.namePlaceholder')} />
+          <Field
+            label={$_('settings.cron.expr')}
+            bind:value={draft.cronExpression}
+            placeholder={$_('settings.cron.exprPlaceholder')}
+          />
+          <div class="cron-options">
+            <Checkbox label={$_('settings.cron.pullYoutube')} bind:checked={draft.pullYoutube} />
+            <Checkbox label={$_('settings.cron.autoUpload')} bind:checked={draft.autoUpload} />
+          </div>
+          <Button type="submit" variant="primary" block disabled={!canSaveCron}>
+            {$_('settings.cron.save')}
+          </Button>
+        </form>
+      </List>
+    {/if}
 
     <SectionLabel>{$_('settings.app')}</SectionLabel>
     <List>
@@ -324,19 +350,32 @@
         title={$_('settings.appearance')}
         detail={currentSchemeLabel}
         onclick={() => (appearanceOpen = true)}
+        last={!hasToken()}
       >
         {#snippet icon()}<TextIcon char={scheme() === 'dark' ? '☾' : '☀'} />{/snippet}
       </Row>
-      <Row
-        title={$_('settings.version.title')}
-        meta={update?.latestVersion ? $_('settings.version.available', { values: { v: update.latestVersion } }) : appVersion}
-        detail={update?.latestVersion ? $_('settings.version.download') : $_('settings.version.check')}
-        chevron={false}
-        onclick={checkUpdate}
-        last
-      >
-        {#snippet icon()}<TextIcon char="↓" />{/snippet}
-      </Row>
+      <!-- The log, the version and the update all read the core's own machine, so
+           they need a token to reach it. -->
+      {#if hasToken()}
+        <Row
+          title={$_('logs.title')}
+          meta={$_('logs.rowMeta')}
+          detail={$_('logs.open')}
+          href="/settings/logs"
+        >
+          {#snippet icon()}<TextIcon char="≡" />{/snippet}
+        </Row>
+        <Row
+          title={$_('settings.version.title')}
+          meta={update?.latestVersion ? $_('settings.version.available', { values: { v: update.latestVersion } }) : appVersion}
+          detail={update?.latestVersion ? $_('settings.version.download') : $_('settings.version.check')}
+          chevron={false}
+          onclick={checkUpdate}
+          last
+        >
+          {#snippet icon()}<TextIcon char="↓" />{/snippet}
+        </Row>
+      {/if}
     </List>
 
     <footer>
@@ -408,6 +447,7 @@
   .draft {
     padding: 14px 24px 16px;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
   .cron-options {
@@ -456,8 +496,6 @@
       grid-template-columns: minmax(320px, 1fr) minmax(280px, 340px);
       gap: 0 18px;
       align-items: start;
-      max-width: 1040px;
-      margin: 0 auto;
       padding: 0 18px 64px;
     }
     .primary-col,
@@ -468,6 +506,12 @@
     .side-col {
       position: sticky;
       top: 18px;
+    }
+    .side-head {
+      display: none;
+    }
+    .side-stack {
+      margin-top: calc(var(--ui-border-hairline) * -1);
     }
     .overview {
       margin: 0;
@@ -480,7 +524,6 @@
     .settings-workspace {
       grid-template-columns: minmax(560px, 1fr) 380px;
       gap: 0 30px;
-      max-width: 1180px;
       padding-inline: 32px;
     }
   }

@@ -56,3 +56,8 @@ export function fromDateTimeInput(date: string, time: string): string {
   if (!date) return '';
   return new Date(`${date}T${time || '00:00'}`).toISOString();
 }
+
+/** What an event is called on screen: the composed title when it exists, else the raw one. */
+export function eventTitle(e: { title: string; computedTitle: string }): string {
+  return e.computedTitle || e.title;
+}

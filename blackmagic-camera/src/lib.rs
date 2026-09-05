@@ -63,17 +63,24 @@ pub enum Error {
 }
 
 impl Error {
-    fn from_status(status: u16, path: &str) -> Self {
-        let p = path.to_string();
+    /// `body` is the camera's own response text, when it sent one — folded in here
+    /// rather than discarded, since a bare status code rarely says why a 403 happened
+    /// (e.g. genuinely different reasons for the same 403 on `/livestreams/0/stop`).
+    fn from_status(status: u16, path: &str, body: &str) -> Self {
+        let context = if body.trim().is_empty() {
+            path.to_string()
+        } else {
+            format!("{path}: {}", body.trim())
+        };
         match status {
-            400 => Error::BadRequest(p),
+            400 => Error::BadRequest(context),
             401 => Error::AuthFailed,
-            403 => Error::Forbidden(p),
-            404 => Error::NotFound(p),
-            409 => Error::Conflict(p),
-            422 => Error::Unprocessable(p),
-            501 => Error::NotSupported(p),
-            other => Error::Http(other, p),
+            403 => Error::Forbidden(context),
+            404 => Error::NotFound(context),
+            409 => Error::Conflict(context),
+            422 => Error::Unprocessable(context),
+            501 => Error::NotSupported(context),
+            other => Error::Http(other, context),
         }
     }
 
@@ -158,7 +165,8 @@ impl Camera {
         let res = req.send().await.map_err(|e| self.transport_error(e))?;
         let status = res.status().as_u16();
         if status >= 400 {
-            return Err(Error::from_status(status, path));
+            let body = res.text().await.unwrap_or_default();
+            return Err(Error::from_status(status, path, &body));
         }
         Ok(res)
     }
@@ -178,7 +186,9 @@ impl Camera {
     // ── Generic REST — the whole API surface ────────────────────────────────
 
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
-        let res = self.send(self.request(reqwest::Method::GET, path), path).await?;
+        let res = self
+            .send(self.request(reqwest::Method::GET, path), path)
+            .await?;
         res.json().await.map_err(|e| Error::Body(e.to_string()))
     }
 
@@ -256,8 +266,11 @@ impl Camera {
     pub async fn start_recording(&self, clip_name: Option<&str>) -> Result<()> {
         match clip_name {
             Some(name) => {
-                self.post("/transports/0/record", &serde_json::json!({ "clipName": name }))
-                    .await
+                self.post(
+                    "/transports/0/record",
+                    &serde_json::json!({ "clipName": name }),
+                )
+                .await
             }
             None => self.post_empty("/transports/0/record").await,
         }
@@ -283,8 +296,13 @@ impl Camera {
     }
 
     pub async fn set_white_balance(&self, kelvin: i32) -> Result<()> {
-        self.put("/video/whiteBalance", &WhiteBalance { white_balance: kelvin })
-            .await
+        self.put(
+            "/video/whiteBalance",
+            &WhiteBalance {
+                white_balance: kelvin,
+            },
+        )
+        .await
     }
 
     pub async fn shutter(&self) -> Result<Shutter> {
@@ -571,19 +589,44 @@ mod tests {
 
     #[test]
     fn status_codes_map_to_distinct_errors() {
-        assert!(Error::from_status(501, "/lens/iris").is_unsupported());
+        assert!(Error::from_status(501, "/lens/iris", "").is_unsupported());
         assert!(matches!(
-            Error::from_status(409, "/x"),
+            Error::from_status(409, "/x", ""),
             Error::Conflict(_)
         ));
         assert!(matches!(
-            Error::from_status(403, "/x"),
+            Error::from_status(403, "/x", ""),
             Error::Forbidden(_)
         ));
-        assert!(matches!(Error::from_status(401, "/x"), Error::AuthFailed));
-        assert!(matches!(Error::from_status(418, "/x"), Error::Http(418, _)));
+        assert!(matches!(
+            Error::from_status(401, "/x", ""),
+            Error::AuthFailed
+        ));
+        assert!(matches!(
+            Error::from_status(418, "/x", ""),
+            Error::Http(418, _)
+        ));
         // A real failure must never be mistaken for "camera lacks the feature".
-        assert!(!Error::from_status(500, "/x").is_unsupported());
+        assert!(!Error::from_status(500, "/x", "").is_unsupported());
+    }
+
+    #[test]
+    fn a_response_body_is_folded_into_the_message_instead_of_discarded() {
+        let with_body = Error::from_status(
+            403,
+            "/livestreams/0/stop",
+            r#"{"error":"stream owned by Blackmagic Cloud"}"#,
+        );
+        assert!(with_body
+            .to_string()
+            .contains("stream owned by Blackmagic Cloud"));
+
+        // A blank or whitespace-only body falls back to the path alone.
+        let no_body = Error::from_status(403, "/livestreams/0/stop", "   ");
+        assert_eq!(
+            no_body.to_string(),
+            "forbidden (likely controlled by another setting): /livestreams/0/stop"
+        );
     }
 
     #[test]

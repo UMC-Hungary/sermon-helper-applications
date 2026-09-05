@@ -34,6 +34,10 @@
     "connectors": {
       "title": "Csatlakozók",
       "note": "Kategóriacsoportok, csatlakozónkénti beállítások, állapot és hibaelhárítás."
+    },
+    "eventSettings": {
+      "title": "Esemény beállítások",
+      "note": "Közzétételi cím sablon és a generált diasorok helye."
     }
   },
   "common": {
@@ -43,6 +47,8 @@
   },
   "dash": {
     "greetingMorning": "Jó reggelt.",
+    "greetingEarly": "Korán keltél, te kis pacsirta.",
+    "greetingNight": "Még fent, éjjeli bagoly?",
     "greetingAfternoon": "Jó napot.",
     "greetingEvening": "Jó estét.",
     "onAir": "Adásban",
@@ -175,6 +181,12 @@
         "failed": "A szinkronizálás nem sikerült",
         "notScheduled": "Még nincs fenn a YouTube-on"
       }
+    },
+    "slides": {
+      "create": "Diasor készítése",
+      "creating": "Készítés…",
+      "created": "Diasorok elkészültek",
+      "failed": "Nem sikerült diasort készíteni"
     }
   },
   "presentations": {
@@ -310,6 +322,55 @@
       "hint": "Olvasd be Metocasttal iPhone-on",
       "loading": "Generálás…",
       "unavailable": "Indítsd el a szervert a csatlakozási kód generálásához"
+    },
+    "template": {
+      "section": "Esemény cím sablon",
+      "hint": "A YouTube-hoz használjuk",
+      "field": "Sablon",
+      "optional": "elhagyható",
+      "save": "Sablon mentése",
+      "reset": "Alapértelmezett visszaállítása",
+      "sampleTitle": "(Vasárnapi) istentisztelet",
+      "sampleSpeaker": "Prókai Árpád"
+    },
+    "eventsRow": {
+      "title": "Esemény beállítások",
+      "meta": "Cím sablon, diasor mappa"
+    }
+  },
+  "logs": {
+    "title": "Alkalmazásnaplók",
+    "rowMeta": "A mag naplójának olvasása, szűrése és törlése",
+    "fileSection": "Naplófájl",
+    "file": "Naplófájl",
+    "loading": "Naplók betöltése…",
+    "refresh": "Frissítés",
+    "download": "Letöltés",
+    "open": "Megnyitás",
+    "copyPath": "Útvonal másolása",
+    "remove": "Napló törlése",
+    "removing": "Törlés…",
+    "removeConfirm": "Törli az aktuális alkalmazásnapló tartalmát? A művelet nem vonható vissza.",
+    "cancel": "Mégse",
+    "empty": "A napló csendes.",
+    "emptyHint": "A sorok a mag működése közben jelennek meg",
+    "noMatches": "Nincs a szűrőnek megfelelő sor.",
+    "unavailable": "A naplók nem érhetők el",
+    "noToken": "Ezen az eszközön nincs token a maghoz, így a napló nem olvasható.",
+    "retry": "Újra",
+    "filters": {
+      "label": "Naplószint szűrő",
+      "all": "Összes",
+      "info": "Infó",
+      "warn": "Figyelmeztetések",
+      "error": "Hibák"
+    },
+    "toasts": {
+      "removed": "Alkalmazásnapló törölve",
+      "removeFailed": "Az alkalmazásnapló törlése sikertelen",
+      "pathCopied": "Napló útvonala másolva",
+      "copyFailed": "A napló útvonalának másolása sikertelen",
+      "openFailed": "Az alkalmazásnapló megnyitása sikertelen"
     }
   },
   "toast": {
@@ -408,7 +469,10 @@
     },
     "camera": {
       "pushYoutube": "YouTube beállítások küldése",
-      "rtmp": "YouTube RTMP URL a kamerán"
+      "rtmp": "YouTube RTMP URL a kamerán",
+      "control": "Kameravezérlés",
+      "controlMeta": "Vezérlés, tárhely, felvételi és adásminőség",
+      "open": "Megnyitás"
     }
   },
   "setup": {
@@ -475,5 +539,84 @@
     "saveCreds": "Hitelesítők mentése",
     "show": "Megjelenítés",
     "hide": "Elrejtés"
+  },
+  "camera": {
+    "title": "Kameravezérlés",
+    "back": "Összekötők",
+    "loading": "Kamera beolvasása",
+    "unavailable": "A kamera beállításai nem érhetők el",
+    "notConnected": "A Blackmagic kamera összekötő nincs csatlakoztatva. Kapcsold be az Összekötőknél, és keresd meg a kamerát.",
+    "retry": "Újra",
+    "transport": "Kamera vezérlés",
+    "startRecord": "Felvétel",
+    "record": {
+      "label": "Felvétel",
+      "sensor": "Szenzor",
+      "resolution": "Felbontás",
+      "frameRate": "Képsebesség",
+      "fps": "{r} fps",
+      "codec": "Kodek",
+      "remaining": "Hátralévő felvételi idő"
+    },
+    "stopRecord": "Felvétel leállítása",
+    "goLive": "Élő adás",
+    "stopStream": "Adás leállítása",
+    "apply": "Küldés a kamerára",
+    "applying": "Küldés",
+    "revert": "Visszaállítás",
+    "applyFailed": "A beállítások nem menthetők",
+    "note": "A beállítások itt előkészülnek, és küldéskor kerülnek a kamerára. A futó felvétel és adás a kamera addigi beállításaival megy tovább.",
+    "state": {
+      "standby": "Készenlét",
+      "recording": "Felvétel",
+      "live": "Élő",
+      "both": "Felvétel · Élő",
+      "rec": "Felv",
+      "ready": "Kész"
+    },
+    "overview": {
+      "stream": "Adás",
+      "record": "Felvétel",
+      "free": "Szabad"
+    },
+    "storage": {
+      "label": "Tárhely",
+      "slots": "{n} hely",
+      "empty": "Üres hely",
+      "meta": "{type} · {clips} klip · {free} szabad / {total}",
+      "noCard": "{type} · nincs kártya",
+      "used": "{volume} használt",
+      "freeOf": "{free} szabad / {total}"
+    },
+    "stream": {
+      "label": "Adás",
+      "server": "Szerver",
+      "quality": "Minőségi profil",
+      "noTable": "{profile} — nincs formátumtábla",
+      "noTableNote": "Ehhez a profilhoz a kamera nem ad formátumtáblát, a bitrátát maga választja. A Streaming profilokhoz tartozik tábla.",
+      "rung": "{resolution} · {fps} fps",
+      "mbps": "{rate} Mbit/s",
+      "output": "Kamera kimenet",
+      "ready": "Kész"
+    }
+  },
+  "eventSettings": {
+    "templateSaved": "Sablon mentve",
+    "folderSaved": "Diasor mappa mentve",
+    "saveFailed": "Nem sikerült menteni",
+    "slides": {
+      "section": "Diasorok",
+      "hint": "Textus és Lekció",
+      "title": "Célmappa",
+      "none": "Nincs beállítva — diasor nem generálható",
+      "choose": "Mappa választása",
+      "clear": "Törlés",
+      "field": "Mappa a kiszolgáló gépén",
+      "placeholder": "/Users/te/Documents/Diak",
+      "save": "Mappa mentése"
+    },
+    "copied": "{token} vágólapra másolva",
+    "copyFailed": "Nem sikerült másolni",
+    "copyHint": "Másolás a vágólapra"
   }
 }

@@ -3,17 +3,26 @@ use std::sync::Arc;
 use blackmagic_camera::discovery;
 pub use blackmagic_camera::discovery::Discovered;
 pub use blackmagic_camera::Camera;
-use blackmagic_camera::{Error, LivestreamPlatform, PlatformConfig, Trust};
+use blackmagic_camera::{
+    notify, Error, LivestreamPlatform, LivestreamStatus, PlatformConfig, RecordState, Trust,
+};
 use tauri::Emitter;
 use tokio::sync::{broadcast, watch, Mutex, RwLock};
 use tokio::time::Duration;
 
 use super::{BlackmagicCameraConfig, ConnectorStatus};
 
-/// ponytail: the camera's notification websocket carries no livestream property
-/// (see blackmagic-camera/README.md), so both states are polled. Swap the record
-/// half for `notify::watch` if this interval ever shows up as latency.
-const POLL_INTERVAL: Duration = Duration::from_secs(2);
+/// Record and livestream state ride the notification websocket now — `GET /event/list`
+/// against real hardware lists `/transports/0/record` and `/livestreams/0` as
+/// subscribable on this model (the manual's list, which the old poll-everything
+/// comment here relied on, says otherwise; see blackmagic-camera/README.md). This is
+/// only a liveness backstop: if the camera drops off the network, the notification
+/// socket keeps retrying silently on its own schedule, so a REST call on the side is
+/// what actually notices and flips the connector to `Error`.
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(10);
+
+const INITIAL_BACKOFF: Duration = Duration::from_secs(5);
+const MAX_BACKOFF: Duration = Duration::from_secs(60);
 
 /// Snapshot of the camera's outputs, broadcast whenever either changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,6 +57,7 @@ impl BlackmagicCameraConnector {
     }
 
     pub async fn start(&self, config: BlackmagicCameraConfig, app: Option<tauri::AppHandle>) {
+        tracing::info!(host = %config.host, "blackmagic camera: connector start requested");
         self.stop_internal().await;
 
         let (stop_tx, stop_rx) = watch::channel(false);
@@ -66,6 +76,7 @@ impl BlackmagicCameraConnector {
     }
 
     pub async fn stop(&self) {
+        tracing::info!("blackmagic camera: connector stop requested");
         self.stop_internal().await;
     }
 
@@ -105,14 +116,17 @@ pub async fn discover(timeout: Duration) -> Result<Vec<Discovered>, String> {
 /// A blank fingerprint means "not accepted yet" — trust whatever the camera
 /// presents, so `presented_fingerprint()` can show the operator what to pin.
 pub fn connect(config: &BlackmagicCameraConfig) -> Result<Camera, Error> {
-    let trust = if config.fingerprint.is_empty() {
+    let auth = (!config.username.is_empty())
+        .then_some((config.username.as_str(), config.password.as_str()));
+    Camera::connect(&config.host, auth, trust_for(config))
+}
+
+fn trust_for(config: &BlackmagicCameraConfig) -> Trust {
+    if config.fingerprint.is_empty() {
         Trust::OnFirstUse
     } else {
         Trust::Pinned(config.fingerprint.clone())
-    };
-    let auth = (!config.username.is_empty())
-        .then_some((config.username.as_str(), config.password.as_str()));
-    Camera::connect(&config.host, auth, trust)
+    }
 }
 
 /// Points the camera's livestream at YouTube. Prefers the camera's own YouTube
@@ -166,6 +180,55 @@ fn youtube_platform(config: PlatformConfig, stream_key: &str) -> Result<Livestre
     })
 }
 
+/// Everything the camera control screen reads, in one pass: the camera's own
+/// payloads forwarded as it returns them. Only the active platform's profile
+/// list is fetched — the others cost a round trip each and nothing shows them.
+pub async fn settings(camera: &Camera) -> Result<serde_json::Value, Error> {
+    let active = camera.livestream_active_platform().await?;
+    let platform: serde_json::Value = camera
+        .get(&format!("/livestreams/platforms/{}", active.platform))
+        .await?;
+    Ok(serde_json::json!({
+        "recording": camera.record_state().await?.recording,
+        "record": {
+            "format": camera.get::<serde_json::Value>("/system/format").await?,
+            "supported": camera.get::<serde_json::Value>("/system/supportedFormats").await?,
+        },
+        "storage": {
+            "slots": camera.get::<serde_json::Value>("/media/slots").await?,
+            "workingset": camera.get::<serde_json::Value>("/media/workingset").await?,
+            "active": camera.get::<serde_json::Value>("/media/active").await?,
+        },
+        "stream": {
+            "status": camera.get::<serde_json::Value>("/livestreams/0").await?,
+            "available": camera.get::<serde_json::Value>("/livestreams/0/available").await?,
+            "platforms": camera.livestream_platforms().await?,
+            "active": active,
+            "platform": platform,
+        },
+    }))
+}
+
+/// What the control screen sends back. Both halves are optional: the screen
+/// applies whichever the operator changed.
+#[derive(serde::Deserialize)]
+pub struct SettingsUpdate {
+    /// The camera's own `FormatRequest` — codec, frameRate and both resolutions
+    /// together, which is the only combination it validates.
+    pub record: Option<serde_json::Value>,
+    pub stream: Option<LivestreamPlatform>,
+}
+
+pub async fn apply_settings(camera: &Camera, update: &SettingsUpdate) -> Result<(), Error> {
+    if let Some(record) = &update.record {
+        camera.put("/system/format", record).await?;
+    }
+    if let Some(stream) = &update.stream {
+        camera.set_livestream_active_platform(stream).await?;
+    }
+    Ok(())
+}
+
 /// Livestreaming is absent on some models; that is "not streaming", not a failure.
 async fn read_state(camera: &Camera) -> Result<CameraState, Error> {
     let is_recording = camera.record_state().await?.recording;
@@ -199,12 +262,12 @@ struct Worker {
 
 impl Worker {
     async fn run(self, mut stop_rx: watch::Receiver<bool>) {
-        let mut backoff = Duration::from_secs(5);
+        let mut backoff = INITIAL_BACKOFF;
         loop {
             self.set_status(ConnectorStatus::Connecting).await;
 
             let ended = self.session(&mut stop_rx).await;
-            *self.camera.lock().await = None;
+            let was_connected = self.camera.lock().await.take().is_some();
             *self.state.write().await = None;
 
             match ended {
@@ -217,6 +280,14 @@ impl Worker {
                 }
             }
 
+            if was_connected {
+                backoff = INITIAL_BACKOFF;
+            }
+            tracing::info!(
+                seconds = backoff.as_secs(),
+                "blackmagic camera: waiting before retry"
+            );
+
             tokio::select! {
                 () = tokio::time::sleep(backoff) => {}
                 result = stop_rx.changed() => {
@@ -225,7 +296,7 @@ impl Worker {
                     return;
                 }
             }
-            backoff = (backoff * 2).min(Duration::from_secs(60));
+            backoff = (backoff * 2).min(MAX_BACKOFF);
         }
     }
 
@@ -243,20 +314,47 @@ impl Worker {
         *self.camera.lock().await = Some(Arc::clone(&camera));
         self.set_status(ConnectorStatus::Connected).await;
 
+        // The notification socket only pushes *changes*, so seed the current values
+        // with one REST read before relying on it.
+        if let Err(e) = self.resync_state(&camera).await {
+            return Ended::ByError(e.to_string());
+        }
+
+        let mut events = notify::watch(
+            &camera,
+            trust_for(&self.config),
+            vec![
+                "/transports/0/record".to_string(),
+                "/livestreams/0".to_string(),
+            ],
+        );
+
+        let mut heartbeat = tokio::time::interval(HEARTBEAT_INTERVAL);
+        heartbeat.tick().await; // fires immediately; consume it so the first real tick waits a full interval
+
         loop {
-            match read_state(&camera).await {
-                Ok(current) => {
-                    let mut guard = self.state.write().await;
-                    if *guard != Some(current) {
-                        *guard = Some(current);
-                        let _ = self.state_tx.send(current);
+            tokio::select! {
+                event = events.recv() => {
+                    match event {
+                        Some(notify::Event::Changed(change)) => self.apply_change(&change).await,
+                        // A reconnect may have missed changes while the socket was down —
+                        // catch up with one REST read rather than trusting the gap was empty.
+                        Some(notify::Event::Connected) => {
+                            if let Err(e) = self.resync_state(&camera).await {
+                                return Ended::ByError(e.to_string());
+                            }
+                        }
+                        // `notify::watch` retries this on its own; the heartbeat below is
+                        // what decides whether the camera itself is actually still there.
+                        Some(notify::Event::Disconnected(_)) => {}
+                        None => return Ended::ByError("notification socket closed".into()),
                     }
                 }
-                Err(e) => return Ended::ByError(e.to_string()),
-            }
-
-            tokio::select! {
-                () = tokio::time::sleep(POLL_INTERVAL) => {}
+                _ = heartbeat.tick() => {
+                    if let Err(e) = camera.product().await {
+                        return Ended::ByError(e.to_string());
+                    }
+                }
                 result = stop_rx.changed() => {
                     let _ = result;
                     return Ended::ByCaller;
@@ -265,7 +363,48 @@ impl Worker {
         }
     }
 
+    /// One-shot REST read of both halves, applied and broadcast only if either changed.
+    async fn resync_state(&self, camera: &Camera) -> Result<(), Error> {
+        let current = read_state(camera).await?;
+        let mut guard = self.state.write().await;
+        if *guard != Some(current) {
+            *guard = Some(current);
+            let _ = self.state_tx.send(current);
+        }
+        Ok(())
+    }
+
+    /// Applies one pushed property change to whichever half of `CameraState` it names.
+    async fn apply_change(&self, change: &notify::PropertyChange) {
+        let mut guard = self.state.write().await;
+        let Some(mut current) = *guard else { return };
+        match change.property.as_str() {
+            "/transports/0/record" => {
+                let Ok(record) = change.parse::<RecordState>() else {
+                    return;
+                };
+                current.is_recording = record.recording;
+            }
+            "/livestreams/0" => {
+                let Ok(status) = change.parse::<LivestreamStatus>() else {
+                    return;
+                };
+                // The raw word, not just the bool: "Streaming" is one of five states
+                // (Idle | Connecting | Streaming | Flushing | Interrupted) and knowing
+                // which one the camera passed through is the whole diagnostic.
+                tracing::info!("camera livestream status: {}", status.status);
+                current.is_streaming = status.status == "Streaming";
+            }
+            _ => return,
+        }
+        if *guard != Some(current) {
+            *guard = Some(current);
+            let _ = self.state_tx.send(current);
+        }
+    }
+
     async fn set_status(&self, new_status: ConnectorStatus) {
+        tracing::info!(connector = "blackmagic-camera", status = ?new_status, "connector status");
         *self.status.write().await = new_status;
         let current = self.status.read().await.clone();
         let _ = self.status_tx.send(current.clone());
@@ -293,10 +432,7 @@ mod tests {
             "Microsoft Teams",
             "Twitch",
         ];
-        let picked: Vec<_> = platforms
-            .iter()
-            .filter(|p| is_youtube_rtmp(p))
-            .collect();
+        let picked: Vec<_> = platforms.iter().filter(|p| is_youtube_rtmp(p)).collect();
         assert_eq!(picked, ["YouTube RTMP"].iter().collect::<Vec<_>>());
     }
 
@@ -334,5 +470,112 @@ mod tests {
             "profiles": [],
         }));
         assert!(youtube_platform(config, "k").is_err());
+    }
+
+    fn test_worker(initial: CameraState) -> Worker {
+        let (status_tx, _) = broadcast::channel(1);
+        let (state_tx, _) = broadcast::channel(1);
+        Worker {
+            config: BlackmagicCameraConfig {
+                enabled: true,
+                host: String::new(),
+                fingerprint: String::new(),
+                username: String::new(),
+                password: String::new(),
+            },
+            app: None,
+            status: Arc::new(RwLock::new(ConnectorStatus::Connected)),
+            state: Arc::new(RwLock::new(Some(initial))),
+            camera: Arc::new(Mutex::new(None)),
+            status_tx,
+            state_tx,
+        }
+    }
+
+    #[tokio::test]
+    async fn apply_change_updates_only_the_named_half() {
+        let worker = test_worker(CameraState {
+            is_streaming: false,
+            is_recording: false,
+        });
+
+        worker
+            .apply_change(&notify::PropertyChange {
+                property: "/transports/0/record".to_string(),
+                value: serde_json::json!({ "recording": true }),
+            })
+            .await;
+        assert_eq!(
+            *worker.state.read().await,
+            Some(CameraState {
+                is_streaming: false,
+                is_recording: true
+            }),
+        );
+
+        worker
+            .apply_change(&notify::PropertyChange {
+                property: "/livestreams/0".to_string(),
+                value: serde_json::json!({
+                    "status": "Streaming",
+                    "bitrate": 0,
+                    "effectiveVideoFormat": "1920x1080p24",
+                }),
+            })
+            .await;
+        assert_eq!(
+            *worker.state.read().await,
+            Some(CameraState {
+                is_streaming: true,
+                is_recording: true
+            }),
+        );
+    }
+
+    #[tokio::test]
+    async fn apply_change_ignores_a_property_it_does_not_track() {
+        let worker = test_worker(CameraState {
+            is_streaming: true,
+            is_recording: true,
+        });
+
+        worker
+            .apply_change(&notify::PropertyChange {
+                property: "/video/iso".to_string(),
+                value: serde_json::json!({ "iso": 800 }),
+            })
+            .await;
+
+        assert_eq!(
+            *worker.state.read().await,
+            Some(CameraState {
+                is_streaming: true,
+                is_recording: true
+            }),
+        );
+    }
+
+    #[tokio::test]
+    async fn apply_change_ignores_a_shape_it_cannot_parse() {
+        let worker = test_worker(CameraState {
+            is_streaming: false,
+            is_recording: false,
+        });
+
+        // `recording` missing entirely — RecordState fails to deserialize, not a panic.
+        worker
+            .apply_change(&notify::PropertyChange {
+                property: "/transports/0/record".to_string(),
+                value: serde_json::json!({ "clipName": "A001" }),
+            })
+            .await;
+
+        assert_eq!(
+            *worker.state.read().await,
+            Some(CameraState {
+                is_streaming: false,
+                is_recording: false
+            }),
+        );
     }
 }

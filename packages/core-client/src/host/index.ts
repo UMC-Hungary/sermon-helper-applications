@@ -294,3 +294,46 @@ export async function enableWindowGlass(): Promise<boolean> {
   await setLiquidGlassEffect({});
   return true;
 }
+
+// ── Native navigation ─────────────────────────────────────────────────────────
+
+/** One destination in the host's own navigation surface. */
+export interface NativeNavItem {
+  label: string;
+  /** SF Symbol name, e.g. `house` or `gearshape`. */
+  symbol: string;
+}
+
+/** Where the host put its navigation surface, or `null` when it has none. */
+export type NativeNavPlacement = 'top' | 'bottom';
+
+/**
+ * Hands navigation to the platform's own chrome — an `NSToolbar` selection group
+ * on macOS, a `UIGlassEffect` tab bar on iOS. Returns where it landed, so the UI
+ * knows to hide its own bar and leave room on the right edge.
+ */
+export async function installNativeNav(
+  items: NativeNavItem[],
+  active: number,
+  onSelect: (index: number) => void,
+): Promise<NativeNavPlacement | null> {
+  if (!isHost()) return null;
+  const { invoke, Channel } = await import('@tauri-apps/api/core');
+  const channel = new Channel<number>();
+  channel.onmessage = onSelect;
+  return invoke<NativeNavPlacement | null>('plugin:native-nav|install', {
+    items,
+    active,
+    onSelect: channel,
+  }).catch((error: unknown) => {
+    console.warn('native navigation unavailable', error);
+    return null;
+  });
+}
+
+/** Moves the selection in the native navigation surface. */
+export async function setNativeNavActive(active: number): Promise<void> {
+  if (!isHost()) return;
+  const { invoke } = await import('@tauri-apps/api/core');
+  await invoke('plugin:native-nav|set_active', { active }).catch(() => {});
+}

@@ -2863,6 +2863,7 @@ dependencies = [
  "tauri-plugin-deep-link",
  "tauri-plugin-dialog",
  "tauri-plugin-liquid-glass",
+ "tauri-plugin-native-nav",
  "tauri-plugin-opener",
  "tauri-plugin-store",
  "tauri-plugin-updater",
@@ -5862,6 +5863,19 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "tauri-plugin-native-nav"
+version = "0.1.0"
+dependencies = [
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "tracing",
 ]
 
 [[package]]

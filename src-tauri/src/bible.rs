@@ -15,7 +15,8 @@ fn v2_api_url() -> String {
 }
 
 fn legacy_api_url() -> String {
-    std::env::var("METOCAST_BIBLE_LEGACY_URL").unwrap_or_else(|_| "https://szentiras.eu".to_string())
+    std::env::var("METOCAST_BIBLE_LEGACY_URL")
+        .unwrap_or_else(|_| "https://szentiras.eu".to_string())
 }
 
 /// One verse, normalised across both upstream APIs.
@@ -232,7 +233,12 @@ async fn fetch_legacy(
     // Strip the leading slash suggestions carry, and encode only spaces so the
     // commas of Hungarian verse notation survive.
     let clean_ref = reference.trim_start_matches('/').replace(' ', "%20");
-    let url = format!("{}/api/idezet/{}/{}", legacy_api_url(), clean_ref, translation);
+    let url = format!(
+        "{}/api/idezet/{}/{}",
+        legacy_api_url(),
+        clean_ref,
+        translation
+    );
     let data: LegacySearchResponse = get_json(&url, api_key).await?;
 
     Ok(BiblePassage {

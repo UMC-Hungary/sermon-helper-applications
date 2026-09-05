@@ -132,14 +132,18 @@ shape as an SSH host-key change. Nothing is ever added to a global trust store.
 - Livestream is `/livestreams/0/…` — plural and indexed — and `start`/`stop` are `PUT`.
 - **This camera model has no Camera Control API group**, so there is no `/camera/tally`,
   colour bars, or battery endpoint. Those exist on Studio Camera models; here they'd 404/501.
-- The notification websocket's subscribable property list covers transport, video, lens,
-  audio, monitoring, colour correction, presets and media — but **not livestream or tally**.
-  Those have to be polled over REST. `GET /event/list` returns the authoritative list per
-  device, since it varies by model.
+- The manual's own account of the notification websocket's subscribable property list
+  covers transport, video, lens, audio, monitoring, colour correction, presets and
+  media — but not livestream or tally. **That's wrong for at least the Cinema Camera
+  6K**: `GET /event/list` against real hardware includes `/livestreams/0`,
+  `/livestreams/0/activePlatform` and `/livestreams/0/available` (tally is still
+  absent — no Camera Control API group on this model, see above). `GET /event/list`
+  is the authoritative list per device either way, since it varies by model; don't
+  trust the manual's version of it.
 - `properties` in a `subscribe` message is an array — the whole desired set goes in one
   message, so reconnect resubscribe is one message too, not N.
 - The websocket URL is the one thing the manual never states; `/control/api/v1/event/websocket`
-  is the conventional path, still unconfirmed against hardware.
+  — confirmed against hardware — is what `Camera::websocket_url()` uses.
 
 ### Live preview over the network
 

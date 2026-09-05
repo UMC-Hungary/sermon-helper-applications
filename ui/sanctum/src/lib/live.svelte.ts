@@ -15,6 +15,12 @@ const CONNECTOR_META: Record<string, { name: string; kind: string; brand?: strin
   discord: { name: 'Discord', kind: 'Webhooks', brand: siDiscord.path },
 };
 
+const REMEDIATION = (name: string) => [
+  'Open Settings → Connectors',
+  `Check the ${name} configuration`,
+  'Re-enable the connector',
+];
+
 // Sanctum's realtime state, in runes. The transport (core-client) validates every
 // message; this module is the only place that decides which piece of UI state each
 // one updates — the same role classic's ws-bindings plays for its stores.
@@ -24,6 +30,8 @@ type ConnState = 'disconnected' | 'connecting' | 'connected' | 'error';
 let obsStreaming = $state(false);
 let obsRecording = $state(false);
 let connectorStatus = $state<Record<string, ConnState>>({});
+let cameraStreaming = $state(false);
+let cameraRecording = $state(false);
 let presenter = $state<PresenterState | null>(null);
 let keynote = $state<KeynoteStatus | null>(null);
 let clients = $state<WsClientInfo[]>([]);
@@ -39,6 +47,12 @@ export const live = {
   },
   get connectorStatus() {
     return connectorStatus;
+  },
+  get cameraStreaming() {
+    return cameraStreaming;
+  },
+  get cameraRecording() {
+    return cameraRecording;
   },
   get presenter() {
     return presenter;
@@ -72,7 +86,16 @@ export function handleWs(msg: WsMessage): void {
       if (msg.connector === 'obs') {
         if (msg.isStreaming !== undefined) obsStreaming = msg.isStreaming;
         if (msg.isRecording !== undefined) obsRecording = msg.isRecording;
+      } else if (msg.connector === 'blackmagic-camera') {
+        if (msg.isStreaming !== undefined) cameraStreaming = msg.isStreaming;
+        if (msg.isRecording !== undefined) cameraRecording = msg.isRecording;
       }
+      break;
+    case 'connectors.state':
+      obsStreaming = msg.obs?.isStreaming ?? false;
+      obsRecording = msg.obs?.isRecording ?? false;
+      cameraStreaming = msg['blackmagic-camera']?.isStreaming ?? false;
+      cameraRecording = msg['blackmagic-camera']?.isRecording ?? false;
       break;
     case 'connectors.status':
       connectorStatus = {
@@ -90,22 +113,47 @@ export function handleWs(msg: WsMessage): void {
       connectorStatus = { ...connectorStatus, [msg.connector]: next };
       const key = `connector:${msg.connector}`;
       const meta = CONNECTOR_META[msg.connector] ?? { name: sourceName(msg.connector), kind: 'Connector' };
-      const actions = msg.connector === 'obs'
-        ? [
-            { label: 'Reconnect', primary: true, run: () => void connectObs() },
-            { label: 'Edit', run: () => void goto('/settings/connectors') },
-          ]
+      // Navigation is instant, so it stays a plain action — only work that takes
+      // time (a reconnect, a re-login) returns its promise and animates.
+      const edit = (query = '') => ({
+        label: 'Edit',
+        run: () => void goto(`/settings/connectors${query}`),
+      });
+      const editFor =
+        msg.connector === 'obs'
+          ? edit()
+          : msg.connector === 'blackmagic-camera'
+            ? edit('?open=blackmagic-camera')
+            : msg.connector === 'youtube'
+              ? edit('?open=youtube')
+              : null;
+      // The backend restart only reports a status edge the card can already be sitting
+      // on, so the click paints the reconnecting chip itself rather than waiting for one.
+      const showReconnecting = (body?: string) =>
+        notify({
+          tier: 'warn',
+          kind: meta.kind,
+          source: meta.name,
+          title: `${meta.name} disconnected`,
+          body,
+          state: 'reconnecting',
+          brand: meta.brand,
+          actions: editFor ? [editFor] : undefined,
+          remediation: REMEDIATION(meta.name),
+          key,
+        });
+      const reconnect = (start: () => Promise<unknown>) => () => {
+        showReconnecting();
+        return start();
+      };
+      const retry = msg.connector === 'obs'
+        ? { label: 'Reconnect', primary: true, run: reconnect(connectObs) }
         : msg.connector === 'blackmagic-camera'
-          ? [
-              { label: 'Reconnect', primary: true, run: () => void connectCamera() },
-              { label: 'Edit', run: () => void goto('/settings/connectors?open=blackmagic-camera') },
-            ]
+          ? { label: 'Reconnect', primary: true, run: reconnect(connectCamera) }
           : msg.connector === 'youtube'
-          ? [
-              { label: 'Re-login', primary: true, run: () => void youtubeAuthUrl().then(openExternal) },
-              { label: 'Edit', run: () => void goto('/settings/connectors?open=youtube') },
-            ]
-          : undefined;
+            ? { label: 'Re-login', primary: true, run: () => youtubeAuthUrl().then(openExternal) }
+            : null;
+      const actions = retry && editFor ? [retry, editFor] : undefined;
       if (next === 'error') {
         notify({
           tier: 'error',
@@ -116,22 +164,12 @@ export function handleWs(msg: WsMessage): void {
           state: 'error',
           brand: meta.brand,
           actions,
-          remediation: ['Open Settings → Connectors', `Check the ${meta.name} configuration`, 'Re-enable the connector'],
+          remediation: REMEDIATION(meta.name),
           key,
         });
       } else if (next === 'connecting' && prev === 'error') {
-        notify({
-          tier: 'warn',
-          kind: meta.kind,
-          source: meta.name,
-          title: `${meta.name} disconnected`,
-          body: msg.status.message,
-          state: 'reconnecting',
-          brand: meta.brand,
-          actions,
-          remediation: ['Open Settings → Connectors', `Check the ${meta.name} configuration`, 'Re-enable the connector'],
-          key,
-        });
+        // Already retrying, so a Reconnect button here would just repeat the chip.
+        showReconnecting(msg.status.message);
       } else if (next === 'connected' && (prev === 'error' || prev === 'connecting')) {
         resolveByKey(key, {
           kind: meta.kind,
@@ -150,7 +188,19 @@ export function handleWs(msg: WsMessage): void {
       });
       break;
     case 'error':
-      notify({ tier: 'error', kind: 'System', source: 'Core', title: msg.message });
+      // This channel carries whatever a command failed with, camera error paths and
+      // status codes alike — often a raw string like ".../livestreams/0/stop". Keep it
+      // out of the serif title (a "0" there reads as "o") and mono in the body instead.
+      // Keyed on the text so a repeated refusal updates its card instead of stacking.
+      notify({
+        tier: 'error',
+        kind: 'System',
+        source: 'Core',
+        title: 'Command failed',
+        body: msg.message,
+        mono: true,
+        key: `error:${msg.message}`,
+      });
       break;
     case 'presentation.settings':
       useWebPresenter = msg.useWebPresenter;

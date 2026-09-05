@@ -57,9 +57,7 @@ impl Args {
         }
 
         let flag = |name: &str| -> Option<String> {
-            raw.windows(2)
-                .find(|w| w[0] == name)
-                .map(|w| w[1].clone())
+            raw.windows(2).find(|w| w[0] == name).map(|w| w[1].clone())
         };
 
         let flag_names = [
@@ -94,14 +92,15 @@ impl Args {
             all: raw.iter().any(|a| a == "--all"),
             quality: flag("--quality"),
             service: flag("--service").unwrap_or_else(|| discovery::DEFAULT_SERVICE.into()),
-            timeout: flag("--timeout")
-                .and_then(|t| t.parse().ok())
-                .unwrap_or(5),
+            timeout: flag("--timeout").and_then(|t| t.parse().ok()).unwrap_or(5),
         }
     }
 
     fn at(&self, index: usize) -> String {
-        self.positional.get(index).cloned().unwrap_or_else(|| usage())
+        self.positional
+            .get(index)
+            .cloned()
+            .unwrap_or_else(|| usage())
     }
 
     fn camera(&self) -> Camera {
@@ -206,8 +205,8 @@ async fn main() {
                 (Some(u), Some(p)) => Some((u.as_str(), p.as_str())),
                 _ => None,
             };
-            let camera = Camera::connect(&args.at(0), auth, Trust::OnFirstUse)
-                .unwrap_or_else(|e| fail(e));
+            let camera =
+                Camera::connect(&args.at(0), auth, Trust::OnFirstUse).unwrap_or_else(|e| fail(e));
             let product = camera.product().await;
             match camera.presented_fingerprint() {
                 Some(fp) => println!("fingerprint: {fp}"),
@@ -232,7 +231,10 @@ async fn main() {
         "put" => {
             let (path, body) = (args.at(1), args.at(2));
             let body: serde_json::Value = serde_json::from_str(&body).unwrap_or_else(|e| fail(e));
-            args.camera().put(&path, &body).await.unwrap_or_else(|e| fail(e));
+            args.camera()
+                .put(&path, &body)
+                .await
+                .unwrap_or_else(|e| fail(e));
             println!("ok");
         }
 
@@ -330,11 +332,18 @@ async fn main() {
                     );
                 }
                 "available" => {
-                    let a = camera.livestream_available().await.unwrap_or_else(|e| fail(e));
+                    let a = camera
+                        .livestream_available()
+                        .await
+                        .unwrap_or_else(|e| fail(e));
                     println!("{a:?}");
                 }
                 "platforms" => {
-                    for p in camera.livestream_platforms().await.unwrap_or_else(|e| fail(e)) {
+                    for p in camera
+                        .livestream_platforms()
+                        .await
+                        .unwrap_or_else(|e| fail(e))
+                    {
                         println!("{p}");
                     }
                 }

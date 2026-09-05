@@ -30,12 +30,15 @@ export * from './api/client.js';
 export * from './api/connectors.js';
 export * from './api/cron-jobs.js';
 export * from './api/events.js';
+export * from './api/logs.js';
 export * from './api/presentations.js';
 export * from './api/queues.js';
 export * from './api/recordings.js';
+export * from './api/settings.js';
 export * from './api/untracked-recordings.js';
 export * from './api/uploads.js';
 export { bibleApi } from './utils/bible-api.js';
+export * from './utils/title-template.js';
 
 // ── Realtime ──────────────────────────────────────────────────────────────────
 // The transport is framework-agnostic: it validates and emits typed messages via
@@ -59,7 +62,14 @@ export * from './uis.js';
 
 // ── Boundary types, inferred from the Zod schemas ─────────────────────────────
 export type {
+  CameraFormat,
+  CameraMediaDevice,
+  CameraPlatform,
+  CameraPlatformProfile,
+  CameraSettings,
+  CameraSettingsUpdate,
   CameraStreamTarget,
+  CameraSupportedFormat,
   ConnectorConfigMap,
   ConnectorName,
   DiscoveredCamera,

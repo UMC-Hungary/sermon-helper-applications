@@ -113,6 +113,131 @@ export const CameraStreamTargetSchema = z.object({
 
 export type CameraStreamTarget = z.infer<typeof CameraStreamTargetSchema>;
 
+/** The camera's own payloads, forwarded by the core for the camera control screen. */
+const ResolutionSchema = z.object({ width: z.number(), height: z.number() });
+
+const ResolutionDescriptorSchema = z.object({
+  group: z.string(),
+  aspectRatio: z.string(),
+  description: z.string(),
+  sensorArea: z.string().default(''),
+});
+
+export const CameraFormatSchema = z.object({
+  codec: z.string(),
+  frameRate: z.string(),
+  recordResolution: ResolutionSchema,
+  sensorResolution: ResolutionSchema,
+  resolutionDescriptor: ResolutionDescriptorSchema,
+  offSpeedEnabled: z.boolean().default(false),
+  offSpeedFrameRate: z.number().default(0),
+});
+
+const SupportedFormatSchema = z.object({
+  codecs: z.array(z.string()),
+  frameRates: z.array(z.string()),
+  recordResolution: ResolutionSchema,
+  sensorResolution: ResolutionSchema,
+  resolutionDescriptor: ResolutionDescriptorSchema,
+});
+
+/** A card or drive in the camera's working set. Only `deviceName` is guaranteed. */
+const MediaDeviceSchema = z.object({
+  deviceName: z.string(),
+  index: z.number().default(0),
+  activeDisk: z.boolean().default(false),
+  volume: z.string().default(''),
+  clipCount: z.number().default(0),
+  remainingRecordTime: z.number().default(0),
+  remainingSpace: z.number().default(0),
+  totalSpace: z.number().default(0),
+});
+
+/** Where the livestream points now: the platform entry plus the stream key. */
+export const CameraPlatformSchema = z.object({
+  platform: z.string(),
+  server: z.string(),
+  quality: z.string(),
+  key: z.string().nullable().default(null),
+  passphrase: z.string().nullable().default(null),
+  url: z.string().nullable().default(null),
+});
+
+const PlatformProfileSchema = z.object({
+  profile: z.string(),
+  lowLatency: z.boolean().default(false),
+  configs: z
+    .array(
+      z.object({
+        resolution: z.string(),
+        fps: z.string(),
+        bitrate: z.number(),
+        audioBitrate: z.number().default(0),
+        keyFrameInterval: z.number().default(0),
+        videoCodecs: z.array(z.string()).default([]),
+      }),
+    )
+    .default([]),
+});
+
+const PlatformServiceSchema = z.object({
+  platform: z.string(),
+  servers: z.array(z.object({ server: z.string(), url: z.string(), group: z.string().default('') })),
+  profiles: z.array(PlatformProfileSchema),
+  defaultProfile: z.string().nullable().default(null),
+  customizableUrlEnabled: z.boolean().default(false),
+});
+
+export const CameraSettingsSchema = z.object({
+  recording: z.boolean(),
+  record: z.object({
+    format: CameraFormatSchema,
+    supported: z.object({ supportedFormats: z.array(SupportedFormatSchema) }),
+  }),
+  storage: z.object({
+    slots: z.array(z.object({ index: z.number(), type: z.string() })),
+    workingset: z.object({ size: z.number(), workingset: z.array(MediaDeviceSchema.nullable()) }),
+    active: z.object({ workingsetIndex: z.number(), deviceName: z.string() }).nullable(),
+  }),
+  stream: z.object({
+    status: z.object({
+      status: z.string(),
+      bitrate: z.number().default(0),
+      effectiveVideoFormat: z.string().default(''),
+      duration: z.number().default(0),
+      cache: z.number().default(0),
+    }),
+    available: z.object({ available: z.boolean(), reasons: z.array(z.string()) }),
+    platforms: z.array(z.string()),
+    active: CameraPlatformSchema,
+    platform: PlatformServiceSchema,
+  }),
+});
+
+/**
+ * What the control screen writes back. The camera validates a record format as a
+ * whole, so all four record fields travel together or not at all.
+ */
+export const CameraSettingsUpdateSchema = z.object({
+  record: z
+    .object({
+      codec: z.string(),
+      frameRate: z.string(),
+      recordResolution: ResolutionSchema,
+      sensorResolution: ResolutionSchema,
+    })
+    .optional(),
+  stream: CameraPlatformSchema.optional(),
+});
+
+export type CameraSettings = z.infer<typeof CameraSettingsSchema>;
+export type CameraFormat = z.infer<typeof CameraFormatSchema>;
+export type CameraSupportedFormat = z.infer<typeof SupportedFormatSchema>;
+export type CameraMediaDevice = z.infer<typeof MediaDeviceSchema>;
+export type CameraPlatform = z.infer<typeof CameraPlatformSchema>;
+export type CameraPlatformProfile = z.infer<typeof PlatformProfileSchema>;
+export type CameraSettingsUpdate = z.infer<typeof CameraSettingsUpdateSchema>;
+
 export const ConnectorStatusPayloadSchema = z.object({
   type: z.enum(['disconnected', 'connecting', 'connected', 'error']),
   message: z.string().optional(),
