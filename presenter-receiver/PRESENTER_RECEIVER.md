@@ -6,13 +6,13 @@ A standalone binary that connects to the Metocast server over WebSocket and rend
 
 ## Supported platforms
 
-| Platform | Binary |
-|---|---|
-| Linux arm64 (Raspberry Pi 4, 5) | `presenter-receiver-linux-arm64` |
-| Linux armv7l (Raspberry Pi 3) | `presenter-receiver-linux-arm64` |
-| Linux x86_64 | `presenter-receiver-linux-x86_64` |
-| macOS Apple Silicon | `presenter-receiver-macos-arm64` |
-| macOS Intel | `presenter-receiver-macos-x86_64` |
+| Platform                        | Binary                            |
+| ------------------------------- | --------------------------------- |
+| Linux arm64 (Raspberry Pi 4, 5) | `presenter-receiver-linux-arm64`  |
+| Linux armv7l (Raspberry Pi 3)   | `presenter-receiver-linux-arm64`  |
+| Linux x86_64                    | `presenter-receiver-linux-x86_64` |
+| macOS Apple Silicon             | `presenter-receiver-macos-arm64`  |
+| macOS Intel                     | `presenter-receiver-macos-x86_64` |
 
 ---
 
@@ -28,11 +28,11 @@ The binary runs as a single process with two concurrent parts:
 
 **Status indicator** — a small pill in the top-right corner of the display shows the connection state at all times:
 
-| Indicator | Meaning |
-|---|---|
-| Filled green dot + version | Connected to the server |
-| Filled orange dot | Connecting or reconnecting |
-| Filled red dot | 5 or more consecutive connection failures |
+| Indicator                  | Meaning                                   |
+| -------------------------- | ----------------------------------------- |
+| Filled green dot + version | Connected to the server                   |
+| Filled orange dot          | Connecting or reconnecting                |
+| Filled red dot             | 5 or more consecutive connection failures |
 
 **Picture mute** — when the server sets the muted state the binary renders a plain black frame instead of slide content. The status indicator remains visible.
 
@@ -45,16 +45,19 @@ The binary runs as a single process with two concurrent parts:
 The installer script auto-detects the platform, installs required system libraries (Linux only), downloads the correct binary from the latest GitHub release, and places it in `/usr/local/bin`.
 
 **Install only:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash
 ```
 
 **Install and start immediately:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
 ```
 
 **Install with auto-start on boot** (Linux / systemd only):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws --service
 ```
@@ -209,9 +212,7 @@ The receiver ignores all message types it does not recognise. Unknown types do n
       },
       {
         "index": 2,
-        "paragraphs": [
-          { "text": "Second slide", "align": "left" }
-        ]
+        "paragraphs": [{ "text": "Second slide", "align": "left" }]
       }
     ],
     "svgSlides": []
@@ -220,6 +221,7 @@ The receiver ignores all message types it does not recognise. Unknown types do n
 ```
 
 Field notes:
+
 - `loaded` — when `false`, all other fields are at their zero values and the receiver shows a black screen.
 - `currentSlide` — 1-based index into `slides`. `0` means no slide is active.
 - `renderMode` — `"text"` uses the paragraph renderer; `"svg"` uses `svgSlides`.

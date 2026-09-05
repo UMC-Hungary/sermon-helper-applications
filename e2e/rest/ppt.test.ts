@@ -2,7 +2,10 @@
  * E2E tests for PPT REST API.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { apiClient } from '../helpers/client.js';
 
 interface PptFolder {
@@ -16,6 +19,15 @@ const isLive = !!process.env.TAURI_TEST_TOKEN;
 
 describe.skipIf(!isLive)('PPT REST API', () => {
   let folderId: string;
+  let folderPath: string;
+
+  beforeAll(() => {
+    folderPath = mkdtempSync(join(tmpdir(), 'e2e-ppt-test-'));
+  });
+
+  afterAll(() => {
+    rmSync(folderPath, { recursive: true, force: true });
+  });
 
   it('GET /api/ppt/folders → 200', async () => {
     const res = await apiClient.get<{ success: boolean; data: PptFolder[] }>('/api/ppt/folders');
@@ -25,7 +37,7 @@ describe.skipIf(!isLive)('PPT REST API', () => {
 
   it('POST /api/ppt/folders → 201', async () => {
     const res = await apiClient.post<{ success: boolean; data: PptFolder }>('/api/ppt/folders', {
-      path: '/tmp/e2e-ppt-test',
+      path: folderPath,
       name: 'E2E Test Folder',
     });
     expect(res.status).toBe(201);

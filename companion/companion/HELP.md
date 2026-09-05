@@ -19,11 +19,13 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 ## Actions
 
 ### RF/IR Commands
+
 - **Execute RF/IR Command** — trigger a saved Broadlink command by slug
 - **Execute Command by Category** — filter by category then trigger
 - **Refresh Command List** — manually re-fetch the command list
 
 ### PPT Selector
+
 - **PPT: Type Digit** — append a digit to the PPT file filter
 - **PPT: Backspace** — remove the last digit from the filter
 - **PPT: Clear Filter** — clear the filter entirely
@@ -32,6 +34,7 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 - **PPT: Refresh Files** — refresh the file list
 
 ### Presentation Control (Keynote)
+
 - **Presentation: Open File** — open a presentation by path
 - **Presentation: Start / Stop Slideshow** — Stop becomes Unload when Metocast is using the web presenter
 - **Presentation: Close All / Close Latest**
@@ -47,45 +50,47 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 
 ## Feedbacks
 
-| Feedback | Description |
-|----------|-------------|
-| Connection Status | Green when connected to Metocast |
-| Command Available | Blue when a specific command is loaded |
-| PPT: Slot Has File | Green when a PPT slot contains a file |
-| PPT: Filter Active | Orange when a digit filter is applied |
-| Presentation: Slideshow Active | Green when a slideshow is running |
-| Presentation: Screen Blanked | Black when the screen is blanked |
+| Feedback                       | Description                            |
+| ------------------------------ | -------------------------------------- |
+| Connection Status              | Green when connected to Metocast       |
+| Command Available              | Blue when a specific command is loaded |
+| PPT: Slot Has File             | Green when a PPT slot contains a file  |
+| PPT: Filter Active             | Orange when a digit filter is applied  |
+| Presentation: Slideshow Active | Green when a slideshow is running      |
+| Presentation: Screen Blanked   | Black when the screen is blanked       |
 
 ## Variables
 
 Use your Companion connection label as the variable prefix. For example, if the connection label is `Metocast`, use `$(Metocast:connection_status)`.
 
-| Variable | Description |
-|----------|-------------|
-| `$(<connection-label>:connection_status)` | Connected / Disconnected |
-| `$(<connection-label>:last_command)` | Name of the last executed command |
-| `$(<connection-label>:command_count)` | Total available commands |
-| `$(<connection-label>:ppt_filter)` | Current digit filter |
-| `$(<connection-label>:ppt_match_count)` | Number of matching files |
-| `$(<connection-label>:ppt_folder_name)` | Selected folder name |
-| `$(<connection-label>:ppt_slot_1_name)` … `ppt_slot_5_name` | File names in slots 1–5 |
-| `$(<connection-label>:ppt_current_slide)` | Current slide number |
-| `$(<connection-label>:ppt_total_slides)` | Total slides |
-| `$(<connection-label>:ppt_slideshow_active)` | ON / OFF |
-| `$(<connection-label>:ppt_app)` | Presentation app name |
-| `$(<connection-label>:ppt_backend)` | Active presentation backend |
-| `$(<connection-label>:ppt_blanked)` | YES / NO |
-| `$(<connection-label>:presenter_event_count)` | Number of backend-ordered presenter events |
-| `$(<connection-label>:presenter_selected_event)` | Backend-selected current/next presenter event |
+| Variable                                                    | Description                                   |
+| ----------------------------------------------------------- | --------------------------------------------- |
+| `$(<connection-label>:connection_status)`                   | Connected / Disconnected                      |
+| `$(<connection-label>:last_command)`                        | Name of the last executed command             |
+| `$(<connection-label>:command_count)`                       | Total available commands                      |
+| `$(<connection-label>:ppt_filter)`                          | Current digit filter                          |
+| `$(<connection-label>:ppt_match_count)`                     | Number of matching files                      |
+| `$(<connection-label>:ppt_folder_name)`                     | Selected folder name                          |
+| `$(<connection-label>:ppt_slot_1_name)` … `ppt_slot_5_name` | File names in slots 1–5                       |
+| `$(<connection-label>:ppt_current_slide)`                   | Current slide number                          |
+| `$(<connection-label>:ppt_total_slides)`                    | Total slides                                  |
+| `$(<connection-label>:ppt_slideshow_active)`                | ON / OFF                                      |
+| `$(<connection-label>:ppt_app)`                             | Presentation app name                         |
+| `$(<connection-label>:ppt_backend)`                         | Active presentation backend                   |
+| `$(<connection-label>:ppt_blanked)`                         | YES / NO                                      |
+| `$(<connection-label>:presenter_event_count)`               | Number of backend-ordered presenter events    |
+| `$(<connection-label>:presenter_selected_event)`            | Backend-selected current/next presenter event |
 
 ## Troubleshooting
 
 ### Module shows "Disconnected"
+
 1. Verify Metocast is running
 2. Check host and port settings
 3. Verify the auth token matches Metocast settings
 4. Check firewall allows connections on port 3737
 
 ### Commands not appearing
+
 1. Ensure Broadlink commands are saved in Metocast
 2. Click the **Refresh Command List** action button

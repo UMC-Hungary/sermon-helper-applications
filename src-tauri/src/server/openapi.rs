@@ -148,6 +148,25 @@ pub fn spec() -> Value {
                         }
                     }
                 },
+                "TitleTemplate": {
+                    "type": "object",
+                    "description": "Template for the published event title. Placeholders are `{name}`; `{date}` takes an optional pipe (`{date|YYYY.MM.DD.}`). Text in `[ ... ]` is dropped whole when a placeholder inside it is empty.",
+                    "required": ["template"],
+                    "properties": {
+                        "template": {
+                            "type": "string",
+                            "example": "{date|YYYY.MM.DD.} {title}[ | Textus: {textus}][ Lekció: {leckio}][ | {speaker}]"
+                        }
+                    }
+                },
+                "SlideFolder": {
+                    "type": "object",
+                    "description": "Folder on the core's machine where generated Bible slide decks are written. Empty means not configured.",
+                    "required": ["path"],
+                    "properties": {
+                        "path": { "type": "string", "example": "/Users/me/Documents/Slides" }
+                    }
+                },
                 "Event": {
                     "type": "object",
                     "description": "Full event record including platform connections and bible references.",
@@ -158,6 +177,7 @@ pub fn spec() -> Value {
                     "properties": {
                         "id":               { "type": "string", "format": "uuid" },
                         "title":            { "type": "string", "example": "Sunday Morning Service" },
+                        "computedTitle":    { "type": "string", "description": "Composed \"date · reference · title · — speaker\" line published to YouTube. Empty falls back to title.", "example": "Sun, September 6, 2026 · 2Kor 1,1-10 · Worship Service — Pastor Smith" },
                         "dateTime":         { "type": "string", "format": "date-time", "description": "Scheduled date and time (ISO 8601 / UTC)" },
                         "speaker":          { "type": "string", "example": "Pastor Smith" },
                         "description":      { "type": "string" },
@@ -175,6 +195,7 @@ pub fn spec() -> Value {
                     "properties": {
                         "id":             { "type": "string", "format": "uuid" },
                         "title":          { "type": "string", "example": "Sunday Morning Service" },
+                        "computedTitle":  { "type": "string", "description": "Composed title published to YouTube. Empty falls back to title." },
                         "dateTime":       { "type": "string", "format": "date-time" },
                         "speaker":        { "type": "string" },
                         "recordingCount": { "type": "integer", "format": "int64", "description": "Number of recording files attached to this event" },
@@ -188,6 +209,7 @@ pub fn spec() -> Value {
                     "required": ["title", "date_time"],
                     "properties": {
                         "title":             { "type": "string", "example": "Sunday Morning Service" },
+                        "computed_title":    { "type": "string", "default": "", "description": "Composed title to publish to YouTube. Omit or leave empty to publish `title` instead." },
                         "date_time":         { "type": "string", "format": "date-time", "description": "Scheduled date and time" },
                         "speaker":           { "type": "string", "default": "" },
                         "description":       { "type": "string", "default": "" },
@@ -303,9 +325,10 @@ pub fn spec() -> Value {
                 "ConnectorStatuses": {
                     "type": "object",
                     "description": "Current status of all connectors.",
-                    "required": ["obs", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
+                    "required": ["obs", "blackmagic-camera", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
                     "properties": {
                         "obs":       { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "blackmagic-camera": { "$ref": "#/components/schemas/ConnectorStatus" },
                         "vmix":      { "$ref": "#/components/schemas/ConnectorStatus" },
                         "atem":      { "$ref": "#/components/schemas/ConnectorStatus" },
                         "broadlink": { "$ref": "#/components/schemas/ConnectorStatus" },
@@ -345,13 +368,15 @@ pub fn spec() -> Value {
                     }
                 },
                 "ConnectorConfig": {
-                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
+                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `blackmagic-camera` (enabled, host, fingerprint, username, password), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
                     "type": "object",
                     "required": ["enabled"],
                     "properties": {
                         "enabled":      { "type": "boolean" },
                         "host":         { "type": "string" },
                         "port":         { "type": "integer" },
+                        "fingerprint":  { "type": "string", "description": "Blackmagic camera: pinned SHA-256 of the camera's self-signed certificate. Blank means trust-on-first-use." },
+                        "username":     { "type": "string" },
                         "password":     { "type": "string", "nullable": true, "description": "Write-only: reads return an empty string" },
                         "clientId":     { "type": "string" },
                         "clientSecret": { "type": "string", "description": "Write-only: reads return an empty string" },
@@ -365,6 +390,111 @@ pub fn spec() -> Value {
                         "appSecretSet":   { "type": "boolean", "readOnly": true, "description": "Whether an app secret is stored" },
                         "webhookUrlSet":  { "type": "boolean", "readOnly": true, "description": "Whether a webhook URL is stored" },
                         "apiKeySet":      { "type": "boolean", "readOnly": true, "description": "Whether an API key is stored. Send false to clear it." }
+                    }
+                },
+                "CameraStreamTarget": {
+                    "type": "object",
+                    "description": "The camera's livestream destination after YouTube settings were pushed.",
+                    "required": ["rtmpUrl", "platform", "server", "quality"],
+                    "properties": {
+                        "rtmpUrl":  { "type": "string", "description": "Ingestion address and stream key joined — what the camera pushes to", "example": "rtmp://a.rtmp.youtube.com/live2/abcd-1234-efgh-5678" },
+                        "platform": { "type": "string", "example": "YouTube" },
+                        "server":   { "type": "string", "description": "The platform's server name, or `Custom` when the URL was overridden" },
+                        "quality":  { "type": "string", "description": "Quality profile the camera will encode at" },
+                        "url":      { "type": "string", "nullable": true, "description": "Set only when the destination is a custom URL rather than a platform entry" }
+                    }
+                },
+                "CameraResolution": {
+                    "type": "object",
+                    "required": ["width", "height"],
+                    "properties": {
+                        "width":  { "type": "integer", "example": 6048 },
+                        "height": { "type": "integer", "example": 4032 }
+                    }
+                },
+                "CameraPlatformEntry": {
+                    "type": "object",
+                    "description": "The camera's active livestream platform entry.",
+                    "required": ["platform", "server", "quality"],
+                    "properties": {
+                        "platform":   { "type": "string", "example": "YouTube RTMP" },
+                        "server":     { "type": "string", "example": "Primary" },
+                        "quality":    { "type": "string", "example": "Streaming High" },
+                        "key":        { "type": "string", "nullable": true, "description": "Stream key" },
+                        "passphrase": { "type": "string", "nullable": true, "description": "SRT streams only" },
+                        "url":        { "type": "string", "nullable": true, "description": "Set only when the platform's URL is customizable" }
+                    }
+                },
+                "CameraSettings": {
+                    "type": "object",
+                    "description": "The camera's own payloads, forwarded unchanged: record format, media working set and livestream settings.",
+                    "required": ["recording", "record", "storage", "stream"],
+                    "properties": {
+                        "recording": { "type": "boolean", "description": "Whether the camera is recording now" },
+                        "record": {
+                            "type": "object",
+                            "description": "`/system/format` and `/system/supportedFormats` as the camera returns them",
+                            "required": ["format", "supported"],
+                            "properties": {
+                                "format":    { "type": "object", "additionalProperties": true },
+                                "supported": { "type": "object", "additionalProperties": true }
+                            }
+                        },
+                        "storage": {
+                            "type": "object",
+                            "description": "`/media/slots`, `/media/workingset` and `/media/active`",
+                            "required": ["slots", "workingset", "active"],
+                            "properties": {
+                                "slots":      { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+                                "workingset": { "type": "object", "additionalProperties": true },
+                                "active":     { "type": "object", "nullable": true, "additionalProperties": true }
+                            }
+                        },
+                        "stream": {
+                            "type": "object",
+                            "description": "Livestream status, availability, the platform list, the active platform and that platform's servers and quality profiles",
+                            "required": ["status", "available", "platforms", "active", "platform"],
+                            "properties": {
+                                "status":    { "type": "object", "additionalProperties": true },
+                                "available": { "type": "object", "additionalProperties": true },
+                                "platforms": { "type": "array", "items": { "type": "string" } },
+                                "active":    { "$ref": "#/components/schemas/CameraPlatformEntry" },
+                                "platform":  { "type": "object", "additionalProperties": true }
+                            }
+                        }
+                    }
+                },
+                "CameraSettingsUpdate": {
+                    "type": "object",
+                    "description": "What to write. Both halves are optional; whichever is present is sent to the camera.",
+                    "properties": {
+                        "record": {
+                            "type": "object",
+                            "description": "The camera validates a format as a whole, so all four fields travel together.",
+                            "required": ["codec", "frameRate", "recordResolution", "sensorResolution"],
+                            "properties": {
+                                "codec":            { "type": "string", "example": "BRaw:8_1" },
+                                "frameRate":        { "type": "string", "example": "24" },
+                                "recordResolution": { "$ref": "#/components/schemas/CameraResolution" },
+                                "sensorResolution": { "$ref": "#/components/schemas/CameraResolution" }
+                            }
+                        },
+                        "stream": { "$ref": "#/components/schemas/CameraPlatformEntry" }
+                    }
+                },
+                "DiscoveredCamera": {
+                    "type": "object",
+                    "description": "A Blackmagic camera found by mDNS. `host` is what the connector config's `host` field takes.",
+                    "required": ["host", "hostname", "addresses", "port", "deviceName", "productName", "uniqueId", "softwareVersion"],
+                    "properties": {
+                        "host":            { "type": "string", "example": "http://Cinema-Camera-6K.local" },
+                        "hostname":        { "type": "string", "example": "Cinema-Camera-6K.local." },
+                        "addresses":       { "type": "array", "items": { "type": "string" } },
+                        "port":            { "type": "integer" },
+                        "deviceName":      { "type": "string" },
+                        "productName":     { "type": "string", "example": "Cinema Camera 6K" },
+                        "uniqueId":        { "type": "string", "description": "Stable across renames and DHCP" },
+                        "softwareVersion": { "type": "string", "example": "10.2.2" }
                     }
                 },
                 "ObsStreamSettings": {
@@ -431,6 +561,169 @@ pub fn spec() -> Value {
             }
         },
         "paths": {
+            "/api/logs": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Read the core's application log",
+                    "description": "Returns the tail of the log file this core writes, plus its path on the host. Lets a client device read the server's log rather than its own.",
+                    "operationId": "getApplicationLog",
+                    "responses": {
+                        "200": {
+                            "description": "Log path and contents",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["path", "content"],
+                                        "properties": {
+                                            "path": { "type": "string" },
+                                            "content": { "type": "string" }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "503": { "description": "This core has no application log" }
+                    }
+                },
+                "delete": {
+                    "tags": ["Settings"],
+                    "summary": "Clear the core's application log",
+                    "operationId": "clearApplicationLog",
+                    "responses": {
+                        "204": { "description": "Log cleared" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "503": { "description": "This core has no application log" }
+                    }
+                }
+            },
+            "/api/settings/title-template": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Get the event title template",
+                    "description": "The template the editor renders `computedTitle` from. Never 404s — an unset key returns the built-in default.",
+                    "operationId": "getTitleTemplate",
+                    "responses": {
+                        "200": {
+                            "description": "The stored template, or the default when unset",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/TitleTemplate" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" }
+                    }
+                },
+                "put": {
+                    "tags": ["Settings"],
+                    "summary": "Replace the event title template",
+                    "operationId": "setTitleTemplate",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/TitleTemplate" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "The stored template",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/TitleTemplate" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "500": { "description": "Database error" }
+                    }
+                }
+            },
+            "/api/settings/slide-folder": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Get the slide output folder",
+                    "description": "Never 404s — an unset key returns an empty path.",
+                    "operationId": "getSlideFolder",
+                    "responses": {
+                        "200": {
+                            "description": "The stored folder, or an empty path when unset",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" }
+                    }
+                },
+                "put": {
+                    "tags": ["Settings"],
+                    "summary": "Set the slide output folder",
+                    "description": "The core checks the folder exists on its own machine; an empty path clears the setting.",
+                    "operationId": "setSlideFolder",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "The stored folder",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                                }
+                            }
+                        },
+                        "400": { "description": "The folder does not exist on the core's machine" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "500": { "description": "Database error" }
+                    }
+                }
+            },
+            "/api/events/{id}/slides": {
+                "post": {
+                    "tags": ["Events"],
+                    "summary": "Generate Bible slide decks for an event",
+                    "description": "Writes one `.pptx` per Bible reference into the configured slide folder, paginated the same way the web presenter shows them. Names are fixed — `textus.pptx` and `lekcio.pptx` — so regenerating replaces the previous deck.",
+                    "operationId": "createEventSlides",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": { "type": "string", "format": "uuid" }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Paths of the written files",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["files"],
+                                        "properties": {
+                                            "files": { "type": "array", "items": { "type": "string" } }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "400": { "description": "No slide folder configured, or the event has no Bible references with verses" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "404": { "description": "Event not found" },
+                        "500": { "description": "Could not write the deck" }
+                    }
+                }
+            },
             "/api/events": {
                 "get": {
                     "tags": ["Events"],
@@ -748,7 +1041,7 @@ pub fn spec() -> Value {
                         "in": "path",
                         "required": true,
                         "description": "Connector name",
-                        "schema": { "type": "string", "enum": ["obs", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
+                        "schema": { "type": "string", "enum": ["obs", "blackmagic-camera", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
                     }
                 ],
                 "get": {
@@ -802,7 +1095,7 @@ pub fn spec() -> Value {
                             "name": "name",
                             "in": "path",
                             "required": true,
-                            "schema": { "type": "string", "enum": ["obs", "youtube", "facebook", "discord", "szentiras"] }
+                            "schema": { "type": "string", "enum": ["obs", "blackmagic-camera", "youtube", "facebook", "discord", "szentiras"] }
                         },
                         {
                             "name": "X-Admin-Token",
@@ -825,6 +1118,111 @@ pub fn spec() -> Value {
                         "401": { "description": "Unauthorized" },
                         "403": { "description": "Missing/invalid admin token, or the request did not come from loopback" },
                         "404": { "description": "Unknown connector" }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/stream/youtube": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Push YouTube settings to the camera",
+                    "description": "Copies the channel's RTMP ingestion address and stream key into the camera's livestream settings, preferring the camera's own YouTube platform entry (which needs only the key) and falling back to a custom RTMP URL on models that list no YouTube platform.\n\nSets the destination only — the camera does not go live. Requires a connected camera (409 otherwise) and a linked YouTube account.",
+                    "operationId": "pushBlackmagicCameraYouTubeSettings",
+                    "responses": {
+                        "200": {
+                            "description": "Where the camera's livestream now points",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/CameraStreamTarget" }
+                                }
+                            }
+                        },
+                        "409": { "description": "No camera connected" },
+                        "502": { "description": "The camera or the YouTube API rejected the request" }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/settings": {
+                "get": {
+                    "tags": ["Connectors"],
+                    "summary": "Read the camera's storage, record format and livestream settings",
+                    "description": "One pass over the camera's own control API: record format plus every supported format, the media slots and working set, and the livestream status, platform list, active platform and that platform's servers and quality profiles.\n\nPayloads are the camera's, forwarded unchanged. Only the active platform's profile list is fetched — the others cost a round trip each.",
+                    "operationId": "getBlackmagicCameraSettings",
+                    "responses": {
+                        "200": {
+                            "description": "Camera settings",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/CameraSettings" }
+                                }
+                            }
+                        },
+                        "409": { "description": "No camera connected" },
+                        "502": { "description": "The camera rejected the request" }
+                    }
+                },
+                "put": {
+                    "tags": ["Connectors"],
+                    "summary": "Write the camera's record format, livestream platform, or both",
+                    "description": "Both halves are optional; whichever is present is written. `record` is the camera's own `FormatRequest` — codec, frameRate and both resolutions travel together, as the camera validates the combination as a whole. `stream` is the full active-platform entry, so send back the one from GET with the fields you changed (dropping `key` clears the stream key).\n\nAnswers with the settings read back from the camera.",
+                    "operationId": "putBlackmagicCameraSettings",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/CameraSettingsUpdate" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Settings after the write",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/CameraSettings" }
+                                }
+                            }
+                        },
+                        "409": { "description": "No camera connected" },
+                        "502": { "description": "The camera rejected the format or platform" }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/discover": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Scan the LAN for Blackmagic cameras",
+                    "description": "mDNS scan (5s). Every connected WebSocket client also receives the result as `blackmagic-camera.discovered`.\n\nWhen no camera is configured yet, the first one found is stored and connected — a scan is how a camera gets connected. An already-configured camera is never repointed.\n\nAn empty list is a normal outcome: mDNS does not cross VLANs, and on macOS the app needs Local Network permission. Adding a camera by host works without discovery.",
+                    "operationId": "discoverBlackmagicCameras",
+                    "responses": {
+                        "200": {
+                            "description": "Cameras found, possibly none",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["cameras"],
+                                        "properties": {
+                                            "cameras": {
+                                                "type": "array",
+                                                "items": { "$ref": "#/components/schemas/DiscoveredCamera" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/connectors/blackmagic-camera/connect": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Connect the Blackmagic camera",
+                    "description": "Starts the Blackmagic camera connector using the stored configuration.",
+                    "operationId": "connectBlackmagicCamera",
+                    "responses": {
+                        "204": { "description": "Connection attempt started" },
+                        "401": { "description": "Unauthorized" }
                     }
                 }
             },

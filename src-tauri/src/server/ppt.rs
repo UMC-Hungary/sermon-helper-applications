@@ -50,12 +50,23 @@ pub async fn add_folder(
     State(state): State<AppState>,
     Json(body): Json<AddFolderBody>,
 ) -> impl IntoResponse {
+    let path = body.path.trim();
+    if !std::fs::metadata(path).is_ok_and(|m| m.is_dir()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "error": format!("No such folder on the server: {path}")
+            })),
+        );
+    }
+
     let result = sqlx::query_as::<_, PptFolder>(
         "INSERT INTO ppt_folders (path, name) VALUES ($1, $2) \
          ON CONFLICT (path) DO UPDATE SET name = EXCLUDED.name \
          RETURNING id, path, name, sort_order",
     )
-    .bind(&body.path)
+    .bind(path)
     .bind(&body.name)
     .fetch_one(&state.pool)
     .await;

@@ -58,8 +58,7 @@ export async function setup(): Promise<void> {
 
   if (!existsSync(BINARY)) {
     throw new Error(
-      `Server binary not found at:\n  ${BINARY}\n` +
-        `Build it first with:\n  pnpm build:server`,
+      `Server binary not found at:\n  ${BINARY}\n` + `Build it first with:\n  pnpm build:server`,
     );
   }
 

@@ -146,12 +146,7 @@ export class MetocastApi {
 	}
 
 	async getPresenterEvents(): Promise<{ events: EventSummary[]; selectedEventId: string | null }> {
-		const data = await this.wsRequest<unknown>(
-			'events.presenter_list',
-			undefined,
-			'events.presenter_list',
-			5000,
-		)
+		const data = await this.wsRequest<unknown>('events.presenter_list', undefined, 'events.presenter_list', 5000)
 		const result = PresenterEventListResponseSchema.safeParse(data)
 		if (!result.success) return { events: [], selectedEventId: null }
 		return {
@@ -410,7 +405,9 @@ export class MetocastApi {
 			case 'error': {
 				const errMsg = message.message as string | undefined
 				if (errMsg === 'unauthorized') {
-					console.error('[Metocast] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Metocast app.')
+					console.error(
+						'[Metocast] WebSocket auth failed — check the Auth Token in module settings matches the token shown in the Metocast app.',
+					)
 					this.onConnectionChange?.(false)
 				} else {
 					console.error('[Metocast] Server error:', errMsg)

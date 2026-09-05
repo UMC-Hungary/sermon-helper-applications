@@ -115,6 +115,7 @@ async fn set_status(
     app: Option<&tauri::AppHandle>,
     new_status: ConnectorStatus,
 ) {
+    tracing::info!(connector = "facebook", status = ?new_status, "connector status");
     *status.write().await = new_status;
     let current = status.read().await.clone();
     let _ = status_tx.send(current.clone());
@@ -245,12 +246,24 @@ async fn run_token_loop(
     let token = match load_tokens(&pool).await {
         Some(t) => t,
         None => {
-            set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
+            set_status(
+                &status,
+                &status_tx,
+                app.as_ref(),
+                ConnectorStatus::Disconnected,
+            )
+            .await;
             return;
         }
     };
 
-    set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Connected).await;
+    set_status(
+        &status,
+        &status_tx,
+        app.as_ref(),
+        ConnectorStatus::Connected,
+    )
+    .await;
 
     loop {
         tokio::select! {
@@ -263,7 +276,13 @@ async fn run_token_loop(
         }
 
         if *stop_rx.borrow() {
-            set_status(&status, &status_tx, app.as_ref(), ConnectorStatus::Disconnected).await;
+            set_status(
+                &status,
+                &status_tx,
+                app.as_ref(),
+                ConnectorStatus::Disconnected,
+            )
+            .await;
             return;
         }
 

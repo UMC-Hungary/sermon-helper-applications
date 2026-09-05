@@ -287,10 +287,7 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 				)
 				const result = await instance.api.presentationStop()
 				if (!result.success) {
-					instance.log(
-						'error',
-						`Presentation ${instance.useWebPresenter ? 'unload' : 'stop'} failed: ${result.error}`,
-					)
+					instance.log('error', `Presentation ${instance.useWebPresenter ? 'unload' : 'stop'} failed: ${result.error}`)
 				}
 			},
 		},
@@ -441,8 +438,7 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 				},
 			],
 			callback: async (action: CompanionActionEvent) => {
-				const referenceType: BibleReferenceType =
-					action.options['referenceType'] === 'leckio' ? 'leckio' : 'textus'
+				const referenceType: BibleReferenceType = action.options['referenceType'] === 'leckio' ? 'leckio' : 'textus'
 				const eventId = action.options['eventId'] as string
 				const result = await instance.api.presentBibleReference(referenceType, eventId || undefined)
 				if (!result.success) {

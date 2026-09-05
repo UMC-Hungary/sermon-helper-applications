@@ -1,0 +1,623 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "events": "Events",
+    "slides": "Slides",
+    "settings": "Settings"
+  },
+  "connection": {
+    "connecting": "Connecting to the core…",
+    "lost": "Core connection lost — retrying…"
+  },
+  "screens": {
+    "dashboard": {
+      "title": "Dashboard",
+      "note": "Broadcast state, live telemetry and the next scheduled event."
+    },
+    "events": {
+      "title": "Events",
+      "note": "Filtered, searchable event list with detail.",
+      "new": "New event"
+    },
+    "editor": {
+      "title": "Event editor",
+      "note": "Scripture lookup, auto-title, privacy and recording options."
+    },
+    "presentations": {
+      "title": "Presentations",
+      "note": "Transport, slide queue and presenter clients."
+    },
+    "settings": {
+      "title": "Settings",
+      "note": "Language, mode, accounts, scheduled jobs and updates."
+    },
+    "connectors": {
+      "title": "Connectors",
+      "note": "Category groups, per-connector configuration, status and remediation."
+    },
+    "eventSettings": {
+      "title": "Event settings",
+      "note": "Published title template and where generated slide decks are written."
+    }
+  },
+  "common": {
+    "errorTitle": "Couldn't load",
+    "errorBody": "The core didn't answer. Check the connection and try again.",
+    "retry": "Try again"
+  },
+  "dash": {
+    "greetingMorning": "Good morning.",
+    "greetingEarly": "Up early, early bird.",
+    "greetingNight": "Still up, night owl?",
+    "greetingAfternoon": "Good afternoon.",
+    "greetingEvening": "Good evening.",
+    "onAir": "On air",
+    "offAir": "Off air",
+    "activeTitle": "Live broadcast",
+    "activeContext": "Streaming now",
+    "noBroadcast": "No active broadcast",
+    "idleHint": "Schedule or start an instant stream",
+    "viewers": "Viewers",
+    "bitrate": "Bitrate",
+    "dropped": "Dropped",
+    "upNext": "Up next",
+    "noneScheduled": "Nothing scheduled",
+    "noneScheduledHint": "New events will appear here",
+    "noSpeaker": "No speaker",
+    "quickActions": "Quick actions",
+    "newEvent": "New event",
+    "newEventMeta": "Schedule a stream",
+    "presentations": "Presentations",
+    "presentationsMeta": "Slides & lyrics",
+    "connectors": "Connectors",
+    "connectorsMeta": "{n} linked"
+  },
+  "events": {
+    "eyebrow": "{n} shown",
+    "title": "Events",
+    "new": "New event",
+    "search": "Search events",
+    "searchPlaceholder": "Search events, speakers…",
+    "filtersLabel": "Filter events",
+    "filter": {
+      "upcoming": "Upcoming",
+      "live": "Live",
+      "past": "Past"
+    },
+    "noMatch": "Nothing matches",
+    "noMatchHint": "Try a different search or filter",
+    "emptyTitle": "No events yet",
+    "emptyHint": "Scheduled broadcasts will appear here",
+    "noSpeaker": "No speaker",
+    "liveNow": "Live now",
+    "preview": "Preview",
+    "selected": "Selected",
+    "open": "Open event",
+    "noSelection": "Nothing selected",
+    "status": {
+      "live": "Live",
+      "past": "Past",
+      "scheduled": "Scheduled"
+    }
+  },
+  "editor": {
+    "back": "Events",
+    "newTitle": "Schedule event",
+    "editTitle": "Edit event",
+    "defaultTitle": "(Sunday) Worship Service",
+    "loadFailed": "Couldn't load this event",
+    "saveFailed": "Couldn't save — your entries are kept",
+    "details": "Details",
+    "eventTitle": "Event title",
+    "titlePlaceholder": "Sunday Worship Service",
+    "date": "Date",
+    "time": "Time",
+    "pickDate": "Pick a date",
+    "pickTime": "Pick a time",
+    "speaker": "Speaker",
+    "speakerPlaceholder": "Pastor Mira Okafor",
+    "scripture": "Scripture",
+    "scriptureHint": "Inline fetch pulls verse text",
+    "textus": "Textus",
+    "leckio": "Leckio",
+    "primary": "Primary",
+    "secondary": "Secondary",
+    "textusPlaceholder": "John 3:16–21",
+    "leckioPlaceholder": "Psalm 23",
+    "refNotFound": "Reference not recognised",
+    "verseCount": "{n} verses · {t}",
+    "description": "Description",
+    "descriptionHint": "Used for the YouTube description",
+    "descriptionPlaceholder": "Share the week's message, links, and anything the congregation should know…",
+    "previewLabel": "YouTube preview",
+    "previewEmpty": "Fill in date and reference to preview",
+    "tag": {
+      "date": "date",
+      "textus": "textus",
+      "title": "title",
+      "speaker": "speaker"
+    },
+    "privacyLabel": "YouTube privacy",
+    "privacy": {
+      "public": "Public",
+      "publicHint": "Anyone can watch",
+      "unlisted": "Unlisted",
+      "unlistedHint": "Link only",
+      "private": "Private",
+      "privateHint": "Only you"
+    },
+    "recording": "Recording",
+    "autoUpload": "Auto-upload after event",
+    "autoUploadHint": "Push the local recording to YouTube when the stream ends",
+    "saveNew": "Schedule event →",
+    "saveEdit": "Save changes →",
+    "cancel": "Cancel",
+    "footNote": "Events can be rescheduled or deleted from the event detail after saving.",
+    "platform": {
+      "label": "Platforms",
+      "open": "Open",
+      "connector": {
+        "connected": "Connector online",
+        "connecting": "Connector connecting",
+        "error": "Connector error",
+        "disconnected": "Connector off"
+      },
+      "status": {
+        "not_scheduled": "Not scheduled",
+        "scheduled": "Scheduled",
+        "created": "Created",
+        "ready": "Ready",
+        "testing": "Testing",
+        "live": "Live",
+        "liveStarting": "Going live",
+        "complete": "Ended",
+        "revoked": "Revoked",
+        "failed": "Failed"
+      },
+      "sync": {
+        "synced": "In sync with YouTube",
+        "syncing": "Syncing to YouTube…",
+        "parked": "Waiting for YouTube sign-in",
+        "failed": "Sync failed",
+        "notScheduled": "Not on YouTube yet"
+      }
+    },
+    "slides": {
+      "create": "Generate slides",
+      "creating": "Generating…",
+      "created": "Slide decks written",
+      "failed": "Could not generate slides"
+    }
+  },
+  "presentations": {
+    "title": "Slides",
+    "modeLabel": "Presenter mode",
+    "mode": {
+      "web": "Web presenter",
+      "keynote": "Keynote bridge"
+    },
+    "presenting": "Presenting",
+    "standby": "Standby",
+    "transport": "Slide transport",
+    "first": "First slide",
+    "prev": "Previous slide",
+    "next": "Next slide",
+    "last": "Last slide",
+    "start": "Start",
+    "stop": "Stop",
+    "unload": "Unload deck",
+    "noDeck": "No deck loaded",
+    "search": "Deck search",
+    "searchPlaceholder": "Search decks, folders…",
+    "loadedDeck": "Loaded deck",
+    "tapToSearch": "Tap to search decks",
+    "noMatch": "Nothing matches",
+    "open": "Open",
+    "queue": "Queue",
+    "queueLabel": "Slide queue",
+    "queueSummary": "{n} of {total} filled",
+    "clear": "Clear",
+    "emptySlot": "Empty slot",
+    "preview": "Current slide",
+    "previewWaiting": "Nothing on screen.",
+    "previewWaitingHint": "Load a deck to preview it here",
+    "presenterSupport": "Presenter support",
+    "clients": "Connected clients",
+    "clientsSummary": "{n} connected",
+    "noClients": "No presenters have joined yet.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "folders": "Presentation folders",
+    "foldersHint": "{n} configured",
+    "folderPath": "Folder path on the core machine",
+    "folderPathPlaceholder": "/Users/name/Presentations",
+    "addFolder": "Add folder",
+    "removeFolder": "Remove folder"
+  },
+  "notif": {
+    "bell": "Notifications, {n} unread",
+    "eyebrow": "Notifications",
+    "count": "{n} items",
+    "allClear": "All clear",
+    "emptyTitle": "Nothing waiting.",
+    "emptyHint": "Connectors will speak up here",
+    "clearAll": "Clear all",
+    "showSteps": "Show steps",
+    "hideSteps": "Hide steps"
+  },
+  "settings": {
+    "eyebrow": "Control surface",
+    "overview": {
+      "mode": "Mode",
+      "accounts": "Accounts",
+      "jobs": "Jobs"
+    },
+    "appearance": "Appearance",
+    "language": "Language",
+    "languageRow": {
+      "title": "Interface language",
+      "meta": "Stored locally and mirrored to Tauri settings.json"
+    },
+    "scheme": {
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Auto"
+    },
+    "modeSection": "App mode",
+    "connect": {
+      "section": "Connect a device",
+      "hint": "Scan with Metocast on iPhone",
+      "loading": "Generating…",
+      "unavailable": "Start the server to generate a connect code"
+    },
+    "mode": {
+      "title": "Current mode · {mode}",
+      "meta": "Resetting returns to setup. The embedded database continues until restart.",
+      "clientMeta": "Removes this device's saved server address and token. You'll return to setup.",
+      "change": "Change",
+      "removeAccess": "Remove access",
+      "switchTitle": "Switch to client mode",
+      "switchBody": "Switching to client mode erases this server's data — recordings, settings and connectors. This cannot be undone.",
+      "switchConfirm": "Switch and erase server data",
+      "switchConfirmDialog": "This permanently deletes all data on this server. Continue?",
+      "switchConfirmFinal": "Yes, erase everything and switch"
+    },
+    "accountsSection": "Sign-in accounts",
+    "account": {
+      "login": "Log in",
+      "manage": "Account",
+      "ready": "Ready to sign in",
+      "needsKey": "Needs API key",
+      "signedCount": "{n}/2 signed in"
+    },
+    "connectors": "Connectors",
+    "connectorsRow": {
+      "title": "Connection manager",
+      "meta": "OBS, YouTube, Facebook, VMix, ATEM, Broadlink, Discord",
+      "open": "Open"
+    },
+    "presentations": "Presentations",
+    "webPresenter": {
+      "title": "Use web presenter",
+      "meta": "Sends presentation.set_use_web_presenter over WebSocket"
+    },
+    "cron": {
+      "section": "Cron jobs",
+      "configured": "{n} configured",
+      "name": "Name",
+      "namePlaceholder": "e.g. YouTube poll",
+      "expr": "Cron expression",
+      "exprPlaceholder": "0 */5 * * * *",
+      "save": "Save",
+      "pullYoutube": "Pull YouTube Live Events",
+      "autoUpload": "Auto-upload flagged recordings",
+      "tagYoutube": "YouTube pull",
+      "tagUpload": "Auto upload",
+      "tagCustom": "Custom task"
+    },
+    "app": "App",
+    "version": {
+      "title": "Application version",
+      "check": "Check",
+      "download": "Download",
+      "available": "{v} available"
+    },
+    "back": "Settings",
+    "template": {
+      "section": "Event title template",
+      "hint": "Used for YouTube",
+      "field": "Template",
+      "optional": "optional",
+      "save": "Save template",
+      "reset": "Reset to default",
+      "sampleTitle": "(Sunday) Worship Service",
+      "sampleSpeaker": "Pastor Mira Okafor"
+    },
+    "eventsRow": {
+      "title": "Event settings",
+      "meta": "Title template, slide output folder"
+    }
+  },
+  "logs": {
+    "title": "Application logs",
+    "rowMeta": "Read, filter and clear this core's log",
+    "fileSection": "Log file",
+    "file": "Log file",
+    "loading": "Loading logs…",
+    "refresh": "Refresh",
+    "download": "Download",
+    "open": "Open",
+    "copyPath": "Copy path",
+    "remove": "Clear log",
+    "removing": "Clearing…",
+    "removeConfirm": "Clear the current application log contents? This cannot be undone.",
+    "cancel": "Cancel",
+    "empty": "The log is quiet.",
+    "emptyHint": "Lines will appear as the core works",
+    "noMatches": "No lines match this filter.",
+    "unavailable": "Logs unavailable",
+    "noToken": "This device has no token for the core, so it cannot read the log.",
+    "retry": "Try again",
+    "filters": {
+      "label": "Log level filter",
+      "all": "All",
+      "info": "Info",
+      "warn": "Warnings",
+      "error": "Errors"
+    },
+    "toasts": {
+      "removed": "Application log cleared",
+      "removeFailed": "Failed to clear the application log",
+      "pathCopied": "Log path copied",
+      "copyFailed": "Failed to copy the log path",
+      "openFailed": "Failed to open the application log"
+    }
+  },
+  "toast": {
+    "region": "Notifications",
+    "dismiss": "Dismiss",
+    "connector": "Connector"
+  },
+  "conn": {
+    "back": "Back",
+    "toast": {
+      "connectFail": "Couldn't connect",
+      "disconnectFail": "Couldn't disconnect",
+      "saveFail": "Couldn't save",
+      "scanFail": "Scan failed",
+      "toggleFail": "Couldn't update"
+    },
+    "eyebrow": "{n} of {total} enabled",
+    "cat": {
+      "broadcast": "Broadcast",
+      "streaming": "Streaming",
+      "devices": "Devices",
+      "future": "Future"
+    },
+    "summary": {
+      "live": "Live",
+      "ready": "Ready",
+      "future": "Future"
+    },
+    "enabledHint": "{n}/{total} enabled",
+    "disabled": "Connector disabled",
+    "descriptor": {
+      "youtube": "Data API v3 · broadcasts and stream keys",
+      "facebook": "Pages API · stream destination",
+      "broadlink": "Projector, screen and AV commands",
+      "vmix": "Configuration stored for future support",
+      "atem": "Switcher support coming soon",
+      "discord": "Webhook support coming soon",
+      "blackmagic-camera": "REST API · record and livestream control"
+    },
+    "lockedNote": "This connector is not implemented yet. Metocast keeps the configuration ready for a future build.",
+    "note": "Connector settings are saved locally first, then reconciled through Tauri commands or the server API.",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Could not save — {error}",
+    "secretKept": "Leave blank to keep",
+    "login": "Login",
+    "account": "Account",
+    "encoder": {
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "reconnect": "Save & reconnect",
+      "rtmp": "{dest} RTMP URL"
+    },
+    "discovery": {
+      "title": "Device discovery",
+      "description": "Find RF/IR emitters on the local network",
+      "scan": "Scan network",
+      "scanAgain": "Scan again",
+      "scanning": "Scanning",
+      "empty": "Start a scan to discover Broadlink RM devices near the booth network."
+    },
+    "ops": {
+      "kicker": "Operator summary",
+      "route": "{dest} route",
+      "obsReady": "OBS is ready for live output.",
+      "obsAttention": "OBS needs attention for live output.",
+      "enabled": "Enabled",
+      "ready": "Ready",
+      "rtmp": "RTMP target",
+      "deviceLayer": "Device layer",
+      "devicesFound": "{n} Broadlink devices discovered",
+      "awaitingScan": "Awaiting network scan",
+      "authState": "Auth state",
+      "ytLinked": "YouTube account linked",
+      "ytNeedsLogin": "YouTube needs login"
+    },
+    "field": {
+      "host": "Host",
+      "port": "Port",
+      "password": "Password",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "appId": "App ID",
+      "appSecret": "App Secret",
+      "pageId": "Page ID",
+      "webhookUrl": "Webhook URL",
+      "apiKey": "API key",
+      "username": "Username",
+      "fingerprint": "Certificate fingerprint"
+    },
+    "cameraDiscovery": {
+      "title": "Find cameras",
+      "description": "Scans the local network. The first camera found is connected automatically when none is configured yet.",
+      "empty": "No camera answered. Cameras only appear once Web Media Manager is enabled in Blackmagic Camera Setup; you can also enter the host by hand.",
+      "firmware": "Firmware {version}"
+    },
+    "camera": {
+      "pushYoutube": "Push YouTube settings",
+      "rtmp": "YouTube RTMP URL on the camera",
+      "control": "Camera control",
+      "controlMeta": "Transport, storage, record and stream quality",
+      "open": "Open"
+    }
+  },
+  "setup": {
+    "eyebrow": "Welcome",
+    "title": "Choose a mode",
+    "lede": "How should this device run Metocast?",
+    "modeLabel": "App mode",
+    "server": "Server",
+    "client": "Client",
+    "serverHint": "Run the backend on this machine. It must stay on to serve other devices.",
+    "clientHint": "Connect to a Metocast server running elsewhere. Get its URL and token from the server's Connect page.",
+    "urlLabel": "Server URL",
+    "tokenLabel": "Auth token",
+    "tokenPlaceholder": "Paste the auth token",
+    "missing": "Server URL and auth token are both required.",
+    "unreachable": "Server unreachable — check the URL and try again.",
+    "unauthorized": "Wrong auth token — check it and try again.",
+    "unexpected": "Unexpected response from server ({status}).",
+    "confirm": "Confirm",
+    "working": "Setting up…",
+    "scanQr": "Scan QR code",
+    "scanning": "Point the camera at the QR code on the server",
+    "scanCancel": "Cancel",
+    "scanError": "Camera unavailable — enter the URL and token manually",
+    "override": {
+      "eyebrow": "Connect",
+      "title": "Replace this device's server?",
+      "body": "This device is already set up. Continuing switches it to {url} and discards the current connection.",
+      "keep": "Keep current",
+      "replace": "Replace"
+    }
+  },
+  "ui": {
+    "activeInterface": "Active interface",
+    "current": "Current"
+  },
+  "login": {
+    "signIn": "Sign in",
+    "credentials": "API credentials",
+    "scope": {
+      "youtube": "Upload, schedule and go live on your channel. Metocast will redirect to YouTube to confirm permissions.",
+      "facebook": "Publish to Pages you manage. Metocast will redirect to Facebook to confirm permissions."
+    },
+    "clientId": "Client ID",
+    "noCreds": "No client credentials yet",
+    "add": "Add",
+    "edit": "Edit",
+    "account": "Account",
+    "email": "Email or username",
+    "password": "Password",
+    "passwordHint": "You'll confirm on the provider's page",
+    "continue": "Continue with {provider}",
+    "connecting": "Connecting…",
+    "credsIntro": "Paste the credentials from your {provider} developer console. These stay on this device.",
+    "field": {
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "appId": "App ID",
+      "appSecret": "App Secret",
+      "pageId": "Page ID"
+    },
+    "redirectUri": "Redirect URI",
+    "redirectHint": "Copy this into your developer console.",
+    "cancel": "Cancel",
+    "saveCreds": "Save credentials",
+    "show": "Show",
+    "hide": "Hide"
+  },
+  "camera": {
+    "title": "Camera control",
+    "back": "Connectors",
+    "loading": "Reading the camera",
+    "unavailable": "Camera settings unavailable",
+    "notConnected": "The Blackmagic camera connector is not connected. Enable it under Connectors and scan for the camera.",
+    "retry": "Try again",
+    "transport": "Camera transport",
+    "startRecord": "Record",
+    "record": {
+      "label": "Recording",
+      "sensor": "Sensor",
+      "resolution": "Resolution",
+      "frameRate": "Frame rate",
+      "fps": "{r} fps",
+      "codec": "Codec",
+      "remaining": "Record time left"
+    },
+    "stopRecord": "Stop record",
+    "goLive": "Go live",
+    "stopStream": "Stop stream",
+    "apply": "Apply to camera",
+    "applying": "Applying",
+    "revert": "Revert",
+    "applyFailed": "Couldn't apply settings",
+    "note": "Settings are staged here and written to the camera when you apply. Recording and streaming keep running on whatever the camera already has.",
+    "state": {
+      "standby": "Standby",
+      "recording": "Recording",
+      "live": "Live",
+      "both": "Recording · Live",
+      "rec": "Rec",
+      "ready": "Ready"
+    },
+    "overview": {
+      "stream": "Stream",
+      "record": "Record",
+      "free": "Free"
+    },
+    "storage": {
+      "label": "Storage",
+      "slots": "{n} slots",
+      "empty": "Empty slot",
+      "meta": "{type} · {clips} clips · {free} free of {total}",
+      "noCard": "{type} · no card",
+      "used": "{volume} used",
+      "freeOf": "{free} free of {total}"
+    },
+    "stream": {
+      "label": "Streaming",
+      "server": "Server",
+      "quality": "Quality profile",
+      "noTable": "{profile} — no format table",
+      "noTableNote": "This profile carries no format table on the camera, so it picks the rate itself. The Streaming profiles list one.",
+      "rung": "{resolution} · {fps} fps",
+      "mbps": "{rate} Mbps",
+      "output": "Camera output",
+      "ready": "Ready"
+    }
+  },
+  "eventSettings": {
+    "templateSaved": "Template saved",
+    "folderSaved": "Slide folder saved",
+    "saveFailed": "Could not save",
+    "slides": {
+      "section": "Slide decks",
+      "hint": "Textus and Lekció",
+      "title": "Output folder",
+      "none": "Not set — slide decks cannot be generated",
+      "choose": "Choose folder",
+      "clear": "Clear",
+      "field": "Folder on the core’s machine",
+      "placeholder": "/Users/you/Documents/Slides",
+      "save": "Save folder"
+    },
+    "copied": "Copied {token}",
+    "copyFailed": "Could not copy",
+    "copyHint": "Copy to clipboard"
+  }
+}

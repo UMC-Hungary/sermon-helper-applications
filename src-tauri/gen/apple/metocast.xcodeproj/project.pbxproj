@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -24,35 +24,35 @@
 /* Begin PBXFileReference section */
 		06139A9345B3695FEC7760CF /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		0EF8A19E97EBE8D46767946B /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
-		12B357989AA0A2B48112C4DF /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
-		2107EF081DA8937101A2E57D /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
-		2DC868752BBBA704894C47BE /* embedded.rs */ = {isa = PBXFileReference; path = embedded.rs; sourceTree = "<group>"; };
-		2E1752B7204C27EA9E54383B /* server.rs */ = {isa = PBXFileReference; path = server.rs; sourceTree = "<group>"; };
-		366F3E080E9351636CFDD841 /* recording.rs */ = {isa = PBXFileReference; path = recording.rs; sourceTree = "<group>"; };
-		369AC6A6E4F0476FEAE61CD5 /* event.rs */ = {isa = PBXFileReference; path = event.rs; sourceTree = "<group>"; };
-		421AC023D5379B3990837A6B /* metocast_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "metocast_iOS.entitlements"; sourceTree = "<group>"; };
-		4E61616E38ABBD3422D26064 /* routes.rs */ = {isa = PBXFileReference; path = routes.rs; sourceTree = "<group>"; };
-		5724564A0FBC0F7480A5D3EF /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
-		648E869F838CE8865052F540 /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
-		7543178D1F3951F0AEFD5E71 /* auth.rs */ = {isa = PBXFileReference; path = auth.rs; sourceTree = "<group>"; };
+		12B357989AA0A2B48112C4DF /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
+		2107EF081DA8937101A2E57D /* lib.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = lib.rs; sourceTree = "<group>"; };
+		2DC868752BBBA704894C47BE /* embedded.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = embedded.rs; sourceTree = "<group>"; };
+		2E1752B7204C27EA9E54383B /* server.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = server.rs; sourceTree = "<group>"; };
+		366F3E080E9351636CFDD841 /* recording.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = recording.rs; sourceTree = "<group>"; };
+		369AC6A6E4F0476FEAE61CD5 /* event.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = event.rs; sourceTree = "<group>"; };
+		421AC023D5379B3990837A6B /* metocast_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = metocast_iOS.entitlements; sourceTree = "<group>"; };
+		4E61616E38ABBD3422D26064 /* routes.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = routes.rs; sourceTree = "<group>"; };
+		5724564A0FBC0F7480A5D3EF /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
+		648E869F838CE8865052F540 /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
+		7543178D1F3951F0AEFD5E71 /* auth.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = auth.rs; sourceTree = "<group>"; };
 		7711C30767B1AC07DF56AF61 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		79996443763A0D126EDAA1D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		86F200C86DB9DD1D228B4E6B /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		9205A74EB6572F71DEB93C1B /* token.rs */ = {isa = PBXFileReference; path = token.rs; sourceTree = "<group>"; };
-		9382942713AF9F6E4B62DCF9 /* metocast_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "metocast_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9205A74EB6572F71DEB93C1B /* token.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = token.rs; sourceTree = "<group>"; };
+		9382942713AF9F6E4B62DCF9 /* metocast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = metocast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		96666E8982E9B5FB43E05742 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
-		9D8917AE16FCD494C965DE5C /* collections.rs */ = {isa = PBXFileReference; path = collections.rs; sourceTree = "<group>"; };
-		9FE91DC8F82A8FB6E63F3ECC /* websocket.rs */ = {isa = PBXFileReference; path = websocket.rs; sourceTree = "<group>"; };
+		9D8917AE16FCD494C965DE5C /* collections.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = collections.rs; sourceTree = "<group>"; };
+		9FE91DC8F82A8FB6E63F3ECC /* websocket.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = websocket.rs; sourceTree = "<group>"; };
 		A80045D910DB92963B1DE173 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
 		ABC3F471C3704A3707255D38 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
-		AC3F4092E5DC03B500CF3862 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
+		AC3F4092E5DC03B500CF3862 /* main.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = main.rs; sourceTree = "<group>"; };
 		B26DCB99C22D0ED474F4860D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		B3F14CCFA85B50B4D692A926 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		C5A38800E47EF94567FF4D2E /* 001_initial.sql */ = {isa = PBXFileReference; path = 001_initial.sql; sourceTree = "<group>"; };
+		C5A38800E47EF94567FF4D2E /* 001_initial.sql */ = {isa = PBXFileReference; lastKnownFileType = text; path = 001_initial.sql; sourceTree = "<group>"; };
 		D96398A3C4D764630761FD5A /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		EC61CAFE1120F75F24B89D50 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		ED33E7C29CBCCAA6251CEF24 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
-		F9F7043A7EFABD78995DFB8D /* mod.rs */ = {isa = PBXFileReference; path = mod.rs; sourceTree = "<group>"; };
+		F9F7043A7EFABD78995DFB8D /* mod.rs */ = {isa = PBXFileReference; lastKnownFileType = text; path = mod.rs; sourceTree = "<group>"; };
 		FBCC5BACD30A44602A652A9E /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -142,7 +142,7 @@
 				7711C30767B1AC07DF56AF61 /* Info.plist */,
 				421AC023D5379B3990837A6B /* metocast_iOS.entitlements */,
 			);
-			path = "metocast_iOS";
+			path = metocast_iOS;
 			sourceTree = "<group>";
 		};
 		571C525BBDD478E33FF629EA /* migrations */ = {
@@ -159,7 +159,7 @@
 				96666E8982E9B5FB43E05742 /* main.mm */,
 				EDB28335F3E127407F52EC96 /* bindings */,
 			);
-			path = "metocast";
+			path = metocast;
 			sourceTree = "<group>";
 		};
 		7CCEF811B0A5D3DE3FD1877B /* Sources */ = {
@@ -173,7 +173,7 @@
 		80929D7C09A3932CD6687A4B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9382942713AF9F6E4B62DCF9 /* metocast_iOS.app */,
+				9382942713AF9F6E4B62DCF9 /* metocast.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -234,11 +234,11 @@
 			);
 			dependencies = (
 			);
-			name = "metocast_iOS";
+			name = metocast_iOS;
 			packageProductDependencies = (
 			);
-			productName = "metocast_iOS";
-			productReference = 9382942713AF9F6E4B62DCF9 /* metocast_iOS.app */;
+			productName = metocast_iOS;
+			productReference = 9382942713AF9F6E4B62DCF9 /* metocast.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -260,7 +260,6 @@
 			);
 			mainGroup = 02BBAD2BF1B68893C3D55AB3;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -385,31 +384,42 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ARCHS = (
-					arm64,
-				);
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "metocast_iOS/metocast_iOS.entitlements";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
+				CODE_SIGN_ENTITLEMENTS = metocast_iOS/metocast_iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 4RQDZKD3ZG;
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\".\"",
 				);
-				INFOPLIST_FILE = "metocast_iOS/Info.plist";
+				INFOPLIST_FILE = metocast_iOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.metocast.app;
 				PRODUCT_NAME = "metocast";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
-				DEVELOPMENT_TEAM = "XFC5826XFJ";
 			};
 			name = debug;
 		};
@@ -473,31 +483,42 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				ARCHS = (
-					arm64,
-				);
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "metocast_iOS/metocast_iOS.entitlements";
+				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
+				CODE_SIGN_ENTITLEMENTS = metocast_iOS/metocast_iOS.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = 4RQDZKD3ZG;
 				ENABLE_BITCODE = NO;
 				"EXCLUDED_ARCHS[sdk=iphoneos*]" = x86_64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\".\"",
 				);
-				INFOPLIST_FILE = "metocast_iOS/Info.plist";
+				INFOPLIST_FILE = metocast_iOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				"LIBRARY_SEARCH_PATHS[arch=arm64]" = "$(inherited) $(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
-				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = "$(inherited) $(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION) $(SDKROOT)/usr/lib/swift $(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME) $(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)";
+				"LIBRARY_SEARCH_PATHS[arch=arm64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/arm64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
+				"LIBRARY_SEARCH_PATHS[arch=x86_64]" = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Externals/x86_64/$(CONFIGURATION)",
+					"$(SDKROOT)/usr/lib/swift",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+					"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.metocast.app;
 				PRODUCT_NAME = "metocast";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
-				DEVELOPMENT_TEAM = "XFC5826XFJ";
 			};
 			name = release;
 		};

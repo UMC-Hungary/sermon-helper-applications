@@ -4,42 +4,51 @@ Church livestream control desktop application built with Tauri 2 + SvelteKit 5 +
 
 ## Rendering UIs
 
-The front-end is swappable. A rendering UI is a static bundle that talks to the core through
-one SDK (`$lib/core-client`) and never touches Tauri, `fetch` or `WebSocket` directly, so the
-same UI runs in the desktop app, a browser, or a remote client-mode window.
+The front-end is swappable. Each rendering UI is a self-contained static app under `ui/` that
+talks to the core through one package (`@metocast/core-client`) and never touches Tauri, `fetch`
+or `WebSocket` directly, so the same UI runs in the desktop app, a browser, or a remote
+client-mode window. This is a pnpm workspace:
+
+```
+ui/classic/            the original control surface (frozen; full coverage)
+ui/sanctum/            the new Sanctum design UI
+packages/core-client/  the only boundary to the core (framework-agnostic: HTTP, WS transport, Zod schemas, host, locales)
+packages/design-system/ Sanctum's tokens + components (@metocast/design-system)
+```
 
 ```bash
-pnpm build                            # the registry's default UI
-METOCAST_UI=my-ui pnpm build          # a different registered UI
-METOCAST_UI=default,my-ui pnpm build  # both, with a chooser in Settings
+pnpm build                              # the registry's default UI (classic)
+METOCAST_UI=sanctum pnpm build          # a different registered UI
+METOCAST_UI=classic,sanctum pnpm build  # both, with a chooser + in-app selector
 ```
 
 Registered UIs live in [`ui/registry.json`](ui/registry.json); [`ui/README.md`](ui/README.md) is
-the contract for writing one.
+the contract for writing one and what belongs in the shared package.
 
 ## API access and secrets
 
 The core exposes one HTTP/WebSocket API, used by the desktop app, remote client-mode UIs,
 Companion and the presenter receiver alike. Access has three tiers:
 
-| Tier | Who | What they get |
-|---|---|---|
-| **No credentials** | Anyone who can reach the port | `GET /health`, `/openapi.json`, `/docs`, the OBS caption overlay (`/caption`), the OAuth callback, and the UI bundle. A WebSocket may connect without a token but is limited to the read-only presenter commands. |
-| **Auth token** | The desktop app, client-mode UIs, Companion | Everything under `/api/*` and full WebSocket access, via `Authorization: Bearer <token>` (or `?token=` for `/ws`). The token is shown on the Connect page. |
-| **Auth token + admin token, on loopback** | The desktop app hosting the server, in server mode | Reading stored upstream credentials back. |
-| **Nobody** | — | Everything else about credentials. See below. |
+| Tier                                      | Who                                                | What they get                                                                                                                                                                                                     |
+| ----------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **No credentials**                        | Anyone who can reach the port                      | `GET /health`, `/openapi.json`, `/docs`, the OBS caption overlay (`/caption`), the OAuth callback, and the UI bundle. A WebSocket may connect without a token but is limited to the read-only presenter commands. |
+| **Auth token**                            | The desktop app, client-mode UIs, Companion        | Everything under `/api/*` and full WebSocket access, via `Authorization: Bearer <token>` (or `?token=` for `/ws`). The token is shown on the Connect page.                                                        |
+| **Auth token + admin token, on loopback** | The desktop app hosting the server, in server mode | Reading stored upstream credentials back.                                                                                                                                                                         |
+| **Nobody**                                | —                                                  | Everything else about credentials. See below.                                                                                                                                                                     |
 
 **Upstream credentials never leave the server.** The szentiras.eu API key, YouTube client
-secret, Facebook app secret, OBS password and Discord webhook URL are stored server-side and
-used only for the core's own outbound requests. `GET /api/connectors/{name}/config` always
-returns them blank, with a `<field>Set` boolean saying whether one is stored — holding the auth
-token is not enough to read them. When saving, send a new value to replace a secret, leave it
-blank to keep the stored one, or send `"<field>Set": false` to clear it.
+secret, Facebook app secret, OBS and Blackmagic camera passwords, and the Discord webhook URL
+are stored server-side and used only for the core's own outbound requests.
+`GET /api/connectors/{name}/config` always returns them blank, with a `<field>Set` boolean
+saying whether one is stored — holding the auth token is not enough to read them. When saving,
+send a new value to replace a secret, leave it blank to keep the stored one, or send
+`"<field>Set": false` to clear it.
 
 The one exception is the machine actually running the server: its own desktop app can re-read a
 credential it stored, via `GET /api/connectors/{name}/config/secrets`. That needs a second
 admin token — regenerated every run, kept in memory, handed to the host window over Tauri IPC and
-never over the network — *and* the request must arrive on loopback. A client-mode window is
+never over the network — _and_ the request must arrive on loopback. A client-mode window is
 talking to someone else's core, so it never gets one, and the **Show** action stays hidden.
 
 Full contract, including what is deliberately public and what is still open (per-device keys,

@@ -45,6 +45,8 @@ pub struct AppRuntime {
     #[cfg(desktop)]
     pub obs_connector: Arc<connectors::obs::ObsConnector>,
     #[cfg(desktop)]
+    pub blackmagic_camera_connector: Arc<connectors::blackmagic_camera::BlackmagicCameraConnector>,
+    #[cfg(desktop)]
     pub vmix_connector: Arc<connectors::vmix::VmixConnector>,
     #[cfg(desktop)]
     pub atem_connector: Arc<connectors::atem::AtemConnector>,
@@ -75,6 +77,8 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_liquid_glass::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_native_nav::init())
         .plugin(tauri_plugin_opener::init());
 
     #[cfg(desktop)]
@@ -97,6 +101,7 @@ pub fn run() {
         commands::server::get_client_url,
         commands::server::get_client_token,
         commands::server::get_admin_token,
+        commands::server::can_host_server,
         commands::server::reset_setup,
         commands::server::get_local_host,
         commands::logs::get_application_log_path,
@@ -119,6 +124,7 @@ pub fn run() {
         commands::server::complete_setup,
         commands::server::get_client_url,
         commands::server::get_client_token,
+        commands::server::can_host_server,
         commands::server::reset_setup,
         commands::server::get_local_host,
         commands::logs::get_application_log_path,
@@ -201,6 +207,9 @@ pub fn run() {
             #[cfg(desktop)]
             let obs_connector = Arc::new(connectors::obs::ObsConnector::new());
             #[cfg(desktop)]
+            let blackmagic_camera_connector =
+                Arc::new(connectors::blackmagic_camera::BlackmagicCameraConnector::new());
+            #[cfg(desktop)]
             let vmix_connector = Arc::new(connectors::vmix::VmixConnector::new());
             #[cfg(desktop)]
             let atem_connector = Arc::new(connectors::atem::AtemConnector::new());
@@ -243,6 +252,8 @@ pub fn run() {
                 ),
                 #[cfg(desktop)]
                 obs_connector: Arc::clone(&obs_connector),
+                #[cfg(desktop)]
+                blackmagic_camera_connector: Arc::clone(&blackmagic_camera_connector),
                 #[cfg(desktop)]
                 vmix_connector: Arc::clone(&vmix_connector),
                 #[cfg(desktop)]

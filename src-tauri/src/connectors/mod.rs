@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod atem;
+pub mod blackmagic_camera;
 pub mod broadlink;
 pub mod discord;
 pub mod facebook;
@@ -197,5 +198,25 @@ pub struct BroadlinkConfig {
 impl ConnectorConfig for BroadlinkConfig {
     fn is_configured(&self) -> bool {
         self.enabled
+    }
+}
+
+/// Blackmagic camera (REST + livestream control). `fingerprint` pins the camera's
+/// self-signed certificate: blank means trust-on-first-use, which is also how the
+/// operator learns the fingerprint to pin. Plain-HTTP cameras never need one.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BlackmagicCameraConfig {
+    pub enabled: bool,
+    /// `http://Cinema-Camera-6K.local`, an IP, or a bare host for HTTPS.
+    pub host: String,
+    pub fingerprint: String,
+    pub username: String,
+    pub password: String,
+}
+
+impl ConnectorConfig for BlackmagicCameraConfig {
+    fn is_configured(&self) -> bool {
+        self.enabled && !self.host.is_empty()
     }
 }

@@ -1,3 +1,4 @@
+import storybook from 'eslint-plugin-storybook';
 import tseslint from 'typescript-eslint';
 import svelte from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
@@ -5,7 +6,16 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['build/', '.svelte-kit/', 'node_modules/', 'src-tauri/', 'companion/dist/'] },
+  {
+    ignores: [
+      '**/build/',
+      '**/.svelte-kit/',
+      '**/storybook-static/',
+      '**/node_modules/',
+      'src-tauri/',
+      'companion/dist/',
+    ],
+  },
 
   // TypeScript files
   {
@@ -27,9 +37,9 @@ export default tseslint.config(
   // Disable rules that incorrectly flag plain <a href> and goto() navigation
   { rules: { 'svelte/no-navigation-without-resolve': 'off' } },
 
-  // Svelte files — TypeScript parser + extra rules
+  // Svelte files (incl. Svelte 5 rune modules `.svelte.ts`/`.svelte.js`) — TS parser
   {
-    files: ['**/*.svelte'],
+    files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
     languageOptions: {
       parser: svelteParser,
       parserOptions: { parser: tseslint.parser },
@@ -43,19 +53,13 @@ export default tseslint.config(
   },
 
   // ── Core client boundary ────────────────────────────────────────────────────
-  // A rendering UI reaches the core only through $lib/core-client. Tauri IPC,
-  // raw fetch and raw WebSocket live inside the SDK so a UI stays portable
-  // across desktop, browser and remote-client hosting.
+  // A rendering UI reaches the core only through @metocast/core-client. Tauri IPC,
+  // raw fetch and raw WebSocket live inside that package so a UI stays portable
+  // across desktop, browser and remote-client hosting. The rule targets every UI
+  // (src today, ui/* after relocation); packages/core-client is exempt by not
+  // being matched here, so a new UI is covered automatically.
   {
-    files: ['src/**/*.{ts,svelte}'],
-    // The SDK and the modules it re-exports are what own the transports.
-    ignores: [
-      'src/lib/core-client/**',
-      'src/lib/api/**',
-      'src/lib/ws/**',
-      'src/lib/host/**',
-      'src/lib/utils/bible-api.ts',
-    ],
+    files: ['src/**/*.{ts,svelte}', 'ui/**/*.{ts,svelte}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -64,11 +68,16 @@ export default tseslint.config(
             {
               group: ['@tauri-apps/*', 'tauri-plugin-*'],
               message:
-                'UI code must not use Tauri directly. Use $lib/core-client (host capabilities are feature-detected there).',
+                'UI code must not use Tauri directly. Use @metocast/core-client (host capabilities are feature-detected there).',
             },
             {
-              group: ['$lib/api/*', '$lib/ws/*', '$lib/host/*'],
-              message: 'Import from $lib/core-client instead of reaching into its layers.',
+              group: [
+                '@metocast/core-client/api/*',
+                '@metocast/core-client/ws/*',
+                '@metocast/core-client/host/*',
+              ],
+              message:
+                'Import from @metocast/core-client instead of reaching into its internal layers.',
             },
           ],
         },
@@ -77,22 +86,22 @@ export default tseslint.config(
         'error',
         {
           name: 'fetch',
-          message: 'Use the core client SDK ($lib/core-client) instead of raw fetch.',
+          message: 'Use @metocast/core-client instead of raw fetch.',
         },
         {
           name: 'WebSocket',
-          message: 'Use connectWs/connectPresenterWs from $lib/core-client instead.',
+          message: 'Use connectWs/connectPresenterWs from @metocast/core-client instead.',
         },
       ],
       'no-restricted-syntax': [
         'error',
         {
           selector: "NewExpression[callee.name='WebSocket']",
-          message: 'Use connectWs/connectPresenterWs from $lib/core-client instead.',
+          message: 'Use connectWs/connectPresenterWs from @metocast/core-client instead.',
         },
         {
           selector: "CallExpression[callee.name='fetch']",
-          message: 'Use the core client SDK ($lib/core-client) instead of raw fetch.',
+          message: 'Use @metocast/core-client instead of raw fetch.',
         },
       ],
     },
@@ -100,4 +109,6 @@ export default tseslint.config(
 
   // Prettier last — disables formatting rules that conflict
   prettier,
+
+  ...storybook.configs['flat/recommended'],
 );
