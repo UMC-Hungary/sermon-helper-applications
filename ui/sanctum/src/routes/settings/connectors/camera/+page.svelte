@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { _, locale } from 'svelte-i18n';
   import {
     PageHeader,
@@ -185,44 +185,21 @@
 
   let seen = '';
   $effect(() => {
-    const now = `${live.cameraStreaming}/${live.cameraRecording}`;
+    const now = `${live.cameraStreamStatus}/${live.cameraRecording}`;
     if (seen && seen !== now) void refresh();
     seen = now;
   });
 
-  // Record and stream state arrive over the camera's notification socket, but the
-  // camera itself still takes a moment to act — connecting to YouTube's RTMP server
-  // is not instant. Hold the pair until the state it asked for arrives, rather than
-  // letting the wait invite a second press — the camera refuses a repeat mid-transition.
-  let wantStream = $state<boolean | null>(null);
-  let wantRecord = $state<boolean | null>(null);
-  const streamBusy = $derived(wantStream !== null && wantStream !== streaming);
-  const recordBusy = $derived(wantRecord !== null && wantRecord !== recording);
+  // The camera reports the RTMP handshake itself — `Connecting` on the way up,
+  // `Flushing` on the way down — so the busy state is read, not guessed at on a
+  // timer. Recording is local to the camera and has no transition of its own.
+  const streamBusy = $derived(
+    live.cameraStreamStatus === 'Connecting' || live.cameraStreamStatus === 'Flushing',
+  );
 
-  const timers: Partial<Record<'stream' | 'record', ReturnType<typeof setTimeout>>> = {};
-
-  /** A refusal never changes the state, so the wait is capped as well as satisfied.
-   *  A second press restarts its own cap rather than inheriting the first one's. */
   function transport(kind: 'stream' | 'record', on: boolean) {
-    if (kind === 'stream') wantStream = on;
-    else wantRecord = on;
     sendWsCommand(`blackmagic-camera.${kind}.${on ? 'start' : 'stop'}`);
-    clearTimeout(timers[kind]);
-    timers[kind] = setTimeout(() => {
-      if (kind === 'stream') wantStream = null;
-      else wantRecord = null;
-      // A refused command leaves the page showing what it asked for; ask the core
-      // what the camera actually did.
-      sendWsCommand('connectors.state');
-      void refresh();
-    }, 8000);
   }
-
-  // Leaving mid-transition would otherwise fire the cap into a dead component.
-  onDestroy(() => {
-    clearTimeout(timers.stream);
-    clearTimeout(timers.record);
-  });
 </script>
 
 <PageHeader
@@ -258,7 +235,6 @@
         icon: recording ? 'stop' : 'record',
         label: recording ? $_('camera.stopRecord') : $_('camera.startRecord'),
         variant: recording ? 'stop' : 'default',
-        disabled: recordBusy,
         onclick: () => transport('record', !recording),
       },
       {
@@ -274,7 +250,7 @@
   <section class="overview">
     <OverviewCell
       label={$_('camera.overview.stream')}
-      value={streaming ? $_('camera.state.live') : settings.stream.status.status}
+      value={streaming ? $_('camera.state.live') : live.cameraStreamStatus}
       color={streaming ? 'var(--status-live)' : 'var(--status-off)'}
       pulse={streaming}
     />

@@ -212,6 +212,9 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
       'blackmagic-camera',
     ]),
     isStreaming: z.boolean().optional(),
+    /** The camera's own livestream word, so a client can tell `Connecting` from `Idle`.
+     *  Absent for every connector but the Blackmagic camera. */
+    streamStatus: z.string().optional(),
     isRecording: z.boolean().optional(),
   }),
   z.object({
@@ -343,7 +346,11 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('connectors.state'),
     obs: z.object({ isStreaming: z.boolean(), isRecording: z.boolean() }).nullable(),
     'blackmagic-camera': z
-      .object({ isStreaming: z.boolean(), isRecording: z.boolean() })
+      .object({
+        isStreaming: z.boolean(),
+        streamStatus: z.string().default('Idle'),
+        isRecording: z.boolean(),
+      })
       .nullable(),
   }),
   z.object({ type: z.literal('connectors.youtube.stream_key'), rtmpUrl: z.string() }),

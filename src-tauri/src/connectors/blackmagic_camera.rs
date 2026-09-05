@@ -25,10 +25,24 @@ const INITIAL_BACKOFF: Duration = Duration::from_secs(5);
 const MAX_BACKOFF: Duration = Duration::from_secs(60);
 
 /// Snapshot of the camera's outputs, broadcast whenever either changes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// The livestream half keeps the camera's own word rather than a bool. `Connecting`
+/// and `Flushing` are the transitions an operator has to be shown — collapsing them
+/// into "not streaming" is what forced the UI to guess at them on a wall clock.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CameraState {
-    pub is_streaming: bool,
+    /// `Idle` | `Connecting` | `Streaming` | `Flushing` | `Interrupted`, verbatim.
+    pub stream_status: String,
     pub is_recording: bool,
+}
+
+/// Livestreaming is absent on some models; that reads as `Idle`, not as a failure.
+pub const STREAM_IDLE: &str = "Idle";
+
+impl CameraState {
+    pub fn is_streaming(&self) -> bool {
+        self.stream_status == "Streaming"
+    }
 }
 
 pub struct BlackmagicCameraConnector {
@@ -92,7 +106,7 @@ impl BlackmagicCameraConnector {
     }
 
     pub async fn get_state(&self) -> Option<CameraState> {
-        *self.state.read().await
+        self.state.read().await.clone()
     }
 
     /// The connected camera, for callers that drive it directly (record, livestream).
@@ -229,16 +243,15 @@ pub async fn apply_settings(camera: &Camera, update: &SettingsUpdate) -> Result<
     Ok(())
 }
 
-/// Livestreaming is absent on some models; that is "not streaming", not a failure.
 async fn read_state(camera: &Camera) -> Result<CameraState, Error> {
     let is_recording = camera.record_state().await?.recording;
-    let is_streaming = match camera.livestream_status().await {
-        Ok(status) => status.status == "Streaming",
-        Err(e) if e.is_unsupported() || matches!(e, Error::NotFound(_)) => false,
+    let stream_status = match camera.livestream_status().await {
+        Ok(status) => status.status,
+        Err(e) if e.is_unsupported() || matches!(e, Error::NotFound(_)) => STREAM_IDLE.to_string(),
         Err(e) => return Err(e),
     };
     Ok(CameraState {
-        is_streaming,
+        stream_status,
         is_recording,
     })
 }
@@ -367,9 +380,9 @@ impl Worker {
     async fn resync_state(&self, camera: &Camera) -> Result<(), Error> {
         let current = read_state(camera).await?;
         let mut guard = self.state.write().await;
-        if *guard != Some(current) {
+        if guard.as_ref() != Some(&current) {
+            let _ = self.state_tx.send(current.clone());
             *guard = Some(current);
-            let _ = self.state_tx.send(current);
         }
         Ok(())
     }
@@ -377,7 +390,9 @@ impl Worker {
     /// Applies one pushed property change to whichever half of `CameraState` it names.
     async fn apply_change(&self, change: &notify::PropertyChange) {
         let mut guard = self.state.write().await;
-        let Some(mut current) = *guard else { return };
+        let Some(mut current) = guard.clone() else {
+            return;
+        };
         match change.property.as_str() {
             "/transports/0/record" => {
                 let Ok(record) = change.parse::<RecordState>() else {
@@ -393,13 +408,13 @@ impl Worker {
                 // (Idle | Connecting | Streaming | Flushing | Interrupted) and knowing
                 // which one the camera passed through is the whole diagnostic.
                 tracing::info!("camera livestream status: {}", status.status);
-                current.is_streaming = status.status == "Streaming";
+                current.stream_status = status.status;
             }
             _ => return,
         }
-        if *guard != Some(current) {
+        if guard.as_ref() != Some(&current) {
+            let _ = self.state_tx.send(current.clone());
             *guard = Some(current);
-            let _ = self.state_tx.send(current);
         }
     }
 
@@ -495,7 +510,7 @@ mod tests {
     #[tokio::test]
     async fn apply_change_updates_only_the_named_half() {
         let worker = test_worker(CameraState {
-            is_streaming: false,
+            stream_status: STREAM_IDLE.to_string(),
             is_recording: false,
         });
 
@@ -508,7 +523,7 @@ mod tests {
         assert_eq!(
             *worker.state.read().await,
             Some(CameraState {
-                is_streaming: false,
+                stream_status: STREAM_IDLE.to_string(),
                 is_recording: true
             }),
         );
@@ -526,16 +541,41 @@ mod tests {
         assert_eq!(
             *worker.state.read().await,
             Some(CameraState {
-                is_streaming: true,
+                stream_status: "Streaming".to_string(),
                 is_recording: true
             }),
         );
     }
 
     #[tokio::test]
+    async fn a_transition_survives_instead_of_reading_as_not_streaming() {
+        let worker = test_worker(CameraState {
+            stream_status: STREAM_IDLE.to_string(),
+            is_recording: false,
+        });
+
+        // "Connecting" is the RTMP handshake. Collapsing it to a bool is what left the
+        // UI unable to tell "not started" from "starting", and guessing on a timer.
+        worker
+            .apply_change(&notify::PropertyChange {
+                property: "/livestreams/0".to_string(),
+                value: serde_json::json!({
+                    "status": "Connecting",
+                    "bitrate": 0,
+                    "effectiveVideoFormat": "1920x1080p24",
+                }),
+            })
+            .await;
+
+        let state = worker.state.read().await.clone().unwrap();
+        assert_eq!(state.stream_status, "Connecting");
+        assert!(!state.is_streaming());
+    }
+
+    #[tokio::test]
     async fn apply_change_ignores_a_property_it_does_not_track() {
         let worker = test_worker(CameraState {
-            is_streaming: true,
+            stream_status: "Streaming".to_string(),
             is_recording: true,
         });
 
@@ -549,7 +589,7 @@ mod tests {
         assert_eq!(
             *worker.state.read().await,
             Some(CameraState {
-                is_streaming: true,
+                stream_status: "Streaming".to_string(),
                 is_recording: true
             }),
         );
@@ -558,7 +598,7 @@ mod tests {
     #[tokio::test]
     async fn apply_change_ignores_a_shape_it_cannot_parse() {
         let worker = test_worker(CameraState {
-            is_streaming: false,
+            stream_status: STREAM_IDLE.to_string(),
             is_recording: false,
         });
 
@@ -573,7 +613,7 @@ mod tests {
         assert_eq!(
             *worker.state.read().await,
             Some(CameraState {
-                is_streaming: false,
+                stream_status: STREAM_IDLE.to_string(),
                 is_recording: false
             }),
         );

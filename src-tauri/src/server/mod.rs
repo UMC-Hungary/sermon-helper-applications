@@ -266,7 +266,8 @@ pub async fn build_and_serve(
                 let msg = json!({
                     "type": "connector.state",
                     "connector": "blackmagic-camera",
-                    "isStreaming": state.is_streaming,
+                    "isStreaming": state.is_streaming(),
+                    "streamStatus": state.stream_status,
                     "isRecording": state.is_recording,
                 })
                 .to_string();

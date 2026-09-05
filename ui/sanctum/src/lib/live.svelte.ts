@@ -47,6 +47,9 @@ let obsRecording = $state(false);
 let connectorStatus = $state<Record<string, ConnState>>({});
 let cameraStreaming = $state(false);
 let cameraRecording = $state(false);
+/** The camera's own word — `Connecting` and `Flushing` are the transitions the
+ *  camera screen shows as busy, which a bool cannot express. */
+let cameraStreamStatus = $state('Idle');
 let presenter = $state<PresenterState | null>(null);
 let keynote = $state<KeynoteStatus | null>(null);
 let clients = $state<WsClientInfo[]>([]);
@@ -68,6 +71,9 @@ export const live = {
   },
   get cameraRecording() {
     return cameraRecording;
+  },
+  get cameraStreamStatus() {
+    return cameraStreamStatus;
   },
   get presenter() {
     return presenter;
@@ -104,6 +110,7 @@ export function handleWs(msg: WsMessage): void {
       } else if (msg.connector === 'blackmagic-camera') {
         if (msg.isStreaming !== undefined) cameraStreaming = msg.isStreaming;
         if (msg.isRecording !== undefined) cameraRecording = msg.isRecording;
+        if (msg.streamStatus !== undefined) cameraStreamStatus = msg.streamStatus;
       }
       break;
     case 'connectors.state':
@@ -111,6 +118,7 @@ export function handleWs(msg: WsMessage): void {
       obsRecording = msg.obs?.isRecording ?? false;
       cameraStreaming = msg['blackmagic-camera']?.isStreaming ?? false;
       cameraRecording = msg['blackmagic-camera']?.isRecording ?? false;
+      cameraStreamStatus = msg['blackmagic-camera']?.streamStatus ?? 'Idle';
       break;
     case 'connectors.status':
       connectorStatus = {

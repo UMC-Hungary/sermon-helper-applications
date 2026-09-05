@@ -2083,7 +2083,7 @@ async fn handle_ws_command(
             let msg = json!({
                 "type": "connectors.state",
                 "obs": obs_output.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
-                "blackmagic-camera": camera.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
+                "blackmagic-camera": camera.map(|s| json!({"isStreaming": s.is_streaming(), "streamStatus": s.stream_status, "isRecording": s.is_recording})),
             })
             .to_string();
             let _ = client_tx.send(Message::Text(msg.into()));

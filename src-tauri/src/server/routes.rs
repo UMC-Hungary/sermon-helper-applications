@@ -86,7 +86,7 @@ pub async fn get_connector_state(State(state): State<AppState>) -> impl IntoResp
     let camera_state = state.blackmagic_camera_connector.get_state().await;
     Json(json!({
         "obs": obs_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
-        "blackmagic-camera": camera_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording}))
+        "blackmagic-camera": camera_state.map(|s| json!({"isStreaming": s.is_streaming(), "streamStatus": s.stream_status, "isRecording": s.is_recording}))
     }))
 }
 
@@ -2880,6 +2880,45 @@ pub async fn broadlink_send_command(
     }
 }
 
+/// The core's own application log, so a client device can read the server's log
+/// rather than its own. Reads the same file the desktop log commands do.
+pub async fn get_application_log(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(app) = state.app_handle.as_ref() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "Application log is unavailable on this core"})),
+        )
+            .into_response();
+    };
+    match (
+        crate::logging::ensure_application_log(app),
+        crate::logging::read_application_log(app),
+    ) {
+        (Ok(path), Ok(content)) => Json(json!({
+            "path": path.to_string_lossy(),
+            "content": content,
+        }))
+        .into_response(),
+        (Err(e), _) | (_, Err(e)) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response()
+        }
+    }
+}
+
+pub async fn clear_application_log(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(app) = state.app_handle.as_ref() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "Application log is unavailable on this core"})),
+        )
+            .into_response();
+    };
+    match crate::logging::clear_application_log(app) {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2960,44 +2999,5 @@ mod tests {
         restore_omitted_secrets(&mut incoming, &stored);
 
         assert_eq!(incoming["password"], "hunter2");
-    }
-}
-
-/// The core's own application log, so a client device can read the server's log
-/// rather than its own. Reads the same file the desktop log commands do.
-pub async fn get_application_log(State(state): State<AppState>) -> impl IntoResponse {
-    let Some(app) = state.app_handle.as_ref() else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({"error": "Application log is unavailable on this core"})),
-        )
-            .into_response();
-    };
-    match (
-        crate::logging::ensure_application_log(app),
-        crate::logging::read_application_log(app),
-    ) {
-        (Ok(path), Ok(content)) => Json(json!({
-            "path": path.to_string_lossy(),
-            "content": content,
-        }))
-        .into_response(),
-        (Err(e), _) | (_, Err(e)) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response()
-        }
-    }
-}
-
-pub async fn clear_application_log(State(state): State<AppState>) -> impl IntoResponse {
-    let Some(app) = state.app_handle.as_ref() else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({"error": "Application log is unavailable on this core"})),
-        )
-            .into_response();
-    };
-    match crate::logging::clear_application_log(app) {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response(),
     }
 }
