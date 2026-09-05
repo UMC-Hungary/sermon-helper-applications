@@ -153,7 +153,6 @@
     background: var(--surface-raised);
     border: var(--ui-border-hairline) solid var(--border-control);
     width: 100%;
-    min-width: 340px;
   }
 
   i {

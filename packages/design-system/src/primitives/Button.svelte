@@ -107,10 +107,6 @@
     border: 0;
   }
 
-  .primary:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--surface-inverse) 88%, var(--text-inverse));
-  }
-
   .secondary {
     background: transparent;
     color: var(--text-primary);
