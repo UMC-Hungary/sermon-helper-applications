@@ -10,16 +10,16 @@ A header with the queue's name and a summary, then one row per slot: its number,
 
 ## Props
 
-| Prop                      | Type                        | Default | Meaning                                                     |
-| ------------------------- | --------------------------- | ------- | ----------------------------------------------------------- |
-| `slots` _(required)_      | `QueueSlot[]`               | —       | —                                                           |
-| `label` _(required)_      | `string`                    | —       | Names the list — "Slide queue".                             |
-| `summary`                 | `string`                    | `''`    | The mono note on the right of the header — "4 of 8 filled". |
-| `openLabel` _(required)_  | `string`                    | —       | —                                                           |
-| `clearLabel` _(required)_ | `string`                    | —       | —                                                           |
-| `emptyLabel` _(required)_ | `string`                    | —       | —                                                           |
-| `onopen`                  | `(slot: QueueSlot) => void` | —       | —                                                           |
-| `onclear`                 | `(slot: QueueSlot) => void` | —       | —                                                           |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `slots` *(required)* | `QueueSlot[]` | — | — |
+| `label` *(required)* | `string` | — | Names the list — "Slide queue". |
+| `summary` | `string` | `''` | The mono note on the right of the header — "4 of 8 filled". |
+| `openLabel` *(required)* | `string` | — | — |
+| `clearLabel` *(required)* | `string` | — | — |
+| `emptyLabel` *(required)* | `string` | — | — |
+| `onopen` | `(slot: QueueSlot) => void` | — | — |
+| `onclear` | `(slot: QueueSlot) => void` | — | — |
 
 ## Variants
 
@@ -31,39 +31,39 @@ Empty slot, filled slot, loaded slot.
 
 ## Tokens consumed
 
-| Token                          | Resolves to                                                    |
-| ------------------------------ | -------------------------------------------------------------- |
-| `--accent`                     | `#5c5c84 / #a9a6d6`                                            |
-| `--border-control`             | `#857c68 / #716b5c`                                            |
-| `--border-hairline`            | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`            |
-| `--c-queue-clear-size`         | `18px`                                                         |
-| `--c-queue-gap`                | `6px`                                                          |
-| `--c-queue-header-padding`     | `9px`                                                          |
-| `--c-queue-item-gap`           | `10px`                                                         |
-| `--c-queue-item-padding-block` | `11px`                                                         |
-| `--c-queue-label-track`        | `1.5px`                                                        |
-| `--c-queue-padding-top`        | `10px`                                                         |
-| `--status-ok`                  | `#386d42 / #6aa876`                                            |
-| `--text-inverse`               | `#efe9dd / #14120f`                                            |
-| `--text-muted`                 | `#615e56 / #918b7e`                                            |
-| `--text-primary`               | `#1c1a16 / #ede6d6`                                            |
-| `--type-label-sm-family`       | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size`         | `9px`                                                          |
-| `--type-label-sm-transform`    | `uppercase`                                                    |
-| `--ui-border-hairline`         | `1px`                                                          |
-| `--ui-focus-offset`            | `2px`                                                          |
-| `--ui-focus-width`             | `2px`                                                          |
-| `--ui-gutter-tight`            | `12px`                                                         |
-| `--ui-target-min`              | `44px`                                                         |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-queue-clear-size` | `18px` |
+| `--c-queue-gap` | `6px` |
+| `--c-queue-header-padding` | `9px` |
+| `--c-queue-item-gap` | `10px` |
+| `--c-queue-item-padding-block` | `11px` |
+| `--c-queue-label-track` | `1.5px` |
+| `--c-queue-padding-top` | `10px` |
+| `--status-ok` | `#386d42 / #6aa876` |
+| `--text-inverse` | `#efe9dd / #14120f` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-transform` | `uppercase` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-gutter-tight` | `12px` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key              | Behaviour                                                     |
-| ---------------- | ------------------------------------------------------------- |
-| `Tab`            | Moves through each slot's open action, then its clear action. |
-| `Enter`, `Space` | Opens or clears.                                              |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Moves through each slot's open action, then its clear action. |
+| `Enter`, `Space` | Opens or clears. |
 
 ## ARIA
 
@@ -81,26 +81,27 @@ A named region containing a real list. Each action's accessible name carries the
 
 Source: `src/components/presentations/SlideQueue.svelte`.
 
-| Selector                       | Property         | Measured | Implemented | Token                          |
-| ------------------------------ | ---------------- | -------- | ----------- | ------------------------------ |
-| `header`                       | `padding-bottom` | `9px`    | `9px`       | `--c-queue-header-padding`     |
-| `header span, header em, code` | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`         |
-| `header span, header em, code` | `letter-spacing` | `1.5px`  | `1.5px`     | `--c-queue-label-track`        |
-| `.items`                       | `gap`            | `6px`    | `6px`       | `--c-queue-gap`                |
-| `.items`                       | `padding-top`    | `10px`   | `10px`      | `--c-queue-padding-top`        |
-| `.items div`                   | `border`         | `1px`    | `1px`       | `--ui-border-hairline`         |
-| `.open`                        | `gap`            | `10px`   | `10px`      | `--c-queue-item-gap`           |
-| `.open`                        | `padding`        | `11px`   | `11px`      | `--c-queue-item-padding-block` |
-| `.open`                        | `padding`        | `12px`   | `12px`      | `--ui-gutter-tight`            |
-| `.clear`                       | `width`          | `38px`   | `44px`      | `--ui-target-min`              |
-| `.clear`                       | `font-size`      | `18px`   | `18px`      | `--c-queue-clear-size`         |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `header` | `padding-bottom` | `9px` | `9px` | `--c-queue-header-padding` |
+| `header span, header em, code` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
+| `header span, header em, code` | `letter-spacing` | `1.5px` | `1.5px` | `--c-queue-label-track` |
+| `.items` | `gap` | `6px` | `6px` | `--c-queue-gap` |
+| `.items` | `padding-top` | `10px` | `10px` | `--c-queue-padding-top` |
+| `.items div` | `border` | `1px` | `1px` | `--ui-border-hairline` |
+| `.open` | `gap` | `10px` | `10px` | `--c-queue-item-gap` |
+| `.open` | `padding` | `11px` | `11px` | `--c-queue-item-padding-block` |
+| `.open` | `padding` | `12px` | `12px` | `--ui-gutter-tight` |
+| `.clear` | `width` | `38px` | `44px` | `--ui-target-min` |
+| `.clear` | `font-size` | `18px` | `18px` | `--c-queue-clear-size` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                                 | Why                                                                                                              |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `--ui-target-min`                                    | The reference makes the clear control 38px wide, below the 44px minimum this system holds every touch target to. |
-| The loaded state carries a word as well as a colour. | The reference distinguishes empty, filled and loaded by border style and fill colour alone.                      |
-| Action names include the slot.                       | The reference's clear control is a bare `×` with no name.                                                        |
+| What | Why |
+| --- | --- |
+| `--ui-target-min` | The reference makes the clear control 38px wide, below the 44px minimum this system holds every touch target to. |
+| The loaded state carries a word as well as a colour. | The reference distinguishes empty, filled and loaded by border style and fill colour alone. |
+| Action names include the slot. | The reference's clear control is a bare `×` with no name. |
+

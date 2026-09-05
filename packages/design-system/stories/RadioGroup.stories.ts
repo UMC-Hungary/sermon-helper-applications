@@ -17,23 +17,23 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Közvetítés minősége',
-    value: 'high',
+    label: "Közvetítés minősége",
+    value: "high",
     options: [
       {
-        value: 'high',
-        label: 'Magas',
-        hint: '1080p, 6 Mb/s',
+        value: "high",
+        label: "Magas",
+        hint: "1080p, 6 Mb/s",
       },
       {
-        value: 'medium',
-        label: 'Közepes',
-        hint: '720p, 3 Mb/s',
+        value: "medium",
+        label: "Közepes",
+        hint: "720p, 3 Mb/s",
       },
       {
-        value: 'low',
-        label: 'Alacsony',
-        hint: '480p, 1 Mb/s',
+        value: "low",
+        label: "Alacsony",
+        hint: "480p, 1 Mb/s",
       },
     ],
   },
@@ -41,23 +41,23 @@ export const Default: Story = {
 
 export const HiddenLegend: Story = {
   args: {
-    label: 'Közvetítés minősége',
-    value: 'high',
+    label: "Közvetítés minősége",
+    value: "high",
     options: [
       {
-        value: 'high',
-        label: 'Magas',
-        hint: '1080p, 6 Mb/s',
+        value: "high",
+        label: "Magas",
+        hint: "1080p, 6 Mb/s",
       },
       {
-        value: 'medium',
-        label: 'Közepes',
-        hint: '720p, 3 Mb/s',
+        value: "medium",
+        label: "Közepes",
+        hint: "720p, 3 Mb/s",
       },
       {
-        value: 'low',
-        label: 'Alacsony',
-        hint: '480p, 1 Mb/s',
+        value: "low",
+        label: "Alacsony",
+        hint: "480p, 1 Mb/s",
       },
     ],
     labelHidden: true,
@@ -66,23 +66,23 @@ export const HiddenLegend: Story = {
 
 export const WithDisabled: Story = {
   args: {
-    label: 'Közvetítés minősége',
-    value: 'high',
+    label: "Közvetítés minősége",
+    value: "high",
     options: [
       {
-        value: 'high',
-        label: 'Magas',
-        hint: '1080p, 6 Mb/s',
+        value: "high",
+        label: "Magas",
+        hint: "1080p, 6 Mb/s",
       },
       {
-        value: 'medium',
-        label: 'Közepes',
+        value: "medium",
+        label: "Közepes",
       },
       {
-        value: 'low',
-        label: 'Alacsony',
+        value: "low",
+        label: "Alacsony",
         disabled: true,
-        hint: 'Nem érhető el ezen a kapcsolaton',
+        hint: "Nem érhető el ezen a kapcsolaton",
       },
     ],
   },

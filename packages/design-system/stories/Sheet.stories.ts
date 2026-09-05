@@ -19,8 +19,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     open: true,
-    title: 'Beállítások',
-    eyebrow: 'Csatlakozók',
+    title: "Beállítások",
+    eyebrow: "Csatlakozók",
     children: s('A lap tartalma'),
   },
 };
@@ -28,8 +28,8 @@ export const Default: Story = {
 export const Square: Story = {
   args: {
     open: true,
-    title: 'Beállítások',
-    eyebrow: 'Csatlakozók',
+    title: "Beállítások",
+    eyebrow: "Csatlakozók",
     children: s('A lap tartalma'),
     rounded: false,
   },
@@ -38,8 +38,8 @@ export const Square: Story = {
 export const NoGrabber: Story = {
   args: {
     open: true,
-    title: 'Beállítások',
-    eyebrow: 'Csatlakozók',
+    title: "Beállítások",
+    eyebrow: "Csatlakozók",
     children: s('A lap tartalma'),
     grabber: false,
   },
@@ -48,8 +48,8 @@ export const NoGrabber: Story = {
 export const Closed: Story = {
   args: {
     open: false,
-    title: 'Beállítások',
-    eyebrow: 'Csatlakozók',
+    title: "Beállítások",
+    eyebrow: "Csatlakozók",
     children: s('A lap tartalma'),
   },
 };

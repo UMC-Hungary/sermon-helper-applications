@@ -10,19 +10,19 @@ Label row (with an optional trailing slot), input, and an optional note. The rul
 
 ## Props
 
-| Prop                 | Type                                                                        | Default                                | Meaning                                                              |
-| -------------------- | --------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------- |
-| `label` _(required)_ | `string`                                                                    | —                                      | —                                                                    |
-| `value`              | `string`                                                                    | `$bindable('')`                        | —                                                                    |
-| `placeholder`        | `string`                                                                    | `''`                                   | —                                                                    |
-| `type`               | `'text' \| 'email' \| 'url' \| 'tel' \| 'search' \| 'password' \| 'number'` | `'text'`                               | —                                                                    |
-| `hint`               | `string`                                                                    | `''`                                   | A quiet note under the input, associated through `aria-describedby`. |
-| `error`              | `string`                                                                    | `''`                                   | Replaces the hint and marks the field invalid.                       |
-| `readonly`           | `boolean`                                                                   | `false`                                | —                                                                    |
-| `disabled`           | `boolean`                                                                   | `false`                                | —                                                                    |
-| `required`           | `boolean`                                                                   | `false`                                | —                                                                    |
-| `id`                 | `string`                                                                    | `sanctum-field-${crypto.randomUUID()}` | —                                                                    |
-| `trailing`           | `Snippet`                                                                   | —                                      | —                                                                    |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `label` *(required)* | `string` | — | — |
+| `value` | `string` | `$bindable('')` | — |
+| `placeholder` | `string` | `''` | — |
+| `type` | `'text' \| 'email' \| 'url' \| 'tel' \| 'search' \| 'password' \| 'number'` | `'text'` | — |
+| `hint` | `string` | `''` | A quiet note under the input, associated through `aria-describedby`. |
+| `error` | `string` | `''` | Replaces the hint and marks the field invalid. |
+| `readonly` | `boolean` | `false` | — |
+| `disabled` | `boolean` | `false` | — |
+| `required` | `boolean` | `false` | — |
+| `id` | `string` | ``sanctum-field-${crypto.randomUUID()}`` | — |
+| `trailing` | `Snippet` | — | — |
 
 ## Variants
 
@@ -34,36 +34,36 @@ Default, focus-within, readonly, disabled, invalid.
 
 ## Tokens consumed
 
-| Token                            | Resolves to                                                                |
-| -------------------------------- | -------------------------------------------------------------------------- |
-| `--accent`                       | `#5c5c84 / #a9a6d6`                                                        |
-| `--border-hairline`              | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
-| `--c-field-hint-gap`             | `2px`                                                                      |
-| `--c-field-hint-track`           | `1.2px`                                                                    |
-| `--c-field-input-gap`            | `4px`                                                                      |
-| `--c-field-input-padding-bottom` | `4px`                                                                      |
-| `--c-field-input-padding-top`    | `8px`                                                                      |
-| `--c-field-label-track`          | `1.5px`                                                                    |
-| `--c-field-padding-block`        | `10px`                                                                     |
-| `--status-error`                 | `#b5321c / #e66a4f`                                                        |
-| `--text-faint`                   | `#676051 / #8f8879`                                                        |
-| `--text-muted`                   | `#615e56 / #918b7e`                                                        |
-| `--text-primary`                 | `#1c1a16 / #ede6d6`                                                        |
-| `--type-body-family`             | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-size`               | `15px`                                                                     |
-| `--type-body-track`              | `-0.1px`                                                                   |
-| `--type-label-sm-family`         | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-sm-size`           | `9px`                                                                      |
-| `--type-label-sm-transform`      | `uppercase`                                                                |
-| `--type-label-sm-weight`         | `500`                                                                      |
-| `--ui-border-hairline`           | `1px`                                                                      |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-field-hint-gap` | `2px` |
+| `--c-field-hint-track` | `1.2px` |
+| `--c-field-input-gap` | `4px` |
+| `--c-field-input-padding-bottom` | `4px` |
+| `--c-field-input-padding-top` | `8px` |
+| `--c-field-label-track` | `1.5px` |
+| `--c-field-padding-block` | `10px` |
+| `--status-error` | `#b5321c / #e66a4f` |
+| `--text-faint` | `#676051 / #8f8879` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-body-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-size` | `15px` |
+| `--type-body-track` | `-0.1px` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-transform` | `uppercase` |
+| `--type-label-sm-weight` | `500` |
+| `--ui-border-hairline` | `1px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key   | Behaviour                    |
-| ----- | ---------------------------- |
+| Key | Behaviour |
+| --- | --- |
 | `Tab` | Moves to and from the input. |
 
 ## ARIA
@@ -82,25 +82,26 @@ A native `<input>` associated with its `<label>` by `for`/`id`. The note is join
 
 Source: `src/components/primitives/Field.svelte`.
 
-| Selector | Property         | Measured | Implemented | Token                            |
-| -------- | ---------------- | -------- | ----------- | -------------------------------- |
-| `label`  | `padding`        | `10px`   | `10px`      | `--c-field-padding-block`        |
-| `span`   | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`           |
-| `span`   | `letter-spacing` | `1.5px`  | `1.5px`     | `--c-field-label-track`          |
-| `span`   | `font-weight`    | `500`    | `500`       | `--type-label-sm-weight`         |
-| `input`  | `padding`        | `8px`    | `8px`       | `--c-field-input-padding-top`    |
-| `input`  | `padding`        | `4px`    | `4px`       | `--c-field-input-padding-bottom` |
-| `input`  | `margin-top`     | `4px`    | `4px`       | `--c-field-input-gap`            |
-| `input`  | `font-size`      | `15px`   | `15px`      | `--type-body-size`               |
-| `input`  | `letter-spacing` | `-0.1px` | `-0.1px`    | `--type-body-track`              |
-| `small`  | `letter-spacing` | `1.2px`  | `1.2px`     | `--c-field-hint-track`           |
-| `small`  | `margin-top`     | `2px`    | `2px`       | `--c-field-hint-gap`             |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `label` | `padding` | `10px` | `10px` | `--c-field-padding-block` |
+| `span` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
+| `span` | `letter-spacing` | `1.5px` | `1.5px` | `--c-field-label-track` |
+| `span` | `font-weight` | `500` | `500` | `--type-label-sm-weight` |
+| `input` | `padding` | `8px` | `8px` | `--c-field-input-padding-top` |
+| `input` | `padding` | `4px` | `4px` | `--c-field-input-padding-bottom` |
+| `input` | `margin-top` | `4px` | `4px` | `--c-field-input-gap` |
+| `input` | `font-size` | `15px` | `15px` | `--type-body-size` |
+| `input` | `letter-spacing` | `-0.1px` | `-0.1px` | `--type-body-track` |
+| `small` | `letter-spacing` | `1.2px` | `1.2px` | `--c-field-hint-track` |
+| `small` | `margin-top` | `2px` | `2px` | `--c-field-hint-gap` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                                               | Why                                                                                                                      |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| What | Why |
+| --- | --- |
 | A focus indicator was added, and the rule changes colour on focus. | The reference sets `outline: 0` on the input and puts nothing in its place, which leaves the field unusable by keyboard. |
-| The error state was added.                                         | The reference has no invalid state for this field at all.                                                                |
+| The error state was added. | The reference has no invalid state for this field at all. |
+

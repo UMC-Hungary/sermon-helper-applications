@@ -17,36 +17,36 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Dia vezérlés',
-    status: 'Vetítés',
-    current: 'Jn 3:16 — Mert úgy szerette Isten a világot',
-    position: '12',
+    label: "Dia vezérlés",
+    status: "Vetítés",
+    current: "Jn 3:16 — Mert úgy szerette Isten a világot",
+    position: "12",
     actions: [
       {
-        icon: 'first',
-        label: 'Első',
+        icon: "first",
+        label: "Első",
         onclick: () => {},
       },
       {
-        icon: 'prev',
-        label: 'Előző',
+        icon: "prev",
+        label: "Előző",
         onclick: () => {},
       },
       {
-        icon: 'play',
-        label: 'Vetítés',
-        variant: 'primary',
+        icon: "play",
+        label: "Vetítés",
+        variant: "primary",
         onclick: () => {},
       },
       {
-        icon: 'next',
-        label: 'Következő',
+        icon: "next",
+        label: "Következő",
         onclick: () => {},
       },
       {
-        icon: 'stop',
-        label: 'Leállítás',
-        variant: 'stop',
+        icon: "stop",
+        label: "Leállítás",
+        variant: "stop",
         onclick: () => {},
       },
     ],
@@ -55,36 +55,36 @@ export const Default: Story = {
 
 export const Standby: Story = {
   args: {
-    label: 'Dia vezérlés',
-    status: 'Készenlét',
-    current: 'Nincs betöltve dia',
-    position: '—',
+    label: "Dia vezérlés",
+    status: "Készenlét",
+    current: "Nincs betöltve dia",
+    position: "—",
     actions: [
       {
-        icon: 'first',
-        label: 'Első',
+        icon: "first",
+        label: "Első",
         onclick: () => {},
       },
       {
-        icon: 'prev',
-        label: 'Előző',
+        icon: "prev",
+        label: "Előző",
         onclick: () => {},
       },
       {
-        icon: 'play',
-        label: 'Vetítés',
-        variant: 'primary',
+        icon: "play",
+        label: "Vetítés",
+        variant: "primary",
         onclick: () => {},
       },
       {
-        icon: 'next',
-        label: 'Következő',
+        icon: "next",
+        label: "Következő",
         onclick: () => {},
       },
       {
-        icon: 'stop',
-        label: 'Leállítás',
-        variant: 'stop',
+        icon: "stop",
+        label: "Leállítás",
+        variant: "stop",
         onclick: () => {},
       },
     ],
@@ -93,25 +93,25 @@ export const Standby: Story = {
 
 export const ThreeControls: Story = {
   args: {
-    label: 'Dia vezérlés',
-    status: 'Vetítés',
-    current: 'Jn 3:16 — Mert úgy szerette Isten a világot',
-    position: '12',
+    label: "Dia vezérlés",
+    status: "Vetítés",
+    current: "Jn 3:16 — Mert úgy szerette Isten a világot",
+    position: "12",
     actions: [
       {
-        icon: 'prev',
-        label: 'Előző',
+        icon: "prev",
+        label: "Előző",
         onclick: () => {},
       },
       {
-        icon: 'play',
-        label: 'Vetítés',
-        variant: 'primary',
+        icon: "play",
+        label: "Vetítés",
+        variant: "primary",
         onclick: () => {},
       },
       {
-        icon: 'next',
-        label: 'Következő',
+        icon: "next",
+        label: "Következő",
         onclick: () => {},
       },
     ],

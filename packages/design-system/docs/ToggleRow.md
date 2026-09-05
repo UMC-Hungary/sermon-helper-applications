@@ -10,13 +10,13 @@ The label and its optional second line on the left, the switch on the right.
 
 ## Props
 
-| Prop                 | Type                         | Default | Meaning                                        |
-| -------------------- | ---------------------------- | ------- | ---------------------------------------------- |
-| `label` _(required)_ | `string`                     | —       | —                                              |
-| `sub`                | `string`                     | —       | A second line explaining what the switch does. |
-| `checked`            | `boolean`                    | —       | —                                              |
-| `disabled`           | `boolean`                    | —       | —                                              |
-| `onchange`           | `(checked: boolean) => void` | —       | —                                              |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `label` *(required)* | `string` | — | — |
+| `sub` | `string` | — | A second line explaining what the switch does. |
+| `checked` | `boolean` | — | — |
+| `disabled` | `boolean` | — | — |
+| `onchange` | `(checked: boolean) => void` | — | — |
 
 ## Variants
 
@@ -28,31 +28,31 @@ Off, on, disabled.
 
 ## Tokens consumed
 
-| Token                          | Resolves to                                                                |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| `--c-toggle-row-gap`           | `12px`                                                                     |
-| `--c-toggle-row-padding-block` | `12px`                                                                     |
-| `--c-toggle-row-sub-gap`       | `2px`                                                                      |
-| `--surface-sunken`             | `#e4ddcd / #23201a`                                                        |
-| `--text-muted`                 | `#615e56 / #918b7e`                                                        |
-| `--text-primary`               | `#1c1a16 / #ede6d6`                                                        |
-| `--type-body-sm-family`        | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-leading`       | `1.4`                                                                      |
-| `--type-body-sm-size`          | `14px`                                                                     |
-| `--type-body-sm-track`         | `-0.1px`                                                                   |
-| `--type-body-sm-weight`        | `500`                                                                      |
-| `--type-caption-size`          | `12px`                                                                     |
-| `--ui-gutter-inset`            | `14px`                                                                     |
-| `--ui-target-min`              | `44px`                                                                     |
+| Token | Resolves to |
+| --- | --- |
+| `--c-toggle-row-gap` | `12px` |
+| `--c-toggle-row-padding-block` | `12px` |
+| `--c-toggle-row-sub-gap` | `2px` |
+| `--surface-sunken` | `#e4ddcd / #23201a` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-leading` | `1.4` |
+| `--type-body-sm-size` | `14px` |
+| `--type-body-sm-track` | `-0.1px` |
+| `--type-body-sm-weight` | `500` |
+| `--type-caption-size` | `12px` |
+| `--ui-gutter-inset` | `14px` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key     | Behaviour                     |
-| ------- | ----------------------------- |
-| `Tab`   | Moves to and from the switch. |
-| `Space` | Changes its state.            |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Moves to and from the switch. |
+| `Space` | Changes its state. |
 
 ## ARIA
 
@@ -70,20 +70,21 @@ The label names the switch through `aria-labelledby` and the second line describ
 
 Source: `src/components/forms/ToggleRow.svelte`.
 
-| Selector | Property         | Measured | Implemented | Token                          |
-| -------- | ---------------- | -------- | ----------- | ------------------------------ |
-| `div`    | `padding`        | `12px`   | `12px`      | `--c-toggle-row-padding-block` |
-| `div`    | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`            |
-| `div`    | `gap`            | `12px`   | `12px`      | `--c-toggle-row-gap`           |
-| `strong` | `font-size`      | `14px`   | `14px`      | `--type-body-sm-size`          |
-| `strong` | `font-weight`    | `500`    | `500`       | `--type-body-sm-weight`        |
-| `strong` | `letter-spacing` | `-0.1px` | `-0.1px`    | `--type-body-sm-track`         |
-| `span`   | `font-size`      | `12px`   | `12px`      | `--type-caption-size`          |
-| `span`   | `margin-top`     | `2px`    | `2px`       | `--c-toggle-row-sub-gap`       |
-| `span`   | `line-height`    | `1.4`    | `1.4`       | `--type-body-sm-leading`       |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `div` | `padding` | `12px` | `12px` | `--c-toggle-row-padding-block` |
+| `div` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
+| `div` | `gap` | `12px` | `12px` | `--c-toggle-row-gap` |
+| `strong` | `font-size` | `14px` | `14px` | `--type-body-sm-size` |
+| `strong` | `font-weight` | `500` | `500` | `--type-body-sm-weight` |
+| `strong` | `letter-spacing` | `-0.1px` | `-0.1px` | `--type-body-sm-track` |
+| `span` | `font-size` | `12px` | `12px` | `--type-caption-size` |
+| `span` | `margin-top` | `2px` | `2px` | `--c-toggle-row-sub-gap` |
+| `span` | `line-height` | `1.4` | `1.4` | `--type-body-sm-leading` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
+

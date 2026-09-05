@@ -10,14 +10,14 @@ A pill-shaped track with a circular thumb that slides across it.
 
 ## Props
 
-| Prop          | Type                         | Default            | Meaning                                                                         |
-| ------------- | ---------------------------- | ------------------ | ------------------------------------------------------------------------------- |
-| `checked`     | `boolean`                    | `$bindable(false)` | —                                                                               |
-| `disabled`    | `boolean`                    | `false`            | —                                                                               |
-| `label`       | `string`                     | —                  | Required unless the toggle is labelled by another element through `labelledby`. |
-| `labelledby`  | `string`                     | —                  | —                                                                               |
-| `describedby` | `string`                     | —                  | —                                                                               |
-| `onchange`    | `(checked: boolean) => void` | —                  | —                                                                               |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `checked` | `boolean` | `$bindable(false)` | — |
+| `disabled` | `boolean` | `false` | — |
+| `label` | `string` | — | Required unless the toggle is labelled by another element through `labelledby`. |
+| `labelledby` | `string` | — | — |
+| `describedby` | `string` | — | — |
+| `onchange` | `(checked: boolean) => void` | — | — |
 
 ## Variants
 
@@ -29,34 +29,34 @@ Off, on, disabled, focus-visible.
 
 ## Tokens consumed
 
-| Token                     | Resolves to                                          |
-| ------------------------- | ---------------------------------------------------- |
-| `--accent`                | `#5c5c84 / #a9a6d6`                                  |
-| `--border-strong`         | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
-| `--c-toggle-height`       | `28px`                                               |
-| `--c-toggle-thumb-inset`  | `2px`                                                |
-| `--c-toggle-thumb-size`   | `24px`                                               |
-| `--c-toggle-thumb-travel` | `20px`                                               |
-| `--c-toggle-width`        | `46px`                                               |
-| `--motion-base`           | `180ms`                                              |
-| `--motion-ease-default`   | `ease`                                               |
-| `--motion-ease-standard`  | `cubic-bezier(0.32, 0.72, 0, 1)`                     |
-| `--motion-slide`          | `220ms`                                              |
-| `--surface-inverse`       | `#1c1a16 / #ede6d6`                                  |
-| `--surface-raised`        | `#f6f2e8 / #1e1b16`                                  |
-| `--ui-focus-offset`       | `2px`                                                |
-| `--ui-focus-width`        | `2px`                                                |
-| `--ui-radius-circle`      | `50%`                                                |
-| `--ui-radius-pill`        | `999px`                                              |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
+| `--c-toggle-height` | `28px` |
+| `--c-toggle-thumb-inset` | `2px` |
+| `--c-toggle-thumb-size` | `24px` |
+| `--c-toggle-thumb-travel` | `20px` |
+| `--c-toggle-width` | `46px` |
+| `--motion-base` | `180ms` |
+| `--motion-ease-default` | `ease` |
+| `--motion-ease-standard` | `cubic-bezier(0.32, 0.72, 0, 1)` |
+| `--motion-slide` | `220ms` |
+| `--surface-inverse` | `#1c1a16 / #ede6d6` |
+| `--surface-raised` | `#f6f2e8 / #1e1b16` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-radius-circle` | `50%` |
+| `--ui-radius-pill` | `999px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key     | Behaviour                     |
-| ------- | ----------------------------- |
-| `Tab`   | Moves to and from the switch. |
-| `Space` | Changes its state.            |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Moves to and from the switch. |
+| `Space` | Changes its state. |
 
 ## ARIA
 
@@ -74,24 +74,25 @@ Every value resolves through a semantic or component token; `scripts/check-fidel
 
 Source: `src/components/primitives/Toggle.svelte`.
 
-| Selector        | Property        | Measured | Implemented | Token                     |
-| --------------- | --------------- | -------- | ----------- | ------------------------- |
-| `button`        | `width`         | `46px`   | `46px`      | `--c-toggle-width`        |
-| `button`        | `height`        | `28px`   | `28px`      | `--c-toggle-height`       |
-| `button`        | `border-radius` | `999px`  | `999px`     | `--ui-radius-pill`        |
-| `button`        | `transition`    | `180ms`  | `180ms`     | `--motion-base`           |
-| `span`          | `top`           | `2px`    | `2px`       | `--c-toggle-thumb-inset`  |
-| `span`          | `width`         | `24px`   | `24px`      | `--c-toggle-thumb-size`   |
-| `span`          | `border-radius` | `50%`    | `50%`       | `--ui-radius-circle`      |
-| `span`          | `transition`    | `220ms`  | `220ms`     | `--motion-slide`          |
-| `.checked span` | `left`          | `20px`   | `20px`      | `--c-toggle-thumb-travel` |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `button` | `width` | `46px` | `46px` | `--c-toggle-width` |
+| `button` | `height` | `28px` | `28px` | `--c-toggle-height` |
+| `button` | `border-radius` | `999px` | `999px` | `--ui-radius-pill` |
+| `button` | `transition` | `180ms` | `180ms` | `--motion-base` |
+| `span` | `top` | `2px` | `2px` | `--c-toggle-thumb-inset` |
+| `span` | `width` | `24px` | `24px` | `--c-toggle-thumb-size` |
+| `span` | `border-radius` | `50%` | `50%` | `--ui-radius-circle` |
+| `span` | `transition` | `220ms` | `220ms` | `--motion-slide` |
+| `.checked span` | `left` | `20px` | `20px` | `--c-toggle-thumb-travel` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                      | Why                                                                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| What | Why |
+| --- | --- |
 | A boundary at control contrast was added. | The reference's off state is a fill at 1.35:1 against the surface, which cannot identify the control. The fill is unchanged; the boundary is what makes it identifiable. |
-| A focus indicator was added.              | The reference has none.                                                                                                                                                  |
-| It became a `switch` with a name.         | The reference renders a bare button with no role, no state and no label.                                                                                                 |
+| A focus indicator was added. | The reference has none. |
+| It became a `switch` with a name. | The reference renders a bare button with no role, no state and no label. |
+

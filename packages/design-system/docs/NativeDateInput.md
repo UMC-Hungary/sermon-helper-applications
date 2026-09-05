@@ -10,15 +10,15 @@ A row showing the formatted value and an icon affordance, with a transparent nat
 
 ## Props
 
-| Prop                          | Type                                   | Default                                      | Meaning                                                                             |
-| ----------------------------- | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `label` _(required)_          | `string`                               | —                                            | The visible label — the reference shows the formatted value here.                   |
-| `icon` _(required)_           | `IconName`                             | —                                            | The icon affordance on the right, hinting the field opens a picker.                 |
-| `type`                        | `'date' \| 'time' \| 'datetime-local'` | `'date'`                                     | —                                                                                   |
-| `value`                       | `string`                               | `$bindable('')`                              | —                                                                                   |
-| `disabled`                    | `boolean`                              | `false`                                      | —                                                                                   |
-| `id`                          | `string`                               | `sanctum-native-date-${crypto.randomUUID()}` | —                                                                                   |
-| `accessibleName` _(required)_ | `string`                               | —                                            | Names the control for assistive technology, which the visible value alone does not. |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `label` *(required)* | `string` | — | The visible label — the reference shows the formatted value here. |
+| `icon` *(required)* | `IconName` | — | The icon affordance on the right, hinting the field opens a picker. |
+| `type` | `'date' \| 'time' \| 'datetime-local'` | `'date'` | — |
+| `value` | `string` | `$bindable('')` | — |
+| `disabled` | `boolean` | `false` | — |
+| `id` | `string` | ``sanctum-native-date-${crypto.randomUUID()}`` | — |
+| `accessibleName` *(required)* | `string` | — | Names the control for assistive technology, which the visible value alone does not. |
 
 ## Variants
 
@@ -30,28 +30,28 @@ Default, focus-visible, disabled.
 
 ## Tokens consumed
 
-| Token                       | Resolves to                                                                |
-| --------------------------- | -------------------------------------------------------------------------- |
-| `--accent`                  | `#5c5c84 / #a9a6d6`                                                        |
-| `--text-muted`              | `#615e56 / #918b7e`                                                        |
-| `--text-primary`            | `#1c1a16 / #ede6d6`                                                        |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
 | `--type-body-strong-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-strong-size`   | `14.5px`                                                                   |
-| `--type-body-strong-track`  | `-0.1px`                                                                   |
-| `--type-body-strong-weight` | `500`                                                                      |
-| `--ui-focus-offset`         | `2px`                                                                      |
-| `--ui-focus-width`          | `2px`                                                                      |
-| `--ui-stack`                | `8px`                                                                      |
-| `--ui-target-min`           | `44px`                                                                     |
+| `--type-body-strong-size` | `14.5px` |
+| `--type-body-strong-track` | `-0.1px` |
+| `--type-body-strong-weight` | `500` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-stack` | `8px` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key           | Behaviour                                                         |
-| ------------- | ----------------------------------------------------------------- |
-| `Tab`         | Moves to and from the input, which becomes visible while focused. |
-| Platform keys | The native picker's own behaviour, unchanged.                     |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Moves to and from the input, which becomes visible while focused. |
+| Platform keys | The native picker's own behaviour, unchanged. |
 
 ## ARIA
 
@@ -69,19 +69,20 @@ The visible value is decorative; `accessibleName` is what names the control, bec
 
 Source: `src/components/forms/ChamberNative.svelte`.
 
-| Selector | Property         | Measured | Implemented | Token                       |
-| -------- | ---------------- | -------- | ----------- | --------------------------- |
-| `label`  | `gap`            | `8px`    | `8px`       | `--ui-stack`                |
-| `span`   | `font-size`      | `14.5px` | `14.5px`    | `--type-body-strong-size`   |
-| `span`   | `font-weight`    | `500`    | `500`       | `--type-body-strong-weight` |
-| `span`   | `letter-spacing` | `-0.1px` | `-0.1px`    | `--type-body-strong-track`  |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `label` | `gap` | `8px` | `8px` | `--ui-stack` |
+| `span` | `font-size` | `14.5px` | `14.5px` | `--type-body-strong-size` |
+| `span` | `font-weight` | `500` | `500` | `--type-body-strong-weight` |
+| `span` | `letter-spacing` | `-0.1px` | `-0.1px` | `--type-body-strong-track` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                             | Why                                                                                                                                                 |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The input becomes visible on focus.              | The reference leaves it at zero opacity always, so a keyboard user focuses something they cannot see.                                               |
-| The affordance text is a prop.                   | The reference hard-codes "Tap ↻", which cannot be translated and assumes a touch pointer.                                                           |
+| What | Why |
+| --- | --- |
+| The input becomes visible on focus. | The reference leaves it at zero opacity always, so a keyboard user focuses something they cannot see. |
+| The affordance text is a prop. | The reference hard-codes "Tap ↻", which cannot be translated and assumes a touch pointer. |
 | The affordance is a stroked icon, not mono text. | The reference's 9px "Tap ↻" label was too small to read as an affordance; a calendar/clock icon at 22px reads at a glance and needs no translation. |
+

@@ -17,21 +17,21 @@ type Story = StoryObj<typeof meta>;
 
 export const Off: Story = {
   args: {
-    label: 'Automatikus feltöltés',
+    label: "Automatikus feltöltés",
     checked: false,
   },
 };
 
 export const On: Story = {
   args: {
-    label: 'Automatikus feltöltés',
+    label: "Automatikus feltöltés",
     checked: true,
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: 'Automatikus feltöltés',
+    label: "Automatikus feltöltés",
     checked: false,
     disabled: true,
   },
@@ -39,7 +39,7 @@ export const Disabled: Story = {
 
 export const DisabledOn: Story = {
   args: {
-    label: 'Automatikus feltöltés',
+    label: "Automatikus feltöltés",
     checked: true,
     disabled: true,
   },

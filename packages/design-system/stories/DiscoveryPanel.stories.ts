@@ -18,21 +18,21 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Broadlink eszközök',
-    description: 'A hálózaton található infravörös és rádiós vezérlők.',
-    scanLabel: 'Keresés',
+    title: "Broadlink eszközök",
+    description: "A hálózaton található infravörös és rádiós vezérlők.",
+    scanLabel: "Keresés",
     children: s('Két eszköz válaszolt.'),
   },
 };
 
 export const Scanning: Story = {
   args: {
-    title: 'Broadlink eszközök',
-    description: 'A hálózaton található infravörös és rádiós vezérlők.',
-    scanLabel: 'Keresés',
+    title: "Broadlink eszközök",
+    description: "A hálózaton található infravörös és rádiós vezérlők.",
+    scanLabel: "Keresés",
     children: s('Két eszköz válaszolt.'),
     scanning: true,
-    scanningLabel: 'Keresés folyamatban',
+    scanningLabel: "Keresés folyamatban",
   },
 };
 

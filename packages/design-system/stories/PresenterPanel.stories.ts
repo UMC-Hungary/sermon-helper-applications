@@ -17,24 +17,24 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Prezentáló nézet',
-    url: 'http://192.168.1.10:1421/presenter',
-    copyLabel: 'Másolás',
-    clientsLabel: 'Csatlakozott eszközök',
-    clientsSummary: '2 aktív',
-    emptyMessage: 'Még senki sem csatlakozott.',
+    label: "Prezentáló nézet",
+    url: "http://192.168.1.10:1421/presenter",
+    copyLabel: "Másolás",
+    clientsLabel: "Csatlakozott eszközök",
+    clientsSummary: "2 aktív",
+    emptyMessage: "Még senki sem csatlakozott.",
     clients: [
       {
-        id: 'a',
-        name: 'Karzat iPad',
-        address: '192.168.1.77',
-        detail: '12 perce',
+        id: "a",
+        name: "Karzat iPad",
+        address: "192.168.1.77",
+        detail: "12 perce",
       },
       {
-        id: 'b',
-        name: 'Szószék laptop',
-        address: '192.168.1.32',
-        detail: '4 perce',
+        id: "b",
+        name: "Szószék laptop",
+        address: "192.168.1.32",
+        detail: "4 perce",
       },
     ],
   },
@@ -42,12 +42,12 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: 'Prezentáló nézet',
-    url: 'http://192.168.1.10:1421/presenter',
-    copyLabel: 'Másolás',
-    clientsLabel: 'Csatlakozott eszközök',
-    clientsSummary: '0 aktív',
-    emptyMessage: 'Még senki sem csatlakozott.',
+    label: "Prezentáló nézet",
+    url: "http://192.168.1.10:1421/presenter",
+    copyLabel: "Másolás",
+    clientsLabel: "Csatlakozott eszközök",
+    clientsSummary: "0 aktív",
+    emptyMessage: "Még senki sem csatlakozott.",
     clients: [],
   },
 };

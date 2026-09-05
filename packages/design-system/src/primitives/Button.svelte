@@ -74,7 +74,7 @@
     white-space: nowrap;
     text-decoration: none;
     border-radius: var(--ui-radius-square);
-    transition: background 120ms;
+    transition: background var(--duration-120);
   }
 
   .block {

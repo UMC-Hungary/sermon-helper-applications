@@ -17,23 +17,23 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Nézők',
-    value: '128',
+    label: "Nézők",
+    value: "128",
   },
 };
 
 export const WithUnit: Story = {
   args: {
-    label: 'Bitráta',
-    value: '5.8',
-    unit: 'Mb/s',
+    label: "Bitráta",
+    value: "5.8",
+    unit: "Mb/s",
   },
 };
 
 export const LongValue: Story = {
   args: {
-    label: 'Adásidő',
-    value: '1:42:18',
+    label: "Adásidő",
+    value: "1:42:18",
   },
 };
 

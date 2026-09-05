@@ -17,39 +17,39 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Megjegyzés',
-    value: 'A tolmács a karzaton ül.',
+    label: "Megjegyzés",
+    value: "A tolmács a karzaton ül.",
   },
 };
 
 export const Empty: Story = {
   args: {
-    label: 'Megjegyzés',
-    value: '',
-    placeholder: 'Írj megjegyzést',
+    label: "Megjegyzés",
+    value: "",
+    placeholder: "Írj megjegyzést",
   },
 };
 
 export const Invalid: Story = {
   args: {
-    label: 'Megjegyzés',
-    value: 'A tolmács a karzaton ül.',
+    label: "Megjegyzés",
+    value: "A tolmács a karzaton ül.",
     invalid: true,
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: 'Megjegyzés',
-    value: 'A tolmács a karzaton ül.',
+    label: "Megjegyzés",
+    value: "A tolmács a karzaton ül.",
     disabled: true,
   },
 };
 
 export const Tall: Story = {
   args: {
-    label: 'Megjegyzés',
-    value: 'A tolmács a karzaton ül.',
+    label: "Megjegyzés",
+    value: "A tolmács a karzaton ül.",
     rows: 8,
   },
 };

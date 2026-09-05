@@ -10,10 +10,10 @@ A ring in the control colour with a leading arc in ink, rotating.
 
 ## Props
 
-| Prop                 | Type     | Default     | Meaning                                                                         |
-| -------------------- | -------- | ----------- | ------------------------------------------------------------------------------- |
-| `size`               | `number` | `20, label` | —                                                                               |
-| `label` _(required)_ | `string` | —           | Announced while the work is in progress. Required, so the wait is never silent. |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `size` | `number` | `20, label` | — |
+| `label` *(required)* | `string` | — | Announced while the work is in progress. Required, so the wait is never silent. |
 
 ## Variants
 
@@ -25,12 +25,12 @@ Spinning; stilled under reduced motion, where the ring stays drawn and the label
 
 ## Tokens consumed
 
-| Token                  | Resolves to         |
-| ---------------------- | ------------------- |
-| `--border-control`     | `#857c68 / #716b5c` |
-| `--motion-pulse`       | `1.8s`              |
-| `--text-primary`       | `#1c1a16 / #ede6d6` |
-| `--ui-border-emphasis` | `2px`               |
+| Token | Resolves to |
+| --- | --- |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--motion-pulse` | `1.8s` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--ui-border-emphasis` | `2px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -58,3 +58,4 @@ None. The reference has no loading indicator. The ring takes the control-contras
 ## Recorded deviations
 
 None.
+

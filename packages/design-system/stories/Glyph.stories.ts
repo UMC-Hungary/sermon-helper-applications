@@ -17,30 +17,30 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    char: '◐',
-    label: 'Twitch',
+    char: "◐",
+    label: "Twitch",
   },
 };
 
 export const Decorative: Story = {
   args: {
-    char: '◐',
+    char: "◐",
     label: undefined,
   },
 };
 
 export const Small: Story = {
   args: {
-    char: '◐',
-    label: 'Twitch',
+    char: "◐",
+    label: "Twitch",
     size: 20,
   },
 };
 
 export const Large: Story = {
   args: {
-    char: '◐',
-    label: 'Twitch',
+    char: "◐",
+    label: "Twitch",
     size: 44,
   },
 };

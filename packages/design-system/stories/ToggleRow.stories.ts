@@ -17,30 +17,30 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Automatikus feltöltés',
-    sub: 'A felvétel az adás végén felkerül a YouTube-ra.',
+    label: "Automatikus feltöltés",
+    sub: "A felvétel az adás végén felkerül a YouTube-ra.",
   },
 };
 
 export const On: Story = {
   args: {
-    label: 'Automatikus feltöltés',
-    sub: 'A felvétel az adás végén felkerül a YouTube-ra.',
+    label: "Automatikus feltöltés",
+    sub: "A felvétel az adás végén felkerül a YouTube-ra.",
     checked: true,
   },
 };
 
 export const LabelOnly: Story = {
   args: {
-    label: 'Automatikus feltöltés',
-    sub: '',
+    label: "Automatikus feltöltés",
+    sub: "",
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: 'Automatikus feltöltés',
-    sub: 'A felvétel az adás végén felkerül a YouTube-ra.',
+    label: "Automatikus feltöltés",
+    sub: "A felvétel az adás végén felkerül a YouTube-ra.",
     disabled: true,
   },
 };

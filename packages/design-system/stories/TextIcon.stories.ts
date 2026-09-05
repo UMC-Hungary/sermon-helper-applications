@@ -17,20 +17,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    char: '·',
+    char: "·",
   },
 };
 
 export const Labelled: Story = {
   args: {
-    char: '⌁',
-    label: 'Broadlink',
+    char: "⌁",
+    label: "Broadlink",
   },
 };
 
 export const Other: Story = {
   args: {
-    char: '▣',
+    char: "▣",
   },
 };
 

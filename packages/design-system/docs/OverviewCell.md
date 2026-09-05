@@ -10,14 +10,14 @@ A label line — dot, then mono text — over the figure in the display face. An
 
 ## Props
 
-| Prop                 | Type               | Default                 | Meaning                                                                            |
-| -------------------- | ------------------ | ----------------------- | ---------------------------------------------------------------------------------- |
-| `label` _(required)_ | `string`           | —                       | —                                                                                  |
-| `value` _(required)_ | `string \| number` | —                       | —                                                                                  |
-| `color`              | `string`           | `'var(--text-primary)'` | A semantic colour token reference for the leading dot.                             |
-| `state`              | `string`           | —                       | The word the dot's colour stands for, so the state is not carried by colour alone. |
-| `divider`            | `boolean`          | `false`                 | Draws the rule that separates this cell from the one before it.                    |
-| `pulse`              | `boolean`          | `false`                 | —                                                                                  |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `label` *(required)* | `string` | — | — |
+| `value` *(required)* | `string \| number` | — | — |
+| `color` | `string` | `'var(--text-primary)'` | A semantic colour token reference for the leading dot. |
+| `state` | `string` | — | The word the dot's colour stands for, so the state is not carried by colour alone. |
+| `divider` | `boolean` | `false` | Draws the rule that separates this cell from the one before it. |
+| `pulse` | `boolean` | `false` | — |
 
 ## Variants
 
@@ -29,25 +29,25 @@ Static, pulsing.
 
 ## Tokens consumed
 
-| Token                             | Resolves to                                                    |
-| --------------------------------- | -------------------------------------------------------------- |
-| `--border-hairline`               | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`            |
-| `--c-overview-cell-gap`           | `6px`                                                          |
-| `--c-overview-cell-label-track`   | `1.5px`                                                        |
-| `--c-overview-cell-padding-block` | `16px`                                                         |
-| `--c-status-dot-gap`              | `6px`                                                          |
-| `--text-muted`                    | `#615e56 / #918b7e`                                            |
-| `--text-primary`                  | `#1c1a16 / #ede6d6`                                            |
-| `--type-label-sm-family`          | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size`            | `9px`                                                          |
-| `--type-label-sm-transform`       | `uppercase`                                                    |
-| `--type-title-family`             | `"Cormorant Garamond", Georgia, serif`                         |
-| `--type-title-leading`            | `1`                                                            |
-| `--type-title-size`               | `30px`                                                         |
-| `--type-title-track`              | `-0.6px`                                                       |
-| `--type-title-weight`             | `500`                                                          |
-| `--ui-border-hairline`            | `1px`                                                          |
-| `--ui-gutter-inset`               | `14px`                                                         |
+| Token | Resolves to |
+| --- | --- |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-overview-cell-gap` | `6px` |
+| `--c-overview-cell-label-track` | `1.5px` |
+| `--c-overview-cell-padding-block` | `16px` |
+| `--c-status-dot-gap` | `6px` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-transform` | `uppercase` |
+| `--type-title-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-title-leading` | `1` |
+| `--type-title-size` | `30px` |
+| `--type-title-track` | `-0.6px` |
+| `--type-title-weight` | `500` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-gutter-inset` | `14px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -71,23 +71,24 @@ The dot is decorative; passing `state` adds the word it stands for as visually h
 
 Source: `src/components/primitives/OverviewCell.svelte`.
 
-| Selector | Property         | Measured | Implemented | Token                             |
-| -------- | ---------------- | -------- | ----------- | --------------------------------- |
-| `div`    | `padding`        | `16px`   | `16px`      | `--c-overview-cell-padding-block` |
-| `div`    | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`               |
-| `p`      | `margin`         | `6px`    | `6px`       | `--c-overview-cell-gap`           |
-| `p`      | `gap`            | `6px`    | `6px`       | `--c-status-dot-gap`              |
-| `span`   | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`            |
-| `span`   | `letter-spacing` | `1.5px`  | `1.5px`     | `--c-overview-cell-label-track`   |
-| `strong` | `font-size`      | `30px`   | `30px`      | `--type-title-size`               |
-| `strong` | `line-height`    | `1`      | `1`         | `--type-title-leading`            |
-| `strong` | `font-weight`    | `500`    | `500`       | `--type-title-weight`             |
-| `strong` | `letter-spacing` | `-0.6px` | `-0.6px`    | `--type-title-track`              |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `div` | `padding` | `16px` | `16px` | `--c-overview-cell-padding-block` |
+| `div` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
+| `p` | `margin` | `6px` | `6px` | `--c-overview-cell-gap` |
+| `p` | `gap` | `6px` | `6px` | `--c-status-dot-gap` |
+| `span` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
+| `span` | `letter-spacing` | `1.5px` | `1.5px` | `--c-overview-cell-label-track` |
+| `strong` | `font-size` | `30px` | `30px` | `--type-title-size` |
+| `strong` | `line-height` | `1` | `1` | `--type-title-leading` |
+| `strong` | `font-weight` | `500` | `500` | `--type-title-weight` |
+| `strong` | `letter-spacing` | `-0.6px` | `-0.6px` | `--type-title-track` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                           | Why                                                                                       |
-| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | A hidden state word was added. | The reference's dot colour is the only thing distinguishing a live cell from an idle one. |
+

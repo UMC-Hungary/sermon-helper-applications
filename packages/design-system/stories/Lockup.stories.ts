@@ -17,13 +17,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    name: 'Metocast',
+    name: "Metocast",
   },
 };
 
 export const Rail: Story = {
   args: {
-    name: 'Metocast',
+    name: "Metocast",
     markSize: 18,
     fontSize: 19,
     tracking: 0.75,
@@ -32,7 +32,7 @@ export const Rail: Story = {
 
 export const Large: Story = {
   args: {
-    name: 'Metocast',
+    name: "Metocast",
     markSize: 32,
     fontSize: 30,
     tracking: 1.5,

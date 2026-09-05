@@ -10,12 +10,12 @@ A rounded square at the given size, with either a caller-supplied mark or a sing
 
 ## Props
 
-| Prop    | Type      | Default | Meaning                                                                                                                                                                    |
-| ------- | --------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mark`  | `Snippet` | —       | The mark inside the tile. A brand logo is supplied by the caller as an inline SVG snippet — the reference masks one in from a CDN, which an offline application cannot do. |
-| `char`  | `string`  | —       | The typographic fallback the reference uses when it has no logo for a kind.                                                                                                |
-| `size`  | `number`  | —       | —                                                                                                                                                                          |
-| `label` | `string`  | —       | Names the tile when it is the only thing identifying what it stands for.                                                                                                   |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `mark` | `Snippet` | — | The mark inside the tile. A brand logo is supplied by the caller as an inline SVG snippet — the reference masks one in from a CDN, which an offline application cannot do. |
+| `char` | `string` | — | The typographic fallback the reference uses when it has no logo for a kind. |
+| `size` | `number` | — | — |
+| `label` | `string` | — | Names the tile when it is the only thing identifying what it stands for. |
 
 ## Variants
 
@@ -27,15 +27,15 @@ Static.
 
 ## Tokens consumed
 
-| Token                    | Resolves to                                          |
-| ------------------------ | ---------------------------------------------------- |
-| `--border-strong`        | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
-| `--text-primary`         | `#1c1a16 / #ede6d6`                                  |
-| `--type-heading-family`  | `"Cormorant Garamond", Georgia, serif`               |
-| `--type-heading-weight`  | `500`                                                |
-| `--type-numeral-leading` | `1`                                                  |
-| `--ui-border-hairline`   | `1px`                                                |
-| `--ui-radius-mark`       | `8px`                                                |
+| Token | Resolves to |
+| --- | --- |
+| `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-heading-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-heading-weight` | `500` |
+| `--type-numeral-leading` | `1` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-radius-mark` | `8px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -59,15 +59,16 @@ Decorative unless given a `label`.
 
 Source: `src/components/primitives/Glyph.svelte`.
 
-| Selector | Property        | Measured | Implemented | Token                  |
-| -------- | --------------- | -------- | ----------- | ---------------------- |
-| `.glyph` | `border-radius` | `8px`    | `8px`       | `--ui-radius-mark`     |
-| `.glyph` | `border`        | `1px`    | `1px`       | `--ui-border-hairline` |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `.glyph` | `border-radius` | `8px` | `8px` | `--ui-radius-mark` |
+| `.glyph` | `border` | `1px` | `1px` | `--ui-border-hairline` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                                                     | Why                                                                                                                                                                               |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | Brand marks are supplied by the caller rather than masked in from a CDN. | The reference loads its logos from `cdn.simpleicons.org`, which an offline desktop application cannot reach. The tile takes a snippet, so the mark is bundled by whoever uses it. |
+

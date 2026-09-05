@@ -10,13 +10,13 @@ A fieldset with its legend, then one row per option: the mark, the label, and an
 
 ## Props
 
-| Prop                   | Type                 | Default | Meaning |
-| ---------------------- | -------------------- | ------- | ------- |
-| `options` _(required)_ | `RadioOption<T>[]`   | —       | —       |
-| `value` _(required)_   | `T`                  | —       | —       |
-| `label` _(required)_   | `string`             | —       | —       |
-| `labelHidden`          | `boolean`            | —       | —       |
-| `onchange`             | `(value: T) => void` | —       | —       |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `options` *(required)* | `RadioOption<T>[]` | — | — |
+| `value` *(required)* | `T` | — | — |
+| `label` *(required)* | `string` | — | — |
+| `labelHidden` | `boolean` | — | — |
+| `onchange` | `(value: T) => void` | — | — |
 
 ## Variants
 
@@ -28,46 +28,46 @@ Unselected, selected, disabled, focus-visible.
 
 ## Tokens consumed
 
-| Token                       | Resolves to                                                                |
-| --------------------------- | -------------------------------------------------------------------------- |
-| `--accent`                  | `#5c5c84 / #a9a6d6`                                                        |
-| `--border-control`          | `#857c68 / #716b5c`                                                        |
-| `--c-checkbox-gap`          | `12px`                                                                     |
-| `--c-checkbox-size`         | `24px`                                                                     |
-| `--c-radio-legend-gap`      | `4px`                                                                      |
-| `--c-radio-mark-offset`     | `2px`                                                                      |
-| `--c-radio-mark-thickness`  | `2px`                                                                      |
-| `--c-toggle-row-sub-gap`    | `2px`                                                                      |
-| `--surface-inverse`         | `#1c1a16 / #ede6d6`                                                        |
-| `--text-muted`              | `#615e56 / #918b7e`                                                        |
-| `--text-primary`            | `#1c1a16 / #ede6d6`                                                        |
-| `--type-body-sm-family`     | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-size`       | `14px`                                                                     |
-| `--type-body-sm-track`      | `-0.1px`                                                                   |
-| `--type-body-sm-weight`     | `500`                                                                      |
-| `--type-caption-family`     | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-caption-leading`    | `1.45`                                                                     |
-| `--type-caption-size`       | `12px`                                                                     |
-| `--type-caption-track`      | `0`                                                                        |
-| `--type-caption-weight`     | `400`                                                                      |
-| `--type-label-sm-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-sm-size`      | `9px`                                                                      |
-| `--type-label-sm-track`     | `1.2px`                                                                    |
-| `--type-label-sm-transform` | `uppercase`                                                                |
-| `--ui-border-hairline`      | `1px`                                                                      |
-| `--ui-focus-offset`         | `2px`                                                                      |
-| `--ui-focus-width`          | `2px`                                                                      |
-| `--ui-radius-circle`        | `50%`                                                                      |
-| `--ui-stack`                | `8px`                                                                      |
-| `--ui-target-min`           | `44px`                                                                     |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--c-checkbox-gap` | `12px` |
+| `--c-checkbox-size` | `24px` |
+| `--c-radio-legend-gap` | `4px` |
+| `--c-radio-mark-offset` | `2px` |
+| `--c-radio-mark-thickness` | `2px` |
+| `--c-toggle-row-sub-gap` | `2px` |
+| `--surface-inverse` | `#1c1a16 / #ede6d6` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-size` | `14px` |
+| `--type-body-sm-track` | `-0.1px` |
+| `--type-body-sm-weight` | `500` |
+| `--type-caption-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-caption-leading` | `1.45` |
+| `--type-caption-size` | `12px` |
+| `--type-caption-track` | `0` |
+| `--type-caption-weight` | `400` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-track` | `1.2px` |
+| `--type-label-sm-transform` | `uppercase` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-radius-circle` | `50%` |
+| `--ui-stack` | `8px` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key                | Behaviour                                   |
-| ------------------ | ------------------------------------------- |
-| `Tab`              | Enters and leaves the group as one stop.    |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Enters and leaves the group as one stop. |
 | `↑`, `↓`, `←`, `→` | Move between options and select as they go. |
 
 ## ARIA
@@ -89,3 +89,4 @@ None. The reference has no radio group; the mark is drawn in its idiom, taking t
 ## Recorded deviations
 
 None.
+

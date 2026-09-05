@@ -17,20 +17,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Dia sor',
-    summary: '2 / 4 kitöltve',
-    openLabel: 'Megnyitás',
-    clearLabel: 'Ürítés',
-    emptyLabel: 'Üres hely',
+    label: "Dia sor",
+    summary: "2 / 4 kitöltve",
+    openLabel: "Megnyitás",
+    clearLabel: "Ürítés",
+    emptyLabel: "Üres hely",
     slots: [
       {
         index: 1,
-        title: 'Köszöntés',
+        title: "Köszöntés",
         loaded: true,
       },
       {
         index: 2,
-        title: 'Jn 3:16',
+        title: "Jn 3:16",
       },
       {
         index: 3,
@@ -44,11 +44,11 @@ export const Default: Story = {
 
 export const AllEmpty: Story = {
   args: {
-    label: 'Dia sor',
-    summary: '0 / 4 kitöltve',
-    openLabel: 'Megnyitás',
-    clearLabel: 'Ürítés',
-    emptyLabel: 'Üres hely',
+    label: "Dia sor",
+    summary: "0 / 4 kitöltve",
+    openLabel: "Megnyitás",
+    clearLabel: "Ürítés",
+    emptyLabel: "Üres hely",
     slots: [
       {
         index: 1,

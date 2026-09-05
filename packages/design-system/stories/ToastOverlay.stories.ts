@@ -18,17 +18,17 @@ type Story = StoryObj<typeof meta>;
 
 export const Polite: Story = {
   args: {
-    label: 'Értesítések',
+    label: "Értesítések",
     children: s('A toastok itt jelennek meg'),
-    priority: 'polite',
+    priority: "polite",
   },
 };
 
 export const Assertive: Story = {
   args: {
-    label: 'Értesítések',
+    label: "Értesítések",
     children: s('A toastok itt jelennek meg'),
-    priority: 'assertive',
+    priority: "assertive",
   },
 };
 

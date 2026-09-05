@@ -17,25 +17,25 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Nézők',
-    value: '128',
+    label: "Nézők",
+    value: "128",
   },
 };
 
 export const Live: Story = {
   args: {
-    label: 'Adás',
-    value: '42:18',
+    label: "Adás",
+    value: "42:18",
     color: 'var(--status-live)',
-    state: 'Adásban',
+    state: "Adásban",
     pulse: true,
   },
 };
 
 export const Divided: Story = {
   args: {
-    label: 'Feltöltés',
-    value: '3',
+    label: "Feltöltés",
+    value: "3",
     divider: true,
   },
 };

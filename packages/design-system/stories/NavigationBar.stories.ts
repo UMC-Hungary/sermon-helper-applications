@@ -17,28 +17,28 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Fő navigáció',
-    active: 'dashboard',
+    label: "Fő navigáció",
+    active: "dashboard",
     items: [
       {
-        value: 'dashboard',
-        label: 'Vezérlő',
-        icon: 'home',
+        value: "dashboard",
+        label: "Vezérlő",
+        icon: "home",
       },
       {
-        value: 'events',
-        label: 'Események',
-        icon: 'calendar',
+        value: "events",
+        label: "Események",
+        icon: "calendar",
       },
       {
-        value: 'slides',
-        label: 'Diák',
-        icon: 'slides',
+        value: "slides",
+        label: "Diák",
+        icon: "slides",
       },
       {
-        value: 'settings',
-        label: 'Beállítások',
-        icon: 'gear',
+        value: "settings",
+        label: "Beállítások",
+        icon: "gear",
       },
     ],
   },
@@ -46,28 +46,28 @@ export const Default: Story = {
 
 export const SecondItemActive: Story = {
   args: {
-    label: 'Fő navigáció',
-    active: 'events',
+    label: "Fő navigáció",
+    active: "events",
     items: [
       {
-        value: 'dashboard',
-        label: 'Vezérlő',
-        icon: 'home',
+        value: "dashboard",
+        label: "Vezérlő",
+        icon: "home",
       },
       {
-        value: 'events',
-        label: 'Események',
-        icon: 'calendar',
+        value: "events",
+        label: "Események",
+        icon: "calendar",
       },
       {
-        value: 'slides',
-        label: 'Diák',
-        icon: 'slides',
+        value: "slides",
+        label: "Diák",
+        icon: "slides",
       },
       {
-        value: 'settings',
-        label: 'Beállítások',
-        icon: 'gear',
+        value: "settings",
+        label: "Beállítások",
+        icon: "gear",
       },
     ],
   },

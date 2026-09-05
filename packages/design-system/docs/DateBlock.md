@@ -10,11 +10,11 @@ A fixed-width column: the month in the mono label face, the day in the display f
 
 ## Props
 
-| Prop                 | Type               | Default | Meaning                                                                                                                                                           |
-| -------------------- | ------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `month` _(required)_ | `string`           | —       | Abbreviated month, already localised by the caller.                                                                                                               |
-| `day` _(required)_   | `string \| number` | —       | —                                                                                                                                                                 |
-| `label`              | `string`           | —       | The full date, announced in place of the two fragments. Without it a screen reader hears "MAR 14" as two unrelated strings; the reference has no such affordance. |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `month` *(required)* | `string` | — | Abbreviated month, already localised by the caller. |
+| `day` *(required)* | `string \| number` | — | — |
+| `label` | `string` | — | The full date, announced in place of the two fragments. Without it a screen reader hears "MAR 14" as two unrelated strings; the reference has no such affordance. |
 
 ## Variants
 
@@ -26,23 +26,23 @@ Static only.
 
 ## Tokens consumed
 
-| Token                    | Resolves to                                                    |
-| ------------------------ | -------------------------------------------------------------- |
-| `--border-hairline`      | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`            |
-| `--c-date-block-gap`     | `3px`                                                          |
-| `--c-date-block-overlap` | `-2px`                                                         |
-| `--c-date-block-width`   | `40px`                                                         |
-| `--text-muted`           | `#615e56 / #918b7e`                                            |
-| `--text-primary`         | `#1c1a16 / #ede6d6`                                            |
+| Token | Resolves to |
+| --- | --- |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-date-block-gap` | `3px` |
+| `--c-date-block-overlap` | `-2px` |
+| `--c-date-block-width` | `40px` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
 | `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size`   | `9px`                                                          |
-| `--type-label-sm-track`  | `1.2px`                                                        |
-| `--type-numeral-family`  | `"Cormorant Garamond", Georgia, serif`                         |
-| `--type-numeral-leading` | `1`                                                            |
-| `--type-numeral-size`    | `22px`                                                         |
-| `--type-numeral-weight`  | `500`                                                          |
-| `--ui-border-hairline`   | `1px`                                                          |
-| `--ui-gutter-inset`      | `14px`                                                         |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-track` | `1.2px` |
+| `--type-numeral-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-numeral-leading` | `1` |
+| `--type-numeral-size` | `22px` |
+| `--type-numeral-weight` | `500` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-gutter-inset` | `14px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -66,22 +66,23 @@ Given `label`, the block becomes a single `img` with the full date as its name a
 
 Source: `src/components/primitives/DateBlock.svelte`.
 
-| Selector | Property         | Measured | Implemented | Token                    |
-| -------- | ---------------- | -------- | ----------- | ------------------------ |
-| `div`    | `width`          | `40px`   | `40px`      | `--c-date-block-width`   |
-| `div`    | `padding-right`  | `14px`   | `14px`      | `--ui-gutter-inset`      |
-| `div`    | `margin-right`   | `-2px`   | `-2px`      | `--c-date-block-overlap` |
-| `span`   | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`   |
-| `span`   | `letter-spacing` | `1.2px`  | `1.2px`     | `--type-label-sm-track`  |
-| `strong` | `font-size`      | `22px`   | `22px`      | `--type-numeral-size`    |
-| `strong` | `line-height`    | `1`      | `1`         | `--type-numeral-leading` |
-| `strong` | `font-weight`    | `500`    | `500`       | `--type-numeral-weight`  |
-| `strong` | `margin-top`     | `3px`    | `3px`       | `--c-date-block-gap`     |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `div` | `width` | `40px` | `40px` | `--c-date-block-width` |
+| `div` | `padding-right` | `14px` | `14px` | `--ui-gutter-inset` |
+| `div` | `margin-right` | `-2px` | `-2px` | `--c-date-block-overlap` |
+| `span` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
+| `span` | `letter-spacing` | `1.2px` | `1.2px` | `--type-label-sm-track` |
+| `strong` | `font-size` | `22px` | `22px` | `--type-numeral-size` |
+| `strong` | `line-height` | `1` | `1` | `--type-numeral-leading` |
+| `strong` | `font-weight` | `500` | `500` | `--type-numeral-weight` |
+| `strong` | `margin-top` | `3px` | `3px` | `--c-date-block-gap` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                          | Why                                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | An accessible name was added. | The reference exposes the two fragments separately, which reads as two unrelated values. |
+

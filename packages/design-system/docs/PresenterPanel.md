@@ -10,16 +10,16 @@ The URL beside a copy action, then a bordered list of connected clients with a h
 
 ## Props
 
-| Prop                        | Type                | Default | Meaning                                |
-| --------------------------- | ------------------- | ------- | -------------------------------------- |
-| `url` _(required)_          | `string`            | —       | The address a presenter opens to join. |
-| `copyLabel` _(required)_    | `string`            | —       | —                                      |
-| `label` _(required)_        | `string`            | —       | —                                      |
-| `clientsLabel` _(required)_ | `string`            | —       | —                                      |
-| `clientsSummary`            | `string`            | `''`    | "3 connected", already interpolated.   |
-| `clients` _(required)_      | `PresenterClient[]` | —       | —                                      |
-| `emptyMessage` _(required)_ | `string`            | —       | —                                      |
-| `oncopy`                    | `() => void`        | —       | —                                      |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `url` *(required)* | `string` | — | The address a presenter opens to join. |
+| `copyLabel` *(required)* | `string` | — | — |
+| `label` *(required)* | `string` | — | — |
+| `clientsLabel` *(required)* | `string` | — | — |
+| `clientsSummary` | `string` | `''` | "3 connected", already interpolated. |
+| `clients` *(required)* | `PresenterClient[]` | — | — |
+| `emptyMessage` *(required)* | `string` | — | — |
+| `oncopy` | `() => void` | — | — |
 
 ## Variants
 
@@ -31,48 +31,48 @@ Populated, empty.
 
 ## Tokens consumed
 
-| Token                             | Resolves to                                                                |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| `--accent`                        | `#5c5c84 / #a9a6d6`                                                        |
-| `--border-control`                | `#857c68 / #716b5c`                                                        |
-| `--border-hairline`               | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
-| `--c-presenter-button-track`      | `1.3px`                                                                    |
-| `--c-presenter-detail-size`       | `11px`                                                                     |
-| `--c-presenter-header-track`      | `1.5px`                                                                    |
-| `--c-presenter-row-padding-block` | `12px`                                                                     |
-| `--c-presenter-url-padding-block` | `11px`                                                                     |
-| `--c-presenter-url-size`          | `11px`                                                                     |
-| `--c-toggle-row-sub-gap`          | `2px`                                                                      |
-| `--surface-inverse`               | `#1c1a16 / #ede6d6`                                                        |
-| `--surface-raised`                | `#f6f2e8 / #1e1b16`                                                        |
-| `--text-inverse`                  | `#efe9dd / #14120f`                                                        |
-| `--text-muted`                    | `#615e56 / #918b7e`                                                        |
-| `--text-primary`                  | `#1c1a16 / #ede6d6`                                                        |
-| `--type-body-sm-family`           | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-leading`          | `1.4`                                                                      |
-| `--type-body-sm-size`             | `14px`                                                                     |
-| `--type-label-family`             | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-sm-family`          | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-sm-size`            | `9px`                                                                      |
-| `--type-label-sm-transform`       | `uppercase`                                                                |
-| `--type-quote-family`             | `"Cormorant Garamond", Georgia, serif`                                     |
-| `--type-quote-size`               | `13px`                                                                     |
-| `--ui-border-hairline`            | `1px`                                                                      |
-| `--ui-focus-offset`               | `2px`                                                                      |
-| `--ui-focus-width`                | `2px`                                                                      |
-| `--ui-gutter-inset`               | `14px`                                                                     |
-| `--ui-gutter-tight`               | `12px`                                                                     |
-| `--ui-stack-loose`                | `14px`                                                                     |
-| `--ui-target-min`                 | `44px`                                                                     |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-presenter-button-track` | `1.3px` |
+| `--c-presenter-detail-size` | `11px` |
+| `--c-presenter-header-track` | `1.5px` |
+| `--c-presenter-row-padding-block` | `12px` |
+| `--c-presenter-url-padding-block` | `11px` |
+| `--c-presenter-url-size` | `11px` |
+| `--c-toggle-row-sub-gap` | `2px` |
+| `--surface-inverse` | `#1c1a16 / #ede6d6` |
+| `--surface-raised` | `#f6f2e8 / #1e1b16` |
+| `--text-inverse` | `#efe9dd / #14120f` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-leading` | `1.4` |
+| `--type-body-sm-size` | `14px` |
+| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-transform` | `uppercase` |
+| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-quote-size` | `13px` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-gutter-inset` | `14px` |
+| `--ui-gutter-tight` | `12px` |
+| `--ui-stack-loose` | `14px` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key              | Behaviour                |
-| ---------------- | ------------------------ |
-| `Tab`            | Reaches the copy action. |
-| `Enter`, `Space` | Copies.                  |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Reaches the copy action. |
+| `Enter`, `Space` | Copies. |
 
 ## ARIA
 
@@ -90,26 +90,27 @@ A region named by `label`. The copy action should announce its result through th
 
 Source: `src/components/presentations/PresenterSupport.svelte`.
 
-| Selector                   | Property         | Measured | Implemented | Token                             |
-| -------------------------- | ---------------- | -------- | ----------- | --------------------------------- |
-| `.support`                 | `gap`            | `14px`   | `14px`      | `--ui-stack-loose`                |
-| `.url`                     | `border`         | `1px`    | `1px`       | `--ui-border-hairline`            |
-| `.url span`                | `padding`        | `11px`   | `11px`      | `--c-presenter-url-padding-block` |
-| `.url span`                | `padding`        | `12px`   | `12px`      | `--ui-gutter-tight`               |
-| `.url span`                | `font-size`      | `11px`   | `11px`      | `--c-presenter-url-size`          |
-| `.url button`              | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`               |
-| `.url button`              | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`            |
-| `.url button`              | `letter-spacing` | `1.3px`  | `1.3px`     | `--c-presenter-button-track`      |
-| `.clients header, article` | `padding`        | `12px`   | `12px`      | `--c-presenter-row-padding-block` |
-| `.clients header`          | `letter-spacing` | `1.5px`  | `1.5px`     | `--c-presenter-header-track`      |
-| `article strong`           | `font-size`      | `14px`   | `14px`      | `--type-body-sm-size`             |
-| `article span, article em` | `margin-top`     | `2px`    | `2px`       | `--c-toggle-row-sub-gap`          |
-| `article span, article em` | `font-size`      | `11px`   | `11px`      | `--c-presenter-detail-size`       |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `.support` | `gap` | `14px` | `14px` | `--ui-stack-loose` |
+| `.url` | `border` | `1px` | `1px` | `--ui-border-hairline` |
+| `.url span` | `padding` | `11px` | `11px` | `--c-presenter-url-padding-block` |
+| `.url span` | `padding` | `12px` | `12px` | `--ui-gutter-tight` |
+| `.url span` | `font-size` | `11px` | `11px` | `--c-presenter-url-size` |
+| `.url button` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
+| `.url button` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
+| `.url button` | `letter-spacing` | `1.3px` | `1.3px` | `--c-presenter-button-track` |
+| `.clients header, article` | `padding` | `12px` | `12px` | `--c-presenter-row-padding-block` |
+| `.clients header` | `letter-spacing` | `1.5px` | `1.5px` | `--c-presenter-header-track` |
+| `article strong` | `font-size` | `14px` | `14px` | `--type-body-sm-size` |
+| `article span, article em` | `margin-top` | `2px` | `2px` | `--c-toggle-row-sub-gap` |
+| `article span, article em` | `font-size` | `11px` | `11px` | `--c-presenter-detail-size` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                 | Why                                                                                                                                                                                             |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | The projection preview was left out. | The reference renders a fake 16:9 slide with hard-coded Helvetica and a black fill. That is a screen's content, not a component's, and the `/presenter` surface is out of this package's scope. |
+

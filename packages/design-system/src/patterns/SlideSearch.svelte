@@ -247,14 +247,14 @@
   .digits {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-top: 12px;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
     margin-bottom: var(--ui-gutter-inset);
     padding: 0 var(--ui-gutter-inset);
   }
 
   .digits button {
-    min-height: 48px;
+    min-height: var(--size-48);
     border: var(--ui-border-hairline) solid var(--border-control);
     background: transparent;
     color: var(--text-primary);

@@ -10,11 +10,11 @@ An optional leading `Dot`, then the label. The outline and the dot take the tone
 
 ## Props
 
-| Prop                    | Type                  | Default                            | Meaning                                                          |
-| ----------------------- | --------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `tone`                  | `Status \| 'neutral'` | `'neutral', dot = false, children` | Tints the outline and the leading dot. `neutral` carries no dot. |
-| `dot`                   | `boolean`             | —                                  | Shows the leading dot, as the reference's state chip does.       |
-| `children` _(required)_ | `Snippet`             | —                                  | —                                                                |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `tone` | `Status \| 'neutral'` | `'neutral', dot = false, children` | Tints the outline and the leading dot. `neutral` carries no dot. |
+| `dot` | `boolean` | — | Shows the leading dot, as the reference's state chip does. |
+| `children` *(required)* | `Snippet` | — | — |
 
 ## Variants
 
@@ -26,23 +26,23 @@ Static only.
 
 ## Tokens consumed
 
-| Token                       | Resolves to                                                    |
-| --------------------------- | -------------------------------------------------------------- |
-| `--border-control`          | `#857c68 / #716b5c`                                            |
-| `--c-badge-gap`             | `5px`                                                          |
-| `--c-badge-padding-block`   | `2px`                                                          |
-| `--c-badge-padding-inline`  | `7px`                                                          |
-| `--c-badge-track`           | `1.4px`                                                        |
-| `--status-error`            | `#b5321c / #e66a4f`                                            |
-| `--status-live`             | `#b5321c / #e66a4f`                                            |
-| `--status-off`              | `#67604e / #8d8779`                                            |
-| `--status-ok`               | `#386d42 / #6aa876`                                            |
-| `--status-warn`             | `#855611 / #d9a358`                                            |
-| `--text-muted`              | `#615e56 / #918b7e`                                            |
-| `--type-label-xs-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-xs-size`      | `8.5px`                                                        |
-| `--type-label-xs-transform` | `uppercase`                                                    |
-| `--ui-border-hairline`      | `1px`                                                          |
+| Token | Resolves to |
+| --- | --- |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--c-badge-gap` | `5px` |
+| `--c-badge-padding-block` | `2px` |
+| `--c-badge-padding-inline` | `7px` |
+| `--c-badge-track` | `1.4px` |
+| `--status-error` | `#b5321c / #e66a4f` |
+| `--status-live` | `#b5321c / #e66a4f` |
+| `--status-off` | `#67604e / #8d8779` |
+| `--status-ok` | `#386d42 / #6aa876` |
+| `--status-warn` | `#855611 / #d9a358` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-size` | `8.5px` |
+| `--type-label-xs-transform` | `uppercase` |
+| `--ui-border-hairline` | `1px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -70,3 +70,4 @@ None. The reference has no counterpart; this component is designed in its idiom 
 ## Recorded deviations
 
 None.
+

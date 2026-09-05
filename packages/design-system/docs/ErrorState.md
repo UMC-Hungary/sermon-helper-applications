@@ -10,13 +10,13 @@ A rule in the error colour down the left, then a mono title with a leading dot, 
 
 ## Props
 
-| Prop                 | Type         | Default | Meaning                                                                                   |
-| -------------------- | ------------ | ------- | ----------------------------------------------------------------------------------------- |
-| `title` _(required)_ | `string`     | —       | —                                                                                         |
-| `body`               | `string`     | —       | What went wrong, in prose. The reference sets this in the serif italic it uses for prose. |
-| `retryLabel`         | `string`     | —       | —                                                                                         |
-| `onretry`            | `() => void` | —       | —                                                                                         |
-| `announce`           | `boolean`    | —       | Announces the failure when it appears in place of content the user was waiting for.       |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `title` *(required)* | `string` | — | — |
+| `body` | `string` | — | What went wrong, in prose. The reference sets this in the serif italic it uses for prose. |
+| `retryLabel` | `string` | — | — |
+| `onretry` | `() => void` | — | — |
+| `announce` | `boolean` | — | Announces the failure when it appears in place of content the user was waiting for. |
 
 ## Variants
 
@@ -28,32 +28,32 @@ With and without a retry action.
 
 ## Tokens consumed
 
-| Token                           | Resolves to                                                    |
-| ------------------------------- | -------------------------------------------------------------- |
-| `--c-error-state-gap`           | `10px`                                                         |
-| `--c-error-state-padding-block` | `12px`                                                         |
-| `--c-status-dot-gap`            | `6px`                                                          |
-| `--status-error`                | `#b5321c / #e66a4f`                                            |
-| `--surface-sunken`              | `#e4ddcd / #23201a`                                            |
-| `--text-secondary`              | `#5c574e / #a8a294`                                            |
-| `--type-label-xs-family`        | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-xs-size`          | `8.5px`                                                        |
-| `--type-label-xs-track`         | `1.5px`                                                        |
-| `--type-label-xs-transform`     | `uppercase`                                                    |
-| `--type-quote-family`           | `"Cormorant Garamond", Georgia, serif`                         |
-| `--type-quote-leading`          | `1.5`                                                          |
-| `--type-quote-size`             | `13px`                                                         |
-| `--ui-border-emphasis`          | `2px`                                                          |
-| `--ui-gutter`                   | `24px`                                                         |
+| Token | Resolves to |
+| --- | --- |
+| `--c-error-state-gap` | `10px` |
+| `--c-error-state-padding-block` | `12px` |
+| `--c-status-dot-gap` | `6px` |
+| `--status-error` | `#b5321c / #e66a4f` |
+| `--surface-sunken` | `#e4ddcd / #23201a` |
+| `--text-secondary` | `#5c574e / #a8a294` |
+| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-size` | `8.5px` |
+| `--type-label-xs-track` | `1.5px` |
+| `--type-label-xs-transform` | `uppercase` |
+| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-quote-leading` | `1.5` |
+| `--type-quote-size` | `13px` |
+| `--ui-border-emphasis` | `2px` |
+| `--ui-gutter` | `24px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key              | Behaviour                 |
-| ---------------- | ------------------------- |
-| `Tab`            | Reaches the retry action. |
-| `Enter`, `Space` | Retries.                  |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Reaches the retry action. |
+| `Enter`, `Space` | Retries. |
 
 ## ARIA
 
@@ -74,3 +74,4 @@ None. The reference has no error state; the treatment is taken from its `RefFiel
 ## Recorded deviations
 
 None.
+

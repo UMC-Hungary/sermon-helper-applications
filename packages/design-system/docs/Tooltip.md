@@ -10,11 +10,11 @@ A wrapper around the trigger, with a bubble above or below it.
 
 ## Props
 
-| Prop                    | Type                                 | Default | Meaning                                                                        |
-| ----------------------- | ------------------------------------ | ------- | ------------------------------------------------------------------------------ |
-| `text` _(required)_     | `string`                             | —       | The text shown on hover and focus. Never the only place the information lives. |
-| `placement`             | `'top' \| 'bottom'`                  | —       | —                                                                              |
-| `children` _(required)_ | `Snippet<[{ describedby: string }]>` | —       | —                                                                              |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `text` *(required)* | `string` | — | The text shown on hover and focus. Never the only place the information lives. |
+| `placement` | `'top' \| 'bottom'` | — | — |
+| `children` *(required)* | `Snippet<[{ describedby: string }]>` | — | — |
 
 ## Variants
 
@@ -26,27 +26,27 @@ Hidden, shown.
 
 ## Tokens consumed
 
-| Token                        | Resolves to                                                    |
-| ---------------------------- | -------------------------------------------------------------- |
-| `--c-tooltip-max-width`      | `248px`                                                        |
-| `--c-tooltip-offset`         | `6px`                                                          |
-| `--c-tooltip-padding-block`  | `6px`                                                          |
-| `--c-tooltip-padding-inline` | `10px`                                                         |
-| `--surface-inverse`          | `#1c1a16 / #ede6d6`                                            |
-| `--text-inverse`             | `#efe9dd / #14120f`                                            |
-| `--type-caption-leading`     | `1.45`                                                         |
-| `--type-label-sm-family`     | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size`       | `9px`                                                          |
-| `--type-label-sm-track`      | `1.2px`                                                        |
-| `--z-tooltip`                | `200`                                                          |
+| Token | Resolves to |
+| --- | --- |
+| `--c-tooltip-max-width` | `248px` |
+| `--c-tooltip-offset` | `6px` |
+| `--c-tooltip-padding-block` | `6px` |
+| `--c-tooltip-padding-inline` | `10px` |
+| `--surface-inverse` | `#1c1a16 / #ede6d6` |
+| `--text-inverse` | `#efe9dd / #14120f` |
+| `--type-caption-leading` | `1.45` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-track` | `1.2px` |
+| `--z-tooltip` | `200` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key      | Behaviour                                   |
-| -------- | ------------------------------------------- |
-| `Tab`    | Focusing the trigger shows the bubble.      |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Focusing the trigger shows the bubble. |
 | `Escape` | Dismisses it while the trigger keeps focus. |
 
 ## ARIA
@@ -69,3 +69,4 @@ None. The reference has no tooltip. The bubble takes the inverse surface its act
 ## Recorded deviations
 
 None.
+

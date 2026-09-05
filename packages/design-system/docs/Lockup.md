@@ -10,12 +10,12 @@ A `FlameMark`, then the product name in the display italic at the given size and
 
 ## Props
 
-| Prop                | Type     | Default | Meaning                                                                                      |
-| ------------------- | -------- | ------- | -------------------------------------------------------------------------------------------- |
-| `name` _(required)_ | `string` | —       | The wordmark. A product name is not a translatable string, so it is passed in, not built in. |
-| `markSize`          | `number` | —       | —                                                                                            |
-| `fontSize`          | `number` | —       | —                                                                                            |
-| `tracking`          | `number` | —       | Tracking in px. The reference varies it with the wordmark's size.                            |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `name` *(required)* | `string` | — | The wordmark. A product name is not a translatable string, so it is passed in, not built in. |
+| `markSize` | `number` | — | — |
+| `fontSize` | `number` | — | — |
+| `tracking` | `number` | — | Tracking in px. The reference varies it with the wordmark's size. |
 
 ## Variants
 
@@ -27,13 +27,13 @@ Static.
 
 ## Tokens consumed
 
-| Token                    | Resolves to                            |
-| ------------------------ | -------------------------------------- |
-| `--text-primary`         | `#1c1a16 / #ede6d6`                    |
-| `--type-heading-family`  | `"Cormorant Garamond", Georgia, serif` |
-| `--type-heading-weight`  | `500`                                  |
-| `--type-numeral-leading` | `1`                                    |
-| `--ui-stack`             | `8px`                                  |
+| Token | Resolves to |
+| --- | --- |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-heading-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-heading-weight` | `500` |
+| `--type-numeral-leading` | `1` |
+| `--ui-stack` | `8px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -57,16 +57,17 @@ The wordmark is real text, so it is announced without help and the mark beside i
 
 Source: `src/components/primitives/Lockup.svelte`.
 
-| Selector    | Property      | Measured | Implemented | Token                    |
-| ----------- | ------------- | -------- | ----------- | ------------------------ |
-| `.lockup`   | `gap`         | `8px`    | `8px`       | `--ui-stack`             |
-| `span span` | `font-weight` | `500`    | `500`       | `--type-heading-weight`  |
-| `span span` | `line-height` | `1`      | `1`         | `--type-numeral-leading` |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `.lockup` | `gap` | `8px` | `8px` | `--ui-stack` |
+| `span span` | `font-weight` | `500` | `500` | `--type-heading-weight` |
+| `span span` | `line-height` | `1` | `1` | `--type-numeral-leading` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                        | Why                                                                                                                                 |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | The product name is a prop. | The reference hard-codes it, which makes the component unusable for anything else and puts a user-facing string inside the library. |
+

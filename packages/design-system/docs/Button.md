@@ -10,18 +10,18 @@ A single label, centred. While loading, a `Spinner` replaces it in place so the 
 
 ## Props
 
-| Prop                    | Type                                              | Default       | Meaning                                                                                                                                                                           |
-| ----------------------- | ------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variant`               | `'primary' \| 'secondary' \| 'quiet' \| 'danger'` | `'secondary'` | `primary` is the ink fill the reference uses for the committing action; `secondary` is its outlined counterpart; `quiet` is the mono text button it uses inside cards and toasts. |
-| `type`                  | `'button' \| 'submit' \| 'reset'`                 | `'button'`    | —                                                                                                                                                                                 |
-| `block`                 | `boolean`                                         | `false`       | Fills the available width, as the reference's primary action does.                                                                                                                |
-| `compact`               | `boolean`                                         | `false`       | The reference's small inline control (mono, uppercase) used inside rows — its `.mini`.                                                                                            |
-| `disabled`              | `boolean`                                         | `false`       | —                                                                                                                                                                                 |
-| `loading`               | `boolean`                                         | `false`       | Keeps the button's width while it works, and marks it busy.                                                                                                                       |
-| `loadingLabel`          | `string`                                          | `'Working'`   | —                                                                                                                                                                                 |
-| `href`                  | `string`                                          | —             | —                                                                                                                                                                                 |
-| `onclick`               | `(event: MouseEvent) => void`                     | —             | —                                                                                                                                                                                 |
-| `children` _(required)_ | `Snippet`                                         | —             | —                                                                                                                                                                                 |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `variant` | `'primary' \| 'secondary' \| 'quiet' \| 'danger'` | `'secondary'` | `primary` is the ink fill the reference uses for the committing action; `secondary` is its outlined counterpart; `quiet` is the mono text button it uses inside cards and toasts. |
+| `type` | `'button' \| 'submit' \| 'reset'` | `'button'` | — |
+| `block` | `boolean` | `false` | Fills the available width, as the reference's primary action does. |
+| `compact` | `boolean` | `false` | The reference's small inline control (mono, uppercase) used inside rows — its `.mini`. |
+| `disabled` | `boolean` | `false` | — |
+| `loading` | `boolean` | `false` | Keeps the button's width while it works, and marks it busy. |
+| `loadingLabel` | `string` | `'Working'` | — |
+| `href` | `string` | — | — |
+| `onclick` | `(event: MouseEvent) => void` | — | — |
+| `children` *(required)* | `Snippet` | — | — |
 
 ## Variants
 
@@ -33,41 +33,42 @@ Default, hover, focus-visible, active, disabled, loading.
 
 ## Tokens consumed
 
-| Token                       | Resolves to                                                                                               |
-| --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `--accent`                  | `#5c5c84 / #a9a6d6`                                                                                       |
-| `--border-control`          | `#857c68 / #716b5c`                                                                                       |
-| `--c-button-min-height`     | `48px`                                                                                                    |
-| `--c-button-padding-inline` | `18px`                                                                                                    |
-| `--c-button-quiet-track`    | `1.4px`                                                                                                   |
-| `--c-button-track`          | `0.2px`                                                                                                   |
-| `--space-10`                | `10px`                                                                                                    |
-| `--space-7`                 | `7px`                                                                                                     |
-| `--status-error`            | `#b5321c / #e66a4f`                                                                                       |
-| `--surface-hover`           | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
-| `--surface-inverse`         | `#1c1a16 / #ede6d6`                                                                                       |
-| `--text-inverse`            | `#efe9dd / #14120f`                                                                                       |
-| `--text-primary`            | `#1c1a16 / #ede6d6`                                                                                       |
-| `--type-body-sm-family`     | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`                                |
-| `--type-body-sm-weight`     | `500`                                                                                                     |
-| `--type-label-family`       | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`                                            |
-| `--type-label-size`         | `10px`                                                                                                    |
-| `--type-label-transform`    | `uppercase`                                                                                               |
-| `--ui-border-hairline`      | `1px`                                                                                                     |
-| `--ui-focus-offset`         | `2px`                                                                                                     |
-| `--ui-focus-width`          | `2px`                                                                                                     |
-| `--ui-radius-square`        | `0`                                                                                                       |
-| `--ui-target-min`           | `44px`                                                                                                    |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--c-button-min-height` | `48px` |
+| `--c-button-padding-inline` | `18px` |
+| `--c-button-quiet-track` | `1.4px` |
+| `--c-button-track` | `0.2px` |
+| `--duration-120` | `120ms` |
+| `--space-10` | `10px` |
+| `--space-7` | `7px` |
+| `--status-error` | `#b5321c / #e66a4f` |
+| `--surface-hover` | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
+| `--surface-inverse` | `#1c1a16 / #ede6d6` |
+| `--text-inverse` | `#efe9dd / #14120f` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-weight` | `500` |
+| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size` | `10px` |
+| `--type-label-transform` | `uppercase` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-radius-square` | `0` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key     | Behaviour                                       |
-| ------- | ----------------------------------------------- |
-| `Tab`   | Moves to and from the button.                   |
+| Key | Behaviour |
+| --- | --- |
+| `Tab` | Moves to and from the button. |
 | `Enter` | Activates. On a link variant, follows the link. |
-| `Space` | Activates the button variant.                   |
+| `Space` | Activates the button variant. |
 
 ## ARIA
 
@@ -87,6 +88,7 @@ None. The reference has no counterpart; this component is designed in its idiom 
 
 ## Recorded deviations
 
-| What                         | Why                                                                                                                                                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | A `quiet` variant was added. | The reference writes the same mono text button in four places — the notification centre's clear-all, a toast's actions, the folder settings action — each with its own markup. One variant replaces all four. |
+

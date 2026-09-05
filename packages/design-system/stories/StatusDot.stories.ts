@@ -17,43 +17,43 @@ type Story = StoryObj<typeof meta>;
 
 export const Live: Story = {
   args: {
-    status: 'live',
-    label: 'Adásban',
+    status: "live",
+    label: "Adásban",
   },
 };
 
 export const Ok: Story = {
   args: {
-    status: 'ok',
-    label: 'Kapcsolódva',
+    status: "ok",
+    label: "Kapcsolódva",
   },
 };
 
 export const Warn: Story = {
   args: {
-    status: 'warn',
-    label: 'Késleltetés',
+    status: "warn",
+    label: "Késleltetés",
   },
 };
 
 export const Error: Story = {
   args: {
-    status: 'error',
-    label: 'Megszakadt',
+    status: "error",
+    label: "Megszakadt",
   },
 };
 
 export const Off: Story = {
   args: {
-    status: 'off',
-    label: 'Készenlét',
+    status: "off",
+    label: "Készenlét",
   },
 };
 
 export const LabelHidden: Story = {
   args: {
-    status: 'live',
-    label: 'Adásban',
+    status: "live",
+    label: "Adásban",
     labelHidden: true,
   },
 };

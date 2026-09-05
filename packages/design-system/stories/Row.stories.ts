@@ -17,32 +17,32 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Vasárnapi istentisztelet',
+    title: "Vasárnapi istentisztelet",
     chevron: false,
-    meta: 'Minden héten · 09:30',
+    meta: "Minden héten · 09:30",
   },
 };
 
 export const WithDetail: Story = {
   args: {
-    title: 'Közvetítés célja',
+    title: "Közvetítés célja",
     chevron: false,
-    detail: 'YouTube',
+    detail: "YouTube",
   },
 };
 
 export const Link: Story = {
   args: {
-    title: 'Események',
+    title: "Események",
     chevron: true,
-    meta: '12 közelgő',
-    href: '#events',
+    meta: "12 közelgő",
+    href: "#events",
   },
 };
 
 export const Button: Story = {
   args: {
-    title: 'Kódoló újraindítása',
+    title: "Kódoló újraindítása",
     chevron: true,
     onclick: () => {},
   },
@@ -50,16 +50,16 @@ export const Button: Story = {
 
 export const Current: Story = {
   args: {
-    title: 'Vezérlő',
+    title: "Vezérlő",
     chevron: true,
-    href: '#dashboard',
-    current: 'page',
+    href: "#dashboard",
+    current: "page",
   },
 };
 
 export const Danger: Story = {
   args: {
-    title: 'Esemény törlése',
+    title: "Esemény törlése",
     chevron: true,
     danger: true,
     onclick: () => {},
@@ -68,7 +68,7 @@ export const Danger: Story = {
 
 export const Disabled: Story = {
   args: {
-    title: 'Adás újraindítása',
+    title: "Adás újraindítása",
     chevron: true,
     onclick: () => {},
     disabled: true,
@@ -77,10 +77,10 @@ export const Disabled: Story = {
 
 export const LongContent: Story = {
   args: {
-    title: 'Vasárnapi istentisztelet közvetítése a gyülekezeti nagyteremből, tolmácsolással',
+    title: "Vasárnapi istentisztelet közvetítése a gyülekezeti nagyteremből, tolmácsolással",
     chevron: true,
-    meta: 'Ez a másodsoros szöveg elég hosszú ahhoz, hogy levágásra kerüljön a sor végén',
-    href: '#long',
+    meta: "Ez a másodsoros szöveg elég hosszú ahhoz, hogy levágásra kerüljön a sor végén",
+    href: "#long",
   },
 };
 

@@ -17,27 +17,27 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Felvétel indítása az adással együtt',
+    label: "Felvétel indítása az adással együtt",
   },
 };
 
 export const Checked: Story = {
   args: {
-    label: 'Felvétel indítása az adással együtt',
+    label: "Felvétel indítása az adással együtt",
     checked: true,
   },
 };
 
 export const Indeterminate: Story = {
   args: {
-    label: 'Felvétel indítása az adással együtt',
+    label: "Felvétel indítása az adással együtt",
     indeterminate: true,
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: 'Felvétel indítása az adással együtt',
+    label: "Felvétel indítása az adással együtt",
     disabled: true,
     checked: true,
   },
@@ -45,8 +45,8 @@ export const Disabled: Story = {
 
 export const WithDescription: Story = {
   args: {
-    label: 'Automatikus feltöltés',
-    describedby: 'cb-hint',
+    label: "Automatikus feltöltés",
+    describedby: "cb-hint",
   },
 };
 

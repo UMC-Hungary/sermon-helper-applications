@@ -10,11 +10,11 @@ A circle at the given size, with an absolutely positioned ring drawn one pixel o
 
 ## Props
 
-| Prop    | Type      | Default                                          | Meaning                                                                           |
-| ------- | --------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `color` | `string`  | `'var(--text-primary)', size = 7, pulse = false` | A semantic colour token reference, never a literal.                               |
-| `size`  | `number`  | —                                                | —                                                                                 |
-| `pulse` | `boolean` | —                                                | The slow ring the reference uses for a live signal. Stilled under reduced motion. |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `color` | `string` | `'var(--text-primary)', size = 7, pulse = false` | A semantic colour token reference, never a literal. |
+| `size` | `number` | — | — |
+| `pulse` | `boolean` | — | The slow ring the reference uses for a live signal. Stilled under reduced motion. |
 
 ## Variants
 
@@ -26,13 +26,13 @@ Static, pulsing.
 
 ## Tokens consumed
 
-| Token                  | Resolves to |
-| ---------------------- | ----------- |
-| `--c-dot-pulse-border` | `1.5px`     |
-| `--c-dot-pulse-inset`  | `-1px`      |
-| `--motion-ease-out`    | `ease-out`  |
-| `--motion-pulse`       | `1.8s`      |
-| `--ui-radius-circle`   | `50%`       |
+| Token | Resolves to |
+| --- | --- |
+| `--c-dot-pulse-border` | `1.5px` |
+| `--c-dot-pulse-inset` | `-1px` |
+| `--motion-ease-out` | `ease-out` |
+| `--motion-pulse` | `1.8s` |
+| `--ui-radius-circle` | `50%` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -57,14 +57,15 @@ None — decorative by construction. Meaning belongs to the text beside it.
 
 Source: `src/components/primitives/Dot.svelte`.
 
-| Selector | Property    | Measured | Implemented | Token                  |
-| -------- | ----------- | -------- | ----------- | ---------------------- |
-| `.pulse` | `inset`     | `-1px`   | `-1px`      | `--c-dot-pulse-inset`  |
-| `.pulse` | `border`    | `1.5px`  | `1.5px`     | `--c-dot-pulse-border` |
-| `.pulse` | `animation` | `1.8s`   | `1.8s`      | `--motion-pulse`       |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `.pulse` | `inset` | `-1px` | `-1px` | `--c-dot-pulse-inset` |
+| `.pulse` | `border` | `1.5px` | `1.5px` | `--c-dot-pulse-border` |
+| `.pulse` | `animation` | `1.8s` | `1.8s` | `--motion-pulse` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
+

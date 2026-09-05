@@ -10,11 +10,11 @@ A fixed column at the top of the viewport. Its children animate in and cast the 
 
 ## Props
 
-| Prop                    | Type                      | Default | Meaning                                                                                                                                                                    |
-| ----------------------- | ------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label` _(required)_    | `string`                  | —       | Names the region so it can be reached from the landmark list.                                                                                                              |
-| `priority`              | `'polite' \| 'assertive'` | —       | `polite` for the ordinary case; a toast that reports a failure the user must act on belongs in an `assertive` region, or better, in an `ErrorState` on the surface itself. |
-| `children` _(required)_ | `Snippet`                 | —       | —                                                                                                                                                                          |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `label` *(required)* | `string` | — | Names the region so it can be reached from the landmark list. |
+| `priority` | `'polite' \| 'assertive'` | — | `polite` for the ordinary case; a toast that reports a failure the user must act on belongs in an `assertive` region, or better, in an `ErrorState` on the surface itself. |
+| `children` *(required)* | `Snippet` | — | — |
 
 ## Variants
 
@@ -26,16 +26,16 @@ Empty, one or more toasts.
 
 ## Tokens consumed
 
-| Token                           | Resolves to                                   |
-| ------------------------------- | --------------------------------------------- |
-| `--c-toast-overlay-inset`       | `12px`                                        |
-| `--c-toast-overlay-shadow-blur` | `26px`                                        |
-| `--c-toast-overlay-top`         | `50px`                                        |
-| `--motion-ease-standard`        | `cubic-bezier(0.32, 0.72, 0, 1)`              |
-| `--motion-enter`                | `280ms`                                       |
-| `--shadow-overlay`              | `rgba(40, 30, 10, 0.18) / rgba(0, 0, 0, 0.5)` |
-| `--ui-stack`                    | `8px`                                         |
-| `--z-toast`                     | `70`                                          |
+| Token | Resolves to |
+| --- | --- |
+| `--c-toast-overlay-inset` | `12px` |
+| `--c-toast-overlay-shadow-blur` | `26px` |
+| `--c-toast-overlay-top` | `50px` |
+| `--motion-ease-standard` | `cubic-bezier(0.32, 0.72, 0, 1)` |
+| `--motion-enter` | `280ms` |
+| `--shadow-overlay` | `rgba(40, 30, 10, 0.18) / rgba(0, 0, 0, 0.5)` |
+| `--ui-stack` | `8px` |
+| `--z-toast` | `70` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -59,19 +59,20 @@ A named region with `aria-live` and `aria-relevant="additions"`, so a toast is a
 
 Source: `src/components/notifications/ToastOverlay.svelte`.
 
-| Selector   | Property     | Measured | Implemented | Token                           |
-| ---------- | ------------ | -------- | ----------- | ------------------------------- |
-| `.overlay` | `top`        | `50px`   | `50px`      | `--c-toast-overlay-top`         |
-| `.overlay` | `left`       | `12px`   | `12px`      | `--c-toast-overlay-inset`       |
-| `.overlay` | `gap`        | `8px`    | `8px`       | `--ui-stack`                    |
-| `.toast`   | `animation`  | `280ms`  | `280ms`     | `--motion-enter`                |
-| `.toast`   | `box-shadow` | `26px`   | `26px`      | `--c-toast-overlay-shadow-blur` |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `.overlay` | `top` | `50px` | `50px` | `--c-toast-overlay-top` |
+| `.overlay` | `left` | `12px` | `12px` | `--c-toast-overlay-inset` |
+| `.overlay` | `gap` | `8px` | `8px` | `--ui-stack` |
+| `.toast` | `animation` | `280ms` | `280ms` | `--motion-enter` |
+| `.toast` | `box-shadow` | `26px` | `26px` | `--c-toast-overlay-shadow-blur` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                       | Why                                                                                         |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
+| What | Why |
+| --- | --- |
 | The live region was added. | The reference's overlay has none, so a toast appears silently for anyone not looking at it. |
-| Position is `fixed`.       | The reference uses `absolute`, which only works inside its phone frame.                     |
+| Position is `fixed`. | The reference uses `absolute`, which only works inside its phone frame. |
+

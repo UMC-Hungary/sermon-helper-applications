@@ -17,33 +17,33 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Vezérlő',
-    eyebrow: 'Vasárnap',
+    title: "Vezérlő",
+    eyebrow: "Vasárnap",
   },
 };
 
 export const WithBack: Story = {
   args: {
-    title: 'Esemény szerkesztése',
-    eyebrow: 'Vasárnap',
+    title: "Esemény szerkesztése",
+    eyebrow: "Vasárnap",
     back: {
-      label: 'Vissza',
-      href: '#events',
+      label: "Vissza",
+      href: "#events",
     },
   },
 };
 
 export const LongTitle: Story = {
   args: {
-    title: 'Vasárnapi istentisztelet közvetítése',
-    eyebrow: '2026. március 14.',
+    title: "Vasárnapi istentisztelet közvetítése",
+    eyebrow: "2026. március 14.",
   },
 };
 
 export const AsSubheading: Story = {
   args: {
-    title: 'Csatlakozók',
-    eyebrow: 'Beállítások',
+    title: "Csatlakozók",
+    eyebrow: "Beállítások",
     level: 2,
   },
 };

@@ -10,12 +10,12 @@ A caption, a header row, and one row per record. Below the narrow threshold each
 
 ## Props
 
-| Prop                   | Type            | Default | Meaning                                                                |
-| ---------------------- | --------------- | ------- | ---------------------------------------------------------------------- |
-| `columns` _(required)_ | `Column<Row>[]` | —       | —                                                                      |
-| `rows` _(required)_    | `Row[]`         | —       | —                                                                      |
-| `caption` _(required)_ | `string`        | —       | Names the table. A table without one is a grid of unexplained values.  |
-| `captionVisible`       | `boolean`       | —       | Shows the caption rather than leaving it to assistive technology only. |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `columns` *(required)* | `Column<Row>[]` | — | — |
+| `rows` *(required)* | `Row[]` | — | — |
+| `caption` *(required)* | `string` | — | Names the table. A table without one is a grid of unexplained values. |
+| `captionVisible` | `boolean` | — | Shows the caption rather than leaving it to assistive technology only. |
 
 ## Variants
 
@@ -27,30 +27,30 @@ Populated. An empty table should be replaced by an `EmptyState`, not rendered wi
 
 ## Tokens consumed
 
-| Token                             | Resolves to                                                                |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| `--border-hairline`               | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
-| `--border-strong`                 | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)`                       |
-| `--c-table-cell-padding-block`    | `13px`                                                                     |
-| `--c-table-stacked-padding-block` | `8px`                                                                      |
-| `--surface-raised`                | `#f6f2e8 / #1e1b16`                                                        |
-| `--text-muted`                    | `#615e56 / #918b7e`                                                        |
-| `--text-primary`                  | `#1c1a16 / #ede6d6`                                                        |
-| `--type-body-sm-family`           | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-size`             | `14px`                                                                     |
-| `--type-body-sm-track`            | `-0.1px`                                                                   |
-| `--type-label-family`             | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-size`               | `10px`                                                                     |
-| `--type-label-sm-family`          | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-sm-size`            | `9px`                                                                      |
-| `--type-label-sm-track`           | `1.2px`                                                                    |
-| `--type-label-sm-transform`       | `uppercase`                                                                |
-| `--type-label-sm-weight`          | `500`                                                                      |
-| `--type-label-track`              | `2px`                                                                      |
-| `--type-label-transform`          | `uppercase`                                                                |
-| `--ui-border-hairline`            | `1px`                                                                      |
-| `--ui-gutter`                     | `24px`                                                                     |
-| `--ui-stack`                      | `8px`                                                                      |
+| Token | Resolves to |
+| --- | --- |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
+| `--c-table-cell-padding-block` | `13px` |
+| `--c-table-stacked-padding-block` | `8px` |
+| `--surface-raised` | `#f6f2e8 / #1e1b16` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-size` | `14px` |
+| `--type-body-sm-track` | `-0.1px` |
+| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size` | `10px` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-sm-track` | `1.2px` |
+| `--type-label-sm-transform` | `uppercase` |
+| `--type-label-sm-weight` | `500` |
+| `--type-label-track` | `2px` |
+| `--type-label-transform` | `uppercase` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-gutter` | `24px` |
+| `--ui-stack` | `8px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -78,3 +78,4 @@ None. The reference has no table; the closest it comes is a three-column grid in
 ## Recorded deviations
 
 None.
+

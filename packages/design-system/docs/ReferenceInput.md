@@ -10,17 +10,17 @@ A header carrying the label, the rank and a status chip, then the input, then ei
 
 ## Props
 
-| Prop                         | Type                      | Default                                          | Meaning                                                                          |
-| ---------------------------- | ------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `label` _(required)_         | `string`                  | —                                                | —                                                                                |
-| `rank` _(required)_          | `string`                  | —                                                | The position of this reference among the others — "primary", "second reading".   |
-| `value`                      | `string`                  | `$bindable('')`                                  | —                                                                                |
-| `placeholder`                | `string`                  | `''`                                             | —                                                                                |
-| `result`                     | `ReferenceResult \| null` | `null`                                           | The lookup's outcome. `null` while nothing has been looked up yet.               |
-| `errorMessage` _(required)_  | `string`                  | —                                                | Announced when a lookup fails; the reference shows this only as prose.           |
-| `statusMessage`              | `string`                  | `''`                                             | "{n} verses · {translation}", already interpolated and translated by the caller. |
-| `notFoundLabel` _(required)_ | `string`                  | —                                                | —                                                                                |
-| `id`                         | `string`                  | `sanctum-reference-input-${crypto.randomUUID()}` | —                                                                                |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `label` *(required)* | `string` | — | — |
+| `rank` *(required)* | `string` | — | The position of this reference among the others — "primary", "second reading". |
+| `value` | `string` | `$bindable('')` | — |
+| `placeholder` | `string` | `''` | — |
+| `result` | `ReferenceResult \| null` | `null` | The lookup's outcome. `null` while nothing has been looked up yet. |
+| `errorMessage` *(required)* | `string` | — | Announced when a lookup fails; the reference shows this only as prose. |
+| `statusMessage` | `string` | `''` | "{n} verses · {translation}", already interpolated and translated by the caller. |
+| `notFoundLabel` *(required)* | `string` | — | — |
+| `id` | `string` | ``sanctum-reference-input-${crypto.randomUUID()}`` | — |
 
 ## Variants
 
@@ -32,52 +32,52 @@ Empty, resolved, not found.
 
 ## Tokens consumed
 
-| Token                                      | Resolves to                                                                |
-| ------------------------------------------ | -------------------------------------------------------------------------- |
-| `--accent`                                 | `#5c5c84 / #a9a6d6`                                                        |
-| `--border-control`                         | `#857c68 / #716b5c`                                                        |
-| `--border-hairline`                        | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
-| `--c-reference-input-block-gap`            | `10px`                                                                     |
-| `--c-reference-input-header-gap`           | `4px`                                                                      |
-| `--c-reference-input-label-track`          | `1.2px`                                                                    |
-| `--c-reference-input-padding-bottom`       | `11px`                                                                     |
-| `--c-reference-input-padding-top`          | `9px`                                                                      |
-| `--c-reference-input-quote-padding-block`  | `8px`                                                                      |
-| `--c-reference-input-quote-padding-inline` | `10px`                                                                     |
-| `--c-reference-input-status-gap`           | `4px`                                                                      |
-| `--c-reference-input-verse-number-width`   | `28px`                                                                     |
-| `--c-reference-input-verse-size`           | `13.5px`                                                                   |
-| `--status-error`                           | `#b5321c / #e66a4f`                                                        |
-| `--status-ok`                              | `#386d42 / #6aa876`                                                        |
-| `--surface-inverse`                        | `#1c1a16 / #ede6d6`                                                        |
-| `--surface-sunken`                         | `#e4ddcd / #23201a`                                                        |
-| `--text-muted`                             | `#615e56 / #918b7e`                                                        |
-| `--text-primary`                           | `#1c1a16 / #ede6d6`                                                        |
-| `--text-secondary`                         | `#5c574e / #a8a294`                                                        |
-| `--type-body-strong-family`                | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-strong-size`                  | `14.5px`                                                                   |
-| `--type-body-strong-weight`                | `500`                                                                      |
-| `--type-label-sm-family`                   | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-sm-size`                     | `9px`                                                                      |
-| `--type-label-xs-family`                   | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
-| `--type-label-xs-size`                     | `8.5px`                                                                    |
-| `--type-label-xs-transform`                | `uppercase`                                                                |
-| `--type-quote-family`                      | `"Cormorant Garamond", Georgia, serif`                                     |
-| `--type-quote-leading`                     | `1.5`                                                                      |
-| `--type-quote-size`                        | `13px`                                                                     |
-| `--ui-border-emphasis`                     | `2px`                                                                      |
-| `--ui-border-hairline`                     | `1px`                                                                      |
-| `--ui-focus-offset`                        | `2px`                                                                      |
-| `--ui-focus-width`                         | `2px`                                                                      |
-| `--ui-gutter-inset`                        | `14px`                                                                     |
-| `--ui-stack`                               | `8px`                                                                      |
+| Token | Resolves to |
+| --- | --- |
+| `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-reference-input-block-gap` | `10px` |
+| `--c-reference-input-header-gap` | `4px` |
+| `--c-reference-input-label-track` | `1.2px` |
+| `--c-reference-input-padding-bottom` | `11px` |
+| `--c-reference-input-padding-top` | `9px` |
+| `--c-reference-input-quote-padding-block` | `8px` |
+| `--c-reference-input-quote-padding-inline` | `10px` |
+| `--c-reference-input-status-gap` | `4px` |
+| `--c-reference-input-verse-number-width` | `28px` |
+| `--c-reference-input-verse-size` | `13.5px` |
+| `--status-error` | `#b5321c / #e66a4f` |
+| `--status-ok` | `#386d42 / #6aa876` |
+| `--surface-inverse` | `#1c1a16 / #ede6d6` |
+| `--surface-sunken` | `#e4ddcd / #23201a` |
+| `--text-muted` | `#615e56 / #918b7e` |
+| `--text-primary` | `#1c1a16 / #ede6d6` |
+| `--text-secondary` | `#5c574e / #a8a294` |
+| `--type-body-strong-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-strong-size` | `14.5px` |
+| `--type-body-strong-weight` | `500` |
+| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size` | `9px` |
+| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-size` | `8.5px` |
+| `--type-label-xs-transform` | `uppercase` |
+| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
+| `--type-quote-leading` | `1.5` |
+| `--type-quote-size` | `13px` |
+| `--ui-border-emphasis` | `2px` |
+| `--ui-border-hairline` | `1px` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-gutter-inset` | `14px` |
+| `--ui-stack` | `8px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key   | Behaviour                    |
-| ----- | ---------------------------- |
+| Key | Behaviour |
+| --- | --- |
 | `Tab` | Moves to and from the input. |
 
 ## ARIA
@@ -96,34 +96,35 @@ The result region is `role="status"`, so a lookup's outcome is announced without
 
 Source: `src/components/forms/RefField.svelte`.
 
-| Selector           | Property         | Measured | Implemented | Token                                      |
-| ------------------ | ---------------- | -------- | ----------- | ------------------------------------------ |
-| `section`          | `padding`        | `9px`    | `9px`       | `--c-reference-input-padding-top`          |
-| `section`          | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`                        |
-| `section`          | `padding`        | `11px`   | `11px`      | `--c-reference-input-padding-bottom`       |
-| `header`           | `margin-bottom`  | `4px`    | `4px`       | `--c-reference-input-header-gap`           |
-| `header p`         | `gap`            | `8px`    | `8px`       | `--ui-stack`                               |
-| `span, em, strong` | `font-size`      | `8.5px`  | `8.5px`     | `--type-label-xs-size`                     |
-| `span, em, strong` | `letter-spacing` | `1.2px`  | `1.2px`     | `--c-reference-input-label-track`          |
-| `strong`           | `gap`            | `4px`    | `4px`       | `--c-reference-input-status-gap`           |
-| `input`            | `font-size`      | `14.5px` | `14.5px`    | `--type-body-strong-size`                  |
-| `input`            | `font-weight`    | `500`    | `500`       | `--type-body-strong-weight`                |
-| `.error`           | `margin-top`     | `10px`   | `10px`      | `--c-reference-input-block-gap`            |
-| `.error`           | `padding`        | `8px`    | `8px`       | `--c-reference-input-quote-padding-block`  |
-| `.error`           | `padding`        | `10px`   | `10px`      | `--c-reference-input-quote-padding-inline` |
-| `.error`           | `border-left`    | `2px`    | `2px`       | `--ui-border-emphasis`                     |
-| `.error`           | `font-size`      | `13px`   | `13px`      | `--type-quote-size`                        |
-| `.verses p`        | `font-size`      | `13.5px` | `13.5px`    | `--c-reference-input-verse-size`           |
-| `.verses p`        | `line-height`    | `1.5`    | `1.5`       | `--type-quote-leading`                     |
-| `code`             | `min-width`      | `28px`   | `28px`      | `--c-reference-input-verse-number-width`   |
-| `code`             | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`                     |
+| Selector | Property | Measured | Implemented | Token |
+| --- | --- | --- | --- | --- |
+| `section` | `padding` | `9px` | `9px` | `--c-reference-input-padding-top` |
+| `section` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
+| `section` | `padding` | `11px` | `11px` | `--c-reference-input-padding-bottom` |
+| `header` | `margin-bottom` | `4px` | `4px` | `--c-reference-input-header-gap` |
+| `header p` | `gap` | `8px` | `8px` | `--ui-stack` |
+| `span, em, strong` | `font-size` | `8.5px` | `8.5px` | `--type-label-xs-size` |
+| `span, em, strong` | `letter-spacing` | `1.2px` | `1.2px` | `--c-reference-input-label-track` |
+| `strong` | `gap` | `4px` | `4px` | `--c-reference-input-status-gap` |
+| `input` | `font-size` | `14.5px` | `14.5px` | `--type-body-strong-size` |
+| `input` | `font-weight` | `500` | `500` | `--type-body-strong-weight` |
+| `.error` | `margin-top` | `10px` | `10px` | `--c-reference-input-block-gap` |
+| `.error` | `padding` | `8px` | `8px` | `--c-reference-input-quote-padding-block` |
+| `.error` | `padding` | `10px` | `10px` | `--c-reference-input-quote-padding-inline` |
+| `.error` | `border-left` | `2px` | `2px` | `--ui-border-emphasis` |
+| `.error` | `font-size` | `13px` | `13px` | `--type-quote-size` |
+| `.verses p` | `font-size` | `13.5px` | `13.5px` | `--c-reference-input-verse-size` |
+| `.verses p` | `line-height` | `1.5` | `1.5` | `--type-quote-leading` |
+| `code` | `min-width` | `28px` | `28px` | `--c-reference-input-verse-number-width` |
+| `code` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What                                               | Why                                                                                                                   |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| The result is announced.                           | The reference shows the outcome visually only, so a keyboard user typing a reference gets no signal that it resolved. |
-| A resting border and a focus indicator were added. | As `LabelledInput`.                                                                                                   |
-| User-facing strings are props.                     | The reference hard-codes "Not found" and its spelling advice in English.                                              |
+| What | Why |
+| --- | --- |
+| The result is announced. | The reference shows the outcome visually only, so a keyboard user typing a reference gets no signal that it resolved. |
+| A resting border and a focus indicator were added. | As `LabelledInput`. |
+| User-facing strings are props. | The reference hard-codes "Not found" and its spelling advice in English. |
+

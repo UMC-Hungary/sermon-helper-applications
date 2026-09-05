@@ -16,7 +16,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: {},
+  args: {
+
+  },
 };
 
 export const Large: Story = {
@@ -27,7 +29,7 @@ export const Large: Story = {
 
 export const Labelled: Story = {
   args: {
-    label: 'Metocast',
+    label: "Metocast",
   },
 };
 

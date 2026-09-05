@@ -17,20 +17,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: 'Betöltés',
+    label: "Betöltés",
   },
 };
 
 export const Small: Story = {
   args: {
-    label: 'Betöltés',
+    label: "Betöltés",
     size: 14,
   },
 };
 
 export const Large: Story = {
   args: {
-    label: 'Betöltés',
+    label: "Betöltés",
     size: 44,
   },
 };

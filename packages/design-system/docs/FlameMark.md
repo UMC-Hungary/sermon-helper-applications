@@ -10,10 +10,10 @@ Two paths: the outer flame carrying a vertical gradient, and the inner flame in 
 
 ## Props
 
-| Prop    | Type     | Default     | Meaning                                                                             |
-| ------- | -------- | ----------- | ----------------------------------------------------------------------------------- |
-| `size`  | `number` | `22, label` | —                                                                                   |
-| `label` | `string` | —           | Names the mark when it stands alone. Inside `Lockup` the wordmark names it instead. |
+| Prop | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `size` | `number` | `22, label` | — |
+| `label` | `string` | — | Names the mark when it stands alone. Inside `Lockup` the wordmark names it instead. |
 
 ## Variants
 
@@ -50,3 +50,4 @@ Carried over from `src/components/primitives/FlameMark.svelte` unchanged in geom
 ## Recorded deviations
 
 None.
+

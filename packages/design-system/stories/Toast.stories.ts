@@ -17,41 +17,41 @@ type Story = StoryObj<typeof meta>;
 
 export const Ok: Story = {
   args: {
-    kind: 'Csatlakozó',
-    source: 'YouTube',
-    title: 'A közvetítés elindult',
-    body: 'A stream 09:31-kor kezdődött, 1080p felbontásban.',
-    tone: 'ok',
+    kind: "Csatlakozó",
+    source: "YouTube",
+    title: "A közvetítés elindult",
+    body: "A stream 09:31-kor kezdődött, 1080p felbontásban.",
+    tone: "ok",
   },
 };
 
 export const Warning: Story = {
   args: {
-    kind: 'Csatlakozó',
-    source: 'YouTube',
-    title: 'Késleltetés nőtt',
-    body: 'A stream 09:31-kor kezdődött, 1080p felbontásban.',
-    tone: 'warn',
-    state: 'instabil',
+    kind: "Csatlakozó",
+    source: "YouTube",
+    title: "Késleltetés nőtt",
+    body: "A stream 09:31-kor kezdődött, 1080p felbontásban.",
+    tone: "warn",
+    state: "instabil",
   },
 };
 
 export const Error: Story = {
   args: {
-    kind: 'Csatlakozó',
-    source: 'YouTube',
-    title: 'A kapcsolat megszakadt',
-    body: 'A stream 09:31-kor kezdődött, 1080p felbontásban.',
-    tone: 'error',
-    state: 'újracsatlakozás',
+    kind: "Csatlakozó",
+    source: "YouTube",
+    title: "A kapcsolat megszakadt",
+    body: "A stream 09:31-kor kezdődött, 1080p felbontásban.",
+    tone: "error",
+    state: "újracsatlakozás",
     actions: [
       {
-        label: 'Újra',
+        label: "Újra",
         primary: true,
         onclick: () => {},
       },
       {
-        label: 'Miért?',
+        label: "Miért?",
         onclick: () => {},
       },
     ],
@@ -60,34 +60,34 @@ export const Error: Story = {
 
 export const Live: Story = {
   args: {
-    kind: 'Csatlakozó',
-    source: 'YouTube',
-    title: 'Adásban',
-    body: 'A stream 09:31-kor kezdődött, 1080p felbontásban.',
-    tone: 'live',
-    state: 'élő',
+    kind: "Csatlakozó",
+    source: "YouTube",
+    title: "Adásban",
+    body: "A stream 09:31-kor kezdődött, 1080p felbontásban.",
+    tone: "live",
+    state: "élő",
   },
 };
 
 export const Mono: Story = {
   args: {
-    kind: 'Csatlakozó',
-    source: 'YouTube',
-    title: 'A közvetítés elindult',
-    body: 'obs-websocket 5.5.4 · rtmp://a.rtmp.youtube.com/live2',
-    tone: 'ok',
+    kind: "Csatlakozó",
+    source: "YouTube",
+    title: "A közvetítés elindult",
+    body: "obs-websocket 5.5.4 · rtmp://a.rtmp.youtube.com/live2",
+    tone: "ok",
     mono: true,
   },
 };
 
 export const Dismissible: Story = {
   args: {
-    kind: 'Csatlakozó',
-    source: 'YouTube',
-    title: 'A közvetítés elindult',
-    body: 'A stream 09:31-kor kezdődött, 1080p felbontásban.',
-    tone: 'ok',
-    dismissLabel: 'Elvetés',
+    kind: "Csatlakozó",
+    source: "YouTube",
+    title: "A közvetítés elindult",
+    body: "A stream 09:31-kor kezdődött, 1080p felbontásban.",
+    tone: "ok",
+    dismissLabel: "Elvetés",
     ondismiss: () => {},
   },
 };
