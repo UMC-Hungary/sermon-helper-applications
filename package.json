@@ -4,6 +4,7 @@
   "description": "Metocast — livestream control desktop application (workspace root)",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@10.29.3",
   "scripts": {
     "dev": "pnpm --filter @metocast/${METOCAST_UI:-classic} dev",
     "build": "node scripts/build-ui.mjs",
