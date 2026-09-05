@@ -10,17 +10,17 @@ A trigger showing the current choice and a chevron, and a listbox that opens ben
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `options` *(required)* | `SelectOption<T>[]` | — | — |
-| `value` *(required)* | `T` | `$bindable()` | — |
-| `label` | `string` | — | Only when the select stands outside a `FormField`. |
-| `id` | `string` | ``sanctum-select-${crypto.randomUUID()}`` | — |
-| `describedby` | `string` | — | — |
-| `disabled` | `boolean` | `false` | — |
-| `invalid` | `boolean` | `false` | — |
-| `placeholder` | `string` | `''` | — |
-| `onchange` | `(value: T) => void` | — | — |
+| Prop                   | Type                 | Default                                 | Meaning                                            |
+| ---------------------- | -------------------- | --------------------------------------- | -------------------------------------------------- |
+| `options` _(required)_ | `SelectOption<T>[]`  | —                                       | —                                                  |
+| `value` _(required)_   | `T`                  | `$bindable()`                           | —                                                  |
+| `label`                | `string`             | —                                       | Only when the select stands outside a `FormField`. |
+| `id`                   | `string`             | `sanctum-select-${crypto.randomUUID()}` | —                                                  |
+| `describedby`          | `string`             | —                                       | —                                                  |
+| `disabled`             | `boolean`            | `false`                                 | —                                                  |
+| `invalid`              | `boolean`            | `false`                                 | —                                                  |
+| `placeholder`          | `string`             | `''`                                    | —                                                  |
+| `onchange`             | `(value: T) => void` | —                                       | —                                                  |
 
 ## Variants
 
@@ -32,49 +32,49 @@ Closed, open, disabled, invalid, placeholder.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--c-select-list-max-height` | `300px` |
-| `--c-select-shadow-blur` | `26px` |
-| `--c-text-field-padding-block` | `9px` |
-| `--shadow-overlay` | `rgba(40, 30, 10, 0.18) / rgba(0, 0, 0, 0.5)` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--surface-hover` | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
-| `--surface-raised` | `#f6f2e8 / #1e1b16` |
-| `--surface-sunken` | `#e4ddcd / #23201a` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-size` | `15px` |
-| `--type-body-strong-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-strong-size` | `14.5px` |
-| `--type-body-strong-track` | `-0.1px` |
-| `--type-body-strong-weight` | `500` |
-| `--type-body-track` | `-0.1px` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter-inset` | `14px` |
-| `--ui-stack` | `8px` |
-| `--ui-target-min` | `44px` |
-| `--z-tooltip` | `200` |
+| Token                          | Resolves to                                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `--accent`                     | `#5c5c84 / #a9a6d6`                                                                                       |
+| `--border-control`             | `#857c68 / #716b5c`                                                                                       |
+| `--border-hairline`            | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                                                       |
+| `--c-select-list-max-height`   | `300px`                                                                                                   |
+| `--c-select-shadow-blur`       | `26px`                                                                                                    |
+| `--c-text-field-padding-block` | `9px`                                                                                                     |
+| `--shadow-overlay`             | `rgba(40, 30, 10, 0.18) / rgba(0, 0, 0, 0.5)`                                                             |
+| `--status-error`               | `#b5321c / #e66a4f`                                                                                       |
+| `--surface-hover`              | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
+| `--surface-raised`             | `#f6f2e8 / #1e1b16`                                                                                       |
+| `--surface-sunken`             | `#e4ddcd / #23201a`                                                                                       |
+| `--text-faint`                 | `#676051 / #8f8879`                                                                                       |
+| `--text-muted`                 | `#615e56 / #918b7e`                                                                                       |
+| `--text-primary`               | `#1c1a16 / #ede6d6`                                                                                       |
+| `--type-body-family`           | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`                                |
+| `--type-body-size`             | `15px`                                                                                                    |
+| `--type-body-strong-family`    | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`                                |
+| `--type-body-strong-size`      | `14.5px`                                                                                                  |
+| `--type-body-strong-track`     | `-0.1px`                                                                                                  |
+| `--type-body-strong-weight`    | `500`                                                                                                     |
+| `--type-body-track`            | `-0.1px`                                                                                                  |
+| `--ui-border-hairline`         | `1px`                                                                                                     |
+| `--ui-focus-offset`            | `2px`                                                                                                     |
+| `--ui-focus-width`             | `2px`                                                                                                     |
+| `--ui-gutter-inset`            | `14px`                                                                                                    |
+| `--ui-stack`                   | `8px`                                                                                                     |
+| `--ui-target-min`              | `44px`                                                                                                    |
+| `--z-tooltip`                  | `200`                                                                                                     |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Enter`, `Space`, `↓`, `↑` | Open the list from the trigger. |
-| `↓`, `↑` | Move the active option. |
-| `Home`, `End` | Jump to the first and last option. |
-| `Enter`, `Space` | Commit the active option and return focus to the trigger. |
-| `Escape` | Dismiss without committing, returning focus to the trigger. |
-| `Tab` | Dismiss without committing and move on. |
+| Key                        | Behaviour                                                   |
+| -------------------------- | ----------------------------------------------------------- |
+| `Enter`, `Space`, `↓`, `↑` | Open the list from the trigger.                             |
+| `↓`, `↑`                   | Move the active option.                                     |
+| `Home`, `End`              | Jump to the first and last option.                          |
+| `Enter`, `Space`           | Commit the active option and return focus to the trigger.   |
+| `Escape`                   | Dismiss without committing, returning focus to the trigger. |
+| `Tab`                      | Dismiss without committing and move on.                     |
 
 ## ARIA
 
@@ -94,7 +94,6 @@ None. The reference has no counterpart; this component is designed in its idiom 
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                      | Why                                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | It became a real listbox. | The reference's select is a button and a div with no roles, no keyboard handling and no focus return — it can only be operated with a pointer. |
-

@@ -25,7 +25,7 @@ export const Default: Story = {
 export const WithHint: Story = {
   args: {
     children: s('Források'),
-    hint: "3 eszköz",
+    hint: '3 eszköz',
   },
 };
 
@@ -33,7 +33,7 @@ export const AsHeading: Story = {
   args: {
     children: s('Források'),
     headingLevel: 2,
-    hint: "3 eszköz",
+    hint: '3 eszköz',
   },
 };
 

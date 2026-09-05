@@ -10,21 +10,21 @@ A trigger showing the current selection, then a list of results, each with an op
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `results` *(required)* | `SlideResult[]` | — | — |
-| `label` *(required)* | `string` | — | Names the search region. |
-| `searchLabel` *(required)* | `string` | — | Mono eyebrow inside the trigger — "SEARCH FILES". |
-| `placeholder` *(required)* | `string` | — | Placeholder shown in the trigger when filter is empty. |
-| `filter` | `string` | `$bindable('')` | Current filter value — bindable so parent can run search. |
-| `emptyMessage` *(required)* | `string` | — | — |
-| `openLabel` *(required)* | `string` | — | — |
-| `queueLabel` *(required)* | `string` | — | — |
-| `queueDisabled` | `boolean` | `false` | — |
-| `numpad` | `boolean` | `false` | Always render the digit numpad (for mobile). |
-| `ontrigger` | `() => void` | — | — |
-| `onopen` | `(result: SlideResult) => void` | — | — |
-| `onqueue` | `(result: SlideResult) => void` | — | — |
+| Prop                        | Type                            | Default         | Meaning                                                   |
+| --------------------------- | ------------------------------- | --------------- | --------------------------------------------------------- |
+| `results` _(required)_      | `SlideResult[]`                 | —               | —                                                         |
+| `label` _(required)_        | `string`                        | —               | Names the search region.                                  |
+| `searchLabel` _(required)_  | `string`                        | —               | Mono eyebrow inside the trigger — "SEARCH FILES".         |
+| `placeholder` _(required)_  | `string`                        | —               | Placeholder shown in the trigger when filter is empty.    |
+| `filter`                    | `string`                        | `$bindable('')` | Current filter value — bindable so parent can run search. |
+| `emptyMessage` _(required)_ | `string`                        | —               | —                                                         |
+| `openLabel` _(required)_    | `string`                        | —               | —                                                         |
+| `queueLabel` _(required)_   | `string`                        | —               | —                                                         |
+| `queueDisabled`             | `boolean`                       | `false`         | —                                                         |
+| `numpad`                    | `boolean`                       | `false`         | Always render the digit numpad (for mobile).              |
+| `ontrigger`                 | `() => void`                    | —               | —                                                         |
+| `onopen`                    | `(result: SlideResult) => void` | —               | —                                                         |
+| `onqueue`                   | `(result: SlideResult) => void` | —               | —                                                         |
 
 ## Variants
 
@@ -36,51 +36,51 @@ With results, empty.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--c-dock-button-label-track` | `1px` |
-| `--c-search-empty-padding-block` | `16px` |
-| `--c-search-item-column-gap` | `10px` |
-| `--c-search-item-padding-block` | `12px` |
-| `--c-search-item-row-gap` | `3px` |
-| `--c-search-label-track` | `1.4px` |
-| `--c-search-title-gap` | `3px` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--status-warn` | `#855611 / #d9a358` |
-| `--surface-raised` | `#f6f2e8 / #1e1b16` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-size` | `15px` |
-| `--type-body-strong-weight` | `500` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-size` | `10px` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-sm-transform` | `uppercase` |
-| `--type-label-transform` | `uppercase` |
-| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-title-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-title-size` | `30px` |
-| `--type-title-weight` | `500` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter-inset` | `14px` |
-| `--ui-gutter-tight` | `12px` |
-| `--ui-target-min` | `44px` |
+| Token                            | Resolves to                                                                |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `--accent`                       | `#5c5c84 / #a9a6d6`                                                        |
+| `--border-control`               | `#857c68 / #716b5c`                                                        |
+| `--border-hairline`              | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
+| `--c-dock-button-label-track`    | `1px`                                                                      |
+| `--c-search-empty-padding-block` | `16px`                                                                     |
+| `--c-search-item-column-gap`     | `10px`                                                                     |
+| `--c-search-item-padding-block`  | `12px`                                                                     |
+| `--c-search-item-row-gap`        | `3px`                                                                      |
+| `--c-search-label-track`         | `1.4px`                                                                    |
+| `--c-search-title-gap`           | `3px`                                                                      |
+| `--status-error`                 | `#b5321c / #e66a4f`                                                        |
+| `--status-warn`                  | `#855611 / #d9a358`                                                        |
+| `--surface-raised`               | `#f6f2e8 / #1e1b16`                                                        |
+| `--text-muted`                   | `#615e56 / #918b7e`                                                        |
+| `--text-primary`                 | `#1c1a16 / #ede6d6`                                                        |
+| `--type-body-family`             | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-size`               | `15px`                                                                     |
+| `--type-body-strong-weight`      | `500`                                                                      |
+| `--type-label-family`            | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
+| `--type-label-size`              | `10px`                                                                     |
+| `--type-label-sm-family`         | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
+| `--type-label-sm-size`           | `9px`                                                                      |
+| `--type-label-sm-transform`      | `uppercase`                                                                |
+| `--type-label-transform`         | `uppercase`                                                                |
+| `--type-quote-family`            | `"Cormorant Garamond", Georgia, serif`                                     |
+| `--type-title-family`            | `"Cormorant Garamond", Georgia, serif`                                     |
+| `--type-title-size`              | `30px`                                                                     |
+| `--type-title-weight`            | `500`                                                                      |
+| `--ui-border-hairline`           | `1px`                                                                      |
+| `--ui-focus-offset`              | `2px`                                                                      |
+| `--ui-focus-width`               | `2px`                                                                      |
+| `--ui-gutter-inset`              | `14px`                                                                     |
+| `--ui-gutter-tight`              | `12px`                                                                     |
+| `--ui-target-min`                | `44px`                                                                     |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Moves through the trigger, then each result's two actions. |
-| `Enter`, `Space` | Opens or queues. |
+| Key              | Behaviour                                                  |
+| ---------------- | ---------------------------------------------------------- |
+| `Tab`            | Moves through the trigger, then each result's two actions. |
+| `Enter`, `Space` | Opens or queues.                                           |
 
 ## ARIA
 
@@ -98,27 +98,26 @@ A named region containing a real list. Each action's name carries the slide's ti
 
 Source: `src/components/presentations/SlideSearch.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.trigger` | `gap` | `12px` | `12px` | `--ui-gutter-tight` |
-| `.trigger` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
-| `.trigger` | `border` | `1px` | `1px` | `--ui-border-hairline` |
-| `small, .trigger em, .open code, .open em, .queue` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
-| `small, .trigger em, .open code, .open em, .queue` | `letter-spacing` | `1.4px` | `1.4px` | `--c-search-label-track` |
-| `strong` | `margin-top` | `3px` | `3px` | `--c-search-title-gap` |
-| `strong` | `font-size` | `15px` | `15px` | `--type-body-size` |
-| `strong` | `font-weight` | `500` | `500` | `--type-body-strong-weight` |
-| `.open` | `gap` | `3px` | `3px` | `--c-search-item-row-gap` |
-| `.open` | `gap` | `10px` | `10px` | `--c-search-item-column-gap` |
-| `.open` | `padding` | `12px` | `12px` | `--c-search-item-padding-block` |
-| `p` | `padding` | `16px` | `16px` | `--c-search-empty-padding-block` |
+| Selector                                           | Property         | Measured | Implemented | Token                            |
+| -------------------------------------------------- | ---------------- | -------- | ----------- | -------------------------------- |
+| `.trigger`                                         | `gap`            | `12px`   | `12px`      | `--ui-gutter-tight`              |
+| `.trigger`                                         | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`              |
+| `.trigger`                                         | `border`         | `1px`    | `1px`       | `--ui-border-hairline`           |
+| `small, .trigger em, .open code, .open em, .queue` | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`           |
+| `small, .trigger em, .open code, .open em, .queue` | `letter-spacing` | `1.4px`  | `1.4px`     | `--c-search-label-track`         |
+| `strong`                                           | `margin-top`     | `3px`    | `3px`       | `--c-search-title-gap`           |
+| `strong`                                           | `font-size`      | `15px`   | `15px`      | `--type-body-size`               |
+| `strong`                                           | `font-weight`    | `500`    | `500`       | `--type-body-strong-weight`      |
+| `.open`                                            | `gap`            | `3px`    | `3px`       | `--c-search-item-row-gap`        |
+| `.open`                                            | `gap`            | `10px`   | `10px`      | `--c-search-item-column-gap`     |
+| `.open`                                            | `padding`        | `12px`   | `12px`      | `--c-search-item-padding-block`  |
+| `p`                                                | `padding`        | `16px`   | `16px`      | `--c-search-empty-padding-block` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
-| Action names include the slide. | The reference's queue control is a bare `+`. |
-| The digit keypad was left out. | It is a screen's control surface, not a component — and its meaning depends entirely on the screen around it. |
-
+| What                            | Why                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Action names include the slide. | The reference's queue control is a bare `+`.                                                                  |
+| The digit keypad was left out.  | It is a screen's control surface, not a component — and its meaning depends entirely on the screen around it. |

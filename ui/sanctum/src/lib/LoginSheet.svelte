@@ -1,6 +1,14 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { Sheet, Field, SectionLabel, Dot, IconButton, Button, Glyph } from '@metocast/design-system';
+  import {
+    Sheet,
+    Field,
+    SectionLabel,
+    Dot,
+    IconButton,
+    Button,
+    Glyph,
+  } from '@metocast/design-system';
   import {
     fetchConnectorConfig,
     saveConnectorConfig,
@@ -14,8 +22,14 @@
   let { provider = $bindable<Provider | null>(null) }: { provider: Provider | null } = $props();
 
   const chars: Record<Provider, string> = { youtube: 'Y', facebook: 'F' };
-  const redirects: Record<Provider, string> = { youtube: 'metocast://auth/yt', facebook: 'metocast://auth/fb' };
-  const authUrls: Record<Provider, () => Promise<string>> = { youtube: youtubeAuthUrl, facebook: facebookAuthUrl };
+  const redirects: Record<Provider, string> = {
+    youtube: 'metocast://auth/yt',
+    facebook: 'metocast://auth/fb',
+  };
+  const authUrls: Record<Provider, () => Promise<string>> = {
+    youtube: youtubeAuthUrl,
+    facebook: facebookAuthUrl,
+  };
 
   let view = $state<'login' | 'credentials'>('login');
   let showSecret = $state(false);
@@ -24,7 +38,9 @@
   let yt = $state({ clientId: '', clientSecret: '', clientSecretSet: false });
   let fb = $state({ appId: '', appSecret: '', appSecretSet: false, pageId: '' });
 
-  const providerName = $derived(provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : '');
+  const providerName = $derived(
+    provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : '',
+  );
   const hasCreds = $derived(
     provider === 'youtube'
       ? Boolean(yt.clientId) && yt.clientSecretSet
@@ -43,10 +59,21 @@
   async function load(p: Provider): Promise<void> {
     if (p === 'youtube') {
       const c = await fetchConnectorConfig('youtube').catch(() => null);
-      if (c) yt = { clientId: c.clientId, clientSecret: c.clientSecret, clientSecretSet: Boolean(c.clientSecretSet) };
+      if (c)
+        yt = {
+          clientId: c.clientId,
+          clientSecret: c.clientSecret,
+          clientSecretSet: Boolean(c.clientSecretSet),
+        };
     } else {
       const c = await fetchConnectorConfig('facebook').catch(() => null);
-      if (c) fb = { appId: c.appId, appSecret: c.appSecret, appSecretSet: Boolean(c.appSecretSet), pageId: c.pageId };
+      if (c)
+        fb = {
+          appId: c.appId,
+          appSecret: c.appSecret,
+          appSecretSet: Boolean(c.appSecretSet),
+          pageId: c.pageId,
+        };
     }
   }
 
@@ -73,7 +100,11 @@
   async function saveYoutube(): Promise<void> {
     const c = await fetchConnectorConfig('youtube').catch(() => null);
     if (!c) return;
-    await saveConnectorConfig('youtube', { ...c, clientId: yt.clientId, clientSecret: yt.clientSecret });
+    await saveConnectorConfig('youtube', {
+      ...c,
+      clientId: yt.clientId,
+      clientSecret: yt.clientSecret,
+    });
     await load('youtube');
     view = 'login';
   }
@@ -81,7 +112,12 @@
   async function saveFacebook(): Promise<void> {
     const c = await fetchConnectorConfig('facebook').catch(() => null);
     if (!c) return;
-    await saveConnectorConfig('facebook', { ...c, appId: fb.appId, appSecret: fb.appSecret, pageId: fb.pageId });
+    await saveConnectorConfig('facebook', {
+      ...c,
+      appId: fb.appId,
+      appSecret: fb.appSecret,
+      pageId: fb.pageId,
+    });
     await load('facebook');
     view = 'login';
   }
@@ -109,7 +145,11 @@
       <p class="copy">{$_(`login.scope.${provider}`)}</p>
       <div class="cred">
         <Dot color={hasCreds ? 'var(--status-ok)' : 'var(--status-warn)'} size={6} />
-        <span>{hasCreds ? `${$_('login.clientId')} · ${maskMid(clientLabel)}` : $_('login.noCreds')}</span>
+        <span
+          >{hasCreds
+            ? `${$_('login.clientId')} · ${maskMid(clientLabel)}`
+            : $_('login.noCreds')}</span
+        >
         <button class="link" onclick={() => (view = 'credentials')}>
           {hasCreds ? $_('login.edit') : $_('login.add')}
         </button>
@@ -117,11 +157,18 @@
       <SectionLabel>{$_('login.account')}</SectionLabel>
       <div class="fields">
         <Field label={$_('login.email')} placeholder={`you@${provider}.com`} />
-        <Field label={$_('login.password')} type="password" placeholder="••••••••••" hint={$_('login.passwordHint')} />
+        <Field
+          label={$_('login.password')}
+          type="password"
+          placeholder="••••••••••"
+          hint={$_('login.passwordHint')}
+        />
       </div>
       <div class="commit">
         <Button variant="primary" block disabled={busy || !hasCreds} onclick={continueOauth}>
-          {busy ? $_('login.connecting') : `${$_('login.continue', { values: { provider: providerName } })} →`}
+          {busy
+            ? $_('login.connecting')
+            : `${$_('login.continue', { values: { provider: providerName } })} →`}
         </Button>
       </div>
     {:else}
@@ -129,7 +176,11 @@
       <SectionLabel hint="OAuth 2.0">{$_('login.credentials')}</SectionLabel>
       <div class="fields">
         {#if provider === 'youtube'}
-          <Field label={$_('login.field.clientId')} bind:value={yt.clientId} placeholder="youtube-XXXXXXXXXXXX" />
+          <Field
+            label={$_('login.field.clientId')}
+            bind:value={yt.clientId}
+            placeholder="youtube-XXXXXXXXXXXX"
+          />
           <Field
             label={$_('login.field.clientSecret')}
             bind:value={yt.clientSecret}
@@ -143,7 +194,11 @@
             {/snippet}
           </Field>
         {:else}
-          <Field label={$_('login.field.appId')} bind:value={fb.appId} placeholder="facebook-XXXXXXXXXXXX" />
+          <Field
+            label={$_('login.field.appId')}
+            bind:value={fb.appId}
+            placeholder="facebook-XXXXXXXXXXXX"
+          />
           <Field
             label={$_('login.field.appSecret')}
             bind:value={fb.appSecret}
@@ -156,13 +211,28 @@
               </button>
             {/snippet}
           </Field>
-          <Field label={$_('login.field.pageId')} bind:value={fb.pageId} placeholder="1000000000000" />
+          <Field
+            label={$_('login.field.pageId')}
+            bind:value={fb.pageId}
+            placeholder="1000000000000"
+          />
         {/if}
-        <Field label={$_('login.redirectUri')} value={providerRedirect} readonly hint={$_('login.redirectHint')} />
+        <Field
+          label={$_('login.redirectUri')}
+          value={providerRedirect}
+          readonly
+          hint={$_('login.redirectHint')}
+        />
       </div>
       <div class="actions">
-        <Button variant="secondary" block onclick={() => (view = 'login')}>{$_('login.cancel')}</Button>
-        <Button variant="primary" block onclick={provider === 'youtube' ? saveYoutube : saveFacebook}>
+        <Button variant="secondary" block onclick={() => (view = 'login')}
+          >{$_('login.cancel')}</Button
+        >
+        <Button
+          variant="primary"
+          block
+          onclick={provider === 'youtube' ? saveYoutube : saveFacebook}
+        >
           {$_('login.saveCreds')}
         </Button>
       </div>

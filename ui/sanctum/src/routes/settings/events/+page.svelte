@@ -130,14 +130,25 @@
             {$_('eventSettings.slides.choose')}
           </Button>
         {:else if folder}
-          <Button variant="secondary" compact onclick={() => saveFolder('')} disabled={folderSaving}>
+          <Button
+            variant="secondary"
+            compact
+            onclick={() => saveFolder('')}
+            disabled={folderSaving}
+          >
             {$_('eventSettings.slides.clear')}
           </Button>
         {/if}
       {/snippet}
     </Row>
     {#if !canPick}
-      <form class="draft" onsubmit={(e) => { e.preventDefault(); void saveFolder(folderDraft.trim()); }}>
+      <form
+        class="draft"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void saveFolder(folderDraft.trim());
+        }}
+      >
         <Field
           label={$_('eventSettings.slides.field')}
           bind:value={folderDraft}
@@ -152,8 +163,18 @@
 
   <SectionLabel hint={$_('settings.template.hint')}>{$_('settings.template.section')}</SectionLabel>
   <List>
-    <form class="draft" onsubmit={(e) => { e.preventDefault(); void saveTemplate(); }}>
-      <Field label={$_('settings.template.field')} bind:value={template} placeholder={DEFAULT_TITLE_TEMPLATE} />
+    <form
+      class="draft"
+      onsubmit={(e) => {
+        e.preventDefault();
+        void saveTemplate();
+      }}
+    >
+      <Field
+        label={$_('settings.template.field')}
+        bind:value={template}
+        placeholder={DEFAULT_TITLE_TEMPLATE}
+      />
       <TitlePreview
         label={$_('editor.previewLabel')}
         text={templatePreview}
@@ -162,7 +183,11 @@
       />
       <p class="template-vars">
         {#each variables as v (v)}
-          <button type="button" onclick={() => copyVariable(v)} title={$_('eventSettings.copyHint')}>
+          <button
+            type="button"
+            onclick={() => copyVariable(v)}
+            title={$_('eventSettings.copyHint')}
+          >
             {v}
           </button>
         {/each}

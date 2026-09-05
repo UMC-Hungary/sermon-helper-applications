@@ -10,14 +10,14 @@ Label, then the control the caller renders, then the hint and the error beneath.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `label` *(required)* | `string` | — | — |
-| `hint` | `string` | `''` | A note under the control, associated through `aria-describedby`. |
-| `error` | `string` | `''` | Replaces the hint, marks the control invalid, and is announced when it appears. |
-| `required` | `boolean` | `false` | — |
-| `id` | `string` | ``sanctum-form-field-${crypto.randomUUID()}`` | — |
-| `children` *(required)* | `Snippet<[FormFieldContext]>` | — | Receives the ids and invalid flag the control must apply to itself. |
+| Prop                    | Type                          | Default                                     | Meaning                                                                         |
+| ----------------------- | ----------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------- |
+| `label` _(required)_    | `string`                      | —                                           | —                                                                               |
+| `hint`                  | `string`                      | `''`                                        | A note under the control, associated through `aria-describedby`.                |
+| `error`                 | `string`                      | `''`                                        | Replaces the hint, marks the control invalid, and is announced when it appears. |
+| `required`              | `boolean`                     | `false`                                     | —                                                                               |
+| `id`                    | `string`                      | `sanctum-form-field-${crypto.randomUUID()}` | —                                                                               |
+| `children` _(required)_ | `Snippet<[FormFieldContext]>` | —                                           | Receives the ids and invalid flag the control must apply to itself.             |
 
 ## Variants
 
@@ -29,20 +29,20 @@ Default, required, invalid.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-field-hint-track` | `1.2px` |
-| `--c-form-field-gap` | `4px` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-xs-size` | `8.5px` |
-| `--type-label-xs-track` | `1.5px` |
-| `--type-label-xs-transform` | `uppercase` |
-| `--type-label-xs-weight` | `500` |
+| Token                       | Resolves to                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `--c-field-hint-track`      | `1.2px`                                                        |
+| `--c-form-field-gap`        | `4px`                                                          |
+| `--status-error`            | `#b5321c / #e66a4f`                                            |
+| `--text-faint`              | `#676051 / #8f8879`                                            |
+| `--text-muted`              | `#615e56 / #918b7e`                                            |
+| `--type-label-sm-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size`      | `9px`                                                          |
+| `--type-label-xs-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-size`      | `8.5px`                                                        |
+| `--type-label-xs-track`     | `1.5px`                                                        |
+| `--type-label-xs-transform` | `uppercase`                                                    |
+| `--type-label-xs-weight`    | `500`                                                          |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -70,4 +70,3 @@ None. The reference has no field wrapper — each of its inputs re-implements it
 ## Recorded deviations
 
 None.
-

@@ -5,7 +5,12 @@
   import { get } from 'svelte/store';
   import { bibleApi } from '@metocast/core-client/utils/bible-api';
   import { debounce } from '@metocast/core-client/utils/debounce';
-  import { isV2Translation, TRANSLATIONS, type BibleTranslation, type BibleVerse } from '@metocast/core-client/types/bible';
+  import {
+    isV2Translation,
+    TRANSLATIONS,
+    type BibleTranslation,
+    type BibleVerse,
+  } from '@metocast/core-client/types/bible';
   import type { BibleSuggestion } from '@metocast/core-client/schemas/bible';
   import BibleSuggestions from '$lib/components/events/BibleSuggestions.svelte';
 
@@ -83,8 +88,12 @@
     leckioTranslation = (leckioRef?.translation as BibleTranslation) ?? 'UF_v2';
     textusVerses = textusRef?.verses?.map((v) => ({ ...v, editing: false })) ?? [];
     leckioVerses = leckioRef?.verses?.map((v) => ({ ...v, editing: false })) ?? [];
-    youtubePrivacyStatus = (initialEvent?.connections.find((c) => c.platform === 'youtube')?.privacyStatus as typeof youtubePrivacyStatus) ?? 'private';
-    facebookPrivacyStatus = (initialEvent?.connections.find((c) => c.platform === 'facebook')?.privacyStatus as typeof facebookPrivacyStatus) ?? 'EVERYONE';
+    youtubePrivacyStatus =
+      (initialEvent?.connections.find((c) => c.platform === 'youtube')
+        ?.privacyStatus as typeof youtubePrivacyStatus) ?? 'private';
+    facebookPrivacyStatus =
+      (initialEvent?.connections.find((c) => c.platform === 'facebook')
+        ?.privacyStatus as typeof facebookPrivacyStatus) ?? 'EVERYONE';
   });
 
   // Calculated title preview
@@ -121,24 +130,27 @@
   }, 300);
 
   // Debounced V2 fetching
-  const debouncedFetchV2 = debounce(async (term: string, translation: BibleTranslation, field: 'textus' | 'leckio') => {
-    if (term.length < 2) return;
-    try {
-      const result = await bibleApi.fetchVerses(term, translation);
-      if (field === 'textus') {
-        textus = result.label;
-        textusVerses = result.verses;
-        textusLoading = false;
-      } else {
-        leckio = result.label;
-        leckioVerses = result.verses;
-        leckioLoading = false;
+  const debouncedFetchV2 = debounce(
+    async (term: string, translation: BibleTranslation, field: 'textus' | 'leckio') => {
+      if (term.length < 2) return;
+      try {
+        const result = await bibleApi.fetchVerses(term, translation);
+        if (field === 'textus') {
+          textus = result.label;
+          textusVerses = result.verses;
+          textusLoading = false;
+        } else {
+          leckio = result.label;
+          leckioVerses = result.verses;
+          leckioLoading = false;
+        }
+      } catch {
+        if (field === 'textus') textusLoading = false;
+        else leckioLoading = false;
       }
-    } catch {
-      if (field === 'textus') textusLoading = false;
-      else leckioLoading = false;
-    }
-  }, 500);
+    },
+    500,
+  );
 
   function handleBibleInput(field: 'textus' | 'leckio', value: string) {
     if (field === 'textus') textusQuery = value;
@@ -170,15 +182,27 @@
   }
 
   async function handleSuggestionSelect(field: 'textus' | 'leckio', suggestion: BibleSuggestion) {
-    if (field === 'textus') { textusQuery = suggestion.label; textusLoading = true; }
-    else { leckioQuery = suggestion.label; leckioLoading = true; }
+    if (field === 'textus') {
+      textusQuery = suggestion.label;
+      textusLoading = true;
+    } else {
+      leckioQuery = suggestion.label;
+      leckioLoading = true;
+    }
     suggestions = [];
     showSuggestions = false;
     const translation = field === 'textus' ? textusTranslation : leckioTranslation;
     try {
       const result = await bibleApi.fetchVerses(suggestion.link, translation);
-      if (field === 'textus') { textus = result.label; textusVerses = result.verses; textusLoading = false; }
-      else { leckio = result.label; leckioVerses = result.verses; leckioLoading = false; }
+      if (field === 'textus') {
+        textus = result.label;
+        textusVerses = result.verses;
+        textusLoading = false;
+      } else {
+        leckio = result.label;
+        leckioVerses = result.verses;
+        leckioLoading = false;
+      }
     } catch {
       if (field === 'textus') textusLoading = false;
       else leckioLoading = false;
@@ -193,8 +217,15 @@
     else leckioLoading = true;
     try {
       const result = await bibleApi.fetchVerses(query, translation);
-      if (field === 'textus') { textus = result.label; textusVerses = result.verses; textusLoading = false; }
-      else { leckio = result.label; leckioVerses = result.verses; leckioLoading = false; }
+      if (field === 'textus') {
+        textus = result.label;
+        textusVerses = result.verses;
+        textusLoading = false;
+      } else {
+        leckio = result.label;
+        leckioVerses = result.verses;
+        leckioLoading = false;
+      }
     } catch (err) {
       if (field === 'textus') textusLoading = false;
       else leckioLoading = false;
@@ -203,23 +234,30 @@
   }
 
   function clearField(field: 'textus' | 'leckio') {
-    if (field === 'textus') { textus = ''; textusVerses = []; textusQuery = ''; }
-    else { leckio = ''; leckioVerses = []; leckioQuery = ''; }
+    if (field === 'textus') {
+      textus = '';
+      textusVerses = [];
+      textusQuery = '';
+    } else {
+      leckio = '';
+      leckioVerses = [];
+      leckioQuery = '';
+    }
   }
 
   function toggleEditing(field: 'textus' | 'leckio', index: number) {
     if (field === 'textus') {
-      textusVerses = textusVerses.map((v, i) => i === index ? { ...v, editing: !v.editing } : v);
+      textusVerses = textusVerses.map((v, i) => (i === index ? { ...v, editing: !v.editing } : v));
     } else {
-      leckioVerses = leckioVerses.map((v, i) => i === index ? { ...v, editing: !v.editing } : v);
+      leckioVerses = leckioVerses.map((v, i) => (i === index ? { ...v, editing: !v.editing } : v));
     }
   }
 
   function handleVerseChange(field: 'textus' | 'leckio', index: number, text: string) {
     if (field === 'textus') {
-      textusVerses = textusVerses.map((v, i) => i === index ? { ...v, text } : v);
+      textusVerses = textusVerses.map((v, i) => (i === index ? { ...v, text } : v));
     } else {
-      leckioVerses = leckioVerses.map((v, i) => i === index ? { ...v, text } : v);
+      leckioVerses = leckioVerses.map((v, i) => (i === index ? { ...v, text } : v));
     }
   }
 
@@ -358,7 +396,7 @@
           </button>
         </div>
 
-        {#each (['textus', 'leckio'] as const) as field (field)}
+        {#each ['textus', 'leckio'] as const as field (field)}
           {#if activeTab === field}
             {@const loading = field === 'textus' ? textusLoading : leckioLoading}
             {@const query = field === 'textus' ? textusQuery : leckioQuery}
@@ -374,7 +412,8 @@
                   <select
                     id="{field}-translation"
                     value={translation}
-                    onchange={(e) => handleTranslationChange(field, e.currentTarget.value as BibleTranslation)}
+                    onchange={(e) =>
+                      handleTranslationChange(field, e.currentTarget.value as BibleTranslation)}
                   >
                     {#each TRANSLATIONS as t (t.code)}
                       <option value={t.code}>{t.name}</option>
@@ -426,11 +465,7 @@
                 <div class="verses">
                   <div class="verses__header">
                     <span class="verses__label">{label}</span>
-                    <button
-                      type="button"
-                      class="verses__clear"
-                      onclick={() => clearField(field)}
-                    >
+                    <button type="button" class="verses__clear" onclick={() => clearField(field)}>
                       Clear
                     </button>
                   </div>

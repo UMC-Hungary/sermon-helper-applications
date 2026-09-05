@@ -2,11 +2,11 @@ import type { ConnectorDefinition } from './types.js';
 import type { ConnectorConfigMap } from '@metocast/core-client/schemas/connectors';
 
 export const szentirasDefinition: ConnectorDefinition<ConnectorConfigMap['szentiras']> = {
-	id: 'szentiras',
-	name: 'Szentírás.eu',
-	category: 'platform',
-	capabilities: { streaming: false, recording: false, live: false },
-	infoMarkdown: `## Szentírás.eu
+  id: 'szentiras',
+  name: 'Szentírás.eu',
+  category: 'platform',
+  capabilities: { streaming: false, recording: false, live: false },
+  infoMarkdown: `## Szentírás.eu
 
 [Szentírás.eu](https://szentiras.eu) is a volunteer-run Hungarian Bible site. Its REST API is
 what fills in Textus and Lekció verse text for the classic translations — **RUF, KG, KNB,
@@ -39,7 +39,7 @@ translations and autocomplete keep working.
 Roughly **60 requests per minute** per key. A disabled key returns **403**, exceeding the
 limit returns **429**. The operators ask that you credit szentiras.eu wherever the text is
 shown publicly, and note that the service carries no availability guarantee.`,
-	isConfigured(config) {
-		return config.enabled && config.apiKey.length > 0;
-	}
+  isConfigured(config) {
+    return config.enabled && config.apiKey.length > 0;
+  },
 };

@@ -45,20 +45,20 @@ only. A literal value in a component's styles is a build failure.
 
 ## Checks
 
-| Command | What it holds to |
-| --- | --- |
-| `pnpm measure` | Regenerates the measurement record from the reference |
-| `pnpm measure:check` | The committed record matches the reference |
-| `pnpm tokens:build` | Regenerates `tokens.css` |
-| `pnpm tokens:check` | `tokens.css` matches its source; both schemes are complete; every value is measured or carries a recorded deviation; the accent is ≥60° from the status colours and stays distinguishable under the three common colour-vision deficiencies |
-| `pnpm contrast` | Every documented pairing meets WCAG 2.2 AA in both schemes |
-| `pnpm fidelity` | Every component token still equals the declaration it was taken from; no literals; no undeclared breakpoints |
-| `pnpm docs` / `pnpm docs:check` | One specification per component, generated from the source so it cannot drift |
-| `pnpm stories` / `pnpm stories:check` | One story file per component |
-| `pnpm catalog:check` | Every export has a specification and stories, and nothing documents something unexported |
-| `pnpm verify` | All of the above |
-| `pnpm test:a11y` | Accessibility checks over every story, in a real browser |
-| `pnpm storybook` | The catalog |
+| Command                               | What it holds to                                                                                                                                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm measure`                        | Regenerates the measurement record from the reference                                                                                                                                                                                       |
+| `pnpm measure:check`                  | The committed record matches the reference                                                                                                                                                                                                  |
+| `pnpm tokens:build`                   | Regenerates `tokens.css`                                                                                                                                                                                                                    |
+| `pnpm tokens:check`                   | `tokens.css` matches its source; both schemes are complete; every value is measured or carries a recorded deviation; the accent is ≥60° from the status colours and stays distinguishable under the three common colour-vision deficiencies |
+| `pnpm contrast`                       | Every documented pairing meets WCAG 2.2 AA in both schemes                                                                                                                                                                                  |
+| `pnpm fidelity`                       | Every component token still equals the declaration it was taken from; no literals; no undeclared breakpoints                                                                                                                                |
+| `pnpm docs` / `pnpm docs:check`       | One specification per component, generated from the source so it cannot drift                                                                                                                                                               |
+| `pnpm stories` / `pnpm stories:check` | One story file per component                                                                                                                                                                                                                |
+| `pnpm catalog:check`                  | Every export has a specification and stories, and nothing documents something unexported                                                                                                                                                    |
+| `pnpm verify`                         | All of the above                                                                                                                                                                                                                            |
+| `pnpm test:a11y`                      | Accessibility checks over every story, in a real browser                                                                                                                                                                                    |
+| `pnpm storybook`                      | The catalog                                                                                                                                                                                                                                 |
 
 `pnpm fonts` re-downloads the woff2 subsets. They are committed, so it is only needed when the
 type roles change.

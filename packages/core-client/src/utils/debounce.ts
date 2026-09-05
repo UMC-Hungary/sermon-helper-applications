@@ -8,7 +8,7 @@
  */
 export function debounce<T extends (...args: never[]) => unknown>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -32,7 +32,7 @@ export function debounce<T extends (...args: never[]) => unknown>(
  */
 export function debounceAsync<T extends (...args: never[]) => Promise<ReturnType<T>>>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => Promise<ReturnType<T> | undefined> {
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let reject: ((reason?: unknown) => void) | null = null;

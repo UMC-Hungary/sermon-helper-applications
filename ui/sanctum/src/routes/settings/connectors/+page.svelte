@@ -56,29 +56,111 @@
     fields: FieldSpec[];
   }
 
-  const fld = (key: string, type: FieldSpec['type'] = 'text', secret = false): FieldSpec => ({ key, type, secret });
+  const fld = (key: string, type: FieldSpec['type'] = 'text', secret = false): FieldSpec => ({
+    key,
+    type,
+    secret,
+  });
 
   const CONNECTORS: ConnMeta[] = [
-    { id: 'obs', name: 'OBS Studio', cat: 'broadcast', supported: true, brand: siObsstudio.path, fields: [fld('host'), fld('port', 'number'), fld('password', 'password', true)] },
-    { id: 'youtube', name: 'YouTube', cat: 'streaming', supported: true, brand: siYoutube.path, fields: [fld('clientId'), fld('clientSecret', 'password', true)] },
-    { id: 'facebook', name: 'Facebook', cat: 'streaming', supported: true, brand: siFacebook.path, fields: [fld('appId'), fld('appSecret', 'password', true), fld('pageId')] },
-    { id: 'broadlink', name: 'Broadlink RF/IR', cat: 'devices', supported: true, char: '⌁', fields: [] },
-    { id: 'blackmagic-camera', name: 'Blackmagic Camera', cat: 'devices', supported: true, brand: siBlackmagicdesign.path, fields: [fld('host'), fld('username'), fld('password', 'password', true), fld('fingerprint')] },
-    { id: 'vmix', name: 'vMix', cat: 'future', supported: false, char: '▣', fields: [fld('host'), fld('port', 'number')] },
-    { id: 'atem', name: 'Blackmagic ATEM', cat: 'future', supported: false, brand: siBlackmagicdesign.path, fields: [fld('host'), fld('port', 'number')] },
-    { id: 'discord', name: 'Discord', cat: 'future', supported: false, brand: siDiscord.path, fields: [fld('webhookUrl', 'password', true)] },
+    {
+      id: 'obs',
+      name: 'OBS Studio',
+      cat: 'broadcast',
+      supported: true,
+      brand: siObsstudio.path,
+      fields: [fld('host'), fld('port', 'number'), fld('password', 'password', true)],
+    },
+    {
+      id: 'youtube',
+      name: 'YouTube',
+      cat: 'streaming',
+      supported: true,
+      brand: siYoutube.path,
+      fields: [fld('clientId'), fld('clientSecret', 'password', true)],
+    },
+    {
+      id: 'facebook',
+      name: 'Facebook',
+      cat: 'streaming',
+      supported: true,
+      brand: siFacebook.path,
+      fields: [fld('appId'), fld('appSecret', 'password', true), fld('pageId')],
+    },
+    {
+      id: 'broadlink',
+      name: 'Broadlink RF/IR',
+      cat: 'devices',
+      supported: true,
+      char: '⌁',
+      fields: [],
+    },
+    {
+      id: 'blackmagic-camera',
+      name: 'Blackmagic Camera',
+      cat: 'devices',
+      supported: true,
+      brand: siBlackmagicdesign.path,
+      fields: [fld('host'), fld('username'), fld('password', 'password', true), fld('fingerprint')],
+    },
+    {
+      id: 'vmix',
+      name: 'vMix',
+      cat: 'future',
+      supported: false,
+      char: '▣',
+      fields: [fld('host'), fld('port', 'number')],
+    },
+    {
+      id: 'atem',
+      name: 'Blackmagic ATEM',
+      cat: 'future',
+      supported: false,
+      brand: siBlackmagicdesign.path,
+      fields: [fld('host'), fld('port', 'number')],
+    },
+    {
+      id: 'discord',
+      name: 'Discord',
+      cat: 'future',
+      supported: false,
+      brand: siDiscord.path,
+      fields: [fld('webhookUrl', 'password', true)],
+    },
   ];
 
   const CATS: Category[] = ['broadcast', 'streaming', 'devices', 'future'];
 
-  const builders: { [K in ConnectorName]: (form: Record<string, string>, enabled: boolean) => ConnectorConfigMap[K] } = {
-    obs: (form, enabled) => ({ enabled, host: form.host ?? '', port: Number(form.port) || 0, password: form.password || null }),
+  const builders: {
+    [K in ConnectorName]: (form: Record<string, string>, enabled: boolean) => ConnectorConfigMap[K];
+  } = {
+    obs: (form, enabled) => ({
+      enabled,
+      host: form.host ?? '',
+      port: Number(form.port) || 0,
+      password: form.password || null,
+    }),
     vmix: (form, enabled) => ({ enabled, host: form.host ?? '', port: Number(form.port) || 0 }),
     atem: (form, enabled) => ({ enabled, host: form.host ?? '', port: Number(form.port) || 0 }),
     broadlink: (_form, enabled) => ({ enabled }),
-    'blackmagic-camera': (form, enabled) => ({ enabled, host: form.host ?? '', fingerprint: form.fingerprint ?? '', username: form.username ?? '', password: form.password ?? '' }),
-    youtube: (form, enabled) => ({ enabled, clientId: form.clientId ?? '', clientSecret: form.clientSecret ?? '' }),
-    facebook: (form, enabled) => ({ enabled, appId: form.appId ?? '', appSecret: form.appSecret ?? '', pageId: form.pageId ?? '' }),
+    'blackmagic-camera': (form, enabled) => ({
+      enabled,
+      host: form.host ?? '',
+      fingerprint: form.fingerprint ?? '',
+      username: form.username ?? '',
+      password: form.password ?? '',
+    }),
+    youtube: (form, enabled) => ({
+      enabled,
+      clientId: form.clientId ?? '',
+      clientSecret: form.clientSecret ?? '',
+    }),
+    facebook: (form, enabled) => ({
+      enabled,
+      appId: form.appId ?? '',
+      appSecret: form.appSecret ?? '',
+      pageId: form.pageId ?? '',
+    }),
     discord: (form, enabled) => ({ enabled, webhookUrl: form.webhookUrl ?? '' }),
     szentiras: (form, enabled) => ({ enabled, apiKey: form.apiKey ?? '' }),
   };
@@ -86,7 +168,9 @@
   let statuses = $state<Partial<Record<ConnectorName, ConnState>>>({});
   let enabled = $state<Record<string, boolean>>({});
   let forms = $state<Record<string, Record<string, string>>>(
-    Object.fromEntries(CONNECTORS.map((c) => [c.id, Object.fromEntries(c.fields.map((f) => [f.key, '']))])),
+    Object.fromEntries(
+      CONNECTORS.map((c) => [c.id, Object.fromEntries(c.fields.map((f) => [f.key, '']))]),
+    ),
   );
   let secretKept = $state<Record<string, string[]>>({});
   let expanded = $state<ConnectorName | null>('obs');
@@ -103,12 +187,20 @@
   let scanningCameras = $state(false);
 
   function fail(meta: ConnMeta, titleKey: string, message: string) {
-    pushToast({ kind: $_('toast.connector'), source: meta.name, title: $_(titleKey), body: message, tone: 'error' });
+    pushToast({
+      kind: $_('toast.connector'),
+      source: meta.name,
+      title: $_(titleKey),
+      body: message,
+      tone: 'error',
+    });
   }
 
   const byCat = (cat: Category) => CONNECTORS.filter((c) => c.cat === cat);
   const enabledCount = $derived(CONNECTORS.filter((c) => enabled[c.id]).length);
-  const readyCount = $derived(CONNECTORS.filter((c) => c.supported && enabled[c.id] && statuses[c.id] !== 'connected').length);
+  const readyCount = $derived(
+    CONNECTORS.filter((c) => c.supported && enabled[c.id] && statuses[c.id] !== 'connected').length,
+  );
   const liveCount = $derived(CONNECTORS.filter((c) => statuses[c.id] === 'connected').length);
   const futureCount = $derived(CONNECTORS.filter((c) => !c.supported).length);
   const obsConnected = $derived(statuses.obs === 'connected');
@@ -117,10 +209,14 @@
   function dotColor(meta: ConnMeta): string {
     if (!enabled[meta.id] || !meta.supported) return 'var(--status-off)';
     switch (statuses[meta.id]) {
-      case 'connected': return 'var(--status-ok)';
-      case 'connecting': return 'var(--status-warn)';
-      case 'error': return 'var(--status-error)';
-      default: return 'var(--status-off)';
+      case 'connected':
+        return 'var(--status-ok)';
+      case 'connecting':
+        return 'var(--status-warn)';
+      case 'error':
+        return 'var(--status-error)';
+      default:
+        return 'var(--status-off)';
     }
   }
 
@@ -128,7 +224,8 @@
     if (!enabled[meta.id]) return $_('conn.disabled');
     if (meta.id === 'obs' || meta.id === 'blackmagic-camera') {
       const f = forms[meta.id] ?? {};
-      const address = meta.id === 'obs' ? `${f.host || 'localhost'}:${f.port || '4455'}` : f.host || '—';
+      const address =
+        meta.id === 'obs' ? `${f.host || 'localhost'}:${f.port || '4455'}` : f.host || '—';
       return `${address} · ${statuses[meta.id] ?? 'disconnected'}`;
     }
     return $_(`conn.descriptor.${meta.id}`);
@@ -140,8 +237,9 @@
     const kept: string[] = [];
     for (const [k, v] of Object.entries(cfg)) {
       if (k === 'enabled') enabled[meta.id] = v === true;
-      else if (k.endsWith('Set')) { if (v === true) kept.push(k.slice(0, -3)); }
-      else if (typeof v === 'string' || typeof v === 'number') form[k] = String(v);
+      else if (k.endsWith('Set')) {
+        if (v === true) kept.push(k.slice(0, -3));
+      } else if (typeof v === 'string' || typeof v === 'number') form[k] = String(v);
     }
     forms[meta.id] = form;
     secretKept[meta.id] = kept;
@@ -191,7 +289,10 @@
 
   async function save(meta: ConnMeta) {
     try {
-      await saveConnectorConfig(meta.id, builders[meta.id](forms[meta.id] ?? {}, enabled[meta.id] ?? false));
+      await saveConnectorConfig(
+        meta.id,
+        builders[meta.id](forms[meta.id] ?? {}, enabled[meta.id] ?? false),
+      );
       outcome[meta.id] = $_('conn.saved');
       await loadConfig(meta);
       await refreshStatuses();
@@ -207,7 +308,11 @@
       if (obsConnected) await disconnectObs();
       else await connectObs();
     } catch (e) {
-      fail(obsMeta, obsConnected ? 'conn.toast.disconnectFail' : 'conn.toast.connectFail', String(e));
+      fail(
+        obsMeta,
+        obsConnected ? 'conn.toast.disconnectFail' : 'conn.toast.connectFail',
+        String(e),
+      );
     }
     await refreshStatuses();
     if (statuses.obs !== 'connected') return;
@@ -219,10 +324,14 @@
     destination = dest;
     if (!obsConnected) return;
     try {
-      const key = dest === 'youtube' ? await fetchYouTubeStreamKey() : await fetchFacebookStreamKey();
+      const key =
+        dest === 'youtube' ? await fetchYouTubeStreamKey() : await fetchFacebookStreamKey();
       rtmp = key.rtmpUrl;
       const slash = rtmp.lastIndexOf('/');
-      await applyObsStreamSettings(slash > 6 ? rtmp.slice(0, slash) : rtmp, slash > 6 ? rtmp.slice(slash + 1) : '');
+      await applyObsStreamSettings(
+        slash > 6 ? rtmp.slice(0, slash) : rtmp,
+        slash > 6 ? rtmp.slice(slash + 1) : '',
+      );
     } catch (e) {
       fail(obsMeta, 'conn.toast.saveFail', String(e));
     }
@@ -270,7 +379,10 @@
   }
 </script>
 
-<PageHeader title={$_('screens.connectors.title')} back={{ label: $_('conn.back'), href: '/settings' }}>
+<PageHeader
+  title={$_('screens.connectors.title')}
+  back={{ label: $_('conn.back'), href: '/settings' }}
+>
   {#snippet trailing()}<NotifBell />{/snippet}
 </PageHeader>
 
@@ -278,14 +390,28 @@
   <div class="main-col">
     <section class="overview">
       <OverviewCell label={$_('conn.summary.live')} value={liveCount} color="var(--status-live)" />
-      <OverviewCell label={$_('conn.summary.ready')} value={readyCount} color="var(--status-ok)" divider />
-      <OverviewCell label={$_('conn.summary.future')} value={futureCount} color="var(--status-warn)" divider />
+      <OverviewCell
+        label={$_('conn.summary.ready')}
+        value={readyCount}
+        color="var(--status-ok)"
+        divider
+      />
+      <OverviewCell
+        label={$_('conn.summary.future')}
+        value={futureCount}
+        color="var(--status-warn)"
+        divider
+      />
     </section>
 
     {#each CATS as cat (cat)}
       {@const items = byCat(cat)}
       {#if items.length}
-        <SectionLabel hint={$_('conn.enabledHint', { values: { n: items.filter((c) => enabled[c.id]).length, total: items.length } })}>
+        <SectionLabel
+          hint={$_('conn.enabledHint', {
+            values: { n: items.filter((c) => enabled[c.id]).length, total: items.length },
+          })}
+        >
           {$_(`conn.cat.${cat}`)}
         </SectionLabel>
         <List>
@@ -295,7 +421,13 @@
               <button class="head" type="button" onclick={() => open(meta)}>
                 {#if meta.brand}
                   <Glyph size={34}>
-                    {#snippet mark()}<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d={meta.brand} /></svg>{/snippet}
+                    {#snippet mark()}<svg
+                        viewBox="0 0 24 24"
+                        width="19"
+                        height="19"
+                        fill="currentColor"
+                        aria-hidden="true"><path d={meta.brand} /></svg
+                      >{/snippet}
                   </Glyph>
                 {:else}
                   <Glyph char={meta.char} size={34} />
@@ -305,7 +437,12 @@
                   <em><Dot color={dotColor(meta)} size={5} />{detailText(meta)}</em>
                 </span>
               </button>
-              <Toggle checked={enabled[meta.id] ?? false} disabled={!meta.supported} label={meta.name} onchange={() => toggle(meta)} />
+              <Toggle
+                checked={enabled[meta.id] ?? false}
+                disabled={!meta.supported}
+                label={meta.name}
+                onchange={() => toggle(meta)}
+              />
             </div>
 
             {#if expanded === meta.id}
@@ -318,15 +455,26 @@
                     type={field.type}
                     bind:value={form[field.key]}
                     readonly={!meta.supported}
-                    placeholder={field.secret && secretKept[meta.id]?.includes(field.key) ? '••••••••' : ''}
-                    hint={field.secret && secretKept[meta.id]?.includes(field.key) ? $_('conn.secretKept') : ''}
+                    placeholder={field.secret && secretKept[meta.id]?.includes(field.key)
+                      ? '••••••••'
+                      : ''}
+                    hint={field.secret && secretKept[meta.id]?.includes(field.key)
+                      ? $_('conn.secretKept')
+                      : ''}
                   />
                 {/each}
 
                 {#if meta.id === 'youtube' || meta.id === 'facebook'}
                   <div class="actions">
-                    <Button variant="secondary" compact onclick={() => save(meta)}>{$_('conn.save')}</Button>
-                    <Button variant="secondary" compact onclick={() => (loginProvider = meta.id === 'youtube' ? 'youtube' : 'facebook')}>
+                    <Button variant="secondary" compact onclick={() => save(meta)}
+                      >{$_('conn.save')}</Button
+                    >
+                    <Button
+                      variant="secondary"
+                      compact
+                      onclick={() =>
+                        (loginProvider = meta.id === 'youtube' ? 'youtube' : 'facebook')}
+                    >
                       {statuses[meta.id] === 'connected' ? $_('conn.account') : $_('conn.login')}
                     </Button>
                   </div>
@@ -337,16 +485,25 @@
                     <Button variant="secondary" compact onclick={toggleObs}>
                       {obsConnected ? $_('conn.encoder.disconnect') : $_('conn.encoder.connect')}
                     </Button>
-                    <Button variant="secondary" compact onclick={() => save(meta)}>{$_('conn.encoder.reconnect')}</Button>
+                    <Button variant="secondary" compact onclick={() => save(meta)}
+                      >{$_('conn.encoder.reconnect')}</Button
+                    >
                   </div>
                   <Segmented
                     compact
                     label={$_('conn.encoder.rtmp', { values: { dest: destination } })}
                     value={destination}
-                    options={[{ value: 'youtube', label: 'YouTube' }, { value: 'facebook', label: 'Facebook' }]}
+                    options={[
+                      { value: 'youtube', label: 'YouTube' },
+                      { value: 'facebook', label: 'Facebook' },
+                    ]}
                     onchange={(v) => pickDestination(v as 'youtube' | 'facebook')}
                   />
-                  <Field label={$_('conn.encoder.rtmp', { values: { dest: destination } })} value={rtmp} readonly />
+                  <Field
+                    label={$_('conn.encoder.rtmp', { values: { dest: destination } })}
+                    value={rtmp}
+                    readonly
+                  />
                 {/if}
 
                 {#if meta.id === 'blackmagic-camera'}
@@ -361,7 +518,9 @@
                     >
                       {$_('conn.camera.pushYoutube')}
                     </Button>
-                    <Button variant="secondary" compact onclick={() => save(meta)}>{$_('conn.encoder.reconnect')}</Button>
+                    <Button variant="secondary" compact onclick={() => save(meta)}
+                      >{$_('conn.encoder.reconnect')}</Button
+                    >
                   </div>
                   <Field label={$_('conn.camera.rtmp')} value={cameraRtmp} readonly />
 
@@ -380,7 +539,9 @@
                   <DiscoveryPanel
                     title={$_('conn.cameraDiscovery.title')}
                     description={$_('conn.cameraDiscovery.description')}
-                    scanLabel={cameras.length ? $_('conn.discovery.scanAgain') : $_('conn.discovery.scan')}
+                    scanLabel={cameras.length
+                      ? $_('conn.discovery.scanAgain')
+                      : $_('conn.discovery.scan')}
                     scanning={scanningCameras}
                     scanningLabel={$_('conn.discovery.scanning')}
                     onscan={scanCameras}
@@ -390,7 +551,14 @@
                     {:else}
                       <ul class="devices">
                         {#each cameras as c (c.uniqueId)}
-                          <li><strong>{c.deviceName || c.productName}</strong><code>{c.host}</code>{#if c.softwareVersion}<em>{$_('conn.cameraDiscovery.firmware', { values: { version: c.softwareVersion } })}</em>{/if}</li>
+                          <li>
+                            <strong>{c.deviceName || c.productName}</strong><code>{c.host}</code
+                            >{#if c.softwareVersion}<em
+                                >{$_('conn.cameraDiscovery.firmware', {
+                                  values: { version: c.softwareVersion },
+                                })}</em
+                              >{/if}
+                          </li>
                         {/each}
                       </ul>
                     {/if}
@@ -401,8 +569,10 @@
                   <DiscoveryPanel
                     title={$_('conn.discovery.title')}
                     description={$_('conn.discovery.description')}
-                    scanLabel={devices.length ? $_('conn.discovery.scanAgain') : $_('conn.discovery.scan')}
-                    scanning={scanning}
+                    scanLabel={devices.length
+                      ? $_('conn.discovery.scanAgain')
+                      : $_('conn.discovery.scan')}
+                    {scanning}
                     scanningLabel={$_('conn.discovery.scanning')}
                     onscan={scan}
                   >
@@ -411,7 +581,11 @@
                     {:else}
                       <ul class="devices">
                         {#each devices as d (d.id)}
-                          <li><strong>{d.name}</strong><code>{d.host}</code><em>{d.model ?? d.deviceType}</em></li>
+                          <li>
+                            <strong>{d.name}</strong><code>{d.host}</code><em
+                              >{d.model ?? d.deviceType}</em
+                            >
+                          </li>
                         {/each}
                       </ul>
                     {/if}
@@ -442,9 +616,22 @@
         <Stat label={$_('conn.ops.ready')} value={readyCount} />
       </div>
       <dl>
-        <div><dt>{$_('conn.ops.rtmp')}</dt><dd>{rtmp || '—'}</dd></div>
-        <div><dt>{$_('conn.ops.deviceLayer')}</dt><dd>{devices.length ? $_('conn.ops.devicesFound', { values: { n: devices.length } }) : $_('conn.ops.awaitingScan')}</dd></div>
-        <div><dt>{$_('conn.ops.authState')}</dt><dd>{ytLinked ? $_('conn.ops.ytLinked') : $_('conn.ops.ytNeedsLogin')}</dd></div>
+        <div>
+          <dt>{$_('conn.ops.rtmp')}</dt>
+          <dd>{rtmp || '—'}</dd>
+        </div>
+        <div>
+          <dt>{$_('conn.ops.deviceLayer')}</dt>
+          <dd>
+            {devices.length
+              ? $_('conn.ops.devicesFound', { values: { n: devices.length } })
+              : $_('conn.ops.awaitingScan')}
+          </dd>
+        </div>
+        <div>
+          <dt>{$_('conn.ops.authState')}</dt>
+          <dd>{ytLinked ? $_('conn.ops.ytLinked') : $_('conn.ops.ytNeedsLogin')}</dd>
+        </div>
       </dl>
     </section>
   </aside>

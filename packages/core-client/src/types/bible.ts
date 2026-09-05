@@ -26,15 +26,35 @@ export interface TranslationOption {
 
 export const TRANSLATIONS: TranslationOption[] = [
   // V2 translations (immediate results, no suggestion selection needed)
-  { code: 'UF_v2', name: 'UF (v2)', fullName: 'Magyar Bibliatársulat Újfordítású Biblia (UF) (v2)', type: 'v2' },
-  { code: 'RUF_v2', name: 'RUF (v2)', fullName: 'Magyar Bibliatársulat Újfordítású Biblia (RUF) (v2)', type: 'v2' },
+  {
+    code: 'UF_v2',
+    name: 'UF (v2)',
+    fullName: 'Magyar Bibliatársulat Újfordítású Biblia (UF) (v2)',
+    type: 'v2',
+  },
+  {
+    code: 'RUF_v2',
+    name: 'RUF (v2)',
+    fullName: 'Magyar Bibliatársulat Újfordítású Biblia (RUF) (v2)',
+    type: 'v2',
+  },
   // Legacy translations (require suggestion selection)
-  { code: 'RUF', name: 'RUF', fullName: 'Magyar Bibliatársulat Újfordítású Bibliája 2014 (RUF)', type: 'legacy' },
+  {
+    code: 'RUF',
+    name: 'RUF',
+    fullName: 'Magyar Bibliatársulat Újfordítású Bibliája 2014 (RUF)',
+    type: 'legacy',
+  },
   { code: 'KG', name: 'KG', fullName: 'Károli Gáspár revideált fordítása (KG)', type: 'legacy' },
   { code: 'KNB', name: 'KNB', fullName: 'Káldi-Neovulgáta (KNB)', type: 'legacy' },
   { code: 'SZIT', name: 'SZIT', fullName: 'Szent István Társulati Biblia (SZIT)', type: 'legacy' },
   { code: 'BD', name: 'BD', fullName: 'Békés-Dalos Újszövetségi Szentírás (BD)', type: 'legacy' },
-  { code: 'STL', name: 'STL', fullName: 'Simon Tamás László Újszövetség-fordítása (STL)', type: 'legacy' },
+  {
+    code: 'STL',
+    name: 'STL',
+    fullName: 'Simon Tamás László Újszövetség-fordítása (STL)',
+    type: 'legacy',
+  },
 ];
 
 // Helper function to check if a translation is V2
@@ -44,7 +64,7 @@ export function isV2Translation(translation: BibleTranslation): boolean {
 
 // Get translation by code
 export function getTranslation(code: BibleTranslation): TranslationOption | undefined {
-  return TRANSLATIONS.find(t => t.code === code);
+  return TRANSLATIONS.find((t) => t.code === code);
 }
 
 // Get V2 API translation code (without _v2 suffix)

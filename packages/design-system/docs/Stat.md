@@ -10,11 +10,11 @@ The label, then the figure in the display face with the unit on its baseline.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `label` *(required)* | `string` | — | — |
-| `value` *(required)* | `string \| number` | — | — |
-| `unit` | `string` | — | A short unit set beside the figure — "min", "kb/s". |
+| Prop                 | Type               | Default | Meaning                                             |
+| -------------------- | ------------------ | ------- | --------------------------------------------------- |
+| `label` _(required)_ | `string`           | —       | —                                                   |
+| `value` _(required)_ | `string \| number` | —       | —                                                   |
+| `unit`               | `string`           | —       | A short unit set beside the figure — "min", "kb/s". |
 
 ## Variants
 
@@ -26,21 +26,21 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-stat-label-gap` | `6px` |
-| `--c-stat-label-track` | `1.8px` |
-| `--c-stat-unit-gap` | `3px` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-figure-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-figure-leading` | `1` |
-| `--type-figure-size` | `24px` |
-| `--type-figure-track` | `-0.4px` |
-| `--type-figure-weight` | `500` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-size` | `10px` |
-| `--type-label-transform` | `uppercase` |
+| Token                    | Resolves to                                                    |
+| ------------------------ | -------------------------------------------------------------- |
+| `--c-stat-label-gap`     | `6px`                                                          |
+| `--c-stat-label-track`   | `1.8px`                                                        |
+| `--c-stat-unit-gap`      | `3px`                                                          |
+| `--text-muted`           | `#615e56 / #918b7e`                                            |
+| `--text-primary`         | `#1c1a16 / #ede6d6`                                            |
+| `--type-figure-family`   | `"Cormorant Garamond", Georgia, serif`                         |
+| `--type-figure-leading`  | `1`                                                            |
+| `--type-figure-size`     | `24px`                                                         |
+| `--type-figure-track`    | `-0.4px`                                                       |
+| `--type-figure-weight`   | `500`                                                          |
+| `--type-label-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size`      | `10px`                                                         |
+| `--type-label-transform` | `uppercase`                                                    |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -64,20 +64,19 @@ None of its own. The label and the figure are both real text and are announced i
 
 Source: `src/components/primitives/Stat.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.label` | `font-size` | `10px` | `10px` | `--type-label-size` |
-| `.label` | `letter-spacing` | `1.8px` | `1.8px` | `--c-stat-label-track` |
-| `.label` | `margin-bottom` | `6px` | `6px` | `--c-stat-label-gap` |
-| `.value` | `gap` | `3px` | `3px` | `--c-stat-unit-gap` |
-| `span` | `font-size` | `24px` | `24px` | `--type-figure-size` |
-| `span` | `font-weight` | `500` | `500` | `--type-figure-weight` |
-| `span` | `letter-spacing` | `-0.4px` | `-0.4px` | `--type-figure-track` |
-| `span` | `line-height` | `1` | `1` | `--type-figure-leading` |
+| Selector | Property         | Measured | Implemented | Token                   |
+| -------- | ---------------- | -------- | ----------- | ----------------------- |
+| `.label` | `font-size`      | `10px`   | `10px`      | `--type-label-size`     |
+| `.label` | `letter-spacing` | `1.8px`  | `1.8px`     | `--c-stat-label-track`  |
+| `.label` | `margin-bottom`  | `6px`    | `6px`       | `--c-stat-label-gap`    |
+| `.value` | `gap`            | `3px`    | `3px`       | `--c-stat-unit-gap`     |
+| `span`   | `font-size`      | `24px`   | `24px`      | `--type-figure-size`    |
+| `span`   | `font-weight`    | `500`    | `500`       | `--type-figure-weight`  |
+| `span`   | `letter-spacing` | `-0.4px` | `-0.4px`    | `--type-figure-track`   |
+| `span`   | `line-height`    | `1`      | `1`         | `--type-figure-leading` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
-

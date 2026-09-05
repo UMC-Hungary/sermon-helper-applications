@@ -17,20 +17,20 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    name: "gear",
+    name: 'gear',
   },
 };
 
 export const Labelled: Story = {
   args: {
-    name: "bell",
-    label: "Értesítések",
+    name: 'bell',
+    label: 'Értesítések',
   },
 };
 
 export const Large: Story = {
   args: {
-    name: "calendar",
+    name: 'calendar',
     size: 44,
     stroke: 1.2,
   },
@@ -38,7 +38,7 @@ export const Large: Story = {
 
 export const HeavyStroke: Story = {
   args: {
-    name: "check",
+    name: 'check',
     size: 32,
     stroke: 2,
   },

@@ -17,29 +17,29 @@ type Story = StoryObj<typeof meta>;
 
 export const Quiet: Story = {
   args: {
-    label: "Értesítések",
-    tier: "off",
+    label: 'Értesítések',
+    tier: 'off',
   },
 };
 
 export const Ok: Story = {
   args: {
-    label: "Értesítések, 1 új",
-    tier: "ok",
+    label: 'Értesítések, 1 új',
+    tier: 'ok',
   },
 };
 
 export const Warning: Story = {
   args: {
-    label: "Értesítések, 2 új",
-    tier: "warn",
+    label: 'Értesítések, 2 új',
+    tier: 'warn',
   },
 };
 
 export const Critical: Story = {
   args: {
-    label: "Értesítések, 3 sürgős",
-    tier: "live",
+    label: 'Értesítések, 3 sürgős',
+    tier: 'live',
     unread: 3,
   },
 };

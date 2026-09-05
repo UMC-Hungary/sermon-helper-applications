@@ -171,7 +171,11 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('connected'), serverId: z.string() }),
   z.object({ type: z.literal('ok') }),
   z.object({ type: z.literal('error'), message: z.string() }),
-  z.object({ type: z.literal('notification'), level: z.enum(['info', 'warn', 'error']), message: z.string() }),
+  z.object({
+    type: z.literal('notification'),
+    level: z.enum(['info', 'warn', 'error']),
+    message: z.string(),
+  }),
   // ── Connector push (server → client) ───────────────────────────────────────
   z.object({
     type: z.literal('event.changed'),
@@ -183,12 +187,30 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('connector.status'),
-    connector: z.enum(['obs', 'vmix', 'atem', 'youtube', 'facebook', 'discord', 'broadlink', 'blackmagic-camera']),
+    connector: z.enum([
+      'obs',
+      'vmix',
+      'atem',
+      'youtube',
+      'facebook',
+      'discord',
+      'broadlink',
+      'blackmagic-camera',
+    ]),
     status: ConnectorStatusPayloadSchema,
   }),
   z.object({
     type: z.literal('connector.state'),
-    connector: z.enum(['obs', 'vmix', 'atem', 'broadlink', 'youtube', 'facebook', 'discord', 'blackmagic-camera']),
+    connector: z.enum([
+      'obs',
+      'vmix',
+      'atem',
+      'broadlink',
+      'youtube',
+      'facebook',
+      'discord',
+      'blackmagic-camera',
+    ]),
     isStreaming: z.boolean().optional(),
     isRecording: z.boolean().optional(),
   }),
@@ -274,9 +296,15 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('events.update'), event: EventSchema }),
   // ── Recordings (WS command responses) ──────────────────────────────────────
   z.object({ type: z.literal('recordings.list'), recordings: z.array(RecordingSchema) }),
-  z.object({ type: z.literal('recordings.list_all'), recordings: z.array(RecordingWithEventSchema) }),
+  z.object({
+    type: z.literal('recordings.list_all'),
+    recordings: z.array(RecordingWithEventSchema),
+  }),
   z.object({ type: z.literal('recordings.create'), recording: RecordingSchema }),
-  z.object({ type: z.literal('recordings.untracked.list'), recordings: z.array(UntrackedRecordingSchema) }),
+  z.object({
+    type: z.literal('recordings.untracked.list'),
+    recordings: z.array(UntrackedRecordingSchema),
+  }),
   z.object({ type: z.literal('recordings.untracked.assign'), recording: RecordingSchema }),
   // ── Activities (WS command responses) ──────────────────────────────────────
   z.object({ type: z.literal('activities.list'), activities: z.array(EventActivitySchema) }),
@@ -323,32 +351,36 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('connectors.youtube.content'),
     content: z.object({
-      liveBroadcasts: z.array(z.object({
-        id: z.string(),
-        title: z.string(),
-        thumbnailUrl: z.string(),
-        publishedAt: z.string().nullable(),
-        viewCount: z.number().nonnegative().nullable(),
-        likeCount: z.number().nonnegative().nullable(),
-        duration: z.string().nullable(),
-        liveStatus: z.string(),
-        scheduledStartTime: z.string().nullable(),
-        watchUrl: z.string(),
-        privacyStatus: z.string(),
-      })),
-      videos: z.array(z.object({
-        id: z.string(),
-        title: z.string(),
-        thumbnailUrl: z.string(),
-        publishedAt: z.string().nullable(),
-        viewCount: z.number().nonnegative().nullable(),
-        likeCount: z.number().nonnegative().nullable(),
-        duration: z.string().nullable(),
-        liveStatus: z.string(),
-        scheduledStartTime: z.string().nullable(),
-        watchUrl: z.string(),
-        privacyStatus: z.string(),
-      })),
+      liveBroadcasts: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          thumbnailUrl: z.string(),
+          publishedAt: z.string().nullable(),
+          viewCount: z.number().nonnegative().nullable(),
+          likeCount: z.number().nonnegative().nullable(),
+          duration: z.string().nullable(),
+          liveStatus: z.string(),
+          scheduledStartTime: z.string().nullable(),
+          watchUrl: z.string(),
+          privacyStatus: z.string(),
+        }),
+      ),
+      videos: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          thumbnailUrl: z.string(),
+          publishedAt: z.string().nullable(),
+          viewCount: z.number().nonnegative().nullable(),
+          likeCount: z.number().nonnegative().nullable(),
+          duration: z.string().nullable(),
+          liveStatus: z.string(),
+          scheduledStartTime: z.string().nullable(),
+          watchUrl: z.string(),
+          privacyStatus: z.string(),
+        }),
+      ),
     }),
   }),
   // ── Auth (WS command responses) ────────────────────────────────────────────
@@ -358,7 +390,10 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('broadlink.status'), status: ConnectorStatusPayloadSchema }),
   z.object({ type: z.literal('broadlink.devices.list'), devices: z.array(BroadlinkDeviceSchema) }),
   z.object({ type: z.literal('broadlink.devices.add'), device: BroadlinkDeviceSchema }),
-  z.object({ type: z.literal('broadlink.commands.list'), commands: z.array(BroadlinkCommandSchema) }),
+  z.object({
+    type: z.literal('broadlink.commands.list'),
+    commands: z.array(BroadlinkCommandSchema),
+  }),
   z.object({ type: z.literal('broadlink.commands.add'), command: BroadlinkCommandSchema }),
   z.object({ type: z.literal('broadlink.commands.update'), command: BroadlinkCommandSchema }),
   // ── Blackmagic camera (WS command responses) ───────────────────────────────

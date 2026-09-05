@@ -21,7 +21,8 @@ const flat = new Map();
 (function collect(node, path = []) {
   for (const [key, value] of Object.entries(node)) {
     if (key.startsWith('$')) continue;
-    if (value && typeof value === 'object' && '$value' in value) flat.set([...path, key].join('-'), String(value.$value));
+    if (value && typeof value === 'object' && '$value' in value)
+      flat.set([...path, key].join('-'), String(value.$value));
     else if (value && typeof value === 'object') collect(value, [...path, key]);
   }
 })(tokens);
@@ -42,7 +43,10 @@ function resolve(name, seen = new Set()) {
 
 const LENGTH = /(-?\d*\.?\d+)(px|rem|em|ms|s|%|vh|vw|dvh|svh|lvh|vmin|vmax|ch|ex|fr|deg)?/gi;
 const strip = (v) =>
-  v.replace(/\b(?:color-mix|rgba?|hsla?|oklch|oklab|var|cubic-bezier|steps|linear)\([^()]*(?:\([^()]*\)[^()]*)*\)/g, ' ');
+  v.replace(
+    /\b(?:color-mix|rgba?|hsla?|oklch|oklab|var|cubic-bezier|steps|linear)\([^()]*(?:\([^()]*\)[^()]*)*\)/g,
+    ' ',
+  );
 
 const byKey = new Map();
 for (const row of measurements.rows) {
@@ -67,7 +71,12 @@ function parseProps(source) {
   for (const raw of block[1].split('\n')) {
     const line = raw.trim();
     if (line.startsWith('/**') || line.startsWith('*') || line.startsWith('/*')) {
-      comment += ' ' + line.replace(/^\/?\*+\/?/, '').replace(/\*\/$/, '').trim();
+      comment +=
+        ' ' +
+        line
+          .replace(/^\/?\*+\/?/, '')
+          .replace(/\*\/$/, '')
+          .trim();
       continue;
     }
     const m = /^'?([\w-]+)'?(\?)?:\s*(.+?);$/.exec(line);
@@ -131,7 +140,18 @@ function render(name, file, source) {
     lines.push('');
   }
 
-  lines.push('## Variants', '', spec.variants, '', '## States', '', spec.states, '', '## Tokens consumed', '');
+  lines.push(
+    '## Variants',
+    '',
+    spec.variants,
+    '',
+    '## States',
+    '',
+    spec.states,
+    '',
+    '## Tokens consumed',
+    '',
+  );
   if (used.length === 0) lines.push('None — the component carries no styles of its own.', '');
   else {
     lines.push('| Token | Resolves to |', '| --- | --- |');
@@ -143,7 +163,18 @@ function render(name, file, source) {
     );
   }
 
-  lines.push('## Keyboard', '', spec.keyboard, '', '## ARIA', '', spec.aria, '', '## Accessibility acceptance criteria', '');
+  lines.push(
+    '## Keyboard',
+    '',
+    spec.keyboard,
+    '',
+    '## ARIA',
+    '',
+    spec.aria,
+    '',
+    '## Accessibility acceptance criteria',
+    '',
+  );
   lines.push(
     '- Reachable, operable and leavable by keyboard alone, with a focus indicator meeting 3:1 in both schemes.',
     '- An accessible name for every control, and current state exposed programmatically.',
@@ -162,8 +193,14 @@ function render(name, file, source) {
       '| --- | --- | --- | --- | --- |',
     );
     for (const [token, map] of Object.entries(entry.tokens ?? {})) {
-      const row = byKey.get(`${entry.source}|${map.selector}|${map.property}|${map.breakpoint ?? 'base'}`);
-      const parts = row ? [...strip(row.value).matchAll(LENGTH)].map(([, n, u]) => (u ? `${parseFloat(n)}${u}` : String(parseFloat(n)))) : [];
+      const row = byKey.get(
+        `${entry.source}|${map.selector}|${map.property}|${map.breakpoint ?? 'base'}`,
+      );
+      const parts = row
+        ? [...strip(row.value).matchAll(LENGTH)].map(([, n, u]) =>
+            u ? `${parseFloat(n)}${u}` : String(parseFloat(n)),
+          )
+        : [];
       lines.push(
         `| \`${escape(map.selector)}\` | \`${map.property}\`${map.breakpoint ? ` @${map.breakpoint}` : ''} | \`${parts[map.index ?? 0] ?? '—'}\` | \`${escape(resolve(token))}\` | \`--${token}\` |`,
       );
@@ -200,7 +237,9 @@ function walk(dir, out = []) {
   return out;
 }
 
-const files = ['src/primitives', 'src/patterns', 'src/a11y'].flatMap((d) => walk(join(packageDir, d)));
+const files = ['src/primitives', 'src/patterns', 'src/a11y'].flatMap((d) =>
+  walk(join(packageDir, d)),
+);
 const stale = [];
 let written = 0;
 

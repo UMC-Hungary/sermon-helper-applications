@@ -75,33 +75,32 @@
   <h1>Welcome — Choose a Mode</h1>
   <p class="subtitle">Select how this app will operate on this device.</p>
 
-  <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+  <form
+    onsubmit={(e) => {
+      e.preventDefault();
+      handleSubmit();
+    }}
+  >
     <fieldset>
       <legend>App mode</legend>
 
       <label class="radio-label">
-        <input
-          type="radio"
-          name="mode"
-          value="server"
-          bind:group={selectedMode}
-        />
+        <input type="radio" name="mode" value="server" bind:group={selectedMode} />
         <span class="radio-text">
           <strong>Server</strong>
-          <span class="description">Run the backend locally (requires this machine to stay on).</span>
+          <span class="description"
+            >Run the backend locally (requires this machine to stay on).</span
+          >
         </span>
       </label>
 
       <label class="radio-label">
-        <input
-          type="radio"
-          name="mode"
-          value="client"
-          bind:group={selectedMode}
-        />
+        <input type="radio" name="mode" value="client" bind:group={selectedMode} />
         <span class="radio-text">
           <strong>Client</strong>
-          <span class="description">Connect to a remote server. Get the URL and token from the server's Connect page.</span>
+          <span class="description"
+            >Connect to a remote server. Get the URL and token from the server's Connect page.</span
+          >
         </span>
       </label>
     </fieldset>

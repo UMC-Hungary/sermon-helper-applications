@@ -12,8 +12,8 @@
 
   const binaryName: Record<Platform, string> = {
     'linux-x86_64': 'presenter-receiver-linux-x86_64',
-    'linux-arm64':  'presenter-receiver-linux-arm64',
-    'macos-arm64':  'presenter-receiver-macos-arm64',
+    'linux-arm64': 'presenter-receiver-linux-arm64',
+    'macos-arm64': 'presenter-receiver-macos-arm64',
     'macos-x86_64': 'presenter-receiver-macos-x86_64',
   };
   const githubRepository = 'UMC-Hungary/sermon-helper-applications';
@@ -23,42 +23,44 @@
   let copiedInstall = $state(false);
   let copiedManual = $state(false);
 
-  const wsUrl = $derived(
-    ($localNetworkUrl || $serverUrl).replace(/^http/, 'ws') + '/ws'
-  );
+  const wsUrl = $derived(($localNetworkUrl || $serverUrl).replace(/^http/, 'ws') + '/ws');
 
   const installCommand = $derived(
-    `curl -fsSL https://raw.githubusercontent.com/${githubRepository}/main/presenter-receiver/install.sh | bash -s -- ${wsUrl}${autoStart ? ' --service' : ''}`
+    `curl -fsSL https://raw.githubusercontent.com/${githubRepository}/main/presenter-receiver/install.sh | bash -s -- ${wsUrl}${autoStart ? ' --service' : ''}`,
   );
 
   const manualCommand = $derived(
-    `curl -fsSL https://github.com/${githubRepository}/releases/latest/download/${binaryName[selectedPlatform]} -o presenter-receiver\nchmod +x presenter-receiver\n./presenter-receiver ${wsUrl}`
+    `curl -fsSL https://github.com/${githubRepository}/releases/latest/download/${binaryName[selectedPlatform]} -o presenter-receiver\nchmod +x presenter-receiver\n./presenter-receiver ${wsUrl}`,
   );
 
   async function copyInstall() {
     await navigator.clipboard.writeText(installCommand);
     copiedInstall = true;
-    setTimeout(() => { copiedInstall = false; }, 2000);
+    setTimeout(() => {
+      copiedInstall = false;
+    }, 2000);
   }
 
   async function copyManual() {
     await navigator.clipboard.writeText(manualCommand);
     copiedManual = true;
-    setTimeout(() => { copiedManual = false; }, 2000);
+    setTimeout(() => {
+      copiedManual = false;
+    }, 2000);
   }
 </script>
 
 <section class="info-card">
   <h2>Presenter Receiver — Install</h2>
   <p class="note">
-    Install the presenter receiver on the display device (e.g. Raspberry Pi).
-    It connects to this server via WebSocket and renders slides on-screen via the framebuffer.
+    Install the presenter receiver on the display device (e.g. Raspberry Pi). It connects to this
+    server via WebSocket and renders slides on-screen via the framebuffer.
   </p>
 
   <h3>One-line install</h3>
   <p class="note">
-    Auto-detects platform (Linux arm64/x86_64, macOS arm64/x86_64).
-    Downloads the binary, installs system dependencies if needed, and starts immediately.
+    Auto-detects platform (Linux arm64/x86_64, macOS arm64/x86_64). Downloads the binary, installs
+    system dependencies if needed, and starts immediately.
   </p>
 
   <label class="autostart-toggle">
@@ -69,8 +71,8 @@
   {#if autoStart}
     <p class="autostart-note">
       Sets up getty auto-login for the current user and adds a restart loop to
-      <code>~/.bash_profile</code>. The presenter launches on boot with no login prompt.
-      To update the server URL later, re-run this command with the new address.
+      <code>~/.bash_profile</code>. The presenter launches on boot with no login prompt. To update
+      the server URL later, re-run this command with the new address.
     </p>
   {/if}
 
@@ -85,8 +87,8 @@
       <button
         class="tab"
         class:active={selectedPlatform === p.id}
-        onclick={() => (selectedPlatform = p.id)}
-      >{p.label}</button>
+        onclick={() => (selectedPlatform = p.id)}>{p.label}</button
+      >
     {/each}
   </div>
   <div class="cmd-row">

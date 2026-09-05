@@ -10,12 +10,12 @@ The label on the left, the hint on the right, both on the same baseline.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `hint` | `string` | `'', headingLevel, id, children` | A trailing note, rendered one tracking step tighter and one tone lighter. |
-| `headingLevel` | `2 \| 3 \| 4` | — | Renders as a heading at this level when the label introduces a region. Left off, it is a plain label — the reference's own markup, which is right when the list below is not a section of its own. |
-| `id` | `string` | — | — |
-| `children` *(required)* | `Snippet` | — | — |
+| Prop                    | Type          | Default                          | Meaning                                                                                                                                                                                            |
+| ----------------------- | ------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hint`                  | `string`      | `'', headingLevel, id, children` | A trailing note, rendered one tracking step tighter and one tone lighter.                                                                                                                          |
+| `headingLevel`          | `2 \| 3 \| 4` | —                                | Renders as a heading at this level when the label introduces a region. Left off, it is a plain label — the reference's own markup, which is right when the list below is not a section of its own. |
+| `id`                    | `string`      | —                                | —                                                                                                                                                                                                  |
+| `children` _(required)_ | `Snippet`     | —                                | —                                                                                                                                                                                                  |
 
 ## Variants
 
@@ -27,19 +27,19 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-section-label-hint-track` | `1px` |
-| `--c-section-label-padding-bottom` | `10px` |
-| `--c-section-label-padding-top` | `28px` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-size` | `10px` |
-| `--type-label-track` | `2px` |
-| `--type-label-transform` | `uppercase` |
-| `--type-label-weight` | `500` |
-| `--ui-gutter` | `24px` |
+| Token                              | Resolves to                                                    |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `--c-section-label-hint-track`     | `1px`                                                          |
+| `--c-section-label-padding-bottom` | `10px`                                                         |
+| `--c-section-label-padding-top`    | `28px`                                                         |
+| `--text-faint`                     | `#676051 / #8f8879`                                            |
+| `--text-muted`                     | `#615e56 / #918b7e`                                            |
+| `--type-label-family`              | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size`                | `10px`                                                         |
+| `--type-label-track`               | `2px`                                                          |
+| `--type-label-transform`           | `uppercase`                                                    |
+| `--type-label-weight`              | `500`                                                          |
+| `--ui-gutter`                      | `24px`                                                         |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -63,21 +63,20 @@ Given `headingLevel` it renders as a heading, so the section joins the document 
 
 Source: `src/components/primitives/SectionLabel.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.label` | `padding` | `28px` | `28px` | `--c-section-label-padding-top` |
-| `.label` | `padding` | `24px` | `24px` | `--ui-gutter` |
-| `.label` | `padding` | `10px` | `10px` | `--c-section-label-padding-bottom` |
-| `div, span` | `font-size` | `10px` | `10px` | `--type-label-size` |
-| `div, span` | `letter-spacing` | `2px` | `2px` | `--type-label-track` |
-| `div, span` | `font-weight` | `500` | `500` | `--type-label-weight` |
-| `span` | `letter-spacing` | `1px` | `1px` | `--c-section-label-hint-track` |
+| Selector    | Property         | Measured | Implemented | Token                              |
+| ----------- | ---------------- | -------- | ----------- | ---------------------------------- |
+| `.label`    | `padding`        | `28px`   | `28px`      | `--c-section-label-padding-top`    |
+| `.label`    | `padding`        | `24px`   | `24px`      | `--ui-gutter`                      |
+| `.label`    | `padding`        | `10px`   | `10px`      | `--c-section-label-padding-bottom` |
+| `div, span` | `font-size`      | `10px`   | `10px`      | `--type-label-size`                |
+| `div, span` | `letter-spacing` | `2px`    | `2px`       | `--type-label-track`               |
+| `div, span` | `font-weight`    | `500`    | `500`       | `--type-label-weight`              |
+| `span`      | `letter-spacing` | `1px`    | `1px`       | `--c-section-label-hint-track`     |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                 | Why                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------- |
 | It can be a heading. | The reference always renders a `<div>`, so none of a screen's structure reaches the outline. |
-

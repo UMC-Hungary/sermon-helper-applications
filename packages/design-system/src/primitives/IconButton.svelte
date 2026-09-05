@@ -13,8 +13,15 @@
     href?: string;
   }
 
-  let { icon, label, variant = 'bare', size = 20, disabled = false, onclick, href }: Props =
-    $props();
+  let {
+    icon,
+    label,
+    variant = 'bare',
+    size = 20,
+    disabled = false,
+    onclick,
+    href,
+  }: Props = $props();
 </script>
 
 {#if href}

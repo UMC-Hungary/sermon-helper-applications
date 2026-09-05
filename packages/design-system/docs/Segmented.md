@@ -10,14 +10,14 @@ A bordered grid of equal columns, one button per option, each stacking glyph, la
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `options` *(required)* | `SegmentedOption<T>[]` | — | — |
-| `value` *(required)* | `T` | — | — |
-| `label` | `string` | — | Required unless the group is labelled by another element through `labelledby`. |
-| `labelledby` | `string` | — | — |
-| `compact` | `boolean` | — | The reference's compact inline tabs (as in Settings) rather than the full control. |
-| `onchange` | `(value: T) => void` | — | — |
+| Prop                   | Type                   | Default | Meaning                                                                            |
+| ---------------------- | ---------------------- | ------- | ---------------------------------------------------------------------------------- |
+| `options` _(required)_ | `SegmentedOption<T>[]` | —       | —                                                                                  |
+| `value` _(required)_   | `T`                    | —       | —                                                                                  |
+| `label`                | `string`               | —       | Required unless the group is labelled by another element through `labelledby`.     |
+| `labelledby`           | `string`               | —       | —                                                                                  |
+| `compact`              | `boolean`              | —       | The reference's compact inline tabs (as in Settings) rather than the full control. |
+| `onchange`             | `(value: T) => void`   | —       | —                                                                                  |
 
 ## Variants
 
@@ -29,42 +29,42 @@ Unselected, selected, disabled, focus-visible.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-segmented-gap` | `3px` |
-| `--c-segmented-glyph-size` | `15px` |
-| `--c-segmented-label-track` | `1.4px` |
-| `--c-segmented-padding-block` | `12px` |
-| `--space-10` | `10px` |
-| `--space-7` | `7px` |
-| `--surface-inverse` | `#1c1a16 / #ede6d6` |
-| `--text-inverse` | `#efe9dd / #14120f` |
-| `--text-inverse-muted` | `#afaba5 / #514d47` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-heading-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-size` | `10px` |
-| `--type-label-transform` | `uppercase` |
-| `--type-label-weight` | `500` |
-| `--type-numeral-leading` | `1` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-stack` | `8px` |
-| `--ui-target-min` | `44px` |
+| Token                         | Resolves to                                                    |
+| ----------------------------- | -------------------------------------------------------------- |
+| `--accent`                    | `#5c5c84 / #a9a6d6`                                            |
+| `--border-control`            | `#857c68 / #716b5c`                                            |
+| `--c-segmented-gap`           | `3px`                                                          |
+| `--c-segmented-glyph-size`    | `15px`                                                         |
+| `--c-segmented-label-track`   | `1.4px`                                                        |
+| `--c-segmented-padding-block` | `12px`                                                         |
+| `--space-10`                  | `10px`                                                         |
+| `--space-7`                   | `7px`                                                          |
+| `--surface-inverse`           | `#1c1a16 / #ede6d6`                                            |
+| `--text-inverse`              | `#efe9dd / #14120f`                                            |
+| `--text-inverse-muted`        | `#afaba5 / #514d47`                                            |
+| `--text-muted`                | `#615e56 / #918b7e`                                            |
+| `--text-primary`              | `#1c1a16 / #ede6d6`                                            |
+| `--type-heading-family`       | `"Cormorant Garamond", Georgia, serif`                         |
+| `--type-label-family`         | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size`           | `10px`                                                         |
+| `--type-label-transform`      | `uppercase`                                                    |
+| `--type-label-weight`         | `500`                                                          |
+| `--type-numeral-leading`      | `1`                                                            |
+| `--ui-border-hairline`        | `1px`                                                          |
+| `--ui-focus-offset`           | `2px`                                                          |
+| `--ui-focus-width`            | `2px`                                                          |
+| `--ui-stack`                  | `8px`                                                          |
+| `--ui-target-min`             | `44px`                                                         |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Enters and leaves the group as one stop. |
-| `←`, `→` | Move between options and select as they go. |
-| `Home`, `End` | Jump to the first and last option. |
+| Key           | Behaviour                                   |
+| ------------- | ------------------------------------------- |
+| `Tab`         | Enters and leaves the group as one stop.    |
+| `←`, `→`      | Move between options and select as they go. |
+| `Home`, `End` | Jump to the first and last option.          |
 
 ## ARIA
 
@@ -82,25 +82,24 @@ Every value resolves through a semantic or component token; `scripts/check-fidel
 
 Source: `src/components/primitives/Segmented.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.seg` | `border` | `1px` | `1px` | `--ui-border-hairline` |
-| `button` | `padding` | `12px` | `12px` | `--c-segmented-padding-block` |
-| `button` | `padding` | `8px` | `8px` | `--ui-stack` |
-| `button` | `gap` | `3px` | `3px` | `--c-segmented-gap` |
-| `span` | `font-size` | `15px` | `15px` | `--c-segmented-glyph-size` |
-| `span` | `line-height` | `1` | `1` | `--type-numeral-leading` |
-| `strong` | `font-size` | `10px` | `10px` | `--type-label-size` |
-| `strong` | `letter-spacing` | `1.4px` | `1.4px` | `--c-segmented-label-track` |
-| `strong` | `font-weight` | `500` | `500` | `--type-label-weight` |
+| Selector | Property         | Measured | Implemented | Token                         |
+| -------- | ---------------- | -------- | ----------- | ----------------------------- |
+| `.seg`   | `border`         | `1px`    | `1px`       | `--ui-border-hairline`        |
+| `button` | `padding`        | `12px`   | `12px`      | `--c-segmented-padding-block` |
+| `button` | `padding`        | `8px`    | `8px`       | `--ui-stack`                  |
+| `button` | `gap`            | `3px`    | `3px`       | `--c-segmented-gap`           |
+| `span`   | `font-size`      | `15px`   | `15px`      | `--c-segmented-glyph-size`    |
+| `span`   | `line-height`    | `1`      | `1`         | `--type-numeral-leading`      |
+| `strong` | `font-size`      | `10px`   | `10px`      | `--type-label-size`           |
+| `strong` | `letter-spacing` | `1.4px`  | `1.4px`     | `--c-segmented-label-track`   |
+| `strong` | `font-weight`    | `500`    | `500`       | `--type-label-weight`         |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
-| It became a radio group. | The reference renders plain buttons with no role, no group name and no roving tab order, so the choice is not announced as a choice. |
-| The inverse hint uses a colour role instead of `opacity: 0.72`. | The composite is the same; stating it as a role is what lets it be contrast-checked. |
-| A minimum target height was added. | The reference's 12px padding leaves options under 44px tall on a phone. |
-
+| What                                                            | Why                                                                                                                                  |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| It became a radio group.                                        | The reference renders plain buttons with no role, no group name and no roving tab order, so the choice is not announced as a choice. |
+| The inverse hint uses a colour role instead of `opacity: 0.72`. | The composite is the same; stating it as a role is what lets it be contrast-checked.                                                 |
+| A minimum target height was added.                              | The reference's 12px padding leaves options under 44px tall on a phone.                                                              |

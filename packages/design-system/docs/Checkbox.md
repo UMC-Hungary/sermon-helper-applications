@@ -10,16 +10,16 @@ A native input, visually replaced by a square box carrying a check or a dash, an
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `checked` | `boolean` | `$bindable(false)` | — |
-| `indeterminate` | `boolean` | `false` | Neither checked nor unchecked — a parent whose children disagree. |
-| `label` *(required)* | `string` | — | — |
-| `labelHidden` | `boolean` | `false` | Hides the label visually while leaving it to assistive technology. |
-| `disabled` | `boolean` | `false` | — |
-| `describedby` | `string` | — | — |
-| `id` | `string` | ``sanctum-checkbox-${crypto.randomUUID()}`` | — |
-| `onchange` | `(checked: boolean) => void` | — | — |
+| Prop                 | Type                         | Default                                   | Meaning                                                            |
+| -------------------- | ---------------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| `checked`            | `boolean`                    | `$bindable(false)`                        | —                                                                  |
+| `indeterminate`      | `boolean`                    | `false`                                   | Neither checked nor unchecked — a parent whose children disagree.  |
+| `label` _(required)_ | `string`                     | —                                         | —                                                                  |
+| `labelHidden`        | `boolean`                    | `false`                                   | Hides the label visually while leaving it to assistive technology. |
+| `disabled`           | `boolean`                    | `false`                                   | —                                                                  |
+| `describedby`        | `string`                     | —                                         | —                                                                  |
+| `id`                 | `string`                     | `sanctum-checkbox-${crypto.randomUUID()}` | —                                                                  |
+| `onchange`           | `(checked: boolean) => void` | —                                         | —                                                                  |
 
 ## Variants
 
@@ -31,32 +31,32 @@ Unchecked, checked, indeterminate, disabled, focus-visible.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-checkbox-gap` | `12px` |
-| `--c-checkbox-size` | `24px` |
-| `--surface-inverse` | `#1c1a16 / #ede6d6` |
-| `--text-inverse` | `#efe9dd / #14120f` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
+| Token                   | Resolves to                                                                |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `--accent`              | `#5c5c84 / #a9a6d6`                                                        |
+| `--border-control`      | `#857c68 / #716b5c`                                                        |
+| `--c-checkbox-gap`      | `12px`                                                                     |
+| `--c-checkbox-size`     | `24px`                                                                     |
+| `--surface-inverse`     | `#1c1a16 / #ede6d6`                                                        |
+| `--text-inverse`        | `#efe9dd / #14120f`                                                        |
+| `--text-primary`        | `#1c1a16 / #ede6d6`                                                        |
 | `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-size` | `14px` |
-| `--type-body-sm-track` | `-0.1px` |
-| `--type-body-sm-weight` | `500` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-target-min` | `44px` |
+| `--type-body-sm-size`   | `14px`                                                                     |
+| `--type-body-sm-track`  | `-0.1px`                                                                   |
+| `--type-body-sm-weight` | `500`                                                                      |
+| `--ui-border-hairline`  | `1px`                                                                      |
+| `--ui-focus-offset`     | `2px`                                                                      |
+| `--ui-focus-width`      | `2px`                                                                      |
+| `--ui-target-min`       | `44px`                                                                     |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Moves to and from the checkbox. |
-| `Space` | Toggles it. |
+| Key     | Behaviour                       |
+| ------- | ------------------------------- |
+| `Tab`   | Moves to and from the checkbox. |
+| `Space` | Toggles it.                     |
 
 ## ARIA
 
@@ -77,4 +77,3 @@ None. The reference has no checkbox at all; the box is drawn in its idiom — sq
 ## Recorded deviations
 
 None.
-

@@ -10,12 +10,12 @@ A bell icon, with a coloured mark for the worst waiting tier and a count for the
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `label` *(required)* | `string` | — | Already interpolated by the caller — "Notifications, 3 unread". |
-| `unread` | `number` | — | — |
-| `tier` | `Status` | — | The worst tier waiting. `off` shows no mark at all. |
-| `onclick` | `() => void` | — | — |
+| Prop                 | Type         | Default | Meaning                                                         |
+| -------------------- | ------------ | ------- | --------------------------------------------------------------- |
+| `label` _(required)_ | `string`     | —       | Already interpolated by the caller — "Notifications, 3 unread". |
+| `unread`             | `number`     | —       | —                                                               |
+| `tier`               | `Status`     | —       | The worst tier waiting. `off` shows no mark at all.             |
+| `onclick`            | `() => void` | —       | —                                                               |
 
 ## Variants
 
@@ -27,40 +27,40 @@ Quiet, marked, counted.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--c-bell-count-border` | `1.5px` |
-| `--c-bell-count-min-width` | `14px` |
-| `--c-bell-count-padding-block` | `1px` |
-| `--c-bell-count-padding-inline` | `4px` |
-| `--c-bell-count-right` | `-4px` |
-| `--c-bell-count-size` | `8px` |
-| `--c-bell-count-top` | `1px` |
-| `--c-bell-mark-offset` | `5px` |
-| `--c-bell-mark-size` | `8px` |
-| `--c-icon-button-padding` | `6px` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--surface-base` | `#efe9dd / #14120f` |
-| `--text-inverse` | `#efe9dd / #14120f` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-leading` | `1.2` |
-| `--ui-border-emphasis` | `2px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-radius-circle` | `50%` |
-| `--ui-radius-pill` | `999px` |
-| `--ui-target-min` | `44px` |
+| Token                           | Resolves to                                                    |
+| ------------------------------- | -------------------------------------------------------------- |
+| `--accent`                      | `#5c5c84 / #a9a6d6`                                            |
+| `--c-bell-count-border`         | `1.5px`                                                        |
+| `--c-bell-count-min-width`      | `14px`                                                         |
+| `--c-bell-count-padding-block`  | `1px`                                                          |
+| `--c-bell-count-padding-inline` | `4px`                                                          |
+| `--c-bell-count-right`          | `-4px`                                                         |
+| `--c-bell-count-size`           | `8px`                                                          |
+| `--c-bell-count-top`            | `1px`                                                          |
+| `--c-bell-mark-offset`          | `5px`                                                          |
+| `--c-bell-mark-size`            | `8px`                                                          |
+| `--c-icon-button-padding`       | `6px`                                                          |
+| `--status-error`                | `#b5321c / #e66a4f`                                            |
+| `--surface-base`                | `#efe9dd / #14120f`                                            |
+| `--text-inverse`                | `#efe9dd / #14120f`                                            |
+| `--text-primary`                | `#1c1a16 / #ede6d6`                                            |
+| `--type-label-family`           | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-leading`          | `1.2`                                                          |
+| `--ui-border-emphasis`          | `2px`                                                          |
+| `--ui-focus-offset`             | `2px`                                                          |
+| `--ui-focus-width`              | `2px`                                                          |
+| `--ui-radius-circle`            | `50%`                                                          |
+| `--ui-radius-pill`              | `999px`                                                        |
+| `--ui-target-min`               | `44px`                                                         |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Moves to and from the control. |
-| `Enter`, `Space` | Opens the centre. |
+| Key              | Behaviour                      |
+| ---------------- | ------------------------------ |
+| `Tab`            | Moves to and from the control. |
+| `Enter`, `Space` | Opens the centre.              |
 
 ## ARIA
 
@@ -78,28 +78,27 @@ The whole state goes into `aria-label`, interpolated by the caller — "Notifica
 
 Source: `src/components/notifications/NotifBell.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `button` | `padding` | `6px` | `6px` | `--c-icon-button-padding` |
-| `.dot` | `top` | `5px` | `5px` | `--c-bell-mark-offset` |
-| `.dot` | `width` | `8px` | `8px` | `--c-bell-mark-size` |
-| `.dot` | `border-radius` | `50%` | `50%` | `--ui-radius-circle` |
-| `.dot` | `border` | `2px` | `2px` | `--ui-border-emphasis` |
-| `em` | `top` | `1px` | `1px` | `--c-bell-count-top` |
-| `em` | `right` | `-4px` | `-4px` | `--c-bell-count-right` |
-| `em` | `font-size` | `8px` | `8px` | `--c-bell-count-size` |
-| `em` | `padding` | `1px` | `1px` | `--c-bell-count-padding-block` |
-| `em` | `padding` | `4px` | `4px` | `--c-bell-count-padding-inline` |
-| `em` | `min-width` | `14px` | `14px` | `--c-bell-count-min-width` |
-| `em` | `line-height` | `1.2` | `1.2` | `--type-label-leading` |
-| `em` | `border` | `1.5px` | `1.5px` | `--c-bell-count-border` |
+| Selector | Property        | Measured | Implemented | Token                           |
+| -------- | --------------- | -------- | ----------- | ------------------------------- |
+| `button` | `padding`       | `6px`    | `6px`       | `--c-icon-button-padding`       |
+| `.dot`   | `top`           | `5px`    | `5px`       | `--c-bell-mark-offset`          |
+| `.dot`   | `width`         | `8px`    | `8px`       | `--c-bell-mark-size`            |
+| `.dot`   | `border-radius` | `50%`    | `50%`       | `--ui-radius-circle`            |
+| `.dot`   | `border`        | `2px`    | `2px`       | `--ui-border-emphasis`          |
+| `em`     | `top`           | `1px`    | `1px`       | `--c-bell-count-top`            |
+| `em`     | `right`         | `-4px`   | `-4px`      | `--c-bell-count-right`          |
+| `em`     | `font-size`     | `8px`    | `8px`       | `--c-bell-count-size`           |
+| `em`     | `padding`       | `1px`    | `1px`       | `--c-bell-count-padding-block`  |
+| `em`     | `padding`       | `4px`    | `4px`       | `--c-bell-count-padding-inline` |
+| `em`     | `min-width`     | `14px`   | `14px`      | `--c-bell-count-min-width`      |
+| `em`     | `line-height`   | `1.2`    | `1.2`       | `--type-label-leading`          |
+| `em`     | `border`        | `1.5px`  | `1.5px`     | `--c-bell-count-border`         |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                                 | Why                                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | The state is in the accessible name. | The reference's label is the bare word "Notifications", so nothing about the waiting state reaches a screen reader. |
-| The target was grown to 44px. | As `IconButton`; the drawn size is unchanged. |
-
+| The target was grown to 44px.        | As `IconButton`; the drawn size is unchanged.                                                                       |

@@ -129,7 +129,11 @@
         try {
           const { verses } = await bibleApi.fetchVerses(q, TRANSLATION);
           if (my !== seq) return;
-          set(verses.length ? { ref: q, translation: TRANSLATION, verses } : { ref: q, invalid: true, verses: [] });
+          set(
+            verses.length
+              ? { ref: q, translation: TRANSLATION, verses }
+              : { ref: q, invalid: true, verses: [] },
+          );
         } catch {
           if (my !== seq) return;
           set({ ref: q, invalid: true, verses: [] });
@@ -144,9 +148,24 @@
   $effect(() => lookupLeckio(leckio));
 
   const privacyOptions = $derived([
-    { value: 'public' as const, label: $_('editor.privacy.public'), glyph: '◉', hint: $_('editor.privacy.publicHint') },
-    { value: 'unlisted' as const, label: $_('editor.privacy.unlisted'), glyph: '◐', hint: $_('editor.privacy.unlistedHint') },
-    { value: 'private' as const, label: $_('editor.privacy.private'), glyph: '○', hint: $_('editor.privacy.privateHint') },
+    {
+      value: 'public' as const,
+      label: $_('editor.privacy.public'),
+      glyph: '◉',
+      hint: $_('editor.privacy.publicHint'),
+    },
+    {
+      value: 'unlisted' as const,
+      label: $_('editor.privacy.unlisted'),
+      glyph: '◐',
+      hint: $_('editor.privacy.unlistedHint'),
+    },
+    {
+      value: 'private' as const,
+      label: $_('editor.privacy.private'),
+      glyph: '○',
+      hint: $_('editor.privacy.privateHint'),
+    },
   ]);
 
   function nextService(): Date {
@@ -179,7 +198,12 @@
       existingConnections = e.connections;
       jobs = await listJobs('platform_sync').catch(() => []);
       const yt = e.connections.find((c) => c.platform === 'youtube');
-      if (yt?.privacyStatus === 'unlisted' || yt?.privacyStatus === 'private' || yt?.privacyStatus === 'public') privacy = yt.privacyStatus;
+      if (
+        yt?.privacyStatus === 'unlisted' ||
+        yt?.privacyStatus === 'private' ||
+        yt?.privacyStatus === 'public'
+      )
+        privacy = yt.privacyStatus;
       const t = e.bibleReferences.find((r) => r.type === 'textus');
       const l = e.bibleReferences.find((r) => r.type === 'leckio');
       if (t) {
@@ -202,7 +226,9 @@
       id: 'youtube',
       label: 'YouTube',
       link: (c: EventConnection) =>
-        c.externalId ? `https://studio.youtube.com/video/${c.externalId}/livestreaming` : c.streamUrl,
+        c.externalId
+          ? `https://studio.youtube.com/video/${c.externalId}/livestreaming`
+          : c.streamUrl,
     },
     { id: 'facebook', label: 'Facebook', link: (c: EventConnection) => c.eventUrl },
   ] as const;
@@ -263,17 +289,43 @@
   });
 
   function buildRefs() {
-    const out: { type: string; reference: string; translation?: string; verses?: { chapter: number; verse: number; text: string }[] }[] = [];
+    const out: {
+      type: string;
+      reference: string;
+      translation?: string;
+      verses?: { chapter: number; verse: number; text: string }[];
+    }[] = [];
     if (textusData && !textusData.invalid && textus.trim())
-      out.push({ type: 'textus', reference: textus.trim(), translation: textusData.translation, verses: textusData.verses.map((v) => ({ chapter: v.chapter, verse: v.verse, text: v.text })) });
+      out.push({
+        type: 'textus',
+        reference: textus.trim(),
+        translation: textusData.translation,
+        verses: textusData.verses.map((v) => ({
+          chapter: v.chapter,
+          verse: v.verse,
+          text: v.text,
+        })),
+      });
     if (leckioData && !leckioData.invalid && leckio.trim())
-      out.push({ type: 'leckio', reference: leckio.trim(), translation: leckioData.translation, verses: leckioData.verses.map((v) => ({ chapter: v.chapter, verse: v.verse, text: v.text })) });
+      out.push({
+        type: 'leckio',
+        reference: leckio.trim(),
+        translation: leckioData.translation,
+        verses: leckioData.verses.map((v) => ({
+          chapter: v.chapter,
+          verse: v.verse,
+          text: v.text,
+        })),
+      });
     return out;
   }
 
   function buildConnections() {
     const others = existingConnections.filter((c) => c.platform !== 'youtube');
-    const conns = others.map((c) => ({ platform: c.platform, privacy_status: c.privacyStatus ?? undefined }));
+    const conns = others.map((c) => ({
+      platform: c.platform,
+      privacy_status: c.privacyStatus ?? undefined,
+    }));
     conns.push({ platform: 'youtube', privacy_status: privacy });
     return conns;
   }
@@ -291,9 +343,22 @@
     generating = true;
     try {
       const { files } = await createEventSlides(eventId);
-      notify({ tier: 'ok', kind: 'Slides', source: 'Core', title: $_('editor.slides.created'), body: files.join('\n'), mono: true });
+      notify({
+        tier: 'ok',
+        kind: 'Slides',
+        source: 'Core',
+        title: $_('editor.slides.created'),
+        body: files.join('\n'),
+        mono: true,
+      });
     } catch (e) {
-      notify({ tier: 'error', kind: 'Slides', source: 'Core', title: $_('editor.slides.failed'), body: e instanceof Error ? e.message : String(e) });
+      notify({
+        tier: 'error',
+        kind: 'Slides',
+        source: 'Core',
+        title: $_('editor.slides.failed'),
+        body: e instanceof Error ? e.message : String(e),
+      });
     } finally {
       generating = false;
     }
@@ -318,7 +383,13 @@
       goto('/events');
     } catch (e) {
       // Report and keep every entered value (task 7.2).
-      notify({ tier: 'error', kind: 'Event', source: 'Core', title: $_('editor.saveFailed'), body: e instanceof Error ? e.message : undefined });
+      notify({
+        tier: 'error',
+        kind: 'Event',
+        source: 'Core',
+        title: $_('editor.saveFailed'),
+        body: e instanceof Error ? e.message : undefined,
+      });
       saving = false;
     }
   }
@@ -342,26 +413,55 @@
     />
   </div>
 
-  <form onsubmit={(e) => { e.preventDefault(); save(); }} style="--preview-h: {previewHeight}px">
+  <form
+    onsubmit={(e) => {
+      e.preventDefault();
+      save();
+    }}
+    style="--preview-h: {previewHeight}px"
+  >
     <div class="main-col">
       <FormSection number="01" label={$_('editor.details')}>
         <div class="field">
-          <TextArea bind:value={title} rows={3} label={$_('editor.eventTitle')} placeholder={$_('editor.titlePlaceholder')} invalid={titleRemaining < 0} />
+          <TextArea
+            bind:value={title}
+            rows={3}
+            label={$_('editor.eventTitle')}
+            placeholder={$_('editor.titlePlaceholder')}
+            invalid={titleRemaining < 0}
+          />
           <small class:warn={titleRemaining < 10}>{autoTitle.length} / {TITLE_LIMIT}</small>
         </div>
         <div class="two">
           <div class="field">
             <span class="cap">{$_('editor.date')}</span>
-            <NativeDateInput type="date" bind:value={date} label={date ? dateLong(fromDateTimeInput(date, time), loc) : $_('editor.pickDate')} icon="calendar" accessibleName={$_('editor.date')} />
+            <NativeDateInput
+              type="date"
+              bind:value={date}
+              label={date ? dateLong(fromDateTimeInput(date, time), loc) : $_('editor.pickDate')}
+              icon="calendar"
+              accessibleName={$_('editor.date')}
+            />
           </div>
           <div class="field">
             <span class="cap">{$_('editor.time')}</span>
-            <NativeDateInput type="time" bind:value={time} label={time || $_('editor.pickTime')} icon="clock" accessibleName={$_('editor.time')} />
+            <NativeDateInput
+              type="time"
+              bind:value={time}
+              label={time || $_('editor.pickTime')}
+              icon="clock"
+              accessibleName={$_('editor.time')}
+            />
           </div>
         </div>
         <div class="field">
           <span class="cap">{$_('editor.speaker')}</span>
-          <TextArea bind:value={speaker} rows={1} label={$_('editor.speaker')} placeholder={$_('editor.speakerPlaceholder')} />
+          <TextArea
+            bind:value={speaker}
+            rows={1}
+            label={$_('editor.speaker')}
+            placeholder={$_('editor.speakerPlaceholder')}
+          />
         </div>
       </FormSection>
 
@@ -397,19 +497,34 @@
 
       <FormSection number="03" label={$_('editor.description')} hint={$_('editor.descriptionHint')}>
         <div class="field">
-          <TextArea bind:value={description} rows={5} label={$_('editor.description')} placeholder={$_('editor.descriptionPlaceholder')} />
-          <small class:warn={description.length > DESC_LIMIT}>{description.length} / {DESC_LIMIT}</small>
+          <TextArea
+            bind:value={description}
+            rows={5}
+            label={$_('editor.description')}
+            placeholder={$_('editor.descriptionPlaceholder')}
+          />
+          <small class:warn={description.length > DESC_LIMIT}
+            >{description.length} / {DESC_LIMIT}</small
+          >
         </div>
       </FormSection>
     </div>
 
     <aside class="publish-col">
       <FormSection number="04" label={$_('editor.privacyLabel')}>
-        <Segmented bind:value={privacy} options={privacyOptions} label={$_('editor.privacyLabel')} />
+        <Segmented
+          bind:value={privacy}
+          options={privacyOptions}
+          label={$_('editor.privacyLabel')}
+        />
       </FormSection>
 
       <FormSection number="05" label={$_('editor.recording')} last={!eventId}>
-        <ToggleRow label={$_('editor.autoUpload')} sub={$_('editor.autoUploadHint')} bind:checked={autoUpload} />
+        <ToggleRow
+          label={$_('editor.autoUpload')}
+          sub={$_('editor.autoUploadHint')}
+          bind:checked={autoUpload}
+        />
       </FormSection>
 
       {#if eventId}

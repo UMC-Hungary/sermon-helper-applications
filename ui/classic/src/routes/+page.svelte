@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { appMode } from '$lib/stores/mode.js';
-	import { serverUrl, authToken, localNetworkUrl } from '$lib/stores/server-url.js';
-	import { wsStatus } from '$lib/stores/ws.js';
-	import { CONNECTORS } from '$lib/connectors/registry.js';
-	import ConnectorDashboardWidget from '$lib/components/connectors/ConnectorDashboardWidget.svelte';
+  import { appMode } from '$lib/stores/mode.js';
+  import { serverUrl, authToken, localNetworkUrl } from '$lib/stores/server-url.js';
+  import { wsStatus } from '$lib/stores/ws.js';
+  import { CONNECTORS } from '$lib/connectors/registry.js';
+  import ConnectorDashboardWidget from '$lib/components/connectors/ConnectorDashboardWidget.svelte';
 </script>
 
 <svelte:head>

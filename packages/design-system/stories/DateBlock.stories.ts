@@ -17,23 +17,23 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    month: "MÁR",
+    month: 'MÁR',
     day: 14,
-    label: "2026. március 14.",
+    label: '2026. március 14.',
   },
 };
 
 export const TwoDigitDay: Story = {
   args: {
-    month: "MÁR",
+    month: 'MÁR',
     day: 30,
-    label: "2026. március 30.",
+    label: '2026. március 30.',
   },
 };
 
 export const Undescribed: Story = {
   args: {
-    month: "MÁR",
+    month: 'MÁR',
     day: 14,
     label: undefined,
   },

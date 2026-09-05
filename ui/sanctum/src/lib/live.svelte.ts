@@ -1,7 +1,18 @@
 import { goto } from '$app/navigation';
-import { sendWsCommand, connectObs, connectCamera, youtubeAuthUrl, openExternal } from '@metocast/core-client';
+import {
+  sendWsCommand,
+  connectObs,
+  connectCamera,
+  youtubeAuthUrl,
+  openExternal,
+} from '@metocast/core-client';
 import type { WsMessage } from '@metocast/core-client';
-import type { PresenterState, KeynoteStatus, WsClientInfo, PptFile } from '@metocast/core-client/schemas/ws-messages';
+import type {
+  PresenterState,
+  KeynoteStatus,
+  WsClientInfo,
+  PptFile,
+} from '@metocast/core-client/schemas/ws-messages';
 import { siObsstudio, siYoutube, siFacebook, siBlackmagicdesign, siDiscord } from 'simple-icons';
 import { notify, resolveByKey } from './notifications.svelte';
 
@@ -10,7 +21,11 @@ const CONNECTOR_META: Record<string, { name: string; kind: string; brand?: strin
   obs: { name: 'OBS Studio', kind: 'Encoder', brand: siObsstudio.path },
   youtube: { name: 'YouTube', kind: 'Streaming', brand: siYoutube.path },
   facebook: { name: 'Facebook Live', kind: 'Streaming', brand: siFacebook.path },
-  'blackmagic-camera': { name: 'Blackmagic Camera', kind: 'Camera', brand: siBlackmagicdesign.path },
+  'blackmagic-camera': {
+    name: 'Blackmagic Camera',
+    kind: 'Camera',
+    brand: siBlackmagicdesign.path,
+  },
   atem: { name: 'Blackmagic ATEM', kind: 'Switcher', brand: siBlackmagicdesign.path },
   discord: { name: 'Discord', kind: 'Webhooks', brand: siDiscord.path },
 };
@@ -112,7 +127,10 @@ export function handleWs(msg: WsMessage): void {
       const next = msg.status.type;
       connectorStatus = { ...connectorStatus, [msg.connector]: next };
       const key = `connector:${msg.connector}`;
-      const meta = CONNECTOR_META[msg.connector] ?? { name: sourceName(msg.connector), kind: 'Connector' };
+      const meta = CONNECTOR_META[msg.connector] ?? {
+        name: sourceName(msg.connector),
+        kind: 'Connector',
+      };
       // Navigation is instant, so it stays a plain action — only work that takes
       // time (a reconnect, a re-login) returns its promise and animates.
       const edit = (query = '') => ({
@@ -146,13 +164,14 @@ export function handleWs(msg: WsMessage): void {
         showReconnecting();
         return start();
       };
-      const retry = msg.connector === 'obs'
-        ? { label: 'Reconnect', primary: true, run: reconnect(connectObs) }
-        : msg.connector === 'blackmagic-camera'
-          ? { label: 'Reconnect', primary: true, run: reconnect(connectCamera) }
-          : msg.connector === 'youtube'
-            ? { label: 'Re-login', primary: true, run: () => youtubeAuthUrl().then(openExternal) }
-            : null;
+      const retry =
+        msg.connector === 'obs'
+          ? { label: 'Reconnect', primary: true, run: reconnect(connectObs) }
+          : msg.connector === 'blackmagic-camera'
+            ? { label: 'Reconnect', primary: true, run: reconnect(connectCamera) }
+            : msg.connector === 'youtube'
+              ? { label: 'Re-login', primary: true, run: () => youtubeAuthUrl().then(openExternal) }
+              : null;
       const actions = retry && editFor ? [retry, editFor] : undefined;
       if (next === 'error') {
         notify({
@@ -209,7 +228,8 @@ export function handleWs(msg: WsMessage): void {
       presenter = msg.state;
       break;
     case 'presenter.slide_changed':
-      if (presenter) presenter = { ...presenter, currentSlide: msg.currentSlide, totalSlides: msg.totalSlides };
+      if (presenter)
+        presenter = { ...presenter, currentSlide: msg.currentSlide, totalSlides: msg.totalSlides };
       break;
     case 'keynote.status':
       keynote = msg.status;

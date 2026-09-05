@@ -9,14 +9,43 @@
   // One nav over the primary destinations. Event editor lives under events,
   // connectors under settings, so those keep their parent tab active.
   const tabs = [
-    { href: '/', icon: 'home', symbol: 'house', key: 'dashboard', active: (p: string) => p === '/' },
-    { href: '/events', icon: 'calendar', symbol: 'calendar', key: 'events', active: (p: string) => p.startsWith('/events') },
-    { href: '/presentations', icon: 'slides', symbol: 'rectangle.on.rectangle', key: 'slides', active: (p: string) => p.startsWith('/presentations') },
-    { href: '/settings', icon: 'gear', symbol: 'gearshape', key: 'settings', active: (p: string) => p.startsWith('/settings') },
+    {
+      href: '/',
+      icon: 'home',
+      symbol: 'house',
+      key: 'dashboard',
+      active: (p: string) => p === '/',
+    },
+    {
+      href: '/events',
+      icon: 'calendar',
+      symbol: 'calendar',
+      key: 'events',
+      active: (p: string) => p.startsWith('/events'),
+    },
+    {
+      href: '/presentations',
+      icon: 'slides',
+      symbol: 'rectangle.on.rectangle',
+      key: 'slides',
+      active: (p: string) => p.startsWith('/presentations'),
+    },
+    {
+      href: '/settings',
+      icon: 'gear',
+      symbol: 'gearshape',
+      key: 'settings',
+      active: (p: string) => p.startsWith('/settings'),
+    },
   ] as const;
 
   const path = $derived($page.url.pathname);
-  const activeIndex = $derived(Math.max(0, tabs.findIndex((t) => t.active(path))));
+  const activeIndex = $derived(
+    Math.max(
+      0,
+      tabs.findIndex((t) => t.active(path)),
+    ),
+  );
 
   // On Apple platforms the OS draws the nav itself, in real liquid glass.
   let native = $state(false);
@@ -40,19 +69,19 @@
 </script>
 
 {#if !native}
-<nav>
-  <div class="brand"><Lockup name="Metocast" /></div>
-  {#each tabs as tab (tab.href)}
-    <a
-      href={tab.href}
-      class:active={tab.active(path)}
-      aria-current={tab.active(path) ? 'page' : undefined}
-    >
-      <Icon name={tab.icon} size={22} />
-      <span>{$_(`nav.${tab.key}`)}</span>
-    </a>
-  {/each}
-</nav>
+  <nav>
+    <div class="brand"><Lockup name="Metocast" /></div>
+    {#each tabs as tab (tab.href)}
+      <a
+        href={tab.href}
+        class:active={tab.active(path)}
+        aria-current={tab.active(path) ? 'page' : undefined}
+      >
+        <Icon name={tab.icon} size={22} />
+        <span>{$_(`nav.${tab.key}`)}</span>
+      </a>
+    {/each}
+  </nav>
 {/if}
 
 <style>

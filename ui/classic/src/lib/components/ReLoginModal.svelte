@@ -37,15 +37,22 @@
   class="overlay"
   role="presentation"
   onclick={onclose}
-  onkeydown={(e) => { if (e.key === 'Escape') onclose(); }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
 ></div>
 
 <!-- Dialog -->
-<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="relogin-title" aria-describedby="relogin-desc">
+<div
+  class="modal"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="relogin-title"
+  aria-describedby="relogin-desc"
+>
   <h2 id="relogin-title" class="modal__title">Session Expired</h2>
   <p id="relogin-desc" class="modal__body">
-    Your {names[connector]} session has expired. Please re-login to continue automatic
-    event scheduling.
+    Your {names[connector]} session has expired. Please re-login to continue automatic event scheduling.
   </p>
 
   {#if error}

@@ -69,9 +69,13 @@ export function connectCamera(): Promise<void> {
  * gets connected. Every client is told the result over `/ws` as well.
  */
 export async function discoverCameras(): Promise<DiscoveredCamera[]> {
-  const { cameras } = await apiFetch('/api/connectors/blackmagic-camera/discover', DiscoveredCamerasSchema, {
-    method: 'POST',
-  });
+  const { cameras } = await apiFetch(
+    '/api/connectors/blackmagic-camera/discover',
+    DiscoveredCamerasSchema,
+    {
+      method: 'POST',
+    },
+  );
   return cameras;
 }
 

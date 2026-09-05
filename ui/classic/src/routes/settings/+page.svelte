@@ -35,15 +35,14 @@
   <h2 class="section-heading">Presentations</h2>
   <section>
     <p class="note">
-      Use the built-in web presenter to parse and display slides in the browser
-      instead of opening Keynote or PowerPoint. Only <code>.pptx</code> files are supported.
+      Use the built-in web presenter to parse and display slides in the browser instead of opening
+      Keynote or PowerPoint. Only <code>.pptx</code> files are supported.
     </p>
     <label class="toggle-label">
       <input type="checkbox" checked={$useWebPresenter} onchange={handleWebPresenterToggle} />
       Use web presenter
     </label>
   </section>
-
 
   <CronJobsSettings />
   <AppVersionSettings />

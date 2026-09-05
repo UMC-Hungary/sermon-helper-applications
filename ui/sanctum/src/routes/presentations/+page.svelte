@@ -42,11 +42,11 @@
 
   const web = $derived(live.presenter);
   const kn = $derived(live.keynote);
-  const loaded = $derived(mode === 'web' ? !!web?.loaded : !!(kn?.slideshowActive || kn?.documentName));
+  const loaded = $derived(
+    mode === 'web' ? !!web?.loaded : !!(kn?.slideshowActive || kn?.documentName),
+  );
   const deckName = $derived(
-    mode === 'web'
-      ? (web?.filePath?.split('/').pop() ?? '')
-      : (kn?.documentName ?? ''),
+    mode === 'web' ? (web?.filePath?.split('/').pop() ?? '') : (kn?.documentName ?? ''),
   );
   const current = $derived(mode === 'web' ? (web?.currentSlide ?? 0) : (kn?.currentSlide ?? 0));
   const total = $derived(mode === 'web' ? (web?.totalSlides ?? 0) : (kn?.totalSlides ?? 0));
@@ -66,19 +66,63 @@
   }
 
   const actions = $derived<TransportAction[]>([
-    { icon: 'first', label: $_('presentations.first'), disabled: !loaded, onclick: () => tx('first') },
-    { icon: 'prev', label: $_('presentations.prev'), disabled: !loaded || current <= 1, onclick: () => tx('prev') },
-    { icon: 'next', label: $_('presentations.next'), variant: 'primary', disabled: !loaded || current >= total, onclick: () => tx('next') },
-    { icon: 'last', label: $_('presentations.last'), disabled: !loaded || current >= total, onclick: () => tx('last') },
+    {
+      icon: 'first',
+      label: $_('presentations.first'),
+      disabled: !loaded,
+      onclick: () => tx('first'),
+    },
+    {
+      icon: 'prev',
+      label: $_('presentations.prev'),
+      disabled: !loaded || current <= 1,
+      onclick: () => tx('prev'),
+    },
+    {
+      icon: 'next',
+      label: $_('presentations.next'),
+      variant: 'primary',
+      disabled: !loaded || current >= total,
+      onclick: () => tx('next'),
+    },
+    {
+      icon: 'last',
+      label: $_('presentations.last'),
+      disabled: !loaded || current >= total,
+      onclick: () => tx('last'),
+    },
     ...(mode === 'keynote'
       ? [
-          { icon: 'play' as const, label: $_('presentations.start'), disabled: !loaded, onclick: () => tx('start') },
-          { icon: 'stop' as const, label: $_('presentations.stop'), variant: 'stop' as const, disabled: !loaded, onclick: stop },
+          {
+            icon: 'play' as const,
+            label: $_('presentations.start'),
+            disabled: !loaded,
+            onclick: () => tx('start'),
+          },
+          {
+            icon: 'stop' as const,
+            label: $_('presentations.stop'),
+            variant: 'stop' as const,
+            disabled: !loaded,
+            onclick: stop,
+          },
         ]
-      : [{ icon: 'stop' as const, label: $_('presentations.unload'), variant: 'stop' as const, disabled: !loaded, onclick: stop }]),
+      : [
+          {
+            icon: 'stop' as const,
+            label: $_('presentations.unload'),
+            variant: 'stop' as const,
+            disabled: !loaded,
+            onclick: stop,
+          },
+        ]),
   ]);
 
-  const status = $derived(loaded ? $_(`presentations.mode.${mode}`) + ' · ' + $_('presentations.presenting') : $_('presentations.standby'));
+  const status = $derived(
+    loaded
+      ? $_(`presentations.mode.${mode}`) + ' · ' + $_('presentations.presenting')
+      : $_('presentations.standby'),
+  );
 
   // ── Deck search ───────────────────────────────────────────────────────────────
   let searchOpen = $state(false);
@@ -102,7 +146,9 @@
 
   const results = $derived<SlideResult[]>(
     searchOpen || filter.length > 0
-      ? live.pptResults.slice(0, 8).map((f) => ({ id: f.id, group: folderName(f.folderId), title: f.name }))
+      ? live.pptResults
+          .slice(0, 8)
+          .map((f) => ({ id: f.id, group: folderName(f.folderId), title: f.name }))
       : [],
   );
 
@@ -110,7 +156,11 @@
   let slotFiles = $state<(PptFile | null)[]>([null, null, null, null, null]);
   const queueFull = $derived(slotFiles.every(Boolean));
   const slots = $derived<QueueSlot[]>(
-    slotFiles.map((f, i) => ({ index: i, title: f?.name, loaded: !!f && web?.filePath === f.path })),
+    slotFiles.map((f, i) => ({
+      index: i,
+      title: f?.name,
+      loaded: !!f && web?.filePath === f.path,
+    })),
   );
 
   function fileById(id: string): PptFile | undefined {
@@ -228,12 +278,16 @@
     />
 
     <SlideSearch
-      results={results}
+      {results}
       label={$_('presentations.search')}
       searchLabel={$_('presentations.search')}
-      placeholder={mobile.current ? $_('presentations.tapToSearch') : $_('presentations.searchPlaceholder')}
+      placeholder={mobile.current
+        ? $_('presentations.tapToSearch')
+        : $_('presentations.searchPlaceholder')}
       bind:filter
-      emptyMessage={searchOpen || filter.length > 0 ? $_('presentations.noMatch') : $_('presentations.tapToSearch')}
+      emptyMessage={searchOpen || filter.length > 0
+        ? $_('presentations.noMatch')
+        : $_('presentations.tapToSearch')}
       openLabel={$_('presentations.open')}
       queueLabel={$_('presentations.queue')}
       queueDisabled={queueFull}
@@ -248,11 +302,16 @@
     <SlideQueue
       {slots}
       label={$_('presentations.queueLabel')}
-      summary={$_('presentations.queueSummary', { values: { n: slotFiles.filter(Boolean).length, total: slotFiles.length } })}
+      summary={$_('presentations.queueSummary', {
+        values: { n: slotFiles.filter(Boolean).length, total: slotFiles.length },
+      })}
       openLabel={$_('presentations.open')}
       clearLabel={$_('presentations.clear')}
       emptyLabel={$_('presentations.emptySlot')}
-      onopen={(s) => { const f = slotFiles[s.index]; if (f) openPath(f.path); }}
+      onopen={(s) => {
+        const f = slotFiles[s.index];
+        if (f) openPath(f.path);
+      }}
       onclear={(s) => (slotFiles[s.index] = null)}
     />
 
@@ -266,7 +325,10 @@
           {/each}
         </div>
       {:else}
-        <EmptyState title={$_('presentations.previewWaiting')} hint={$_('presentations.previewWaitingHint')} />
+        <EmptyState
+          title={$_('presentations.previewWaiting')}
+          hint={$_('presentations.previewWaitingHint')}
+        />
       {/if}
     </div>
   </aside>
@@ -307,14 +369,22 @@
         <div class="no-clients">{$_('presentations.noClients')}</div>
       {:else}
         {#each clients as c, i (c.id)}
-          <Row title={c.name} meta={c.address} detail={c.detail} chevron={false} last={i === clients.length - 1} />
+          <Row
+            title={c.name}
+            meta={c.address}
+            detail={c.detail}
+            chevron={false}
+            last={i === clients.length - 1}
+          />
         {/each}
       {/if}
     </List>
   {/if}
 
   <div class="folders-bar">
-    <span class="folders-count">{$_('presentations.foldersHint', { values: { n: folders.length } })}</span>
+    <span class="folders-count"
+      >{$_('presentations.foldersHint', { values: { n: folders.length } })}</span
+    >
     {#if canPick}
       <button class="add-folder-btn" type="button" disabled={adding} onclick={addFolderFlow}>
         + {$_('presentations.addFolder')}

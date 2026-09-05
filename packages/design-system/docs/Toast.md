@@ -10,23 +10,23 @@ A tone-coloured rule down the left, then a header — mark, kind and source, a s
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `kind` *(required)* | `string` | — | The mono kind label above the source name — "Connector", "Upload". |
-| `source` *(required)* | `string` | — | Who is speaking — "YouTube", "OBS". |
-| `title` *(required)* | `string` | — | — |
-| `body` | `string` | `''` | — |
-| `state` | `string` | — | A short state chip beside the source — "reconnecting", "offline". |
-| `tone` | `ToastTone` | `'ok'` | — |
-| `mono` | `boolean` | `false` | Renders the body in the mono face, for log lines and identifiers. |
-| `actions` | `ToastAction[]` | `[]` | — |
-| `dismissLabel` | `string` | `'Dismiss'` | — |
-| `ondismiss` | `() => void` | — | — |
-| `mark` | `Snippet` | — | The tile that identifies the source, usually a `Glyph`. |
-| `remediation` | `string[]` | — | Numbered remediation steps, disclosed by the "why" toggle in the footer. |
-| `whyLabel` | `string` | `'Why?'` | The disclosure toggle's labels — closed then open. |
-| `hideWhyLabel` | `string` | `'Hide why'` | — |
-| `detail` | `Snippet` | — | Extra content between the body and footer, e.g. a folded group of sources. |
+| Prop                  | Type            | Default      | Meaning                                                                    |
+| --------------------- | --------------- | ------------ | -------------------------------------------------------------------------- |
+| `kind` _(required)_   | `string`        | —            | The mono kind label above the source name — "Connector", "Upload".         |
+| `source` _(required)_ | `string`        | —            | Who is speaking — "YouTube", "OBS".                                        |
+| `title` _(required)_  | `string`        | —            | —                                                                          |
+| `body`                | `string`        | `''`         | —                                                                          |
+| `state`               | `string`        | —            | A short state chip beside the source — "reconnecting", "offline".          |
+| `tone`                | `ToastTone`     | `'ok'`       | —                                                                          |
+| `mono`                | `boolean`       | `false`      | Renders the body in the mono face, for log lines and identifiers.          |
+| `actions`             | `ToastAction[]` | `[]`         | —                                                                          |
+| `dismissLabel`        | `string`        | `'Dismiss'`  | —                                                                          |
+| `ondismiss`           | `() => void`    | —            | —                                                                          |
+| `mark`                | `Snippet`       | —            | The tile that identifies the source, usually a `Glyph`.                    |
+| `remediation`         | `string[]`      | —            | Numbered remediation steps, disclosed by the "why" toggle in the footer.   |
+| `whyLabel`            | `string`        | `'Why?'`     | The disclosure toggle's labels — closed then open.                         |
+| `hideWhyLabel`        | `string`        | `'Hide why'` | —                                                                          |
+| `detail`              | `Snippet`       | —            | Extra content between the body and footer, e.g. a folded group of sources. |
 
 ## Variants
 
@@ -38,67 +38,67 @@ Default, with state chip, with actions, with detail, dismissible.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-toast-accent-width` | `4px` |
-| `--c-toast-action-padding` | `11px` |
-| `--c-toast-action-padding-block` | `5px` |
-| `--c-toast-action-size` | `9.5px` |
-| `--c-toast-action-track` | `1.3px` |
-| `--c-toast-body-gap` | `4px` |
-| `--c-toast-footer-gap` | `7px` |
-| `--c-toast-footer-margin` | `11px` |
-| `--c-toast-header-gap` | `10px` |
-| `--c-toast-header-margin` | `9px` |
-| `--c-toast-mono-size` | `11px` |
-| `--c-toast-padding-block` | `12px` |
-| `--c-toast-source-size` | `12.5px` |
-| `--c-toast-state-gap` | `5px` |
-| `--c-toast-state-padding-block` | `2px` |
-| `--c-toast-state-padding-inline` | `7px` |
-| `--c-toast-state-track` | `1.4px` |
-| `--c-toast-why-margin` | `10px` |
-| `--c-toast-why-padding-block` | `10px` |
-| `--c-toast-why-padding-inline` | `12px` |
-| `--c-toast-why-step-gap` | `9px` |
-| `--c-toast-why-step-margin` | `5px` |
-| `--c-toast-why-step-size` | `12.5px` |
-| `--surface-raised` | `#f6f2e8 / #1e1b16` |
-| `--surface-sunken` | `#e4ddcd / #23201a` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--text-secondary` | `#5c574e / #a8a294` |
-| `--type-body-sm-weight` | `500` |
-| `--type-caption-leading` | `1.45` |
-| `--type-caption-size` | `12px` |
-| `--type-heading-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-heading-leading` | `1.2` |
-| `--type-heading-size` | `17px` |
-| `--type-heading-weight` | `500` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-transform` | `uppercase` |
-| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-xs-size` | `8.5px` |
-| `--type-label-xs-track` | `1.5px` |
-| `--type-label-xs-transform` | `uppercase` |
-| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--ui-border-emphasis` | `2px` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter-inset` | `14px` |
-| `--ui-target-min` | `44px` |
+| Token                            | Resolves to                                                    |
+| -------------------------------- | -------------------------------------------------------------- |
+| `--accent`                       | `#5c5c84 / #a9a6d6`                                            |
+| `--border-control`               | `#857c68 / #716b5c`                                            |
+| `--c-toast-accent-width`         | `4px`                                                          |
+| `--c-toast-action-padding`       | `11px`                                                         |
+| `--c-toast-action-padding-block` | `5px`                                                          |
+| `--c-toast-action-size`          | `9.5px`                                                        |
+| `--c-toast-action-track`         | `1.3px`                                                        |
+| `--c-toast-body-gap`             | `4px`                                                          |
+| `--c-toast-footer-gap`           | `7px`                                                          |
+| `--c-toast-footer-margin`        | `11px`                                                         |
+| `--c-toast-header-gap`           | `10px`                                                         |
+| `--c-toast-header-margin`        | `9px`                                                          |
+| `--c-toast-mono-size`            | `11px`                                                         |
+| `--c-toast-padding-block`        | `12px`                                                         |
+| `--c-toast-source-size`          | `12.5px`                                                       |
+| `--c-toast-state-gap`            | `5px`                                                          |
+| `--c-toast-state-padding-block`  | `2px`                                                          |
+| `--c-toast-state-padding-inline` | `7px`                                                          |
+| `--c-toast-state-track`          | `1.4px`                                                        |
+| `--c-toast-why-margin`           | `10px`                                                         |
+| `--c-toast-why-padding-block`    | `10px`                                                         |
+| `--c-toast-why-padding-inline`   | `12px`                                                         |
+| `--c-toast-why-step-gap`         | `9px`                                                          |
+| `--c-toast-why-step-margin`      | `5px`                                                          |
+| `--c-toast-why-step-size`        | `12.5px`                                                       |
+| `--surface-raised`               | `#f6f2e8 / #1e1b16`                                            |
+| `--surface-sunken`               | `#e4ddcd / #23201a`                                            |
+| `--text-muted`                   | `#615e56 / #918b7e`                                            |
+| `--text-primary`                 | `#1c1a16 / #ede6d6`                                            |
+| `--text-secondary`               | `#5c574e / #a8a294`                                            |
+| `--type-body-sm-weight`          | `500`                                                          |
+| `--type-caption-leading`         | `1.45`                                                         |
+| `--type-caption-size`            | `12px`                                                         |
+| `--type-heading-family`          | `"Cormorant Garamond", Georgia, serif`                         |
+| `--type-heading-leading`         | `1.2`                                                          |
+| `--type-heading-size`            | `17px`                                                         |
+| `--type-heading-weight`          | `500`                                                          |
+| `--type-label-family`            | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-transform`         | `uppercase`                                                    |
+| `--type-label-xs-family`         | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-size`           | `8.5px`                                                        |
+| `--type-label-xs-track`          | `1.5px`                                                        |
+| `--type-label-xs-transform`      | `uppercase`                                                    |
+| `--type-quote-family`            | `"Cormorant Garamond", Georgia, serif`                         |
+| `--ui-border-emphasis`           | `2px`                                                          |
+| `--ui-border-hairline`           | `1px`                                                          |
+| `--ui-focus-offset`              | `2px`                                                          |
+| `--ui-focus-width`               | `2px`                                                          |
+| `--ui-gutter-inset`              | `14px`                                                         |
+| `--ui-target-min`                | `44px`                                                         |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Reaches the dismiss, then each action. |
-| `Enter`, `Space` | Activates. |
+| Key              | Behaviour                              |
+| ---------------- | -------------------------------------- |
+| `Tab`            | Reaches the dismiss, then each action. |
+| `Enter`, `Space` | Activates.                             |
 
 ## ARIA
 
@@ -116,40 +116,39 @@ The toast itself carries no live region — `ToastOverlay` owns that, so a stack
 
 Source: `src/components/notifications/ToastCard.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `article` | `border` | `1px` | `1px` | `--ui-border-hairline` |
-| `article > div` | `padding` | `12px` | `12px` | `--c-toast-padding-block` |
-| `article > div` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
-| `header` | `gap` | `10px` | `10px` | `--c-toast-header-gap` |
-| `header` | `margin-bottom` | `9px` | `9px` | `--c-toast-header-margin` |
-| `small` | `font-size` | `8.5px` | `8.5px` | `--type-label-xs-size` |
-| `small` | `letter-spacing` | `1.5px` | `1.5px` | `--type-label-xs-track` |
-| `strong` | `font-size` | `12.5px` | `12.5px` | `--c-toast-source-size` |
-| `strong` | `font-weight` | `500` | `500` | `--type-body-sm-weight` |
-| `header span` | `gap` | `5px` | `5px` | `--c-toast-state-gap` |
-| `header span` | `padding` | `2px` | `2px` | `--c-toast-state-padding-block` |
-| `header span` | `padding` | `7px` | `7px` | `--c-toast-state-padding-inline` |
-| `header span` | `letter-spacing` | `1.4px` | `1.4px` | `--c-toast-state-track` |
-| `h3` | `font-size` | `17px` | `17px` | `--type-heading-size` |
-| `h3` | `font-weight` | `500` | `500` | `--type-heading-weight` |
-| `h3` | `line-height` | `1.2` | `1.2` | `--type-heading-leading` |
-| `p:not(header p)` | `margin` | `4px` | `4px` | `--c-toast-body-gap` |
-| `p:not(header p)` | `font-size` | `12px` | `12px` | `--type-caption-size` |
-| `p:not(header p)` | `line-height` | `1.45` | `1.45` | `--type-caption-leading` |
-| `.mono` | `font-size` | `11px` | `11px` | `--c-toast-mono-size` |
-| `footer` | `gap` | `7px` | `7px` | `--c-toast-footer-gap` |
-| `footer` | `margin-top` | `11px` | `11px` | `--c-toast-footer-margin` |
-| `footer button` | `font-size` | `9.5px` | `9.5px` | `--c-toast-action-size` |
-| `footer button` | `letter-spacing` | `1.3px` | `1.3px` | `--c-toast-action-track` |
-| `footer button` | `padding` | `11px` | `11px` | `--c-toast-action-padding` |
+| Selector          | Property         | Measured | Implemented | Token                            |
+| ----------------- | ---------------- | -------- | ----------- | -------------------------------- |
+| `article`         | `border`         | `1px`    | `1px`       | `--ui-border-hairline`           |
+| `article > div`   | `padding`        | `12px`   | `12px`      | `--c-toast-padding-block`        |
+| `article > div`   | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`              |
+| `header`          | `gap`            | `10px`   | `10px`      | `--c-toast-header-gap`           |
+| `header`          | `margin-bottom`  | `9px`    | `9px`       | `--c-toast-header-margin`        |
+| `small`           | `font-size`      | `8.5px`  | `8.5px`     | `--type-label-xs-size`           |
+| `small`           | `letter-spacing` | `1.5px`  | `1.5px`     | `--type-label-xs-track`          |
+| `strong`          | `font-size`      | `12.5px` | `12.5px`    | `--c-toast-source-size`          |
+| `strong`          | `font-weight`    | `500`    | `500`       | `--type-body-sm-weight`          |
+| `header span`     | `gap`            | `5px`    | `5px`       | `--c-toast-state-gap`            |
+| `header span`     | `padding`        | `2px`    | `2px`       | `--c-toast-state-padding-block`  |
+| `header span`     | `padding`        | `7px`    | `7px`       | `--c-toast-state-padding-inline` |
+| `header span`     | `letter-spacing` | `1.4px`  | `1.4px`     | `--c-toast-state-track`          |
+| `h3`              | `font-size`      | `17px`   | `17px`      | `--type-heading-size`            |
+| `h3`              | `font-weight`    | `500`    | `500`       | `--type-heading-weight`          |
+| `h3`              | `line-height`    | `1.2`    | `1.2`       | `--type-heading-leading`         |
+| `p:not(header p)` | `margin`         | `4px`    | `4px`       | `--c-toast-body-gap`             |
+| `p:not(header p)` | `font-size`      | `12px`   | `12px`      | `--type-caption-size`            |
+| `p:not(header p)` | `line-height`    | `1.45`   | `1.45`      | `--type-caption-leading`         |
+| `.mono`           | `font-size`      | `11px`   | `11px`      | `--c-toast-mono-size`            |
+| `footer`          | `gap`            | `7px`    | `7px`       | `--c-toast-footer-gap`           |
+| `footer`          | `margin-top`     | `11px`   | `11px`      | `--c-toast-footer-margin`        |
+| `footer button`   | `font-size`      | `9.5px`  | `9.5px`     | `--c-toast-action-size`          |
+| `footer button`   | `letter-spacing` | `1.3px`  | `1.3px`     | `--c-toast-action-track`         |
+| `footer button`   | `padding`        | `11px`   | `11px`      | `--c-toast-action-padding`       |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                                                | Why                                                                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | The tone is a prop rather than derived from a tier. | The reference maps notification tiers to colours inside the card, which ties the component to that application's notion of severity. |
-| Every user-facing string is a prop. | The reference hard-codes "Offline", "Why?" and "Hide why" in English. |
-
+| Every user-facing string is a prop.                 | The reference hard-codes "Offline", "Why?" and "Hide why" in English.                                                                |

@@ -32,7 +32,9 @@ describe.skipIf(!isLive)('Broadlink REST API', () => {
   let commandId: string;
 
   it('GET /api/connectors/broadlink/status → 200', async () => {
-    const res = await apiClient.get<{ status: { type: string } }>('/api/connectors/broadlink/status');
+    const res = await apiClient.get<{ status: { type: string } }>(
+      '/api/connectors/broadlink/status',
+    );
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('status');
   });

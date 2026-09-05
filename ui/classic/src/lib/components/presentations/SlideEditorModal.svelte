@@ -14,11 +14,11 @@
   // Each entry is all paragraph texts joined by '\n' for editing in a textarea.
   // untrack prevents Svelte from warning about capturing the initial prop value.
   let localTexts = $state<string[]>(
-    untrack(() => slides.map((s) => s.paragraphs.flatMap((p) => p.lines).join('\n')))
+    untrack(() => slides.map((s) => s.paragraphs.flatMap((p) => p.lines).join('\n'))),
   );
 
   let debounceTimers = $state<(ReturnType<typeof setTimeout> | null)[]>(
-    untrack(() => slides.map(() => null))
+    untrack(() => slides.map(() => null)),
   );
 
   function handleInput(slideIndex: number, value: string) {
@@ -52,7 +52,9 @@
 <div
   class="backdrop"
   role="presentation"
-  onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
 >
   <div class="modal" role="dialog" aria-modal="true" aria-label="Edit slide content">
     <div class="modal__header">

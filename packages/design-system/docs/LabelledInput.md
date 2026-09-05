@@ -10,16 +10,16 @@ A bordered block on the sunken surface, holding the label and the input, with an
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `label` *(required)* | `string` | — | — |
-| `value` | `string` | `$bindable('')` | — |
-| `placeholder` | `string` | `''` | — |
-| `type` | `'text' \| 'email' \| 'url' \| 'tel' \| 'search' \| 'number'` | `'text'` | — |
-| `error` | `string` | `''` | — |
-| `disabled` | `boolean` | `false` | — |
-| `required` | `boolean` | `false` | — |
-| `id` | `string` | ``sanctum-labelled-input-${crypto.randomUUID()}`` | — |
+| Prop                 | Type                                                          | Default                                         | Meaning |
+| -------------------- | ------------------------------------------------------------- | ----------------------------------------------- | ------- |
+| `label` _(required)_ | `string`                                                      | —                                               | —       |
+| `value`              | `string`                                                      | `$bindable('')`                                 | —       |
+| `placeholder`        | `string`                                                      | `''`                                            | —       |
+| `type`               | `'text' \| 'email' \| 'url' \| 'tel' \| 'search' \| 'number'` | `'text'`                                        | —       |
+| `error`              | `string`                                                      | `''`                                            | —       |
+| `disabled`           | `boolean`                                                     | `false`                                         | —       |
+| `required`           | `boolean`                                                     | `false`                                         | —       |
+| `id`                 | `string`                                                      | `sanctum-labelled-input-${crypto.randomUUID()}` | —       |
 
 ## Variants
 
@@ -31,39 +31,39 @@ Default, focus-within, disabled, invalid.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-labelled-input-label-gap` | `4px` |
-| `--c-labelled-input-padding-bottom` | `11px` |
-| `--c-labelled-input-padding-top` | `9px` |
-| `--motion-fast` | `120ms` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--surface-sunken` | `#e4ddcd / #23201a` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-strong-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-strong-leading` | `1.4` |
-| `--type-body-strong-size` | `14.5px` |
-| `--type-body-strong-track` | `-0.1px` |
-| `--type-body-strong-weight` | `500` |
-| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-xs-size` | `8.5px` |
-| `--type-label-xs-track` | `1.5px` |
-| `--type-label-xs-transform` | `uppercase` |
-| `--type-label-xs-weight` | `500` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter-inset` | `14px` |
+| Token                               | Resolves to                                                                |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| `--accent`                          | `#5c5c84 / #a9a6d6`                                                        |
+| `--border-control`                  | `#857c68 / #716b5c`                                                        |
+| `--c-labelled-input-label-gap`      | `4px`                                                                      |
+| `--c-labelled-input-padding-bottom` | `11px`                                                                     |
+| `--c-labelled-input-padding-top`    | `9px`                                                                      |
+| `--motion-fast`                     | `120ms`                                                                    |
+| `--status-error`                    | `#b5321c / #e66a4f`                                                        |
+| `--surface-sunken`                  | `#e4ddcd / #23201a`                                                        |
+| `--text-muted`                      | `#615e56 / #918b7e`                                                        |
+| `--text-primary`                    | `#1c1a16 / #ede6d6`                                                        |
+| `--type-body-strong-family`         | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-strong-leading`        | `1.4`                                                                      |
+| `--type-body-strong-size`           | `14.5px`                                                                   |
+| `--type-body-strong-track`          | `-0.1px`                                                                   |
+| `--type-body-strong-weight`         | `500`                                                                      |
+| `--type-label-xs-family`            | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
+| `--type-label-xs-size`              | `8.5px`                                                                    |
+| `--type-label-xs-track`             | `1.5px`                                                                    |
+| `--type-label-xs-transform`         | `uppercase`                                                                |
+| `--type-label-xs-weight`            | `500`                                                                      |
+| `--ui-border-hairline`              | `1px`                                                                      |
+| `--ui-focus-offset`                 | `2px`                                                                      |
+| `--ui-focus-width`                  | `2px`                                                                      |
+| `--ui-gutter-inset`                 | `14px`                                                                     |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
+| Key   | Behaviour                    |
+| ----- | ---------------------------- |
 | `Tab` | Moves to and from the input. |
 
 ## ARIA
@@ -82,28 +82,27 @@ A native `<input>` associated by `for`/`id`. The error is joined by `aria-descri
 
 Source: `src/components/forms/Chamber.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `label` | `padding` | `9px` | `9px` | `--c-labelled-input-padding-top` |
-| `label` | `padding` | `14px` | `14px` | `--ui-gutter-inset` |
-| `label` | `padding` | `11px` | `11px` | `--c-labelled-input-padding-bottom` |
-| `label` | `transition` | `120ms` | `120ms` | `--motion-fast` |
-| `span` | `font-size` | `8.5px` | `8.5px` | `--type-label-xs-size` |
-| `span` | `letter-spacing` | `1.5px` | `1.5px` | `--type-label-xs-track` |
-| `span` | `font-weight` | `500` | `500` | `--type-label-xs-weight` |
-| `span` | `margin-bottom` | `4px` | `4px` | `--c-labelled-input-label-gap` |
-| `:global(.chamber-input)` | `font-size` | `14.5px` | `14.5px` | `--type-body-strong-size` |
-| `:global(.chamber-input)` | `letter-spacing` | `-0.1px` | `-0.1px` | `--type-body-strong-track` |
-| `:global(.chamber-input)` | `font-weight` | `500` | `500` | `--type-body-strong-weight` |
-| `:global(.chamber-input)` | `line-height` | `1.4` | `1.4` | `--type-body-strong-leading` |
+| Selector                  | Property         | Measured | Implemented | Token                               |
+| ------------------------- | ---------------- | -------- | ----------- | ----------------------------------- |
+| `label`                   | `padding`        | `9px`    | `9px`       | `--c-labelled-input-padding-top`    |
+| `label`                   | `padding`        | `14px`   | `14px`      | `--ui-gutter-inset`                 |
+| `label`                   | `padding`        | `11px`   | `11px`      | `--c-labelled-input-padding-bottom` |
+| `label`                   | `transition`     | `120ms`  | `120ms`     | `--motion-fast`                     |
+| `span`                    | `font-size`      | `8.5px`  | `8.5px`     | `--type-label-xs-size`              |
+| `span`                    | `letter-spacing` | `1.5px`  | `1.5px`     | `--type-label-xs-track`             |
+| `span`                    | `font-weight`    | `500`    | `500`       | `--type-label-xs-weight`            |
+| `span`                    | `margin-bottom`  | `4px`    | `4px`       | `--c-labelled-input-label-gap`      |
+| `:global(.chamber-input)` | `font-size`      | `14.5px` | `14.5px`    | `--type-body-strong-size`           |
+| `:global(.chamber-input)` | `letter-spacing` | `-0.1px` | `-0.1px`    | `--type-body-strong-track`          |
+| `:global(.chamber-input)` | `font-weight`    | `500`    | `500`       | `--type-body-strong-weight`         |
+| `:global(.chamber-input)` | `line-height`    | `1.4`    | `1.4`       | `--type-body-strong-leading`        |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
-| `--ui-border-hairline` | The reference leaves the resting border transparent, so the field has no visible boundary until it is focused. |
-| The resting border is visible. | The reference makes it transparent until focus, so the field has no boundary at rest and cannot be identified as a control. |
-| A focus indicator was added. | The reference's only focus signal is that transparent border turning to ink, which does not meet the 3:1 an indicator needs. |
-
+| What                           | Why                                                                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `--ui-border-hairline`         | The reference leaves the resting border transparent, so the field has no visible boundary until it is focused.               |
+| The resting border is visible. | The reference makes it transparent until focus, so the field has no boundary at rest and cannot be identified as a control.  |
+| A focus indicator was added.   | The reference's only focus signal is that transparent border turning to ink, which does not meet the 3:1 an indicator needs. |

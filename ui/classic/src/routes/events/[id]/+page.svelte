@@ -106,7 +106,10 @@
         const act = await createActivity(id, { activity_type: 'completed' });
         activities = [...activities, act];
         // Open upload modal if there are recordings and upload platforms are connected
-        if (recordings.length > 0 && ($youtubeStatus === 'connected' || $facebookStatus === 'connected')) {
+        if (
+          recordings.length > 0 &&
+          ($youtubeStatus === 'connected' || $facebookStatus === 'connected')
+        ) {
           showUploadModal = true;
         }
       }
@@ -174,9 +177,21 @@
       <dd>{event.description}</dd>
     {/if}
     <dt>YouTube Visibility</dt>
-    <dd>{conn('youtube')?.privacyStatus === 'public' ? 'Public' : conn('youtube')?.privacyStatus === 'unlisted' ? 'Unlisted' : 'Private'}</dd>
+    <dd>
+      {conn('youtube')?.privacyStatus === 'public'
+        ? 'Public'
+        : conn('youtube')?.privacyStatus === 'unlisted'
+          ? 'Unlisted'
+          : 'Private'}
+    </dd>
     <dt>Facebook Visibility</dt>
-    <dd>{conn('facebook')?.privacyStatus === 'EVERYONE' ? 'Public' : conn('facebook')?.privacyStatus === 'FRIENDS' ? 'Friends' : 'Only Me'}</dd>
+    <dd>
+      {conn('facebook')?.privacyStatus === 'EVERYONE'
+        ? 'Public'
+        : conn('facebook')?.privacyStatus === 'FRIENDS'
+          ? 'Friends'
+          : 'Only Me'}
+    </dd>
   </dl>
 
   <!-- Social connector status & actions -->
@@ -192,12 +207,28 @@
       <div class="social-item">
         <div class="social-item__header">
           <span class="social-item__name">YouTube</span>
-          <span class="badge badge--{conn('youtube')?.scheduleStatus === 'scheduled' || conn('youtube')?.externalId ? 'scheduled' : conn('youtube')?.scheduleStatus === 'failed' ? 'failed' : 'none'}">
-            {conn('youtube')?.scheduleStatus === 'scheduled' || conn('youtube')?.externalId ? 'Scheduled' : conn('youtube')?.scheduleStatus === 'failed' ? 'Failed' : 'Not Scheduled'}
+          <span
+            class="badge badge--{conn('youtube')?.scheduleStatus === 'scheduled' ||
+            conn('youtube')?.externalId
+              ? 'scheduled'
+              : conn('youtube')?.scheduleStatus === 'failed'
+                ? 'failed'
+                : 'none'}"
+          >
+            {conn('youtube')?.scheduleStatus === 'scheduled' || conn('youtube')?.externalId
+              ? 'Scheduled'
+              : conn('youtube')?.scheduleStatus === 'failed'
+                ? 'Failed'
+                : 'Not Scheduled'}
           </span>
         </div>
         {#if conn('youtube')?.streamUrl}
-          <a href={conn('youtube')?.streamUrl} target="_blank" rel="noopener noreferrer" class="view-link">
+          <a
+            href={conn('youtube')?.streamUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="view-link"
+          >
             View on YouTube
           </a>
         {/if}
@@ -220,12 +251,27 @@
       <div class="social-item">
         <div class="social-item__header">
           <span class="social-item__name">Facebook</span>
-          <span class="badge badge--{conn('facebook')?.scheduleStatus === 'scheduled' ? 'scheduled' : conn('facebook')?.scheduleStatus === 'failed' ? 'failed' : 'none'}">
-            {conn('facebook')?.scheduleStatus === 'scheduled' ? 'Scheduled' : conn('facebook')?.scheduleStatus === 'failed' ? 'Failed' : 'Not Scheduled'}
+          <span
+            class="badge badge--{conn('facebook')?.scheduleStatus === 'scheduled'
+              ? 'scheduled'
+              : conn('facebook')?.scheduleStatus === 'failed'
+                ? 'failed'
+                : 'none'}"
+          >
+            {conn('facebook')?.scheduleStatus === 'scheduled'
+              ? 'Scheduled'
+              : conn('facebook')?.scheduleStatus === 'failed'
+                ? 'Failed'
+                : 'Not Scheduled'}
           </span>
         </div>
         {#if conn('facebook')?.eventUrl}
-          <a href={conn('facebook')?.eventUrl} target="_blank" rel="noopener noreferrer" class="view-link">
+          <a
+            href={conn('facebook')?.eventUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="view-link"
+          >
             View on Facebook
           </a>
         {/if}

@@ -9,7 +9,7 @@ the library later. This doc is both the findings from building it and the CLI re
 - [REST API for Blackmagic Cameras (PDF, 07 Aug 2025)](https://documents.blackmagicdesign.com/DeveloperManuals/RESTAPIforBlackmagicCameras.pdf) — the endpoint reference everything below is checked against; still Blackmagic's current published version, checked live against their developer page
 - [Blackmagic Camera Control (PDF, 07 Aug 2025)](https://documents.blackmagicdesign.com/DeveloperManuals/BlackmagicCameraControl.pdf)
 - [Developer page — Camera SDK and Software](https://www.blackmagicdesign.com/developer/products/camera/sdk-and-software) — source of truth for which PDF is current; re-check here before assuming a doc is stale
-- **Per camera:** `https://<camera-host>/control/documentation.html` — the YAML docs generated from *your specific unit's installed firmware*, served by the camera itself
+- **Per camera:** `https://<camera-host>/control/documentation.html` — the YAML docs generated from _your specific unit's installed firmware_, served by the camera itself
 - Also on disk: `/Applications/Blackmagic Cameras/Instruction Manuals/Cinema Camera 6K Manual.pdf` (installed with Blackmagic Camera Setup) — "Developer Information" section, p.182 onward, is the same REST reference
 
 **Doc/firmware gap:** the test camera is running software 10.2.2 (10 Aug 2026), which added
@@ -41,12 +41,12 @@ Until this is on, the camera answers mDNS and ARP but accepts no TCP connection 
 call here fails with `Unreachable`, and that failure mode is indistinguishable from "wrong
 host" or "camera off". Check this first if nothing responds.
 
-| Camera Setup option | Effect on this crate |
-|---|---|
-| Web media manager → *enabled* | Plain HTTP — address the camera as `http://cam.local` |
-| Web media manager → *enabled with security only* | HTTPS, self-signed cert by default — needs `--fingerprint` (or `--insecure` once, to learn it) |
-| Secure login settings | Username + password — pass `--user`/`--pass` |
-| Allow utility administration → *via USB* | Blocks Camera Setup itself over the network; does not affect the REST API |
+| Camera Setup option                              | Effect on this crate                                                                           |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Web media manager → _enabled_                    | Plain HTTP — address the camera as `http://cam.local`                                          |
+| Web media manager → _enabled with security only_ | HTTPS, self-signed cert by default — needs `--fingerprint` (or `--insecure` once, to learn it) |
+| Secure login settings                            | Username + password — pass `--user`/`--pass`                                                   |
+| Allow utility administration → _via USB_         | Blocks Camera Setup itself over the network; does not affect the REST API                      |
 
 Renaming the camera or a factory reset invalidates its certificate, so its fingerprint
 changes and it correctly comes back as `CertUntrusted` until re-accepted.
@@ -57,27 +57,27 @@ changes and it correctly comes back as `CertUntrusted` until re-accepted.
 bmcam <command> [options]
 ```
 
-| Command | Does |
-|---|---|
-| `discover [--service <type>] [--timeout <secs>] [--all]` | mDNS scan for cameras on the LAN |
-| `probe <host>` | Connect, print the cert fingerprint and product info — run this first |
-| `get <host> <path>` | Any `GET`, e.g. `/video/iso` — the whole API is reachable this way |
-| `put <host> <path> <json>` | Any `PUT`, e.g. `/video/iso '{"iso":800}'` |
-| `record <host> start\|stop` | Start/stop recording |
+| Command                                                             | Does                                                                                                   |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `discover [--service <type>] [--timeout <secs>] [--all]`            | mDNS scan for cameras on the LAN                                                                       |
+| `probe <host>`                                                      | Connect, print the cert fingerprint and product info — run this first                                  |
+| `get <host> <path>`                                                 | Any `GET`, e.g. `/video/iso` — the whole API is reachable this way                                     |
+| `put <host> <path> <json>`                                          | Any `PUT`, e.g. `/video/iso '{"iso":800}'`                                                             |
+| `record <host> start\|stop`                                         | Start/stop recording                                                                                   |
 | `stream <host> status\|start\|stop\|available\|platforms\|platform` | Livestream: current state, go live/stop, availability + reasons, platform list, active platform config |
-| `stream <host> dump` | Every livestream setting the camera has, in one pass |
-| `stream <host> target <url> [--quality <name>]` | Point the stream at your own RTMP/SRT receiver instead of a platform |
-| `watch <host> <property>...` | Live `propertyValueChanged` events over the notification websocket, with reconnect |
+| `stream <host> dump`                                                | Every livestream setting the camera has, in one pass                                                   |
+| `stream <host> target <url> [--quality <name>]`                     | Point the stream at your own RTMP/SRT receiver instead of a platform                                   |
+| `watch <host> <property>...`                                        | Live `propertyValueChanged` events over the notification websocket, with reconnect                     |
 
-| Option | Applies to | Meaning |
-|---|---|---|
-| `--fingerprint <sha256>` | any host command | Pin the connection to this cert (from `probe`) |
-| `--insecure` | any host command | Trust-on-first-use, no pinning — for `probe` only in practice |
-| `--user <u> --pass <p>` | any host command | HTTP basic auth |
-| `--service <type>` | `discover` | mDNS service type (default `_http._tcp.local.`) |
-| `--timeout <secs>` | `discover` | How long to listen (default 5) |
-| `--all` | `discover` | Unfiltered — every service instance, not just identified cameras |
-| `--quality <name>` | `stream target` | Quality profile name; defaults to the platform's default |
+| Option                   | Applies to       | Meaning                                                          |
+| ------------------------ | ---------------- | ---------------------------------------------------------------- |
+| `--fingerprint <sha256>` | any host command | Pin the connection to this cert (from `probe`)                   |
+| `--insecure`             | any host command | Trust-on-first-use, no pinning — for `probe` only in practice    |
+| `--user <u> --pass <p>`  | any host command | HTTP basic auth                                                  |
+| `--service <type>`       | `discover`       | mDNS service type (default `_http._tcp.local.`)                  |
+| `--timeout <secs>`       | `discover`       | How long to listen (default 5)                                   |
+| `--all`                  | `discover`       | Unfiltered — every service instance, not just identified cameras |
+| `--quality <name>`       | `stream target`  | Quality profile name; defaults to the platform's default         |
 
 `<host>` is `cam.local`, an IP, or an explicit `http://cam.local`/`https://cam.local` to force
 a scheme. Plain-HTTP hosts don't need `--fingerprint` — there's no certificate to pin.
@@ -167,7 +167,7 @@ from ATEM Setup) — the manual documents producing that file, not its schema.
 
 Three limits worth knowing before building on this:
 
-- **One stream, singular** (`/livestreams/0`). The camera cannot feed a local preview *and*
+- **One stream, singular** (`/livestreams/0`). The camera cannot feed a local preview _and_
   stream to YouTube at once. Camera → local server → OBS → YouTube works; camera → both does not.
 - **It's the program feed, not a low-latency preview.** ~1–3 s on RTMP/HLS, less on SRT/WebRTC.
   Fine for "where is the camera pointed", not for pulling focus.

@@ -85,8 +85,13 @@
     aria-label={ariaLabel ?? title}
     {@attach (el) => el.showModal()}
     onclose={close}
-    oncancel={(event) => { event.preventDefault(); close(); }}
-    onclick={(event) => { if (event.target === event.currentTarget) close(); }}
+    oncancel={(event) => {
+      event.preventDefault();
+      close();
+    }}
+    onclick={(event) => {
+      if (event.target === event.currentTarget) close();
+    }}
   >
     <div
       class="panel"

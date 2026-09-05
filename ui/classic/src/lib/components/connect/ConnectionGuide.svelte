@@ -17,7 +17,13 @@
     }, 2000);
   }
 
-  function httpFile(name: string, seq: number, method: 'GET' | 'POST', path: string, body?: string): string {
+  function httpFile(
+    name: string,
+    seq: number,
+    method: 'GET' | 'POST',
+    path: string,
+    body?: string,
+  ): string {
     const lines = [
       `info:`,
       `  name: ${name}`,
@@ -129,7 +135,12 @@
         '/api/events',
         `{\n  "title": "Sunday Service",\n  "date_time": "${new Date().toISOString()}",\n  "speaker": "Pastor"\n}`,
       ),
-      'Metocast API/List Recordings.yml': httpFile('List Recordings', 4, 'GET', '/api/events/:id/recordings'),
+      'Metocast API/List Recordings.yml': httpFile(
+        'List Recordings',
+        4,
+        'GET',
+        '/api/events/:id/recordings',
+      ),
       'Metocast API/Add Recording.yml': httpFile(
         'Add Recording',
         5,
@@ -137,7 +148,12 @@
         '/api/events/:id/recordings',
         `{\n  "filename": "recording.mp4",\n  "duration_seconds": 3600\n}`,
       ),
-      'Metocast API/Get Connector Statuses.yml': httpFile('Get Connector Statuses', 6, 'GET', '/api/connectors/status'),
+      'Metocast API/Get Connector Statuses.yml': httpFile(
+        'Get Connector Statuses',
+        6,
+        'GET',
+        '/api/connectors/status',
+      ),
       'Metocast API/WebSocket.yml': wsFile(),
       'Metocast API/OpenAPI Spec.yml': httpFilePublic('OpenAPI Spec', 8, '/openapi.json'),
       'Metocast API/environments/Local.yml': envFile(),
@@ -189,7 +205,10 @@
         <tr><td>POST</td><td>/api/events</td><td>Create event</td></tr>
         <tr><td>GET</td><td>/api/events/:id/recordings</td><td>List recordings</td></tr>
         <tr><td>POST</td><td>/api/events/:id/recordings</td><td>Add recording</td></tr>
-        <tr><td>GET</td><td>/api/connectors/status</td><td>Connector statuses (all connectors)</td></tr>
+        <tr
+          ><td>GET</td><td>/api/connectors/status</td><td>Connector statuses (all connectors)</td
+          ></tr
+        >
         <tr><td>GET</td><td>/ws?token=…</td><td>WebSocket stream</td></tr>
         <tr><td>GET</td><td>/openapi.json</td><td>OpenAPI 3.1 spec (no auth)</td></tr>
         <tr><td>GET</td><td>/docs</td><td>Interactive API reference (no auth)</td></tr>

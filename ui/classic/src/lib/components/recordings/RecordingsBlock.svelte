@@ -70,29 +70,29 @@
       aria-selected={activeTab === 'not_flagged'}
       class="tab"
       class:tab--active={activeTab === 'not_flagged'}
-      onclick={() => (activeTab = 'not_flagged')}
-    >Not Flagged</button>
+      onclick={() => (activeTab = 'not_flagged')}>Not Flagged</button
+    >
     <button
       role="tab"
       aria-selected={activeTab === 'flagged'}
       class="tab"
       class:tab--active={activeTab === 'flagged'}
-      onclick={() => (activeTab = 'flagged')}
-    >Flagged</button>
+      onclick={() => (activeTab = 'flagged')}>Flagged</button
+    >
     <button
       role="tab"
       aria-selected={activeTab === 'in_progress'}
       class="tab"
       class:tab--active={activeTab === 'in_progress'}
-      onclick={() => (activeTab = 'in_progress')}
-    >In Progress</button>
+      onclick={() => (activeTab = 'in_progress')}>In Progress</button
+    >
     <button
       role="tab"
       aria-selected={activeTab === 'uploaded'}
       class="tab"
       class:tab--active={activeTab === 'uploaded'}
-      onclick={() => (activeTab = 'uploaded')}
-    >Uploaded</button>
+      onclick={() => (activeTab = 'uploaded')}>Uploaded</button
+    >
   </div>
 
   <div class="tab-panel" role="tabpanel">
@@ -124,7 +124,12 @@
                 <span class="badge badge--warn">Pending</span>
               {:else if activeTab === 'uploaded'}
                 {#if rec.videoUrl}
-                  <a href={rec.videoUrl} target="_blank" rel="noopener noreferrer" class="badge badge--ok">Watch</a>
+                  <a
+                    href={rec.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="badge badge--ok">Watch</a
+                  >
                 {:else}
                   <span class="badge badge--ok">Uploaded</span>
                 {/if}
@@ -135,8 +140,18 @@
                     <div class="upload-row">
                       <span class="platform-label">{entry.platform}</span>
                       {#if entry.state === 'uploading'}
-                        {@const pct = entry.totalBytes > 0 ? Math.round((entry.progressBytes / entry.totalBytes) * 100) : 0}
-                        <div class="progress-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="{entry.platform} upload progress">
+                        {@const pct =
+                          entry.totalBytes > 0
+                            ? Math.round((entry.progressBytes / entry.totalBytes) * 100)
+                            : 0}
+                        <div
+                          class="progress-bar"
+                          role="progressbar"
+                          aria-valuenow={pct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label="{entry.platform} upload progress"
+                        >
                           <div class="progress-bar__fill" style="width:{pct}%"></div>
                         </div>
                         <span class="pct-label">{pct}%</span>
@@ -154,8 +169,18 @@
                     <div class="upload-row">
                       <span class="platform-label">{upload.platform}</span>
                       {#if upload.state === 'uploading'}
-                        {@const pct = upload.totalBytes > 0 ? Math.round((upload.progressBytes / upload.totalBytes) * 100) : 0}
-                        <div class="progress-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="{upload.platform} upload progress">
+                        {@const pct =
+                          upload.totalBytes > 0
+                            ? Math.round((upload.progressBytes / upload.totalBytes) * 100)
+                            : 0}
+                        <div
+                          class="progress-bar"
+                          role="progressbar"
+                          aria-valuenow={pct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label="{upload.platform} upload progress"
+                        >
                           <div class="progress-bar__fill" style="width:{pct}%"></div>
                         </div>
                         <span class="pct-label">{pct}%</span>
@@ -190,7 +215,7 @@
   .tabs {
     display: flex;
     border-bottom: 1px solid var(--border);
-    background: var(--nav-item-hover, rgba(0,0,0,0.03));
+    background: var(--nav-item-hover, rgba(0, 0, 0, 0.03));
   }
 
   .tab {
@@ -292,7 +317,7 @@
 
   .badge--muted {
     color: var(--text-secondary);
-    background: var(--nav-item-hover, rgba(0,0,0,0.05));
+    background: var(--nav-item-hover, rgba(0, 0, 0, 0.05));
   }
 
   .badge--warn {
@@ -349,7 +374,13 @@
     font-size: 0.75rem;
   }
 
-  .status-text--ok { color: var(--status-ok-text); }
-  .status-text--warn { color: var(--status-warn-text); }
-  .status-text--err { color: var(--status-err-text); }
+  .status-text--ok {
+    color: var(--status-ok-text);
+  }
+  .status-text--warn {
+    color: var(--status-warn-text);
+  }
+  .status-text--err {
+    color: var(--status-err-text);
+  }
 </style>

@@ -10,13 +10,13 @@ A scrollable strip of tabs over a hairline rule, with the selected tab underline
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `tabs` *(required)* | `Tab<T>[]` | — | — |
-| `value` *(required)* | `T` | — | — |
-| `label` *(required)* | `string` | — | — |
-| `onchange` | `(value: T) => void` | — | — |
-| `children` *(required)* | `Snippet<[T]>` | — | Rendered inside the panel for the selected tab. |
+| Prop                    | Type                 | Default | Meaning                                         |
+| ----------------------- | -------------------- | ------- | ----------------------------------------------- |
+| `tabs` _(required)_     | `Tab<T>[]`           | —       | —                                               |
+| `value` _(required)_    | `T`                  | —       | —                                               |
+| `label` _(required)_    | `string`             | —       | —                                               |
+| `onchange`              | `(value: T) => void` | —       | —                                               |
+| `children` _(required)_ | `Snippet<[T]>`       | —       | Rendered inside the panel for the selected tab. |
 
 ## Variants
 
@@ -28,37 +28,37 @@ Unselected, selected, disabled, focus-visible.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--c-tabs-gap` | `18px` |
-| `--c-tabs-padding-block` | `12px` |
-| `--c-tabs-track` | `1.4px` |
-| `--surface-inverse` | `#1c1a16 / #ede6d6` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-size` | `10px` |
-| `--type-label-transform` | `uppercase` |
-| `--type-label-weight` | `500` |
-| `--ui-border-emphasis` | `2px` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter` | `24px` |
-| `--ui-target-min` | `44px` |
+| Token                    | Resolves to                                                    |
+| ------------------------ | -------------------------------------------------------------- |
+| `--accent`               | `#5c5c84 / #a9a6d6`                                            |
+| `--border-hairline`      | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`            |
+| `--c-tabs-gap`           | `18px`                                                         |
+| `--c-tabs-padding-block` | `12px`                                                         |
+| `--c-tabs-track`         | `1.4px`                                                        |
+| `--surface-inverse`      | `#1c1a16 / #ede6d6`                                            |
+| `--text-faint`           | `#676051 / #8f8879`                                            |
+| `--text-muted`           | `#615e56 / #918b7e`                                            |
+| `--text-primary`         | `#1c1a16 / #ede6d6`                                            |
+| `--type-label-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-size`      | `10px`                                                         |
+| `--type-label-transform` | `uppercase`                                                    |
+| `--type-label-weight`    | `500`                                                          |
+| `--ui-border-emphasis`   | `2px`                                                          |
+| `--ui-border-hairline`   | `1px`                                                          |
+| `--ui-focus-offset`      | `2px`                                                          |
+| `--ui-focus-width`       | `2px`                                                          |
+| `--ui-gutter`            | `24px`                                                         |
+| `--ui-target-min`        | `44px`                                                         |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Enters the strip as one stop, then moves to the panel. |
-| `←`, `→` | Move between tabs and select as they go. |
-| `Home`, `End` | Jump to the first and last tab. |
+| Key           | Behaviour                                              |
+| ------------- | ------------------------------------------------------ |
+| `Tab`         | Enters the strip as one stop, then moves to the panel. |
+| `←`, `→`      | Move between tabs and select as they go.               |
+| `Home`, `End` | Jump to the first and last tab.                        |
 
 ## ARIA
 
@@ -79,4 +79,3 @@ None as a component. The reference hand-rolls four separate tab-like treatments 
 ## Recorded deviations
 
 None.
-

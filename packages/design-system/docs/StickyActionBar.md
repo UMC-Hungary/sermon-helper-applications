@@ -10,14 +10,14 @@ An optional secondary action and the primary action, which fills the remaining w
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `primary` *(required)* | `string` | — | — |
-| `secondary` | `string` | `''` | — |
-| `onprimary` | `() => void` | — | — |
-| `onsecondary` | `() => void` | — | — |
-| `primaryDisabled` | `boolean` | `false` | — |
-| `bottom` | `string` | `'24px'` | How far above the bottom edge the bar settles. |
+| Prop                   | Type         | Default  | Meaning                                        |
+| ---------------------- | ------------ | -------- | ---------------------------------------------- |
+| `primary` _(required)_ | `string`     | —        | —                                              |
+| `secondary`            | `string`     | `''`     | —                                              |
+| `onprimary`            | `() => void` | —        | —                                              |
+| `onsecondary`          | `() => void` | —        | —                                              |
+| `primaryDisabled`      | `boolean`    | `false`  | —                                              |
+| `bottom`               | `string`     | `'24px'` | How far above the bottom edge the bar settles. |
 
 ## Variants
 
@@ -29,37 +29,37 @@ Default, primary disabled.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
-| `--c-action-bar-button-height` | `48px` |
-| `--c-action-bar-button-padding` | `18px` |
-| `--c-action-bar-padding-block` | `10px` |
-| `--c-action-bar-padding-inline` | `12px` |
-| `--c-action-bar-track` | `0.2px` |
-| `--surface-base` | `#efe9dd / #14120f` |
-| `--surface-inverse` | `#1c1a16 / #ede6d6` |
-| `--text-inverse` | `#efe9dd / #14120f` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-weight` | `500` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-stack` | `8px` |
-| `--z-actionbar` | `45` |
+| Token                           | Resolves to                                                                |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `--accent`                      | `#5c5c84 / #a9a6d6`                                                        |
+| `--border-control`              | `#857c68 / #716b5c`                                                        |
+| `--border-hairline`             | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
+| `--border-strong`               | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)`                       |
+| `--c-action-bar-button-height`  | `48px`                                                                     |
+| `--c-action-bar-button-padding` | `18px`                                                                     |
+| `--c-action-bar-padding-block`  | `10px`                                                                     |
+| `--c-action-bar-padding-inline` | `12px`                                                                     |
+| `--c-action-bar-track`          | `0.2px`                                                                    |
+| `--surface-base`                | `#efe9dd / #14120f`                                                        |
+| `--surface-inverse`             | `#1c1a16 / #ede6d6`                                                        |
+| `--text-inverse`                | `#efe9dd / #14120f`                                                        |
+| `--text-primary`                | `#1c1a16 / #ede6d6`                                                        |
+| `--type-body-sm-family`         | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-weight`         | `500`                                                                      |
+| `--ui-border-hairline`          | `1px`                                                                      |
+| `--ui-focus-offset`             | `2px`                                                                      |
+| `--ui-focus-width`              | `2px`                                                                      |
+| `--ui-stack`                    | `8px`                                                                      |
+| `--z-actionbar`                 | `45`                                                                       |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Reaches the secondary action, then the primary. |
-| `Enter`, `Space` | Activates. |
+| Key              | Behaviour                                       |
+| ---------------- | ----------------------------------------------- |
+| `Tab`            | Reaches the secondary action, then the primary. |
+| `Enter`, `Space` | Activates.                                      |
 
 ## ARIA
 
@@ -78,23 +78,22 @@ Both actions are real buttons with visible text labels.
 
 Source: `src/components/layout/StickyActionBar.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.bar` | `gap` | `8px` | `8px` | `--ui-stack` |
-| `.bar` | `padding` | `10px` | `10px` | `--c-action-bar-padding-block` |
-| `.bar` | `padding` | `12px` | `12px` | `--c-action-bar-padding-inline` |
-| `.bar` | `border-top` | `1px` | `1px` | `--ui-border-hairline` |
-| `button` | `min-height` | `48px` | `48px` | `--c-action-bar-button-height` |
-| `button` | `padding` | `18px` | `18px` | `--c-action-bar-button-padding` |
-| `button` | `font-weight` | `500` | `500` | `--type-body-sm-weight` |
-| `button` | `letter-spacing` | `0.2px` | `0.2px` | `--c-action-bar-track` |
+| Selector | Property         | Measured | Implemented | Token                           |
+| -------- | ---------------- | -------- | ----------- | ------------------------------- |
+| `.bar`   | `gap`            | `8px`    | `8px`       | `--ui-stack`                    |
+| `.bar`   | `padding`        | `10px`   | `10px`      | `--c-action-bar-padding-block`  |
+| `.bar`   | `padding`        | `12px`   | `12px`      | `--c-action-bar-padding-inline` |
+| `.bar`   | `border-top`     | `1px`    | `1px`       | `--ui-border-hairline`          |
+| `button` | `min-height`     | `48px`   | `48px`      | `--c-action-bar-button-height`  |
+| `button` | `padding`        | `18px`   | `18px`      | `--c-action-bar-button-padding` |
+| `button` | `font-weight`    | `500`    | `500`       | `--type-body-sm-weight`         |
+| `button` | `letter-spacing` | `0.2px`  | `0.2px`     | `--c-action-bar-track`          |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
-| A focus indicator was added. | The reference has none. |
+| What                                 | Why                                                                           |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| A focus indicator was added.         | The reference has none.                                                       |
 | The bar honours the safe-area inset. | The reference positions itself against its phone frame instead of the device. |
-

@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { apiFetch } from './client.js';
-import { UntrackedRecordingSchema, type UntrackedRecording } from '../schemas/untracked-recording.js';
+import {
+  UntrackedRecordingSchema,
+  type UntrackedRecording,
+} from '../schemas/untracked-recording.js';
 import { RecordingSchema, type Recording } from '../schemas/recording.js';
 
 export function listUntrackedRecordings(): Promise<UntrackedRecording[]> {
@@ -15,9 +18,7 @@ export function assignUntrackedRecording(id: string, eventId: string): Promise<R
 }
 
 export function deleteUntrackedRecording(id: string, deleteFile: boolean): Promise<void> {
-  return apiFetch(
-    `/api/recordings/untracked/${id}?delete_file=${deleteFile}`,
-    z.undefined(),
-    { method: 'DELETE' },
-  );
+  return apiFetch(`/api/recordings/untracked/${id}?delete_file=${deleteFile}`, z.undefined(), {
+    method: 'DELETE',
+  });
 }

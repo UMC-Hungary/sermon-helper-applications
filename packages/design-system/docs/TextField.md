@@ -10,18 +10,18 @@ A bordered field on the sunken surface.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `value` | `string` | `$bindable('')` | — |
-| `type` | `'text' \| 'email' \| 'url' \| 'tel' \| 'search' \| 'password' \| 'number'` | `'text'` | — |
-| `placeholder` | `string` | `''` | — |
-| `disabled` | `boolean` | `false` | — |
-| `readonly` | `boolean` | `false` | — |
-| `required` | `boolean` | `false` | — |
-| `invalid` | `boolean` | `false` | — |
-| `id` | `string` | — | Supplied by `FormField`, which owns the label and the notes. |
-| `describedby` | `string` | — | — |
-| `label` | `string` | — | Only when the field stands outside a `FormField`. |
+| Prop          | Type                                                                        | Default         | Meaning                                                      |
+| ------------- | --------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------ |
+| `value`       | `string`                                                                    | `$bindable('')` | —                                                            |
+| `type`        | `'text' \| 'email' \| 'url' \| 'tel' \| 'search' \| 'password' \| 'number'` | `'text'`        | —                                                            |
+| `placeholder` | `string`                                                                    | `''`            | —                                                            |
+| `disabled`    | `boolean`                                                                   | `false`         | —                                                            |
+| `readonly`    | `boolean`                                                                   | `false`         | —                                                            |
+| `required`    | `boolean`                                                                   | `false`         | —                                                            |
+| `invalid`     | `boolean`                                                                   | `false`         | —                                                            |
+| `id`          | `string`                                                                    | —               | Supplied by `FormField`, which owns the label and the notes. |
+| `describedby` | `string`                                                                    | —               | —                                                            |
+| `label`       | `string`                                                                    | —               | Only when the field stands outside a `FormField`.            |
 
 ## Variants
 
@@ -33,33 +33,33 @@ Default, focus-visible, readonly, disabled, invalid.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-text-field-padding-block` | `9px` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--surface-sunken` | `#e4ddcd / #23201a` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-strong-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-strong-size` | `14.5px` |
-| `--type-body-strong-track` | `-0.1px` |
-| `--type-body-strong-weight` | `500` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter-inset` | `14px` |
-| `--ui-radius-square` | `0` |
-| `--ui-target-min` | `44px` |
+| Token                          | Resolves to                                                                |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `--accent`                     | `#5c5c84 / #a9a6d6`                                                        |
+| `--border-control`             | `#857c68 / #716b5c`                                                        |
+| `--c-text-field-padding-block` | `9px`                                                                      |
+| `--status-error`               | `#b5321c / #e66a4f`                                                        |
+| `--surface-sunken`             | `#e4ddcd / #23201a`                                                        |
+| `--text-faint`                 | `#676051 / #8f8879`                                                        |
+| `--text-muted`                 | `#615e56 / #918b7e`                                                        |
+| `--text-primary`               | `#1c1a16 / #ede6d6`                                                        |
+| `--type-body-strong-family`    | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-strong-size`      | `14.5px`                                                                   |
+| `--type-body-strong-track`     | `-0.1px`                                                                   |
+| `--type-body-strong-weight`    | `500`                                                                      |
+| `--ui-border-hairline`         | `1px`                                                                      |
+| `--ui-focus-offset`            | `2px`                                                                      |
+| `--ui-focus-width`             | `2px`                                                                      |
+| `--ui-gutter-inset`            | `14px`                                                                     |
+| `--ui-radius-square`           | `0`                                                                        |
+| `--ui-target-min`              | `44px`                                                                     |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
+| Key   | Behaviour                    |
+| ----- | ---------------------------- |
 | `Tab` | Moves to and from the field. |
 
 ## ARIA
@@ -81,4 +81,3 @@ None as a standalone control. It takes `LabelledInput`'s fill, boundary and type
 ## Recorded deviations
 
 None.
-

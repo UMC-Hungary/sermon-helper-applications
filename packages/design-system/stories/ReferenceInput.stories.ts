@@ -17,42 +17,42 @@ type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = {
   args: {
-    label: "Igehely",
-    rank: "Első",
-    value: "",
-    errorMessage: "Nézd meg a helyesírást. Próbáld így: Könyv Fejezet:Vers.",
-    notFoundLabel: "Nincs találat",
-    placeholder: "Jn 3:16",
+    label: 'Igehely',
+    rank: 'Első',
+    value: '',
+    errorMessage: 'Nézd meg a helyesírást. Próbáld így: Könyv Fejezet:Vers.',
+    notFoundLabel: 'Nincs találat',
+    placeholder: 'Jn 3:16',
   },
 };
 
 export const Resolved: Story = {
   args: {
-    label: "Igehely",
-    rank: "Első",
-    value: "Jn 3:16",
-    errorMessage: "Nézd meg a helyesírást. Próbáld így: Könyv Fejezet:Vers.",
-    notFoundLabel: "Nincs találat",
-    statusMessage: "1 vers · RÚF",
+    label: 'Igehely',
+    rank: 'Első',
+    value: 'Jn 3:16',
+    errorMessage: 'Nézd meg a helyesírást. Próbáld így: Könyv Fejezet:Vers.',
+    notFoundLabel: 'Nincs találat',
+    statusMessage: '1 vers · RÚF',
     result: {
       verses: [
         {
           n: 16,
-          text: "Mert úgy szerette Isten a világot, hogy egyszülött Fiát adta.",
+          text: 'Mert úgy szerette Isten a világot, hogy egyszülött Fiát adta.',
         },
       ],
-      translation: "RÚF",
+      translation: 'RÚF',
     },
   },
 };
 
 export const NotFound: Story = {
   args: {
-    label: "Igehely",
-    rank: "Első",
-    value: "Jn 99:1",
-    errorMessage: "Nézd meg a helyesírást. Próbáld így: Könyv Fejezet:Vers.",
-    notFoundLabel: "Nincs találat",
+    label: 'Igehely',
+    rank: 'Első',
+    value: 'Jn 99:1',
+    errorMessage: 'Nézd meg a helyesírást. Próbáld így: Könyv Fejezet:Vers.',
+    notFoundLabel: 'Nincs találat',
     result: {
       invalid: true,
     },

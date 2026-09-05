@@ -24,7 +24,14 @@
     onchange?: (value: T) => void;
   }
 
-  let { options, value = $bindable(), label, labelledby, compact = false, onchange }: Props = $props();
+  let {
+    options,
+    value = $bindable(),
+    label,
+    labelledby,
+    compact = false,
+    onchange,
+  }: Props = $props();
 
   function select(option: SegmentedOption<T>) {
     if (option.disabled) return;

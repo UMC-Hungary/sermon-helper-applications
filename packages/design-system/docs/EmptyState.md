@@ -10,11 +10,11 @@ Centred: the serif italic title, an optional mono hint, and an optional action.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `title` *(required)* | `string` | — | The serif italic line the reference uses — "The booth is quiet." |
-| `hint` | `string` | — | The mono micro-label under it — "Connectors will speak up here". |
-| `action` | `Snippet` | — | — |
+| Prop                 | Type      | Default | Meaning                                                          |
+| -------------------- | --------- | ------- | ---------------------------------------------------------------- |
+| `title` _(required)_ | `string`  | —       | The serif italic line the reference uses — "The booth is quiet." |
+| `hint`               | `string`  | —       | The mono micro-label under it — "Connectors will speak up here". |
+| `action`             | `Snippet` | —       | —                                                                |
 
 ## Variants
 
@@ -26,20 +26,20 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-empty-state-hint-gap` | `10px` |
-| `--c-empty-state-hint-size` | `9.5px` |
-| `--c-empty-state-hint-track` | `1.5px` |
-| `--c-empty-state-padding-bottom` | `30px` |
-| `--c-empty-state-padding-top` | `50px` |
-| `--c-empty-state-title-size` | `18px` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-xs-transform` | `uppercase` |
-| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--ui-gutter` | `24px` |
+| Token                            | Resolves to                                                    |
+| -------------------------------- | -------------------------------------------------------------- |
+| `--c-empty-state-hint-gap`       | `10px`                                                         |
+| `--c-empty-state-hint-size`      | `9.5px`                                                        |
+| `--c-empty-state-hint-track`     | `1.5px`                                                        |
+| `--c-empty-state-padding-bottom` | `30px`                                                         |
+| `--c-empty-state-padding-top`    | `50px`                                                         |
+| `--c-empty-state-title-size`     | `18px`                                                         |
+| `--text-faint`                   | `#676051 / #8f8879`                                            |
+| `--text-muted`                   | `#615e56 / #918b7e`                                            |
+| `--type-label-xs-family`         | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-transform`      | `uppercase`                                                    |
+| `--type-quote-family`            | `"Cormorant Garamond", Georgia, serif`                         |
+| `--ui-gutter`                    | `24px`                                                         |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -63,19 +63,18 @@ None of its own. When the emptiness is the result of a search or a filter, the s
 
 Source: `src/components/notifications/NotificationCenter.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.empty` | `padding` | `50px` | `50px` | `--c-empty-state-padding-top` |
-| `.empty` | `padding` | `24px` | `24px` | `--ui-gutter` |
-| `.empty` | `padding` | `30px` | `30px` | `--c-empty-state-padding-bottom` |
-| `.empty` | `font-size` | `18px` | `18px` | `--c-empty-state-title-size` |
-| `.empty span` | `font-size` | `9.5px` | `9.5px` | `--c-empty-state-hint-size` |
-| `.empty span` | `letter-spacing` | `1.5px` | `1.5px` | `--c-empty-state-hint-track` |
-| `.empty span` | `margin-top` | `10px` | `10px` | `--c-empty-state-hint-gap` |
+| Selector      | Property         | Measured | Implemented | Token                            |
+| ------------- | ---------------- | -------- | ----------- | -------------------------------- |
+| `.empty`      | `padding`        | `50px`   | `50px`      | `--c-empty-state-padding-top`    |
+| `.empty`      | `padding`        | `24px`   | `24px`      | `--ui-gutter`                    |
+| `.empty`      | `padding`        | `30px`   | `30px`      | `--c-empty-state-padding-bottom` |
+| `.empty`      | `font-size`      | `18px`   | `18px`      | `--c-empty-state-title-size`     |
+| `.empty span` | `font-size`      | `9.5px`  | `9.5px`     | `--c-empty-state-hint-size`      |
+| `.empty span` | `letter-spacing` | `1.5px`  | `1.5px`     | `--c-empty-state-hint-track`     |
+| `.empty span` | `margin-top`     | `10px`   | `10px`      | `--c-empty-state-hint-gap`       |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
-

@@ -24,7 +24,9 @@
 
   let { recordings, loading = false, ondelete, onassign }: Props = $props();
 
-  function getUploadBadge(rec: RecordingItem): { label: string; variant: 'ok' | 'warn' | 'err' | 'info' | 'none' } | null {
+  function getUploadBadge(
+    rec: RecordingItem,
+  ): { label: string; variant: 'ok' | 'warn' | 'err' | 'info' | 'none' } | null {
     // Check live WS progress first
     const liveKeys = Object.keys($uploadProgress).filter((k) => k.startsWith(`${rec.id}:`));
     if (liveKeys.length > 0) {
@@ -34,14 +36,16 @@
         .filter((e): e is UploadProgressEntry => e !== undefined);
       const uploading = entries.find((e) => e.state === 'uploading');
       if (uploading) {
-        const pct = uploading.totalBytes > 0
-          ? Math.round((uploading.progressBytes / uploading.totalBytes) * 100)
-          : 0;
+        const pct =
+          uploading.totalBytes > 0
+            ? Math.round((uploading.progressBytes / uploading.totalBytes) * 100)
+            : 0;
         return { label: `Uploading ${pct}%`, variant: 'info' };
       }
       if (entries.some((e) => e.state === 'failed')) return { label: 'Failed', variant: 'err' };
       if (entries.some((e) => e.state === 'paused')) return { label: 'Paused', variant: 'warn' };
-      if (entries.every((e) => e.state === 'completed')) return { label: 'Uploaded', variant: 'ok' };
+      if (entries.every((e) => e.state === 'completed'))
+        return { label: 'Uploaded', variant: 'ok' };
     }
 
     // Fall back to uploads field from API
@@ -52,9 +56,12 @@
       const pct = u.totalBytes > 0 ? Math.round((u.progressBytes / u.totalBytes) * 100) : 0;
       return { label: `Uploading ${pct}%`, variant: 'info' };
     }
-    if (uploads.some((u) => u.state === 'failed')) return { label: 'Upload Failed', variant: 'err' };
-    if (uploads.some((u) => u.state === 'paused')) return { label: 'Upload Paused', variant: 'warn' };
-    if (uploads.some((u) => u.state === 'pending')) return { label: 'Upload Pending', variant: 'info' };
+    if (uploads.some((u) => u.state === 'failed'))
+      return { label: 'Upload Failed', variant: 'err' };
+    if (uploads.some((u) => u.state === 'paused'))
+      return { label: 'Upload Paused', variant: 'warn' };
+    if (uploads.some((u) => u.state === 'pending'))
+      return { label: 'Upload Pending', variant: 'info' };
     if (uploads.every((u) => u.state === 'completed')) return { label: 'Uploaded', variant: 'ok' };
     return null;
   }
@@ -97,7 +104,9 @@
         <div class="item__info">
           <span class="item__name">{rec.customTitle ?? rec.fileName}</span>
           <span class="item__meta">
-            {formatSize(rec.fileSize)}{formatDuration(rec.durationSeconds) ? ` · ${formatDuration(rec.durationSeconds)}` : ''}
+            {formatSize(rec.fileSize)}{formatDuration(rec.durationSeconds)
+              ? ` · ${formatDuration(rec.durationSeconds)}`
+              : ''}
             {#if rec.uploaded}
               &middot; <span class="badge--uploaded">Uploaded</span>
             {/if}
@@ -116,18 +125,18 @@
             <button
               class="btn-danger"
               onclick={() => handleDelete(rec.id, true)}
-              disabled={deletingId === rec.id}
-            >Record + File</button>
+              disabled={deletingId === rec.id}>Record + File</button
+            >
             <button
               class="btn-secondary"
               onclick={() => handleDelete(rec.id, false)}
-              disabled={deletingId === rec.id}
-            >Record only</button>
+              disabled={deletingId === rec.id}>Record only</button
+            >
             <button
               class="btn-cancel"
               onclick={() => (confirmingDeleteId = null)}
-              disabled={deletingId === rec.id}
-            >Cancel</button>
+              disabled={deletingId === rec.id}>Cancel</button
+            >
           {:else}
             {#if onassign}
               <button class="btn-assign" onclick={() => onassign?.(rec.id)}>
@@ -206,11 +215,21 @@
   .upload-badge {
     font-weight: 500;
   }
-  .upload-badge--ok { color: var(--status-ok-text); }
-  .upload-badge--info { color: var(--accent); }
-  .upload-badge--warn { color: var(--status-warn-text); }
-  .upload-badge--err { color: var(--status-err-text); }
-  .upload-badge--none { color: var(--text-secondary); }
+  .upload-badge--ok {
+    color: var(--status-ok-text);
+  }
+  .upload-badge--info {
+    color: var(--accent);
+  }
+  .upload-badge--warn {
+    color: var(--status-warn-text);
+  }
+  .upload-badge--err {
+    color: var(--status-err-text);
+  }
+  .upload-badge--none {
+    color: var(--text-secondary);
+  }
 
   .btn-assign {
     padding: 0.375rem 0.875rem;

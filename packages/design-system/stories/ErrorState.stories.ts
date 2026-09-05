@@ -17,24 +17,24 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: "Nem sikerült betölteni",
-    body: "A kiszolgáló nem válaszolt időben. Ellenőrizd, hogy fut-e, majd próbáld újra.",
+    title: 'Nem sikerült betölteni',
+    body: 'A kiszolgáló nem válaszolt időben. Ellenőrizd, hogy fut-e, majd próbáld újra.',
   },
 };
 
 export const WithRetry: Story = {
   args: {
-    title: "Nem sikerült betölteni",
-    body: "A kiszolgáló nem válaszolt időben. Ellenőrizd, hogy fut-e, majd próbáld újra.",
-    retryLabel: "Újra",
+    title: 'Nem sikerült betölteni',
+    body: 'A kiszolgáló nem válaszolt időben. Ellenőrizd, hogy fut-e, majd próbáld újra.',
+    retryLabel: 'Újra',
     onretry: () => {},
   },
 };
 
 export const TitleOnly: Story = {
   args: {
-    title: "Nem sikerült betölteni",
-    body: "",
+    title: 'Nem sikerült betölteni',
+    body: '',
   },
 };
 

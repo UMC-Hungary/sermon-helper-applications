@@ -17,21 +17,21 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: "Talált eszközök",
-    actionLabel: "Párosítás",
-    emptyMessage: "Egy eszköz sem válaszolt.",
+    label: 'Talált eszközök',
+    actionLabel: 'Párosítás',
+    emptyMessage: 'Egy eszköz sem válaszolt.',
     devices: [
       {
-        id: "a",
-        name: "Nappali RM4 Pro",
-        address: "192.168.1.42",
-        kind: "Broadlink RM4 Pro",
+        id: 'a',
+        name: 'Nappali RM4 Pro',
+        address: '192.168.1.42',
+        kind: 'Broadlink RM4 Pro',
       },
       {
-        id: "b",
-        name: "Karzat RM Mini",
-        address: "192.168.1.51",
-        kind: "Broadlink RM Mini 3",
+        id: 'b',
+        name: 'Karzat RM Mini',
+        address: '192.168.1.51',
+        kind: 'Broadlink RM Mini 3',
       },
     ],
   },
@@ -39,9 +39,9 @@ export const Default: Story = {
 
 export const Empty: Story = {
   args: {
-    label: "Talált eszközök",
-    actionLabel: "Párosítás",
-    emptyMessage: "Egy eszköz sem válaszolt.",
+    label: 'Talált eszközök',
+    actionLabel: 'Párosítás',
+    emptyMessage: 'Egy eszköz sem válaszolt.',
     devices: [],
   },
 };

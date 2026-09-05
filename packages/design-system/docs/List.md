@@ -10,13 +10,13 @@ A container. It has no padding of its own — the rows carry the gutter.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `flush` | `boolean` | `false` | Nudges the list down when it follows another list rather than a section label. |
-| `as` | `'div' \| 'ul'` | `'div'` | Renders the rows as list items when they are a set of like things. Rows that are each a navigation target should stay unlisted, as they are in the reference, and be wrapped in a nav by the screen. |
-| `aria-label` | `string` | — | — |
-| `aria-labelledby` | `string` | — | — |
-| `children` *(required)* | `Snippet` | — | — |
+| Prop                    | Type            | Default | Meaning                                                                                                                                                                                              |
+| ----------------------- | --------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flush`                 | `boolean`       | `false` | Nudges the list down when it follows another list rather than a section label.                                                                                                                       |
+| `as`                    | `'div' \| 'ul'` | `'div'` | Renders the rows as list items when they are a set of like things. Rows that are each a navigation target should stay unlisted, as they are in the reference, and be wrapped in a nav by the screen. |
+| `aria-label`            | `string`        | —       | —                                                                                                                                                                                                    |
+| `aria-labelledby`       | `string`        | —       | —                                                                                                                                                                                                    |
+| `children` _(required)_ | `Snippet`       | —       | —                                                                                                                                                                                                    |
 
 ## Variants
 
@@ -28,12 +28,12 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--c-list-flush-gap` | `4px` |
-| `--surface-raised` | `#f6f2e8 / #1e1b16` |
-| `--ui-border-hairline` | `1px` |
+| Token                  | Resolves to                                         |
+| ---------------------- | --------------------------------------------------- |
+| `--border-hairline`    | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--c-list-flush-gap`   | `4px`                                               |
+| `--surface-raised`     | `#f6f2e8 / #1e1b16`                                 |
+| `--ui-border-hairline` | `1px`                                               |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -57,14 +57,13 @@ Not interactive.
 
 Source: `src/components/primitives/List.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `div` | `border-top` | `1px` | `1px` | `--ui-border-hairline` |
-| `.flush` | `margin-top` | `4px` | `4px` | `--c-list-flush-gap` |
+| Selector | Property     | Measured | Implemented | Token                  |
+| -------- | ------------ | -------- | ----------- | ---------------------- |
+| `div`    | `border-top` | `1px`    | `1px`       | `--ui-border-hairline` |
+| `.flush` | `margin-top` | `4px`    | `4px`       | `--c-list-flush-gap`   |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
-

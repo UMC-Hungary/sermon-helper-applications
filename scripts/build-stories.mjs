@@ -14,9 +14,11 @@ const samples = JSON.parse(readFileSync(join(packageDir, 'stories/samples.json')
 
 /** Where each exported component lives, read from the entry point rather than guessed. */
 const LOCATION = new Map(
-  [...readFileSync(join(packageDir, 'src/index.ts'), 'utf8').matchAll(
-    /export \{ default as (\w+) \} from '\.\/(\w+)\//g,
-  )].map((m) => [m[1], m[2]]),
+  [
+    ...readFileSync(join(packageDir, 'src/index.ts'), 'utf8').matchAll(
+      /export \{ default as (\w+) \} from '\.\/(\w+)\//g,
+    ),
+  ].map((m) => [m[1], m[2]]),
 );
 const GROUP = { primitives: 'Primitives', patterns: 'Patterns', a11y: 'Accessibility' };
 
@@ -34,13 +36,19 @@ function literal(value, indent = '    ') {
   const entries = Object.entries(value);
   if (entries.length === 0) return '{}';
   return `{\n${entries
-    .map(([k, v]) => `${indent}  ${/^[a-z][\w]*$/i.test(k) ? k : JSON.stringify(k)}: ${literal(v, indent + '  ')},`)
+    .map(
+      ([k, v]) =>
+        `${indent}  ${/^[a-z][\w]*$/i.test(k) ? k : JSON.stringify(k)}: ${literal(v, indent + '  ')},`,
+    )
     .join('\n')}\n${indent}}`;
 }
 
 const argsBlock = (args, indent = '  ') =>
   Object.entries(args)
-    .map(([k, v]) => `${indent}  ${/^[a-z][\w]*$/i.test(k) ? k : JSON.stringify(k)}: ${literal(v, indent + '  ')},`)
+    .map(
+      ([k, v]) =>
+        `${indent}  ${/^[a-z][\w]*$/i.test(k) ? k : JSON.stringify(k)}: ${literal(v, indent + '  ')},`,
+    )
     .join('\n');
 
 function render(name, sample) {
@@ -72,7 +80,14 @@ function render(name, sample) {
     if (story.$comment) lines.push(`/** ${story.$comment} */`);
     const args = { ...sample.args, ...story };
     delete args.$comment;
-    lines.push(`export const ${storyName}: Story = {`, `  args: {`, argsBlock(args), `  },`, `};`, ``);
+    lines.push(
+      `export const ${storyName}: Story = {`,
+      `  args: {`,
+      argsBlock(args),
+      `  },`,
+      `};`,
+      ``,
+    );
   }
 
   // Every component ends with its measurements, so drift is visible where the work happens.
@@ -116,7 +131,9 @@ if (process.argv.includes('--check')) {
     console.error('Run `pnpm -F @metocast/design-system stories`.');
     process.exit(1);
   }
-  console.log(`All ${Object.keys(samples).filter((k) => !k.startsWith('$')).length} story files are current.`);
+  console.log(
+    `All ${Object.keys(samples).filter((k) => !k.startsWith('$')).length} story files are current.`,
+  );
 } else {
   console.log(`Wrote ${written} story files.`);
 }

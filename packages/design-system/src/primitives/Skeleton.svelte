@@ -19,7 +19,7 @@
   {#each { length: lines } as _, index (index)}
     <span
       class={shape}
-      style:height={height}
+      style:height
       style:width={index === lines - 1 && lines > 1 ? '62%' : undefined}
     ></span>
   {/each}

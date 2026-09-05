@@ -19,35 +19,35 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
   args: {
     children: s('Mentés'),
-    variant: "primary",
+    variant: 'primary',
   },
 };
 
 export const Secondary: Story = {
   args: {
     children: s('Mégse'),
-    variant: "secondary",
+    variant: 'secondary',
   },
 };
 
 export const Danger: Story = {
   args: {
     children: s('Esemény törlése'),
-    variant: "danger",
+    variant: 'danger',
   },
 };
 
 export const Quiet: Story = {
   args: {
     children: s('Összes törlése'),
-    variant: "quiet",
+    variant: 'quiet',
   },
 };
 
 export const Block: Story = {
   args: {
     children: s('Mentés'),
-    variant: "primary",
+    variant: 'primary',
     block: true,
   },
 };
@@ -55,7 +55,7 @@ export const Block: Story = {
 export const Disabled: Story = {
   args: {
     children: s('Mentés'),
-    variant: "primary",
+    variant: 'primary',
     disabled: true,
   },
 };
@@ -63,9 +63,9 @@ export const Disabled: Story = {
 export const Loading: Story = {
   args: {
     children: s('Mentés'),
-    variant: "primary",
+    variant: 'primary',
     loading: true,
-    loadingLabel: "Mentés folyamatban",
+    loadingLabel: 'Mentés folyamatban',
   },
 };
 

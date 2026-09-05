@@ -33,23 +33,23 @@
 </script>
 
 {#if hostCapabilities.mode}
-<section>
-  <h2>{$_('appSettings.appMode.title')}</h2>
-  <p>
-    {$_('appSettings.appMode.current')}: <strong>{currentMode ?? '—'}</strong>
-  </p>
-  <p class="note">
-    {$_('appSettings.appMode.note')}
-  </p>
+  <section>
+    <h2>{$_('appSettings.appMode.title')}</h2>
+    <p>
+      {$_('appSettings.appMode.current')}: <strong>{currentMode ?? '—'}</strong>
+    </p>
+    <p class="note">
+      {$_('appSettings.appMode.note')}
+    </p>
 
-  {#if errorMessage}
-    <p class="error" role="alert">{errorMessage}</p>
-  {/if}
+    {#if errorMessage}
+      <p class="error" role="alert">{errorMessage}</p>
+    {/if}
 
-  <button onclick={changeMode} disabled={resetting}>
-    {resetting ? $_('appSettings.appMode.changing') : $_('appSettings.appMode.changeMode')}
-  </button>
-</section>
+    <button onclick={changeMode} disabled={resetting}>
+      {resetting ? $_('appSettings.appMode.changing') : $_('appSettings.appMode.changeMode')}
+    </button>
+  </section>
 {/if}
 
 <style>

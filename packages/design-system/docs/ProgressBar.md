@@ -10,11 +10,11 @@ A label row with an optional figure, over a bordered track carrying the fill.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `value` | `number` | — | 0–100. Leave undefined for work whose extent is not known yet. |
-| `label` *(required)* | `string` | — | — |
-| `valueText` | `string` | — | The figure beside the label — "3 of 12", "48%". Text, so it can be translated. |
+| Prop                 | Type     | Default | Meaning                                                                        |
+| -------------------- | -------- | ------- | ------------------------------------------------------------------------------ |
+| `value`              | `number` | —       | 0–100. Leave undefined for work whose extent is not known yet.                 |
+| `label` _(required)_ | `string` | —       | —                                                                              |
+| `valueText`          | `string` | —       | The figure beside the label — "3 of 12", "48%". Text, so it can be translated. |
 
 ## Variants
 
@@ -26,23 +26,23 @@ Both variants; the indeterminate one is stilled under reduced motion.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-progress-height` | `5px` |
-| `--c-progress-label-gap` | `6px` |
-| `--motion-ease-default` | `ease` |
-| `--motion-ease-standard` | `cubic-bezier(0.32, 0.72, 0, 1)` |
-| `--motion-pulse` | `1.8s` |
-| `--motion-slide` | `220ms` |
-| `--surface-inverse` | `#1c1a16 / #ede6d6` |
-| `--surface-sunken` | `#e4ddcd / #23201a` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-sm-track` | `1.2px` |
-| `--type-label-sm-transform` | `uppercase` |
-| `--ui-border-hairline` | `1px` |
+| Token                       | Resolves to                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `--border-control`          | `#857c68 / #716b5c`                                            |
+| `--c-progress-height`       | `5px`                                                          |
+| `--c-progress-label-gap`    | `6px`                                                          |
+| `--motion-ease-default`     | `ease`                                                         |
+| `--motion-ease-standard`    | `cubic-bezier(0.32, 0.72, 0, 1)`                               |
+| `--motion-pulse`            | `1.8s`                                                         |
+| `--motion-slide`            | `220ms`                                                        |
+| `--surface-inverse`         | `#1c1a16 / #ede6d6`                                            |
+| `--surface-sunken`          | `#e4ddcd / #23201a`                                            |
+| `--text-muted`              | `#615e56 / #918b7e`                                            |
+| `--type-label-sm-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size`      | `9px`                                                          |
+| `--type-label-sm-track`     | `1.2px`                                                        |
+| `--type-label-sm-transform` | `uppercase`                                                    |
+| `--ui-border-hairline`      | `1px`                                                          |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -69,4 +69,3 @@ None. The reference has no progress indication of any kind. The track takes the 
 ## Recorded deviations
 
 None.
-

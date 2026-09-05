@@ -17,22 +17,22 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    primary: "Mentés",
-    secondary: "Mégse",
+    primary: 'Mentés',
+    secondary: 'Mégse',
   },
 };
 
 export const PrimaryOnly: Story = {
   args: {
-    primary: "Mentés",
-    secondary: "",
+    primary: 'Mentés',
+    secondary: '',
   },
 };
 
 export const PrimaryDisabled: Story = {
   args: {
-    primary: "Mentés",
-    secondary: "Mégse",
+    primary: 'Mentés',
+    secondary: 'Mégse',
     primaryDisabled: true,
   },
 };

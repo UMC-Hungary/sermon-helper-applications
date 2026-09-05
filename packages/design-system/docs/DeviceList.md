@@ -10,13 +10,13 @@ One row per device: name, address in the mono face, optional kind, and the actio
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `devices` *(required)* | `Device[]` | — | — |
-| `label` *(required)* | `string` | — | — |
-| `actionLabel` *(required)* | `string` | — | The action offered on each device — "Pair". |
-| `emptyMessage` *(required)* | `string` | — | — |
-| `onselect` | `(device: Device) => void` | — | — |
+| Prop                        | Type                       | Default | Meaning                                     |
+| --------------------------- | -------------------------- | ------- | ------------------------------------------- |
+| `devices` _(required)_      | `Device[]`                 | —       | —                                           |
+| `label` _(required)_        | `string`                   | —       | —                                           |
+| `actionLabel` _(required)_  | `string`                   | —       | The action offered on each device — "Pair". |
+| `emptyMessage` _(required)_ | `string`                   | —       | —                                           |
+| `onselect`                  | `(device: Device) => void` | —       | —                                           |
 
 ## Variants
 
@@ -28,48 +28,48 @@ Populated, empty.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--c-device-address-track` | `0.8px` |
-| `--c-device-column-gap` | `10px` |
-| `--c-device-kind-size` | `11px` |
-| `--c-device-name-size` | `13px` |
-| `--c-device-padding-block` | `12px` |
-| `--c-device-row-gap` | `2px` |
-| `--c-discovery-button-padding` | `10px` |
-| `--c-discovery-button-track` | `1.2px` |
-| `--c-discovery-status-padding` | `12px` |
-| `--c-discovery-title-size` | `9.5px` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--text-secondary` | `#5c574e / #a8a294` |
-| `--type-body-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-leading` | `1.4` |
-| `--type-body-sm-weight` | `500` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-sm-transform` | `uppercase` |
-| `--type-quote-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-quote-size` | `13px` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-stack` | `8px` |
-| `--ui-target-min` | `44px` |
-| `--ui-track-none` | `0` |
+| Token                          | Resolves to                                                                |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `--accent`                     | `#5c5c84 / #a9a6d6`                                                        |
+| `--border-control`             | `#857c68 / #716b5c`                                                        |
+| `--border-hairline`            | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                        |
+| `--c-device-address-track`     | `0.8px`                                                                    |
+| `--c-device-column-gap`        | `10px`                                                                     |
+| `--c-device-kind-size`         | `11px`                                                                     |
+| `--c-device-name-size`         | `13px`                                                                     |
+| `--c-device-padding-block`     | `12px`                                                                     |
+| `--c-device-row-gap`           | `2px`                                                                      |
+| `--c-discovery-button-padding` | `10px`                                                                     |
+| `--c-discovery-button-track`   | `1.2px`                                                                    |
+| `--c-discovery-status-padding` | `12px`                                                                     |
+| `--c-discovery-title-size`     | `9.5px`                                                                    |
+| `--text-muted`                 | `#615e56 / #918b7e`                                                        |
+| `--text-primary`               | `#1c1a16 / #ede6d6`                                                        |
+| `--text-secondary`             | `#5c574e / #a8a294`                                                        |
+| `--type-body-family`           | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-family`        | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-leading`       | `1.4`                                                                      |
+| `--type-body-sm-weight`        | `500`                                                                      |
+| `--type-label-sm-family`       | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
+| `--type-label-sm-size`         | `9px`                                                                      |
+| `--type-label-sm-transform`    | `uppercase`                                                                |
+| `--type-quote-family`          | `"Cormorant Garamond", Georgia, serif`                                     |
+| `--type-quote-size`            | `13px`                                                                     |
+| `--ui-border-hairline`         | `1px`                                                                      |
+| `--ui-focus-offset`            | `2px`                                                                      |
+| `--ui-focus-width`             | `2px`                                                                      |
+| `--ui-stack`                   | `8px`                                                                      |
+| `--ui-target-min`              | `44px`                                                                     |
+| `--ui-track-none`              | `0`                                                                        |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Moves through each device's action in turn. |
-| `Enter`, `Space` | Performs the action. |
+| Key              | Behaviour                                   |
+| ---------------- | ------------------------------------------- |
+| `Tab`            | Moves through each device's action in turn. |
+| `Enter`, `Space` | Performs the action.                        |
 
 ## ARIA
 
@@ -87,22 +87,21 @@ A list, named by `label`. Each action carries the device's name in its own acces
 
 Source: `src/components/connectors/BroadlinkDiscovery.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `article` | `gap` | `2px` | `2px` | `--c-device-row-gap` |
-| `article` | `gap` | `10px` | `10px` | `--c-device-column-gap` |
-| `article` | `padding` | `12px` | `12px` | `--c-device-padding-block` |
-| `article span` | `font-size` | `13px` | `13px` | `--c-device-name-size` |
-| `article span` | `font-weight` | `500` | `500` | `--type-body-sm-weight` |
-| `code, em` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
-| `code, em` | `letter-spacing` | `0.8px` | `0.8px` | `--c-device-address-track` |
-| `em` | `font-size` | `11px` | `11px` | `--c-device-kind-size` |
-| `em` | `letter-spacing` | `0` | `0` | `--ui-track-none` |
-| `article button` | `margin-top` @narrow | `8px` | `8px` | `--ui-stack` |
+| Selector         | Property             | Measured | Implemented | Token                      |
+| ---------------- | -------------------- | -------- | ----------- | -------------------------- |
+| `article`        | `gap`                | `2px`    | `2px`       | `--c-device-row-gap`       |
+| `article`        | `gap`                | `10px`   | `10px`      | `--c-device-column-gap`    |
+| `article`        | `padding`            | `12px`   | `12px`      | `--c-device-padding-block` |
+| `article span`   | `font-size`          | `13px`   | `13px`      | `--c-device-name-size`     |
+| `article span`   | `font-weight`        | `500`    | `500`       | `--type-body-sm-weight`    |
+| `code, em`       | `font-size`          | `9px`    | `9px`       | `--type-label-sm-size`     |
+| `code, em`       | `letter-spacing`     | `0.8px`  | `0.8px`     | `--c-device-address-track` |
+| `em`             | `font-size`          | `11px`   | `11px`      | `--c-device-kind-size`     |
+| `em`             | `letter-spacing`     | `0`      | `0`         | `--ui-track-none`          |
+| `article button` | `margin-top` @narrow | `8px`    | `8px`       | `--ui-stack`               |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
-

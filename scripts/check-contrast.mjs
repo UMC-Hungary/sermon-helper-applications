@@ -16,7 +16,9 @@ for (const scheme of ['light', 'dark']) {
     const bg = colors[pairing.bg];
     const base = colors[pairing.base ?? 'surface-base'];
     if (!fg || !bg || !base) {
-      console.error(`  ${scheme}: pairing --${pairing.fg} on --${pairing.bg} has no measurable colour`);
+      console.error(
+        `  ${scheme}: pairing --${pairing.fg} on --${pairing.bg} has no measurable colour`,
+      );
       process.exitCode = 1;
       continue;
     }

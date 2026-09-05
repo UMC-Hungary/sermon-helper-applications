@@ -10,18 +10,18 @@ A `Sheet` whose action slot holds the clear-all, and whose body is either an `Em
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `open` | `boolean` | `$bindable(false)` | — |
-| `title` *(required)* | `string` | — | "3 items" or "All clear", already interpolated by the caller. |
-| `eyebrow` | `string` | `'Notifications'` | — |
-| `empty` | `boolean` | `false` | True when there is nothing waiting, so the empty state shows instead of the list. |
-| `emptyTitle` *(required)* | `string` | — | — |
-| `emptyHint` | `string` | `''` | — |
-| `clearLabel` | `string` | `'Clear all'` | — |
-| `onclear` | `() => void` | — | — |
-| `onclose` | `() => void` | — | — |
-| `children` | `Snippet` | — | — |
+| Prop                      | Type         | Default            | Meaning                                                                           |
+| ------------------------- | ------------ | ------------------ | --------------------------------------------------------------------------------- |
+| `open`                    | `boolean`    | `$bindable(false)` | —                                                                                 |
+| `title` _(required)_      | `string`     | —                  | "3 items" or "All clear", already interpolated by the caller.                     |
+| `eyebrow`                 | `string`     | `'Notifications'`  | —                                                                                 |
+| `empty`                   | `boolean`    | `false`            | True when there is nothing waiting, so the empty state shows instead of the list. |
+| `emptyTitle` _(required)_ | `string`     | —                  | —                                                                                 |
+| `emptyHint`               | `string`     | `''`               | —                                                                                 |
+| `clearLabel`              | `string`     | `'Clear all'`      | —                                                                                 |
+| `onclear`                 | `() => void` | —                  | —                                                                                 |
+| `onclose`                 | `() => void` | —                  | —                                                                                 |
+| `children`                | `Snippet`    | —                  | —                                                                                 |
 
 ## Variants
 
@@ -33,10 +33,10 @@ Open, closed, empty.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-notification-centre-gap` | `10px` |
-| `--c-notification-centre-padding` | `16px` |
+| Token                             | Resolves to |
+| --------------------------------- | ----------- |
+| `--c-notification-centre-gap`     | `10px`      |
+| `--c-notification-centre-padding` | `16px`      |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -60,14 +60,13 @@ Inherited from `Sheet`. The title is the caller's already-interpolated summary �
 
 Source: `src/components/notifications/NotificationCenter.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `.list` | `padding` | `16px` | `16px` | `--c-notification-centre-padding` |
-| `.list` | `gap` | `10px` | `10px` | `--c-notification-centre-gap` |
+| Selector | Property  | Measured | Implemented | Token                             |
+| -------- | --------- | -------- | ----------- | --------------------------------- |
+| `.list`  | `padding` | `16px`   | `16px`      | `--c-notification-centre-padding` |
+| `.list`  | `gap`     | `10px`   | `10px`      | `--c-notification-centre-gap`     |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
-

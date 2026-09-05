@@ -24,7 +24,10 @@ const RECONNECT_DELAY_MAX = 30000;
 
 export function connectWs(h: WsHandlers): void {
   handlers = h;
-  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING))
+  if (
+    socket &&
+    (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+  )
     return;
 
   const { mode, authToken: token, serverPort, serverUrl } = coreConfig();

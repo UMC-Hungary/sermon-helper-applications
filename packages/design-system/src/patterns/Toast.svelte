@@ -132,7 +132,12 @@
           </button>
         {/each}
         {#if remediation?.length}
-          <button type="button" class="toggle" aria-expanded={expanded} onclick={() => (expanded = !expanded)}>
+          <button
+            type="button"
+            class="toggle"
+            aria-expanded={expanded}
+            onclick={() => (expanded = !expanded)}
+          >
             {expanded ? hideWhyLabel : whyLabel}
           </button>
         {/if}

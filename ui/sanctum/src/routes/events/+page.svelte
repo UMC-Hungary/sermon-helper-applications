@@ -94,7 +94,10 @@
   onMount(load);
 </script>
 
-<PageHeader eyebrow={$_('events.eyebrow', { values: { n: visible.length } })} title={$_('events.title')}>
+<PageHeader
+  eyebrow={$_('events.eyebrow', { values: { n: visible.length } })}
+  title={$_('events.title')}
+>
   {#snippet trailing()}
     <NotifBell />
     <IconButton icon="plus" label={$_('events.new')} onclick={() => goto('/events/new')} />
@@ -106,13 +109,22 @@
     <section class="search">
       <div>
         <Icon name="search" size={16} />
-        <input type="search" bind:value={query} placeholder={$_('events.searchPlaceholder')} aria-label={$_('events.search')} />
+        <input
+          type="search"
+          bind:value={query}
+          placeholder={$_('events.searchPlaceholder')}
+          aria-label={$_('events.search')}
+        />
       </div>
     </section>
 
     <nav class="filters" aria-label={$_('events.filtersLabel')}>
       {#each filters as f (f)}
-        <button class:active={filter === f} aria-pressed={filter === f} onclick={() => (filter = f)}>
+        <button
+          class:active={filter === f}
+          aria-pressed={filter === f}
+          onclick={() => (filter = f)}
+        >
           {$_(`events.filter.${f}`)}
         </button>
       {/each}
@@ -121,7 +133,12 @@
     {#if phase === 'loading'}
       <div class="pad"><Skeleton height="56px" lines={3} /></div>
     {:else if phase === 'error'}
-      <ErrorState title={$_('common.errorTitle')} body={$_('common.errorBody')} retryLabel={$_('common.retry')} onretry={load} />
+      <ErrorState
+        title={$_('common.errorTitle')}
+        body={$_('common.errorBody')}
+        retryLabel={$_('common.retry')}
+        onretry={load}
+      />
     {:else if visible.length === 0}
       <EmptyState
         title={query ? $_('events.noMatch') : $_('events.emptyTitle')}
@@ -130,8 +147,15 @@
     {:else}
       <List>
         {#each visible as e, i (e.id)}
-          <Row meta={`${timeShort(e.dateTime, loc)} · ${e.speaker || $_('events.noSpeaker')}`} href={`/events/${e.id}`} last={i === visible.length - 1}>
-            {#snippet icon()}<DateBlock month={monthAbbr(e.dateTime, loc)} day={dayNum(e.dateTime, loc)} />{/snippet}
+          <Row
+            meta={`${timeShort(e.dateTime, loc)} · ${e.speaker || $_('events.noSpeaker')}`}
+            href={`/events/${e.id}`}
+            last={i === visible.length - 1}
+          >
+            {#snippet icon()}<DateBlock
+                month={monthAbbr(e.dateTime, loc)}
+                day={dayNum(e.dateTime, loc)}
+              />{/snippet}
             <span class="rowtitle">
               {eventTitle(e)}
               {#if e.id === currentId}<Dot color="var(--status-live)" size={6} pulse />{/if}
@@ -143,12 +167,16 @@
   </div>
 
   <aside>
-    <SectionLabel hint={featured?.id === currentId ? $_('events.liveNow') : $_('events.preview')}>{$_('events.selected')}</SectionLabel>
+    <SectionLabel hint={featured?.id === currentId ? $_('events.liveNow') : $_('events.preview')}
+      >{$_('events.selected')}</SectionLabel
+    >
     {#if featured}
       <article>
         <DateBlock month={monthLabel} day={dayNum(featured.dateTime, loc)} />
         <div>
-          <small>{timeShort(featured.dateTime, loc)}{destinations ? ` · ${destinations}` : ''}</small>
+          <small
+            >{timeShort(featured.dateTime, loc)}{destinations ? ` · ${destinations}` : ''}</small
+          >
           <h2>{eventTitle(featured)}</h2>
           <p>
             {#if featured.id === currentId}
@@ -159,7 +187,9 @@
               <Badge tone="ok">{$_('events.status.scheduled')}</Badge>
             {/if}
           </p>
-          <Button variant="primary" compact onclick={() => goto(`/events/${featured.id}`)}>{$_('events.open')}</Button>
+          <Button variant="primary" compact onclick={() => goto(`/events/${featured.id}`)}
+            >{$_('events.open')}</Button
+          >
         </div>
       </article>
     {:else}

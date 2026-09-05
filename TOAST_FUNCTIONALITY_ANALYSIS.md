@@ -7,6 +7,7 @@ This document outlines all toast notification use cases in the metocast system, 
 ### 1. **System Notifications (Informational)**
 
 #### 1.1 Application Updates
+
 - **Type**: Info
 - **Trigger**: App startup (UpdateChecker.svelte)
 - **Message Pattern**: "New version available: {version}"
@@ -15,6 +16,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Frequency**: Infrequent (on app startup)
 
 #### 1.2 Event Management
+
 - **Type**: Success / Info
 - **Trigger**: Server event change notifications (ws/client.ts)
 - **Messages**:
@@ -25,6 +27,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Frequency**: Occasional (per event change)
 
 #### 1.3 Recording Detection
+
 - **Type**: Success / Info
 - **Trigger**: New recording detected (ws/client.ts)
 - **Messages**:
@@ -37,6 +40,7 @@ This document outlines all toast notification use cases in the metocast system, 
 ### 2. **Success Notifications**
 
 #### 2.1 Upload Completion
+
 - **Type**: Success
 - **Trigger**: Recording successfully uploaded (ws/client.ts)
 - **Message Pattern**: "Recording uploaded to {platform}"
@@ -46,6 +50,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Related State**: Upload progress is tracked in real-time before completion
 
 #### 2.2 Settings Saved
+
 - **Type**: Success
 - **Trigger**: Caption settings saved (obs-caption/+page.svelte)
 - **Message**: "Caption settings saved"
@@ -53,6 +58,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Frequency**: Per user action
 
 #### 2.3 Connector Settings Saved
+
 - **Type**: Success / Error
 - **Trigger**: Saving any connector's settings (ConnectorSettingsBlock.svelte)
 - **Messages**:
@@ -63,6 +69,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Frequency**: Per user action
 
 #### 2.4 Clipboard Copy
+
 - **Type**: Success
 - **Trigger**: Caption URL copied to clipboard (obs-caption/+page.svelte)
 - **Message**: "Caption URL copied to clipboard"
@@ -74,6 +81,7 @@ This document outlines all toast notification use cases in the metocast system, 
 ### 3. **Error Notifications**
 
 #### 3.1 WebSocket Communication Errors
+
 - **Type**: Error
 - **Trigger**: WebSocket error message received (ws/client.ts)
 - **Message Pattern**: Raw error message from server
@@ -81,6 +89,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Frequency**: On error events
 
 #### 3.2 Upload Failures
+
 - **Type**: Error
 - **Trigger**: Recording upload fails (ws/client.ts)
 - **Message Pattern**: "Upload to {platform} failed: {error}"
@@ -89,6 +98,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - **Frequency**: On upload failure
 
 #### 3.3 Settings Load/Save Failures
+
 - **Type**: Error
 - **Trigger**: Caption settings operations fail (obs-caption/+page.svelte)
 - **Messages**:
@@ -100,6 +110,7 @@ This document outlines all toast notification use cases in the metocast system, 
 ### 4. **Warning Notifications**
 
 #### 4.1 General Warnings
+
 - **Type**: Warning
 - **Trigger**: Notification message with 'warn' level (ws/client.ts)
 - **Message Pattern**: Raw warning message from server
@@ -109,6 +120,7 @@ This document outlines all toast notification use cases in the metocast system, 
 ### 5. **Generic Message Notifications**
 
 #### 5.1 Server Notifications
+
 - **Type**: Auto-selected based on level (info/warn/error)
 - **Trigger**: Generic notification message from server (ws/client.ts)
 - **Message Pattern**: Raw message with mapped severity level
@@ -121,17 +133,20 @@ This document outlines all toast notification use cases in the metocast system, 
 ## Toast Design Recommendations
 
 ### Message Structure
+
 - **Pattern 1**: Simple confirmation → "Action completed"
 - **Pattern 2**: Entity-focused → "{Action} {Entity}: {Name}"
 - **Pattern 3**: System-focused → "{System} {Action}: {Details}"
 
 ### Duration Patterns
+
 - **Persistent with action**: Update availability (user must take action)
 - **Auto-dismiss (3-5s)**: Success notifications, simple confirmations
 - **Auto-dismiss (2s)**: Quick feedback (copy, toggle)
 - **Sticky/Manual dismiss**: Errors, critical warnings
 
 ### Icon Recommendations
+
 - Success (green): ✓ Check mark, upload complete, save success, copy success
 - Error (red): ✗ X mark, failed operations, connection issues
 - Warning (yellow): ⚠ Alert triangle for warnings
@@ -139,6 +154,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - Action (blue): → Arrow or action icon with CTA
 
 ### Color Coding
+
 - Uses `svelte-sonner` richColors feature
 - Green for success
 - Red for errors
@@ -146,10 +162,12 @@ This document outlines all toast notification use cases in the metocast system, 
 - Blue for info/updates
 
 ### Interactive Elements
+
 - **Action Buttons**: Update download link (UpdateChecker)
 - **Copy Feedback**: URL copy with state change
 
 ### Data Context
+
 - **Dynamic content**: Event titles, platform names, error messages
 - **Temporal data**: Upload progress (separate from toast)
 - **Related UI feedback**: Button state changes (e.g., "Copy URL" → "Copied!")
@@ -159,23 +177,27 @@ This document outlines all toast notification use cases in the metocast system, 
 ## Implementation Notes
 
 ### Current Library
+
 - **Library**: svelte-sonner
-- **Configuration**: 
+- **Configuration**:
   - Position: top-right
   - Rich colors enabled
   - Close button visible
 
 ### State Management
+
 - Upload progress tracked separately in reactive store
 - Notification display independent of state updates
 - Server-driven notifications via WebSocket messages
 
 ### Error Handling
+
 - Silent failures on app startup (updater check)
 - Explicit error display on user actions
 - Raw error messages from server passed through
 
 ### Localization
+
 - Some messages use i18n (UpdateChecker)
 - Most messages are dynamic/English strings from server or code
 
@@ -188,8 +210,9 @@ This document outlines all toast notification use cases in the metocast system, 
 "Design a comprehensive toast notification system for a desktop streaming control application with the following requirements:
 
 **Notification Types to Support:**
+
 1. System updates with downloadable action
-2. Event management (create/update) 
+2. Event management (create/update)
 3. Recording detection (tracked/untracked)
 4. Long-running operations (upload progress → completion/failure)
 5. Settings changes (load/save success/failure)
@@ -197,6 +220,7 @@ This document outlines all toast notification use cases in the metocast system, 
 7. Generic messages (info/warn/error from server)
 
 **Requirements:**
+
 - Support 4 severity levels: info, success, warning, error
 - Auto-dismiss for most notifications (2-5 second duration)
 - Persistent dismissible format for errors and updates
@@ -208,6 +232,7 @@ This document outlines all toast notification use cases in the metocast system, 
 - Accessibility considerations
 
 **Optional Enhancements:**
+
 - Progress indicators for long-running operations
 - Sound notifications for critical events
 - Toast grouping for similar notifications

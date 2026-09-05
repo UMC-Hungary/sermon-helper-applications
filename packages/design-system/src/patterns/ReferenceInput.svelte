@@ -151,7 +151,8 @@
 
   .error {
     margin-top: var(--c-reference-input-block-gap);
-    padding: var(--c-reference-input-quote-padding-block) var(--c-reference-input-quote-padding-inline);
+    padding: var(--c-reference-input-quote-padding-block)
+      var(--c-reference-input-quote-padding-inline);
     border-left: var(--ui-border-emphasis) solid var(--status-error);
     color: var(--text-secondary);
     font-family: var(--type-quote-family);
@@ -168,7 +169,8 @@
     display: flex;
     gap: var(--c-reference-input-block-gap);
     margin: 0;
-    padding: var(--c-reference-input-quote-padding-block) var(--c-reference-input-quote-padding-inline);
+    padding: var(--c-reference-input-quote-padding-block)
+      var(--c-reference-input-quote-padding-inline);
     border-top: var(--ui-border-hairline) solid var(--border-hairline);
     font-family: var(--type-quote-family);
     font-size: var(--c-reference-input-verse-size);

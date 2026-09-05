@@ -9,49 +9,49 @@ addMessages('en', en);
 addMessages('hu', hu);
 
 function getInitialLocale(): string {
-	if (browser) {
-		const saved = localStorage.getItem('locale');
-		if (saved) return saved;
-	}
-	return 'en';
+  if (browser) {
+    const saved = localStorage.getItem('locale');
+    if (saved) return saved;
+  }
+  return 'en';
 }
 
 init({
-	fallbackLocale: 'en',
-	initialLocale: getInitialLocale(),
+  fallbackLocale: 'en',
+  initialLocale: getInitialLocale(),
 });
 
 export async function loadSavedLocale(): Promise<void> {
-	if (!browser) return;
+  if (!browser) return;
 
-	try {
-		const store = await loadHostStore('settings.json');
-		const savedLocale = (await store?.get('locale')) as string | null | undefined;
-		if (savedLocale) {
-			locale.set(savedLocale);
-		}
-	} catch (error) {
-		console.warn('Failed to load saved locale from Tauri store:', error);
-	}
+  try {
+    const store = await loadHostStore('settings.json');
+    const savedLocale = (await store?.get('locale')) as string | null | undefined;
+    if (savedLocale) {
+      locale.set(savedLocale);
+    }
+  } catch (error) {
+    console.warn('Failed to load saved locale from Tauri store:', error);
+  }
 }
 
 export async function setLocale(newLocale: string): Promise<void> {
-	locale.set(newLocale);
-	if (!browser) return;
+  locale.set(newLocale);
+  if (!browser) return;
 
-	try {
-		localStorage.setItem('locale', newLocale);
-		const store = await loadHostStore('settings.json');
-		if (store) {
-			await store.set('locale', newLocale);
-			await store.save();
-		}
-	} catch (error) {
-		console.warn('Failed to save locale:', error);
-	}
+  try {
+    localStorage.setItem('locale', newLocale);
+    const store = await loadHostStore('settings.json');
+    if (store) {
+      await store.set('locale', newLocale);
+      await store.save();
+    }
+  } catch (error) {
+    console.warn('Failed to save locale:', error);
+  }
 }
 
 export const availableLocales = [
-	{ code: 'en', name: 'English', flag: '🇬🇧' },
-	{ code: 'hu', name: 'Magyar', flag: '🇭🇺' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'hu', name: 'Magyar', flag: '🇭🇺' },
 ];

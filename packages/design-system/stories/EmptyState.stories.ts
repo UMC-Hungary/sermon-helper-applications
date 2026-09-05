@@ -17,15 +17,15 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: "Csend van a vezérlőben.",
-    hint: "A csatlakozók itt szólalnak meg",
+    title: 'Csend van a vezérlőben.',
+    hint: 'A csatlakozók itt szólalnak meg',
   },
 };
 
 export const TitleOnly: Story = {
   args: {
-    title: "Csend van a vezérlőben.",
-    hint: "",
+    title: 'Csend van a vezérlőben.',
+    hint: '',
   },
 };
 

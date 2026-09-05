@@ -34,10 +34,7 @@ export function createRecording(
   });
 }
 
-export function flagRecordingsForUpload(
-  eventId: string,
-  items: FlagUploadItem[],
-): Promise<void> {
+export function flagRecordingsForUpload(eventId: string, items: FlagUploadItem[]): Promise<void> {
   return apiFetch(`/api/events/${eventId}/recordings/flag-upload`, z.void(), {
     method: 'POST',
     body: { recordings: items },

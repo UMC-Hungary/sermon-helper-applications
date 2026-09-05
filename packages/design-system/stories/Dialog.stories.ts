@@ -19,8 +19,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     open: true,
-    eyebrow: "Megerősítés",
-    title: "Törlöd az eseményt?",
+    eyebrow: 'Megerősítés',
+    title: 'Törlöd az eseményt?',
     children: s('Az esemény és minden hozzá tartozó felvétel eltűnik. Ez nem vonható vissza.'),
   },
 };
@@ -28,8 +28,8 @@ export const Default: Story = {
 export const ModalOnly: Story = {
   args: {
     open: true,
-    eyebrow: "Megerősítés",
-    title: "Törlöd az eseményt?",
+    eyebrow: 'Megerősítés',
+    title: 'Törlöd az eseményt?',
     children: s('Az esemény és minden hozzá tartozó felvétel eltűnik. Ez nem vonható vissza.'),
     modalOnly: true,
   },
@@ -38,8 +38,8 @@ export const ModalOnly: Story = {
 export const Closed: Story = {
   args: {
     open: false,
-    eyebrow: "Megerősítés",
-    title: "Törlöd az eseményt?",
+    eyebrow: 'Megerősítés',
+    title: 'Törlöd az eseményt?',
     children: s('Az esemény és minden hozzá tartozó felvétel eltűnik. Ez nem vonható vissza.'),
   },
 };

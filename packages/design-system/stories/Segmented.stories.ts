@@ -17,23 +17,23 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: "Nézet",
-    value: "week",
+    label: 'Nézet',
+    value: 'week',
     options: [
       {
-        value: "day",
-        label: "Nap",
-        glyph: "·",
+        value: 'day',
+        label: 'Nap',
+        glyph: '·',
       },
       {
-        value: "week",
-        label: "Hét",
-        glyph: "▤",
+        value: 'week',
+        label: 'Hét',
+        glyph: '▤',
       },
       {
-        value: "month",
-        label: "Hónap",
-        glyph: "▦",
+        value: 'month',
+        label: 'Hónap',
+        glyph: '▦',
       },
     ],
   },
@@ -41,26 +41,26 @@ export const Default: Story = {
 
 export const WithHints: Story = {
   args: {
-    label: "Nézet",
-    value: "week",
+    label: 'Nézet',
+    value: 'week',
     options: [
       {
-        value: "day",
-        label: "Nap",
-        glyph: "·",
-        hint: "ma",
+        value: 'day',
+        label: 'Nap',
+        glyph: '·',
+        hint: 'ma',
       },
       {
-        value: "week",
-        label: "Hét",
-        glyph: "▤",
-        hint: "7 nap",
+        value: 'week',
+        label: 'Hét',
+        glyph: '▤',
+        hint: '7 nap',
       },
       {
-        value: "month",
-        label: "Hónap",
-        glyph: "▦",
-        hint: "30 nap",
+        value: 'month',
+        label: 'Hónap',
+        glyph: '▦',
+        hint: '30 nap',
       },
     ],
   },
@@ -68,16 +68,16 @@ export const WithHints: Story = {
 
 export const TwoOptions: Story = {
   args: {
-    label: "Nézet",
-    value: "auto",
+    label: 'Nézet',
+    value: 'auto',
     options: [
       {
-        value: "auto",
-        label: "Automatikus",
+        value: 'auto',
+        label: 'Automatikus',
       },
       {
-        value: "manual",
-        label: "Kézi",
+        value: 'manual',
+        label: 'Kézi',
       },
     ],
   },
@@ -85,20 +85,20 @@ export const TwoOptions: Story = {
 
 export const WithDisabled: Story = {
   args: {
-    label: "Nézet",
-    value: "week",
+    label: 'Nézet',
+    value: 'week',
     options: [
       {
-        value: "day",
-        label: "Nap",
+        value: 'day',
+        label: 'Nap',
       },
       {
-        value: "week",
-        label: "Hét",
+        value: 'week',
+        label: 'Hét',
       },
       {
-        value: "month",
-        label: "Hónap",
+        value: 'month',
+        label: 'Hónap',
         disabled: true,
       },
     ],

@@ -18,22 +18,38 @@
   const ytConnected = $derived($youtubeStatus === 'connected');
   const fbConnected = $derived($facebookStatus === 'connected');
 
-  let selectedIds = $state<Set<string>>(untrack(() => {
-    const firstId = recordings.length === 1 ? recordings[0]?.id : undefined;
-    return firstId ? new Set([firstId]) : new Set();
-  }));
-  let customTitles = $state<Record<string, string>>(untrack(() =>
-    Object.fromEntries(recordings.map((r) => [r.id, r.customTitle ?? event.title]))
-  ));
-  let customDescriptions = $state<Record<string, string>>(untrack(() =>
-    Object.fromEntries(recordings.map((r) => [r.id, r.customDescription ?? '']))
-  ));
-  let youtubeVisibility = $state<'private' | 'unlisted' | 'public'>(untrack(() =>
-    (event.connections.find((c) => c.platform === 'youtube')?.privacyStatus as 'private' | 'unlisted' | 'public' | undefined) ?? 'private'
-  ));
-  let facebookVisibility = $state<'ONLY_ME' | 'FRIENDS' | 'EVERYONE'>(untrack(() =>
-    (event.connections.find((c) => c.platform === 'facebook')?.privacyStatus as 'ONLY_ME' | 'FRIENDS' | 'EVERYONE' | undefined) ?? 'ONLY_ME'
-  ));
+  let selectedIds = $state<Set<string>>(
+    untrack(() => {
+      const firstId = recordings.length === 1 ? recordings[0]?.id : undefined;
+      return firstId ? new Set([firstId]) : new Set();
+    }),
+  );
+  let customTitles = $state<Record<string, string>>(
+    untrack(() => Object.fromEntries(recordings.map((r) => [r.id, r.customTitle ?? event.title]))),
+  );
+  let customDescriptions = $state<Record<string, string>>(
+    untrack(() => Object.fromEntries(recordings.map((r) => [r.id, r.customDescription ?? '']))),
+  );
+  let youtubeVisibility = $state<'private' | 'unlisted' | 'public'>(
+    untrack(
+      () =>
+        (event.connections.find((c) => c.platform === 'youtube')?.privacyStatus as
+          | 'private'
+          | 'unlisted'
+          | 'public'
+          | undefined) ?? 'private',
+    ),
+  );
+  let facebookVisibility = $state<'ONLY_ME' | 'FRIENDS' | 'EVERYONE'>(
+    untrack(
+      () =>
+        (event.connections.find((c) => c.platform === 'facebook')?.privacyStatus as
+          | 'ONLY_ME'
+          | 'FRIENDS'
+          | 'EVERYONE'
+          | undefined) ?? 'ONLY_ME',
+    ),
+  );
   let saving = $state(false);
   let error = $state('');
 
@@ -75,7 +91,7 @@
       await triggerUploadCycle();
 
       const updated = recordings.map((r) =>
-        selectedIds.has(r.id) ? { ...r, uploadable: true } : r
+        selectedIds.has(r.id) ? { ...r, uploadable: true } : r,
       );
       onuploaded(updated);
       onclose();
@@ -116,11 +132,7 @@
               <div class="recording-item__fields">
                 <label class="field">
                   <span>Title</span>
-                  <input
-                    type="text"
-                    bind:value={customTitles[rec.id]}
-                    placeholder={rec.fileName}
-                  />
+                  <input type="text" bind:value={customTitles[rec.id]} placeholder={rec.fileName} />
                 </label>
                 <label class="field">
                   <span>Description</span>

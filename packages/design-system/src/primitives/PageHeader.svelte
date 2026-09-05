@@ -16,8 +16,16 @@
     titleTrailing?: Snippet;
   }
 
-  let { title, eyebrow = '', back, level = 1, id, eyebrowContent, trailing, titleTrailing }: Props =
-    $props();
+  let {
+    title,
+    eyebrow = '',
+    back,
+    level = 1,
+    id,
+    eyebrowContent,
+    trailing,
+    titleTrailing,
+  }: Props = $props();
 </script>
 
 <header>

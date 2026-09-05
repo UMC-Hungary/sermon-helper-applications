@@ -40,8 +40,13 @@
     aria-labelledby={`${id}-title`}
     {@attach (el) => el.showModal()}
     onclose={close}
-    oncancel={(event) => { event.preventDefault(); if (!modalOnly) close(); }}
-    onclick={(event) => { if (!modalOnly && event.target === event.currentTarget) close(); }}
+    oncancel={(event) => {
+      event.preventDefault();
+      if (!modalOnly) close();
+    }}
+    onclick={(event) => {
+      if (!modalOnly && event.target === event.currentTarget) close();
+    }}
   >
     <div class="panel">
       <header>

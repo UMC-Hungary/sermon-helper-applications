@@ -49,13 +49,17 @@
 {#snippet body()}
   {#if icon}{@render icon()}{/if}
   <span class="body">
-    <span class="title">{#if children}{@render children()}{:else}{title}{/if}</span>
+    <span class="title"
+      >{#if children}{@render children()}{:else}{title}{/if}</span
+    >
     {#if meta}<span class="meta">{meta}</span>{/if}
   </span>
   {#if detail}<span class="detail">{detail}</span>{/if}
   {#if control}{@render control()}{/if}
   {#if interactive}
-    <span class="chev">{#if chevron}<Icon name="chev" size={14} stroke={1.6} />{/if}</span>
+    <span class="chev"
+      >{#if chevron}<Icon name="chev" size={14} stroke={1.6} />{/if}</span
+    >
   {/if}
 {/snippet}
 
@@ -64,7 +68,15 @@
     {@render body()}
   </a>
 {:else if onclick}
-  <button class="row" class:danger class:last type="button" {disabled} {onclick} aria-current={current || undefined}>
+  <button
+    class="row"
+    class:danger
+    class:last
+    type="button"
+    {disabled}
+    {onclick}
+    aria-current={current || undefined}
+  >
     {@render body()}
   </button>
 {:else}

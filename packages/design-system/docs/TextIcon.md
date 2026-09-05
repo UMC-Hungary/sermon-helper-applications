@@ -10,10 +10,10 @@ One character centred in a square.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `char` | `string` | `'·', label` | A single typographic character standing in for an icon, set in the display face. |
-| `label` | `string` | — | Give a name only when the character is the sole carrier of meaning. |
+| Prop    | Type     | Default      | Meaning                                                                          |
+| ------- | -------- | ------------ | -------------------------------------------------------------------------------- |
+| `char`  | `string` | `'·', label` | A single typographic character standing in for an icon, set in the display face. |
+| `label` | `string` | —            | Give a name only when the character is the sole carrier of meaning.              |
 
 ## Variants
 
@@ -25,12 +25,12 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-text-icon-font-size` | `18px` |
-| `--c-text-icon-size` | `28px` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-heading-family` | `"Cormorant Garamond", Georgia, serif` |
+| Token                     | Resolves to                            |
+| ------------------------- | -------------------------------------- |
+| `--c-text-icon-font-size` | `18px`                                 |
+| `--c-text-icon-size`      | `28px`                                 |
+| `--text-primary`          | `#1c1a16 / #ede6d6`                    |
+| `--type-heading-family`   | `"Cormorant Garamond", Georgia, serif` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -54,14 +54,13 @@ Decorative unless given a `label`.
 
 Source: `src/components/primitives/TextIcon.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `span` | `width` | `28px` | `28px` | `--c-text-icon-size` |
-| `span` | `font-size` | `18px` | `18px` | `--c-text-icon-font-size` |
+| Selector | Property    | Measured | Implemented | Token                     |
+| -------- | ----------- | -------- | ----------- | ------------------------- |
+| `span`   | `width`     | `28px`   | `28px`      | `--c-text-icon-size`      |
+| `span`   | `font-size` | `18px`   | `18px`      | `--c-text-icon-font-size` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
 None.
-

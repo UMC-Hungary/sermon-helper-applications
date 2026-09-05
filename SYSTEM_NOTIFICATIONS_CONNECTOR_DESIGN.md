@@ -24,12 +24,12 @@ STREAMING PLATFORMS     HARDWARE DEVICES        MESSAGING         TOOLS
 
 Every connector tracks one of these states:
 
-| State | Color | Icon | Meaning | User Action |
-|-------|-------|------|---------|------------|
-| **connected** | Green | ● | Fully operational, ready to stream/control | None required |
-| **connecting** | Yellow | ◐ | Attempting to establish connection | Wait or troubleshoot |
-| **disconnected** | Grey | ○ | Not connected (may be disabled) | Enable or configure |
-| **error** | Red | ✕ | Connected but non-functional, or connection failed | See error details, recheck, or fix |
+| State            | Color  | Icon | Meaning                                            | User Action                        |
+| ---------------- | ------ | ---- | -------------------------------------------------- | ---------------------------------- |
+| **connected**    | Green  | ●    | Fully operational, ready to stream/control         | None required                      |
+| **connecting**   | Yellow | ◐    | Attempting to establish connection                 | Wait or troubleshoot               |
+| **disconnected** | Grey   | ○    | Not connected (may be disabled)                    | Enable or configure                |
+| **error**        | Red    | ✕    | Connected but non-functional, or connection failed | See error details, recheck, or fix |
 
 ### Status Transitions
 
@@ -73,12 +73,12 @@ connector                          ↓
 
 ```typescript
 interface ConnectorError {
-  id: string;                    // Unique error ID
-  connectorId: string;           // 'obs', 'youtube', 'discord', etc.
-  connectorName: string;         // Display name "OBS Studio"
-  message: string;               // User-facing error message
-  infoMarkdown?: string;         // Detailed troubleshooting steps
-  timestamp: Date;               // When error occurred
+  id: string; // Unique error ID
+  connectorId: string; // 'obs', 'youtube', 'discord', etc.
+  connectorName: string; // Display name "OBS Studio"
+  message: string; // User-facing error message
+  infoMarkdown?: string; // Detailed troubleshooting steps
+  timestamp: Date; // When error occurred
 }
 ```
 
@@ -115,28 +115,31 @@ interface ConnectorError {
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Connected | ✓ "OBS Studio Connected" | Ready to stream/record |
-| Connecting | ◐ "Connecting to OBS..." | Wait 5-10s, check host/port |
-| Disconnected | ○ "OBS Studio Disconnected" | Enable OBS, check network |
-| Error: Cannot connect | ✕ "OBS connection failed: connection refused" | Check host, port, firewall |
-| Error: Wrong password | ✕ "OBS auth failed: invalid password" | Verify password in OBS WebSocket settings |
-| Error: Version mismatch | ✕ "OBS version incompatible" | Update OBS to latest version |
+| Scenario                | Message                                       | Recovery                                  |
+| ----------------------- | --------------------------------------------- | ----------------------------------------- |
+| Connected               | ✓ "OBS Studio Connected"                      | Ready to stream/record                    |
+| Connecting              | ◐ "Connecting to OBS..."                      | Wait 5-10s, check host/port               |
+| Disconnected            | ○ "OBS Studio Disconnected"                   | Enable OBS, check network                 |
+| Error: Cannot connect   | ✕ "OBS connection failed: connection refused" | Check host, port, firewall                |
+| Error: Wrong password   | ✕ "OBS auth failed: invalid password"         | Verify password in OBS WebSocket settings |
+| Error: Version mismatch | ✕ "OBS version incompatible"                  | Update OBS to latest version              |
 
 #### Troubleshooting Guide
+
 - Enable WebSocket Server in OBS (Tools → WebSocket Server Settings)
 - Note port number (default 4455)
 - Set secure password
 - Verify host/port in Settings match
 
 #### Device Listeners (OBS Sources)
+
 - Users can create "device listeners" for OBS sources
 - Each listener monitored for availability
 - **Error**: "Device unavailable: {device name}"
 - **Recovery**: Add new listener, update reference
 
 #### Related Notifications (via WS)
+
 - `obs.state`: Stream started/stopped, recording started/stopped
 - `obs.devices.available`: List of available OBS sources
 - `obs.listeners.{list,create,update,delete}`: Listener lifecycle events
@@ -151,15 +154,16 @@ interface ConnectorError {
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Connected | ✓ "vMix Connected" | Ready to control |
-| Connecting | ◐ "Connecting to vMix..." | Wait for vMix to start |
-| Disconnected | ○ "vMix Disconnected" | Enable vMix, check IP |
+| Scenario              | Message                                      | Recovery                              |
+| --------------------- | -------------------------------------------- | ------------------------------------- |
+| Connected             | ✓ "vMix Connected"                           | Ready to control                      |
+| Connecting            | ◐ "Connecting to vMix..."                    | Wait for vMix to start                |
+| Disconnected          | ○ "vMix Disconnected"                        | Enable vMix, check IP                 |
 | Error: Cannot connect | ✕ "vMix connection failed: host unreachable" | Check vMix is running, verify IP/port |
-| Error: Network issue | ✕ "vMix connection timeout" | Check network connectivity |
+| Error: Network issue  | ✕ "vMix connection timeout"                  | Check network connectivity            |
 
 #### Troubleshooting Guide
+
 - Ensure vMix is running on the target machine
 - Verify IP address and port (default 8088)
 - Check firewall allows connections
@@ -175,16 +179,17 @@ interface ConnectorError {
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Connected | ✓ "ATEM Connected" | Ready to control |
-| Connecting | ◐ "Connecting to ATEM..." | Power on device, check network |
-| Disconnected | ○ "ATEM Disconnected" | Power on ATEM, check IP |
-| Error: Cannot connect | ✕ "ATEM connection failed: no response" | Check device is powered, on network |
-| Error: Network unreachable | ✕ "ATEM: network interface down" | Check Ethernet cable, IP address |
-| Error: Firmware mismatch | ✕ "ATEM firmware version incompatible" | Update ATEM firmware via Blackmagic app |
+| Scenario                   | Message                                 | Recovery                                |
+| -------------------------- | --------------------------------------- | --------------------------------------- |
+| Connected                  | ✓ "ATEM Connected"                      | Ready to control                        |
+| Connecting                 | ◐ "Connecting to ATEM..."               | Power on device, check network          |
+| Disconnected               | ○ "ATEM Disconnected"                   | Power on ATEM, check IP                 |
+| Error: Cannot connect      | ✕ "ATEM connection failed: no response" | Check device is powered, on network     |
+| Error: Network unreachable | ✕ "ATEM: network interface down"        | Check Ethernet cable, IP address        |
+| Error: Firmware mismatch   | ✕ "ATEM firmware version incompatible"  | Update ATEM firmware via Blackmagic app |
 
 #### Troubleshooting Guide
+
 - Power on ATEM Switcher
 - Verify Ethernet connection
 - Check IP address in ATEM settings (button press on device)
@@ -192,6 +197,7 @@ interface ConnectorError {
 - Update ATEM firmware if prompted
 
 #### Capability Flags
+
 - Streaming: Indicates device is actively switching
 - Recording: Indicates device has recording input active
 
@@ -205,21 +211,23 @@ interface ConnectorError {
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Authenticated | ✓ "YouTube Connected" | Ready to broadcast |
-| Connecting | ◐ "Authenticating with YouTube..." | Waiting for OAuth |
-| Disconnected | ○ "YouTube Not Connected" | Login required |
-| Error: Auth expired | ✕ "YouTube: session expired" | Re-authenticate via Settings |
-| Error: Quota exceeded | ✕ "YouTube: API quota exceeded" | Wait 24h or upgrade quota |
-| Error: Account restricted | ✕ "YouTube: streaming disabled" | Check account settings, enable live streaming |
+| Scenario                  | Message                            | Recovery                                      |
+| ------------------------- | ---------------------------------- | --------------------------------------------- |
+| Authenticated             | ✓ "YouTube Connected"              | Ready to broadcast                            |
+| Connecting                | ◐ "Authenticating with YouTube..." | Waiting for OAuth                             |
+| Disconnected              | ○ "YouTube Not Connected"          | Login required                                |
+| Error: Auth expired       | ✕ "YouTube: session expired"       | Re-authenticate via Settings                  |
+| Error: Quota exceeded     | ✕ "YouTube: API quota exceeded"    | Wait 24h or upgrade quota                     |
+| Error: Account restricted | ✕ "YouTube: streaming disabled"    | Check account settings, enable live streaming |
 
 #### Live Status Detection
+
 - `youtubeLiveActive` flag: True when at least one live broadcast is active
 - Polling via cron job (`cron.youtube_pull`)
 - Display: "YouTube LIVE" badge with pulsing red dot in nav
 
 #### Troubleshooting Guide
+
 - Click "Login" to authorize with Google Account
 - Ensure YouTube account has live streaming enabled
 - Check quotas in Google Cloud Console
@@ -235,16 +243,17 @@ interface ConnectorError {
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Authenticated | ✓ "Facebook Connected" | Ready to broadcast |
-| Connecting | ◐ "Authenticating with Facebook..." | Waiting for OAuth |
-| Disconnected | ○ "Facebook Not Connected" | Configure app credentials |
-| Error: Invalid credentials | ✕ "Facebook: invalid app secret" | Check App ID and Secret |
-| Error: Page not found | ✕ "Facebook: page access denied" | Verify page ID, check permissions |
-| Error: Token revoked | ✕ "Facebook: authentication failed" | Re-authenticate, check app status |
+| Scenario                   | Message                             | Recovery                          |
+| -------------------------- | ----------------------------------- | --------------------------------- |
+| Authenticated              | ✓ "Facebook Connected"              | Ready to broadcast                |
+| Connecting                 | ◐ "Authenticating with Facebook..." | Waiting for OAuth                 |
+| Disconnected               | ○ "Facebook Not Connected"          | Configure app credentials         |
+| Error: Invalid credentials | ✕ "Facebook: invalid app secret"    | Check App ID and Secret           |
+| Error: Page not found      | ✕ "Facebook: page access denied"    | Verify page ID, check permissions |
+| Error: Token revoked       | ✕ "Facebook: authentication failed" | Re-authenticate, check app status |
 
 #### Troubleshooting Guide
+
 - Create Facebook App in Developer Dashboard
 - Obtain App ID and App Secret
 - Get Page ID from Facebook page settings
@@ -260,17 +269,18 @@ interface ConnectorError {
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Connected | ✓ "Discord Connected" | Ready to send messages |
-| Connecting | ◐ "Testing Discord webhook..." | Wait for response |
-| Disconnected | ○ "Discord Not Configured" | Add webhook URL |
-| Error: Invalid URL | ✕ "Discord: invalid webhook URL" | Check URL format and syntax |
-| Error: Webhook deleted | ✕ "Discord: webhook not found (404)" | Recreate webhook in Discord |
-| Error: Forbidden | ✕ "Discord: insufficient permissions" | Check channel permissions, webhook scope |
-| Error: Rate limited | ✕ "Discord: rate limited, retry in Xs" | Wait before retrying |
+| Scenario               | Message                                | Recovery                                 |
+| ---------------------- | -------------------------------------- | ---------------------------------------- |
+| Connected              | ✓ "Discord Connected"                  | Ready to send messages                   |
+| Connecting             | ◐ "Testing Discord webhook..."         | Wait for response                        |
+| Disconnected           | ○ "Discord Not Configured"             | Add webhook URL                          |
+| Error: Invalid URL     | ✕ "Discord: invalid webhook URL"       | Check URL format and syntax              |
+| Error: Webhook deleted | ✕ "Discord: webhook not found (404)"   | Recreate webhook in Discord              |
+| Error: Forbidden       | ✕ "Discord: insufficient permissions"  | Check channel permissions, webhook scope |
+| Error: Rate limited    | ✕ "Discord: rate limited, retry in Xs" | Wait before retrying                     |
 
 #### Troubleshooting Guide
+
 - Go to Discord server → Server Settings → Integrations → Webhooks
 - Create new webhook for target channel
 - Copy webhook URL
@@ -278,6 +288,7 @@ interface ConnectorError {
 - Verify no special characters in URL
 
 #### Note
+
 Discord integration status: "Not yet fully implemented" (per definition)
 
 ---
@@ -290,16 +301,17 @@ Discord integration status: "Not yet fully implemented" (per definition)
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Connected | ✓ "Broadlink Connected" | Ready to send commands |
-| Connecting | ◐ "Discovering Broadlink devices..." | Wait for discovery scan |
-| Disconnected | ○ "No Broadlink Devices" | Power on device, check network |
+| Scenario                | Message                              | Recovery                            |
+| ----------------------- | ------------------------------------ | ----------------------------------- |
+| Connected               | ✓ "Broadlink Connected"              | Ready to send commands              |
+| Connecting              | ◐ "Discovering Broadlink devices..." | Wait for discovery scan             |
+| Disconnected            | ○ "No Broadlink Devices"             | Power on device, check network      |
 | Error: No devices found | ✕ "Broadlink: no devices on network" | Ensure device powered, on same WiFi |
-| Error: Learn timeout | ✕ "Broadlink: learn mode timeout" | Point remote at device, retrigger |
-| Error: Send failed | ✕ "Broadlink: command send failed" | Check device, verify learned code |
+| Error: Learn timeout    | ✕ "Broadlink: learn mode timeout"    | Point remote at device, retrigger   |
+| Error: Send failed      | ✕ "Broadlink: command send failed"   | Check device, verify learned code   |
 
 #### Device Management
+
 - **Discovery**: Automatic broadcast discovery
 - **Device Selection**: Multiple devices supported, UI shows dropdown
 - **Command Categories**: Projector, Screen, Lighting, Audio, HVAC, Other
@@ -307,12 +319,14 @@ Discord integration status: "Not yet fully implemented" (per definition)
 - **Send**: Execute learned IR/RF command
 
 #### Troubleshooting Guide
+
 - Power on Broadlink device, connect to WiFi
 - Device should appear in discovery automatically
 - For IR/RF learning: press "Learn" button, point remote, press button
 - If not discovered: check WiFi network, device reset
 
 #### Related UI Elements
+
 - Device selector dropdown
 - Learned command buttons (grouped by category)
 - Learn dialog for new commands
@@ -328,13 +342,14 @@ Discord integration status: "Not yet fully implemented" (per definition)
 
 #### Status Scenarios
 
-| Scenario | Message | Recovery |
-|----------|---------|----------|
-| Connected | ✓ "OBS Badge Connected" | Showing current scene |
-| Disconnected | ○ "OBS Badge Disconnected" | No scene display |
+| Scenario               | Message                                 | Recovery                      |
+| ---------------------- | --------------------------------------- | ----------------------------- |
+| Connected              | ✓ "OBS Badge Connected"                 | Showing current scene         |
+| Disconnected           | ○ "OBS Badge Disconnected"              | No scene display              |
 | Error: Scene not found | ✕ "OBS Badge: scene '{name}' not found" | Update scene name in settings |
 
 #### Configuration
+
 - Requires OBS connection
 - Scene name specified in settings
 - Updates automatically when scene changes
@@ -406,6 +421,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
 ### 1. Status Badge Design
 
 **Requirements:**
+
 - Quick visual recognition of connector health
 - Minimal space in navigation bar
 - Color-coded (green/yellow/grey/red)
@@ -413,6 +429,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
 - Tooltip on hover (optional): Full connector name + last update time
 
 **Animations:**
+
 - Yellow pulse when connecting (5s interval)
 - No animation when connected (solid green)
 - Red steady when error
@@ -421,6 +438,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
 ### 2. Error Card Design
 
 **Requirements:**
+
 - Clear connector name (bold)
 - Concise error message
 - Action buttons (Recheck, Fix, Info)
@@ -428,6 +446,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
 - Optional: Timestamp of error
 
 **Layout:**
+
 - Card-based list (one error = one card)
 - Responsive: buttons wrap on mobile
 - Error count badge in navigation header
@@ -435,6 +454,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
 ### 3. Notification Toast Patterns
 
 **When to show toasts** (vs. just updating badge):
+
 - ❌ Status changes (connecting/connected): Don't toast (badge is enough)
 - ✅ Error detected: May toast if user is actively using app
 - ✅ Critical errors: Toast with action buttons (e.g., "Fix", "Dismiss")
@@ -443,6 +463,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
 ### 4. Information Hierarchy
 
 **In errors list:**
+
 1. Connector name (biggest, most important)
 2. Error message (secondary, actionable)
 3. Help text / Info button (tertiary, on-demand)
@@ -450,17 +471,18 @@ Discord integration status: "Not yet fully implemented" (per definition)
 
 ### 5. Color Coding
 
-| State | Hex Color | Usage | Emotion |
-|-------|-----------|-------|---------|
-| Connected | #10B981 | Green badge, streaming icon | Healthy, ready |
-| Connecting | #F59E0B | Yellow badge, loading spinner | Processing, wait |
-| Disconnected | #6B7280 | Grey badge, dim text | Neutral, disabled |
-| Error | #EF4444 | Red badge, alert icon | Urgent, broken |
-| Live (YouTube) | #EF4444 | Red pulsing badge | Attention, active |
+| State          | Hex Color | Usage                         | Emotion           |
+| -------------- | --------- | ----------------------------- | ----------------- |
+| Connected      | #10B981   | Green badge, streaming icon   | Healthy, ready    |
+| Connecting     | #F59E0B   | Yellow badge, loading spinner | Processing, wait  |
+| Disconnected   | #6B7280   | Grey badge, dim text          | Neutral, disabled |
+| Error          | #EF4444   | Red badge, alert icon         | Urgent, broken    |
+| Live (YouTube) | #EF4444   | Red pulsing badge             | Attention, active |
 
 ### 6. Accessibility
 
 **Requirements:**
+
 - ARIA labels for status indicators
 - Semantic HTML (buttons, not divs)
 - Keyboard navigation for error cards
@@ -629,6 +651,7 @@ Discord integration status: "Not yet fully implemented" (per definition)
    - Help: Inline tooltips, expandable guides
 
 **Deliverables:**
+
 - Wireframes for each component
 - Color specifications and accessibility checks
 - Animation sequences (status transitions, pulsing)

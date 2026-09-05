@@ -89,7 +89,7 @@
   function formatAbsoluteDate(dateStr: string | null | undefined): string {
     if (!dateStr) return '';
     return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
-      new Date(dateStr)
+      new Date(dateStr),
     );
   }
 
@@ -130,8 +130,19 @@
   {#if selectedPlatform === 'youtube'}
     {#if !isYouTubeConnected()}
       <div class="not-connected">
-        <svg class="not-connected-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+        <svg
+          class="not-connected-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"
+          />
         </svg>
         <p class="not-connected-title">{$_('liveEvents.notConnected')}</p>
         <p class="not-connected-desc">{$_('liveEvents.connectFirst')}</p>
@@ -180,10 +191,12 @@
           {/each}
         </div>
 
-      <!-- Error -->
+        <!-- Error -->
       {:else if error}
         <div class="error-state">
-          <p class="error-msg">{isAuthError ? $_('liveEvents.sessionExpired') : $_('liveEvents.error')}</p>
+          <p class="error-msg">
+            {isAuthError ? $_('liveEvents.sessionExpired') : $_('liveEvents.error')}
+          </p>
           {#if !isAuthError}
             <p class="error-detail">{error}</p>
           {/if}
@@ -194,25 +207,20 @@
           {/if}
         </div>
 
-      <!-- Empty -->
+        <!-- Empty -->
       {:else if visibleItems.length === 0}
         <div class="empty-state">
           <p class="empty-msg">{$_('liveEvents.noContent')}</p>
         </div>
 
-      <!-- Grid -->
+        <!-- Grid -->
       {:else}
         <div class="video-grid">
           {#each visibleItems as item (item.id)}
             <button class="video-card" onclick={() => openVideo(studioUrl(item))}>
               <div class="thumbnail-wrap">
                 {#if item.thumbnailUrl}
-                  <img
-                    class="thumbnail"
-                    src={item.thumbnailUrl}
-                    alt={item.title}
-                    loading="lazy"
-                  />
+                  <img class="thumbnail" src={item.thumbnailUrl} alt={item.title} loading="lazy" />
                 {:else}
                   <div class="thumbnail-placeholder" aria-hidden="true"></div>
                 {/if}
@@ -245,10 +253,18 @@
                 {#if item.privacyStatus !== 'public'}
                   <span class="privacy-badge privacy-{item.privacyStatus}">
                     {#if item.privacyStatus === 'private'}
-                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1zm2.5 5H5.5V4.5a2.5 2.5 0 0 1 5 0V6z"/></svg>
+                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
+                        ><path
+                          d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1.5V4.5A3.5 3.5 0 0 0 8 1zm2.5 5H5.5V4.5a2.5 2.5 0 0 1 5 0V6z"
+                        /></svg
+                      >
                       Private
                     {:else}
-                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3.5 8a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h12a.5.5 0 0 1 0 1H2a.5.5 0 0 1-.5-.5zm5 6a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1H7a.5.5 0 0 1-.5-.5z"/></svg>
+                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
+                        ><path
+                          d="M3.5 8a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h12a.5.5 0 0 1 0 1H2a.5.5 0 0 1-.5-.5zm5 6a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1H7a.5.5 0 0 1-.5-.5z"
+                        /></svg
+                      >
                       Unlisted
                     {/if}
                   </span>
@@ -301,10 +317,14 @@
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
+    transition:
+      color 0.15s,
+      border-color 0.15s;
   }
 
-  .platform-tab:hover { color: var(--text-primary); }
+  .platform-tab:hover {
+    color: var(--text-primary);
+  }
 
   .platform-tab.active {
     color: var(--text-primary);
@@ -336,7 +356,9 @@
     border: none;
     border-radius: 9999px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
   }
 
   .content-tab:hover {
@@ -399,7 +421,9 @@
     transition: filter 0.15s;
   }
 
-  .settings-link:hover { filter: brightness(0.8); }
+  .settings-link:hover {
+    filter: brightness(0.8);
+  }
 
   /* ── Error ── */
   .error-state {
@@ -438,7 +462,9 @@
     transition: filter 0.15s;
   }
 
-  .pill-btn:hover { filter: brightness(0.8); }
+  .pill-btn:hover {
+    filter: brightness(0.8);
+  }
 
   /* ── Empty ── */
   .empty-state {
@@ -459,15 +485,21 @@
   }
 
   @media (max-width: 1100px) {
-    .video-grid { grid-template-columns: repeat(3, 1fr); }
+    .video-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 
   @media (max-width: 780px) {
-    .video-grid { grid-template-columns: repeat(2, 1fr); }
+    .video-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   @media (max-width: 480px) {
-    .video-grid { grid-template-columns: 1fr; }
+    .video-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* ── Video card ── */
@@ -484,7 +516,9 @@
     transition: transform 0.1s;
   }
 
-  .video-card:hover { transform: translateY(-2px); }
+  .video-card:hover {
+    transform: translateY(-2px);
+  }
 
   .video-card:focus-visible {
     outline: 2px solid #065fd4;
@@ -496,7 +530,9 @@
     cursor: default;
   }
 
-  .skeleton-card:hover { transform: none; }
+  .skeleton-card:hover {
+    transform: none;
+  }
 
   /* ── Thumbnail ── */
   .thumbnail-wrap {
@@ -534,8 +570,12 @@
     color: #fff;
   }
 
-  .badge-live { background: #ff0000; }
-  .badge-upcoming { background: var(--text-primary); }
+  .badge-live {
+    background: #ff0000;
+  }
+  .badge-upcoming {
+    background: var(--text-primary);
+  }
 
   .duration-badge {
     position: absolute;
@@ -582,7 +622,9 @@
     margin: 0;
   }
 
-  .meta-sep { color: var(--text-tertiary); }
+  .meta-sep {
+    color: var(--text-tertiary);
+  }
 
   /* ── Privacy badge ── */
   .privacy-badge {
@@ -634,7 +676,11 @@
   }
 
   @keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 </style>

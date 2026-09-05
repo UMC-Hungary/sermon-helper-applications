@@ -12,7 +12,7 @@
     connected: 'Connected',
     connecting: 'Connecting',
     disconnected: 'Disconnected',
-    error: 'Error'
+    error: 'Error',
   };
 </script>
 

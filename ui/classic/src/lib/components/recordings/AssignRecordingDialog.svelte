@@ -43,7 +43,12 @@
   }
 </script>
 
-<div class="overlay" role="presentation" onkeydown={(e) => e.key === 'Escape' && onclose()} onclick={onclose}>
+<div
+  class="overlay"
+  role="presentation"
+  onkeydown={(e) => e.key === 'Escape' && onclose()}
+  onclick={onclose}
+>
   <div
     class="dialog"
     role="dialog"
@@ -73,11 +78,7 @@
 
     <div class="actions">
       <button class="btn-cancel" onclick={onclose}>Cancel</button>
-      <button
-        class="btn-assign"
-        onclick={assign}
-        disabled={!selectedEventId || assigning}
-      >
+      <button class="btn-assign" onclick={assign} disabled={!selectedEventId || assigning}>
         {assigning ? 'Assigning…' : 'Assign'}
       </button>
     </div>

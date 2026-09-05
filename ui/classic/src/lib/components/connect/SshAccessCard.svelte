@@ -47,9 +47,11 @@
   // Suggest adding connected Pi devices not yet in the list
   const suggestions = $derived(
     $connectedClients.filter(
-      c => c.label === 'Presenter Receiver' && c.hostname &&
-        !untrack(() => devices.some(d => d.host === c.hostname))
-    )
+      (c) =>
+        c.label === 'Presenter Receiver' &&
+        c.hostname &&
+        !untrack(() => devices.some((d) => d.host === c.hostname)),
+    ),
   );
 
   function addSuggestion(hostname: string) {
@@ -64,7 +66,7 @@
     if (devices.length === 1) {
       devices = [makeDevice()];
     } else {
-      devices = devices.filter(d => d.id !== id);
+      devices = devices.filter((d) => d.id !== id);
     }
   }
 
@@ -87,13 +89,17 @@
     if (!cmd) return;
     await navigator.clipboard.writeText(cmd);
     copiedId = device.id;
-    setTimeout(() => { copiedId = null; }, 2000);
+    setTimeout(() => {
+      copiedId = null;
+    }, 2000);
   }
 
   async function copyLogs() {
     await navigator.clipboard.writeText(logCommand);
     copiedLogs = true;
-    setTimeout(() => { copiedLogs = false; }, 2000);
+    setTimeout(() => {
+      copiedLogs = false;
+    }, 2000);
   }
 </script>
 
@@ -103,8 +109,8 @@
     <button class="btn-add" onclick={addDevice}>+ Add device</button>
   </div>
   <p class="note">
-    Save your remote devices here to quickly generate an SSH command for troubleshooting.
-    Devices are stored locally in your browser. Once connected, run
+    Save your remote devices here to quickly generate an SSH command for troubleshooting. Devices
+    are stored locally in your browser. Once connected, run
     <code class="inline-code">tail -f ~/.local/log/presenter-receiver.log</code>
     to stream live logs from the presenter receiver.
   </p>
@@ -134,8 +140,8 @@
           <button
             class="btn-remove"
             onclick={() => removeDevice(device.id)}
-            aria-label="Remove device"
-          >✕</button>
+            aria-label="Remove device">✕</button
+          >
         </div>
 
         <div class="ssh-form">

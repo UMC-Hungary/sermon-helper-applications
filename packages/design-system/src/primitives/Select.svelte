@@ -40,7 +40,12 @@
   let trigger = $state<HTMLButtonElement>();
   let list = $state<HTMLElement>();
 
-  const selectedIndex = $derived(Math.max(0, options.findIndex((o) => o.value === value)));
+  const selectedIndex = $derived(
+    Math.max(
+      0,
+      options.findIndex((o) => o.value === value),
+    ),
+  );
   const selected = $derived(options[selectedIndex]);
 
   function show() {

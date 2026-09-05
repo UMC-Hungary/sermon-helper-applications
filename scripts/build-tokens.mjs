@@ -33,7 +33,9 @@ function emit() {
   // Zeroing the duration primitives stills every semantic motion token that aliases them, which
   // removes the animation without removing any state indication.
   const stilled = flatten(primitives.duration ?? {}, ['duration']).map(([n]) => [n, '0ms']);
-  parts.push(`@media (prefers-reduced-motion: reduce) {\n${nest(block(':root', stilled, '\t\t'))}}\n`);
+  parts.push(
+    `@media (prefers-reduced-motion: reduce) {\n${nest(block(':root', stilled, '\t\t'))}}\n`,
+  );
 
   return parts.filter(Boolean).join('\n');
 }

@@ -35,7 +35,8 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    padding: var(--c-section-label-padding-top) var(--ui-gutter) var(--c-section-label-padding-bottom);
+    padding: var(--c-section-label-padding-top) var(--ui-gutter)
+      var(--c-section-label-padding-bottom);
   }
 
   div,

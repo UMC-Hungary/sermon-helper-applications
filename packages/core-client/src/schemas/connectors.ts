@@ -182,7 +182,9 @@ const PlatformProfileSchema = z.object({
 
 const PlatformServiceSchema = z.object({
   platform: z.string(),
-  servers: z.array(z.object({ server: z.string(), url: z.string(), group: z.string().default('') })),
+  servers: z.array(
+    z.object({ server: z.string(), url: z.string(), group: z.string().default('') }),
+  ),
   profiles: z.array(PlatformProfileSchema),
   defaultProfile: z.string().nullable().default(null),
   customizableUrlEnabled: z.boolean().default(false),

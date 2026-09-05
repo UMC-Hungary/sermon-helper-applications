@@ -75,9 +75,7 @@
     { value: 'dark' as Scheme, label: $_('settings.scheme.dark') },
     { value: 'auto' as Scheme, label: $_('settings.scheme.auto') },
   ]);
-  const currentSchemeLabel = $derived(
-    schemeOptions.find((o) => o.value === scheme())?.label ?? '',
-  );
+  const currentSchemeLabel = $derived(schemeOptions.find((o) => o.value === scheme())?.label ?? '');
 
   function cronTags(job: CronJob): string {
     const tags = [];
@@ -104,17 +102,30 @@
     }
     if (mode === 'server') {
       try {
-        const [host, port, token] = await Promise.all([getLocalHost(), getServerPort(), getToken()]);
+        const [host, port, token] = await Promise.all([
+          getLocalHost(),
+          getServerPort(),
+          getToken(),
+        ]);
         if (host && port && token) {
           const payload = connectLink({ url: `http://${host}:${port}`, token });
-          connectQr = await QRCode.toDataURL(payload, { width: 160, margin: 1, color: { dark: '#000', light: '#fff' } });
+          connectQr = await QRCode.toDataURL(payload, {
+            width: 160,
+            margin: 1,
+            color: { dark: '#000', light: '#fff' },
+          });
         }
-      } catch { /* server unavailable */ }
+      } catch {
+        /* server unavailable */
+      }
     }
     await refreshCron();
     try {
       const s = await fetchConnectorStatuses();
-      signedIn = { youtube: s.youtube?.type === 'connected', facebook: s.facebook?.type === 'connected' };
+      signedIn = {
+        youtube: s.youtube?.type === 'connected',
+        facebook: s.facebook?.type === 'connected',
+      };
     } catch {
       /* offline */
     }
@@ -181,19 +192,33 @@
 <div class="settings-workspace">
   <div class="primary-col">
     <section class="overview">
-      <OverviewCell label={$_('settings.overview.mode')} value={mode === 'server' ? 'S' : 'C'} color="var(--status-ok)" />
+      <OverviewCell
+        label={$_('settings.overview.mode')}
+        value={mode === 'server' ? 'S' : 'C'}
+        color="var(--status-ok)"
+      />
       <OverviewCell
         label={$_('settings.overview.accounts')}
         value={`${signedCount}/2`}
         color={signedCount === 2 ? 'var(--status-ok)' : 'var(--status-warn)'}
         divider
       />
-      <OverviewCell label={$_('settings.overview.jobs')} value={enabledJobs} color="var(--text-muted)" divider />
+      <OverviewCell
+        label={$_('settings.overview.jobs')}
+        value={enabledJobs}
+        color="var(--text-muted)"
+        divider
+      />
     </section>
 
     <SectionLabel>{$_('settings.language')}</SectionLabel>
     <List>
-      <Row title={$_('settings.languageRow.title')} meta={$_('settings.languageRow.meta')} chevron={false} last>
+      <Row
+        title={$_('settings.languageRow.title')}
+        meta={$_('settings.languageRow.meta')}
+        chevron={false}
+        last
+      >
         {#snippet icon()}<TextIcon char="A" />{/snippet}
         {#snippet control()}
           <Segmented
@@ -218,7 +243,11 @@
         >
           {#snippet icon()}<TextIcon char={mode === 'server' ? 'S' : 'C'} />{/snippet}
           {#snippet control()}
-            <Button variant={mode === 'client' ? 'danger' : 'secondary'} compact onclick={openModeSheet}>
+            <Button
+              variant={mode === 'client' ? 'danger' : 'secondary'}
+              compact
+              onclick={openModeSheet}
+            >
               {mode === 'client' ? $_('settings.mode.removeAccess') : $_('settings.mode.change')}
             </Button>
           {/snippet}
@@ -227,13 +256,26 @@
     {/if}
 
     {#if mode === 'server' && hasToken()}
-      <SectionLabel hint={$_('settings.connect.hint')}>{$_('settings.connect.section')}</SectionLabel>
+      <SectionLabel hint={$_('settings.connect.hint')}
+        >{$_('settings.connect.section')}</SectionLabel
+      >
       <List>
-        <Row title={$_('settings.connect.section')} meta={$_('settings.connect.hint')} chevron={false} last>
+        <Row
+          title={$_('settings.connect.section')}
+          meta={$_('settings.connect.hint')}
+          chevron={false}
+          last
+        >
           {#snippet icon()}<TextIcon char="⠿" />{/snippet}
           {#snippet control()}
             {#if connectQr}
-              <img src={connectQr} alt="QR code to connect a device" width="80" height="80" style="display:block" />
+              <img
+                src={connectQr}
+                alt="QR code to connect a device"
+                width="80"
+                height="80"
+                style="display:block"
+              />
             {:else}
               <span class="qr-loading">{$_('settings.connect.loading')}</span>
             {/if}
@@ -301,7 +343,12 @@
 
     <SectionLabel>{$_('settings.presentations')}</SectionLabel>
     <List>
-      <Row title={$_('settings.webPresenter.title')} meta={$_('settings.webPresenter.meta')} chevron={false} last>
+      <Row
+        title={$_('settings.webPresenter.title')}
+        meta={$_('settings.webPresenter.meta')}
+        chevron={false}
+        last
+      >
         {#snippet icon()}<TextIcon char="▣" />{/snippet}
         {#snippet control()}
           <Toggle
@@ -326,8 +373,18 @@
             {/snippet}
           </Row>
         {/each}
-        <form class="draft" onsubmit={(e) => { e.preventDefault(); addCron(); }}>
-          <Field label={$_('settings.cron.name')} bind:value={draft.name} placeholder={$_('settings.cron.namePlaceholder')} />
+        <form
+          class="draft"
+          onsubmit={(e) => {
+            e.preventDefault();
+            addCron();
+          }}
+        >
+          <Field
+            label={$_('settings.cron.name')}
+            bind:value={draft.name}
+            placeholder={$_('settings.cron.namePlaceholder')}
+          />
           <Field
             label={$_('settings.cron.expr')}
             bind:value={draft.cronExpression}
@@ -367,8 +424,12 @@
         </Row>
         <Row
           title={$_('settings.version.title')}
-          meta={update?.latestVersion ? $_('settings.version.available', { values: { v: update.latestVersion } }) : appVersion}
-          detail={update?.latestVersion ? $_('settings.version.download') : $_('settings.version.check')}
+          meta={update?.latestVersion
+            ? $_('settings.version.available', { values: { v: update.latestVersion } })
+            : appVersion}
+          detail={update?.latestVersion
+            ? $_('settings.version.download')
+            : $_('settings.version.check')}
           chevron={false}
           onclick={checkUpdate}
           last

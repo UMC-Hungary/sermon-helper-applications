@@ -10,21 +10,21 @@ An optional leading slot — a `Dot`, `TextIcon`, `Glyph` or `DateBlock` — the
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `title` | `string` | `''` | — |
-| `meta` | `string` | `''` | The second line, one tone lighter. Truncates rather than wrapping. |
-| `detail` | `string` | `''` | A trailing value, aligned to the row's top edge alongside the chevron. |
-| `chevron` | `boolean` | `true` | — |
-| `danger` | `boolean` | `false` | Renders the title in the danger colour; pair it with wording that says so too. |
-| `last` | `boolean` | `false` | Drops the bottom rule, for the last row in a list. |
-| `onclick` | `(event: MouseEvent) => void` | — | Makes the row a button. A row that navigates should instead be given `href`, so it lands in the keyboard order as the link it is. |
-| `href` | `string` | — | — |
-| `current` | `'page' \| 'step' \| 'true' \| false` | `false` | Marks the row as the current page or step; the reference has no such indication. |
-| `disabled` | `boolean` | `false` | — |
-| `icon` | `Snippet` | — | — |
-| `control` | `Snippet` | — | — |
-| `children` | `Snippet` | — | — |
+| Prop       | Type                                  | Default | Meaning                                                                                                                           |
+| ---------- | ------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `title`    | `string`                              | `''`    | —                                                                                                                                 |
+| `meta`     | `string`                              | `''`    | The second line, one tone lighter. Truncates rather than wrapping.                                                                |
+| `detail`   | `string`                              | `''`    | A trailing value, aligned to the row's top edge alongside the chevron.                                                            |
+| `chevron`  | `boolean`                             | `true`  | —                                                                                                                                 |
+| `danger`   | `boolean`                             | `false` | Renders the title in the danger colour; pair it with wording that says so too.                                                    |
+| `last`     | `boolean`                             | `false` | Drops the bottom rule, for the last row in a list.                                                                                |
+| `onclick`  | `(event: MouseEvent) => void`         | —       | Makes the row a button. A row that navigates should instead be given `href`, so it lands in the keyboard order as the link it is. |
+| `href`     | `string`                              | —       | —                                                                                                                                 |
+| `current`  | `'page' \| 'step' \| 'true' \| false` | `false` | Marks the row as the current page or step; the reference has no such indication.                                                  |
+| `disabled` | `boolean`                             | `false` | —                                                                                                                                 |
+| `icon`     | `Snippet`                             | —       | —                                                                                                                                 |
+| `control`  | `Snippet`                             | —       | —                                                                                                                                 |
+| `children` | `Snippet`                             | —       | —                                                                                                                                 |
 
 ## Variants
 
@@ -36,42 +36,42 @@ Default, hover, focus-visible, active, disabled, current.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--c-row-detail-gap` | `1px` |
-| `--c-row-meta-gap` | `4px` |
-| `--c-row-min-height` | `56px` |
-| `--c-row-padding-block` | `14px` |
-| `--motion-fast` | `120ms` |
-| `--status-error` | `#b5321c / #e66a4f` |
-| `--surface-hover` | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-leading` | `1.24` |
-| `--type-body-size` | `15px` |
-| `--type-body-sm-size` | `14px` |
-| `--type-body-track` | `-0.1px` |
-| `--type-body-weight` | `400` |
-| `--type-caption-size` | `12px` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter` | `24px` |
-| `--ui-stack-loose` | `14px` |
+| Token                   | Resolves to                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| `--accent`              | `#5c5c84 / #a9a6d6`                                                                                       |
+| `--border-hairline`     | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`                                                       |
+| `--c-row-detail-gap`    | `1px`                                                                                                     |
+| `--c-row-meta-gap`      | `4px`                                                                                                     |
+| `--c-row-min-height`    | `56px`                                                                                                    |
+| `--c-row-padding-block` | `14px`                                                                                                    |
+| `--motion-fast`         | `120ms`                                                                                                   |
+| `--status-error`        | `#b5321c / #e66a4f`                                                                                       |
+| `--surface-hover`       | `color-mix(in srgb, {text-primary} 3%, transparent) / color-mix(in srgb, {text-primary} 3%, transparent)` |
+| `--text-faint`          | `#676051 / #8f8879`                                                                                       |
+| `--text-muted`          | `#615e56 / #918b7e`                                                                                       |
+| `--text-primary`        | `#1c1a16 / #ede6d6`                                                                                       |
+| `--type-body-family`    | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`                                |
+| `--type-body-leading`   | `1.24`                                                                                                    |
+| `--type-body-size`      | `15px`                                                                                                    |
+| `--type-body-sm-size`   | `14px`                                                                                                    |
+| `--type-body-track`     | `-0.1px`                                                                                                  |
+| `--type-body-weight`    | `400`                                                                                                     |
+| `--type-caption-size`   | `12px`                                                                                                    |
+| `--ui-border-hairline`  | `1px`                                                                                                     |
+| `--ui-focus-offset`     | `2px`                                                                                                     |
+| `--ui-focus-width`      | `2px`                                                                                                     |
+| `--ui-gutter`           | `24px`                                                                                                    |
+| `--ui-stack-loose`      | `14px`                                                                                                    |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Reaches an interactive row; a static row is not a tab stop. |
-| `Enter` | Activates a link or button row. |
-| `Space` | Activates a button row. |
+| Key     | Behaviour                                                   |
+| ------- | ----------------------------------------------------------- |
+| `Tab`   | Reaches an interactive row; a static row is not a tab stop. |
+| `Enter` | Activates a link or button row.                             |
+| `Space` | Activates a button row.                                     |
 
 ## ARIA
 
@@ -90,29 +90,28 @@ An interactive row is a real `<a>` or `<button>`, so role, name and disabled sta
 
 Source: `src/components/primitives/Row.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `div, button` | `padding` | `14px` | `14px` | `--c-row-padding-block` |
-| `div, button` | `padding` | `24px` | `24px` | `--ui-gutter` |
-| `div, button` | `min-height` | `56px` | `56px` | `--c-row-min-height` |
-| `div, button` | `gap` | `14px` | `14px` | `--ui-stack-loose` |
-| `div, button` | `transition` | `120ms` | `120ms` | `--motion-fast` |
-| `.title` | `font-size` | `15px` | `15px` | `--type-body-size` |
-| `.title` | `letter-spacing` | `-0.1px` | `-0.1px` | `--type-body-track` |
-| `.title` | `font-weight` | `400` | `400` | `--type-body-weight` |
-| `.title` | `line-height` | `1.24` | `1.24` | `--type-body-leading` |
-| `.meta` | `font-size` | `12px` | `12px` | `--type-caption-size` |
-| `.meta` | `margin-top` | `4px` | `4px` | `--c-row-meta-gap` |
-| `.detail` | `font-size` | `14px` | `14px` | `--type-body-sm-size` |
-| `.detail` | `margin-top` | `1px` | `1px` | `--c-row-detail-gap` |
+| Selector      | Property         | Measured | Implemented | Token                   |
+| ------------- | ---------------- | -------- | ----------- | ----------------------- |
+| `div, button` | `padding`        | `14px`   | `14px`      | `--c-row-padding-block` |
+| `div, button` | `padding`        | `24px`   | `24px`      | `--ui-gutter`           |
+| `div, button` | `min-height`     | `56px`   | `56px`      | `--c-row-min-height`    |
+| `div, button` | `gap`            | `14px`   | `14px`      | `--ui-stack-loose`      |
+| `div, button` | `transition`     | `120ms`  | `120ms`     | `--motion-fast`         |
+| `.title`      | `font-size`      | `15px`   | `15px`      | `--type-body-size`      |
+| `.title`      | `letter-spacing` | `-0.1px` | `-0.1px`    | `--type-body-track`     |
+| `.title`      | `font-weight`    | `400`    | `400`       | `--type-body-weight`    |
+| `.title`      | `line-height`    | `1.24`   | `1.24`      | `--type-body-leading`   |
+| `.meta`       | `font-size`      | `12px`   | `12px`      | `--type-caption-size`   |
+| `.meta`       | `margin-top`     | `4px`    | `4px`       | `--c-row-meta-gap`      |
+| `.detail`     | `font-size`      | `14px`   | `14px`      | `--type-body-sm-size`   |
+| `.detail`     | `margin-top`     | `1px`    | `1px`       | `--c-row-detail-gap`    |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
-| A focus indicator was added. | The reference has none, on this component or nearly any other. It is drawn inset so it does not overlap the row above. |
+| What                                         | Why                                                                                                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A focus indicator was added.                 | The reference has none, on this component or nearly any other. It is drawn inset so it does not overlap the row above.                                         |
 | `href` produces a link rather than a button. | The reference makes every clickable row a `<button>`, including the ones that navigate, which loses the middle-click, the context menu and the announced role. |
-| The chevron is hidden on static rows. | The reference defaults it to shown and renders it on non-clickable rows, promising an affordance that is not there. |
-
+| The chevron is hidden on static rows.        | The reference defaults it to shown and renders it on non-clickable rows, promising an affordance that is not there.                                            |

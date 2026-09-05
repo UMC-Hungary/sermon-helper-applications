@@ -65,10 +65,7 @@
 {/if}
 
 {#if assigningId !== null}
-  <AssignRecordingDialog
-    untrackedId={assigningId}
-    onclose={() => (assigningId = null)}
-  />
+  <AssignRecordingDialog untrackedId={assigningId} onclose={() => (assigningId = null)} />
 {/if}
 
 <style>
@@ -124,5 +121,4 @@
     color: var(--text-secondary);
     margin: 0 0 1rem;
   }
-
 </style>

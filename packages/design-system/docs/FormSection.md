@@ -10,13 +10,13 @@ A header — the number in an outlined chip, the label in the display italic, an
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `number` *(required)* | `string \| number` | — | The step number in its chip. Numbering is the caller's, not the component's. |
-| `label` *(required)* | `string` | — | — |
-| `hint` | `string` | — | A quiet note on the right of the header — "optional", "2 of 5". |
-| `last` | `boolean` | — | Drops the bottom rule, for the last section in a form. |
-| `children` *(required)* | `Snippet` | — | — |
+| Prop                    | Type               | Default | Meaning                                                                      |
+| ----------------------- | ------------------ | ------- | ---------------------------------------------------------------------------- |
+| `number` _(required)_   | `string \| number` | —       | The step number in its chip. Numbering is the caller's, not the component's. |
+| `label` _(required)_    | `string`           | —       | —                                                                            |
+| `hint`                  | `string`           | —       | A quiet note on the right of the header — "optional", "2 of 5".              |
+| `last`                  | `boolean`          | —       | Drops the bottom rule, for the last section in a form.                       |
+| `children` _(required)_ | `Snippet`          | —       | —                                                                            |
 
 ## Variants
 
@@ -28,31 +28,31 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
-| `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
-| `--c-form-section-header-gap` | `10px` |
-| `--c-form-section-header-margin` | `10px` |
-| `--c-form-section-hint-track` | `1px` |
-| `--c-form-section-number-padding-block` | `2px` |
-| `--c-form-section-number-padding-inline` | `5px` |
-| `--c-form-section-number-track` | `1.4px` |
-| `--c-form-section-padding-block` | `18px` |
-| `--text-faint` | `#676051 / #8f8879` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-heading-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-heading-size` | `17px` |
-| `--type-heading-track` | `0.1px` |
-| `--type-heading-weight` | `500` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-sm-transform` | `uppercase` |
-| `--type-label-sm-weight` | `500` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-radius-chip` | `2px` |
-| `--ui-stack` | `8px` |
+| Token                                    | Resolves to                                                    |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `--border-hairline`                      | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)`            |
+| `--border-strong`                        | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)`           |
+| `--c-form-section-header-gap`            | `10px`                                                         |
+| `--c-form-section-header-margin`         | `10px`                                                         |
+| `--c-form-section-hint-track`            | `1px`                                                          |
+| `--c-form-section-number-padding-block`  | `2px`                                                          |
+| `--c-form-section-number-padding-inline` | `5px`                                                          |
+| `--c-form-section-number-track`          | `1.4px`                                                        |
+| `--c-form-section-padding-block`         | `18px`                                                         |
+| `--text-faint`                           | `#676051 / #8f8879`                                            |
+| `--text-muted`                           | `#615e56 / #918b7e`                                            |
+| `--text-primary`                         | `#1c1a16 / #ede6d6`                                            |
+| `--type-heading-family`                  | `"Cormorant Garamond", Georgia, serif`                         |
+| `--type-heading-size`                    | `17px`                                                         |
+| `--type-heading-track`                   | `0.1px`                                                        |
+| `--type-heading-weight`                  | `500`                                                          |
+| `--type-label-sm-family`                 | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size`                   | `9px`                                                          |
+| `--type-label-sm-transform`              | `uppercase`                                                    |
+| `--type-label-sm-weight`                 | `500`                                                          |
+| `--ui-border-hairline`                   | `1px`                                                          |
+| `--ui-radius-chip`                       | `2px`                                                          |
+| `--ui-stack`                             | `8px`                                                          |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -76,28 +76,27 @@ A `<section>` labelled by its heading, so the step appears in the document outli
 
 Source: `src/components/forms/ChamberSection.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `section` | `padding` | `18px` | `18px` | `--c-form-section-padding-block` |
-| `header` | `margin-bottom` | `10px` | `10px` | `--c-form-section-header-margin` |
-| `div` | `gap` | `10px` | `10px` | `--c-form-section-header-gap` |
-| `span` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
-| `span` | `letter-spacing` | `1.4px` | `1.4px` | `--c-form-section-number-track` |
-| `span` | `font-weight` | `500` | `500` | `--type-label-sm-weight` |
-| `span` | `padding` | `2px` | `2px` | `--c-form-section-number-padding-block` |
-| `span` | `padding` | `5px` | `5px` | `--c-form-section-number-padding-inline` |
-| `span` | `border-radius` | `2px` | `2px` | `--ui-radius-chip` |
-| `strong` | `font-size` | `17px` | `17px` | `--type-heading-size` |
-| `strong` | `letter-spacing` | `0.1px` | `0.1px` | `--type-heading-track` |
-| `strong` | `font-weight` | `500` | `500` | `--type-heading-weight` |
-| `em` | `letter-spacing` | `1px` | `1px` | `--c-form-section-hint-track` |
-| `.body` | `gap` | `8px` | `8px` | `--ui-stack` |
+| Selector  | Property         | Measured | Implemented | Token                                    |
+| --------- | ---------------- | -------- | ----------- | ---------------------------------------- |
+| `section` | `padding`        | `18px`   | `18px`      | `--c-form-section-padding-block`         |
+| `header`  | `margin-bottom`  | `10px`   | `10px`      | `--c-form-section-header-margin`         |
+| `div`     | `gap`            | `10px`   | `10px`      | `--c-form-section-header-gap`            |
+| `span`    | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`                   |
+| `span`    | `letter-spacing` | `1.4px`  | `1.4px`     | `--c-form-section-number-track`          |
+| `span`    | `font-weight`    | `500`    | `500`       | `--type-label-sm-weight`                 |
+| `span`    | `padding`        | `2px`    | `2px`       | `--c-form-section-number-padding-block`  |
+| `span`    | `padding`        | `5px`    | `5px`       | `--c-form-section-number-padding-inline` |
+| `span`    | `border-radius`  | `2px`    | `2px`       | `--ui-radius-chip`                       |
+| `strong`  | `font-size`      | `17px`   | `17px`      | `--type-heading-size`                    |
+| `strong`  | `letter-spacing` | `0.1px`  | `0.1px`     | `--type-heading-track`                   |
+| `strong`  | `font-weight`    | `500`    | `500`       | `--type-heading-weight`                  |
+| `em`      | `letter-spacing` | `1px`    | `1px`       | `--c-form-section-hint-track`            |
+| `.body`   | `gap`            | `8px`    | `8px`       | `--ui-stack`                             |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                             | Why                                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | The label became a real heading. | The reference sets it as a `<strong>`, which puts none of the form's structure into the document outline. |
-

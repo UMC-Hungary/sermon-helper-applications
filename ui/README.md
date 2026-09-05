@@ -17,7 +17,7 @@ Registered UIs today: `ui/classic/` (the original control surface, frozen) and `
    to any new UI automatically.
 2. **Do not import from another UI.** Anything two UIs share goes in a workspace package they
    both depend on by name, never a relative path into a sibling UI.
-3. **Assume no desktop shell.** Anything Tauri-only is a *host capability*: which core the
+3. **Assume no desktop shell.** Anything Tauri-only is a _host capability_: which core the
    window talks to, log files, updates, native dialogs. Check `hostCapabilities` before
    offering it and hide or degrade the control when it is absent. A UI that throws outside the
    desktop app is broken, not "desktop-only".
@@ -33,16 +33,16 @@ Registered UIs today: `ui/classic/` (the original control surface, frozen) and `
 
 `packages/core-client` (`@metocast/core-client`) is the single boundary to the core. It is
 **framework-agnostic** — a React UI could consume it as easily as a Svelte one — so the test for
-what belongs there is simple: *if it imports a UI framework, it does not belong.*
+what belongs there is simple: _if it imports a UI framework, it does not belong._
 
-| Behind it | What |
-|---|---|
-| HTTP (`src/api`) | Events, recordings, uploads, queues, connector config/status, Bible lookups, presenter |
-| WebSocket (`src/ws`) | `connectWs` (a **transport**: connect/reconnect/validate, emitting typed messages via handlers), `sendWsCommand`, `connectPresenterWs` |
-| Host (`src/host`) | `hostCapabilities` plus the optional desktop-only calls, each feature-detected |
-| Schemas / types (`src/schemas`, `src/types`) | One Zod definition per message; a backend change is a compile error in whichever UI drifts |
-| Config (`src/config`) | `configureCoreClient` — the UI supplies the core's location/token once at startup |
-| Locales (`locales/`) | Shared translation catalogues; a UI adds its own keys but shares these |
+| Behind it                                    | What                                                                                                                                   |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP (`src/api`)                             | Events, recordings, uploads, queues, connector config/status, Bible lookups, presenter                                                 |
+| WebSocket (`src/ws`)                         | `connectWs` (a **transport**: connect/reconnect/validate, emitting typed messages via handlers), `sendWsCommand`, `connectPresenterWs` |
+| Host (`src/host`)                            | `hostCapabilities` plus the optional desktop-only calls, each feature-detected                                                         |
+| Schemas / types (`src/schemas`, `src/types`) | One Zod definition per message; a backend change is a compile error in whichever UI drifts                                             |
+| Config (`src/config`)                        | `configureCoreClient` — the UI supplies the core's location/token once at startup                                                      |
+| Locales (`locales/`)                         | Shared translation catalogues; a UI adds its own keys but shares these                                                                 |
 
 What stays in each UI: its stores, components, routes, styling, notifications — and the
 **bindings** that write incoming WebSocket messages into that UI's own state (the transport is
@@ -65,15 +65,15 @@ Add an entry to [`registry.json`](registry.json):
 }
 ```
 
-| Field | Meaning |
-|---|---|
-| `id` | Stable identifier; used in `METOCAST_UI` and in the bundle path |
-| `displayName` | Shown in the settings selector |
-| `description` | One-liner under the name — describe coverage honestly, since UIs need not match |
-| `buildCommand` | Run from the repo root; must produce static files |
-| `buildDir` | Where that command writes them, relative to the repo root |
-| `appDir` | The UI's SvelteKit `kit.appDir`; **must be unique** across the registry |
-| `entry` | The HTML file to open, relative to `buildDir` |
+| Field          | Meaning                                                                         |
+| -------------- | ------------------------------------------------------------------------------- |
+| `id`           | Stable identifier; used in `METOCAST_UI` and in the bundle path                 |
+| `displayName`  | Shown in the settings selector                                                  |
+| `description`  | One-liner under the name — describe coverage honestly, since UIs need not match |
+| `buildCommand` | Run from the repo root; must produce static files                               |
+| `buildDir`     | Where that command writes them, relative to the repo root                       |
+| `appDir`       | The UI's SvelteKit `kit.appDir`; **must be unique** across the registry         |
+| `entry`        | The HTML file to open, relative to `buildDir`                                   |
 
 `appDir` is what makes a multi-UI bundle possible. SvelteKit writes asset URLs absolute
 (`/_my-ui/immutable/...`), so every bundled UI's asset directory has to sit at the bundle root —

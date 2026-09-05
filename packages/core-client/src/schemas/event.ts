@@ -24,7 +24,10 @@ export const EventConnectionSchema = z.object({
   eventUrl: z.string().nullable().default(null),
   scheduleStatus: z.string().default('not_scheduled'),
   privacyStatus: z.string().nullable().default(null),
-  extra: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).nullable().default(null),
+  extra: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))
+    .nullable()
+    .default(null),
 });
 
 export type EventConnection = z.infer<typeof EventConnectionSchema>;
@@ -78,7 +81,9 @@ const BibleReferencePayloadSchema = z.object({
   type: z.string(),
   reference: z.string().optional(),
   translation: z.string().optional(),
-  verses: z.array(z.object({ chapter: z.number(), verse: z.number(), text: z.string() })).optional(),
+  verses: z
+    .array(z.object({ chapter: z.number(), verse: z.number(), text: z.string() }))
+    .optional(),
 });
 
 export const CreateEventPayloadSchema = z.object({

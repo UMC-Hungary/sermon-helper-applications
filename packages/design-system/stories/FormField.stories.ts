@@ -48,7 +48,11 @@ export const AroundATextArea: Story = {
 };
 
 export const AroundASelect: Story = {
-  render: preview({ label: 'Jelenet', control: 'select', hint: 'Az adás indulásakor ez lesz aktív' }),
+  render: preview({
+    label: 'Jelenet',
+    control: 'select',
+    hint: 'Az adás indulásakor ez lesz aktív',
+  }),
 };
 
 export const Anatomy_: Story = {

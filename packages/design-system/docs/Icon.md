@@ -10,12 +10,12 @@ One `<path>` in a 24-unit viewBox, stroked in `currentColor`.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `name` *(required)* | `IconName` | — | — |
-| `size` | `number` | — | Matches the reference's per-call sizing; the drawing scales, the stroke does not. |
-| `stroke` | `number` | — | — |
-| `label` | `string` | — | Decorative by default. Give a label only when the icon is the sole carrier of meaning. |
+| Prop                | Type       | Default | Meaning                                                                                |
+| ------------------- | ---------- | ------- | -------------------------------------------------------------------------------------- |
+| `name` _(required)_ | `IconName` | —       | —                                                                                      |
+| `size`              | `number`   | —       | Matches the reference's per-call sizing; the drawing scales, the stroke does not.      |
+| `stroke`            | `number`   | —       | —                                                                                      |
+| `label`             | `string`   | —       | Decorative by default. Give a label only when the icon is the sole carrier of meaning. |
 
 ## Variants
 
@@ -51,7 +51,6 @@ Carried over from `src/components/primitives/Icon.svelte`. Its sixteen marks are
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                          | Why                                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | The set is one path per icon. | The reference draws some marks as a `rect` plus a `path`, which makes a stroke-width change land differently on the two halves. |
-

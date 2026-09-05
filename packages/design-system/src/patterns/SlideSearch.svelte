@@ -69,7 +69,7 @@
   </button>
 
   {#if !numpad}
-    <input class="text" type="search" bind:value={filter} placeholder={placeholder} aria-label={searchLabel} />
+    <input class="text" type="search" bind:value={filter} {placeholder} aria-label={searchLabel} />
   {/if}
 
   {#if results.length === 0 && filter.length > 0}
@@ -109,8 +109,8 @@
           type="button"
           class:danger={ch === '⌫'}
           class:warn={ch === 'CLR'}
-          onclick={() => press(ch)}
-        >{ch}</button>
+          onclick={() => press(ch)}>{ch}</button
+        >
       {/each}
     </div>
   {/if}

@@ -5,7 +5,10 @@ import tokens from '../../tokens/tokens.json';
 /** The shape `tokens/fidelity.json` holds for one component. */
 interface FidelityEntry {
   source: string;
-  tokens?: Record<string, { selector: string; property: string; index?: number; breakpoint?: string }>;
+  tokens?: Record<
+    string,
+    { selector: string; property: string; index?: number; breakpoint?: string }
+  >;
   deviations?: Record<string, string>;
 }
 

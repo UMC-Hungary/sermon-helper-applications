@@ -1,71 +1,70 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
+  import { connectObs, fetchConnectorStatuses } from '@metocast/core-client';
+  import { applyConnectorStatuses } from '$lib/stores/connectors.js';
+  import { connectorErrors, clearError } from '$lib/stores/errors.js';
+  import { findConnector } from '$lib/connectors/registry.js';
+  import ConnectorFixModal from '$lib/components/connectors/ConnectorFixModal.svelte';
 
-	import { _ } from 'svelte-i18n';
-	import { connectObs, fetchConnectorStatuses } from '@metocast/core-client';
-	import { applyConnectorStatuses } from '$lib/stores/connectors.js';
-	import { connectorErrors, clearError } from '$lib/stores/errors.js';
-	import { findConnector } from '$lib/connectors/registry.js';
-	import ConnectorFixModal from '$lib/components/connectors/ConnectorFixModal.svelte';
+  let fixingConnectorId: string | null = $state(null);
+  let recheckingIds = $state(new Set<string>());
+  let expandedInfoIds = $state(new Set<string>());
 
-	let fixingConnectorId: string | null = $state(null);
-	let recheckingIds = $state(new Set<string>());
-	let expandedInfoIds = $state(new Set<string>());
+  async function recheck(connectorId: string, errorId: string) {
+    recheckingIds = new Set([...recheckingIds, errorId]);
+    clearError(errorId);
+    try {
+      // OBS is the only connector with a manual reconnect; the rest simply
+      // report their current state.
+      if (connectorId === 'obs') await connectObs();
+      applyConnectorStatuses(await fetchConnectorStatuses());
+    } catch {
+      // A failed re-check leaves the existing error in place; status updates
+      // also arrive over WS.
+    } finally {
+      recheckingIds = new Set([...recheckingIds].filter((id) => id !== errorId));
+    }
+  }
 
-	async function recheck(connectorId: string, errorId: string) {
-		recheckingIds = new Set([...recheckingIds, errorId]);
-		clearError(errorId);
-		try {
-			// OBS is the only connector with a manual reconnect; the rest simply
-			// report their current state.
-			if (connectorId === 'obs') await connectObs();
-			applyConnectorStatuses(await fetchConnectorStatuses());
-		} catch {
-			// A failed re-check leaves the existing error in place; status updates
-			// also arrive over WS.
-		} finally {
-			recheckingIds = new Set([...recheckingIds].filter((id) => id !== errorId));
-		}
-	}
+  function toggleInfo(errorId: string) {
+    if (expandedInfoIds.has(errorId)) {
+      expandedInfoIds = new Set([...expandedInfoIds].filter((id) => id !== errorId));
+    } else {
+      expandedInfoIds = new Set([...expandedInfoIds, errorId]);
+    }
+  }
 
-	function toggleInfo(errorId: string) {
-		if (expandedInfoIds.has(errorId)) {
-			expandedInfoIds = new Set([...expandedInfoIds].filter((id) => id !== errorId));
-		} else {
-			expandedInfoIds = new Set([...expandedInfoIds, errorId]);
-		}
-	}
+  /** Minimal markdown-to-HTML converter for the infoMarkdown field. */
+  function renderMarkdown(md: string): string {
+    return md
+      .split('\n')
+      .map((line) => {
+        if (line.startsWith('## ')) {
+          return `<h3>${escapeHtml(line.slice(3))}</h3>`;
+        }
+        if (line.startsWith('# ')) {
+          return `<h2>${escapeHtml(line.slice(2))}</h2>`;
+        }
+        if (line.startsWith('- ') || line.match(/^\d+\. /)) {
+          return `<li>${inlineMarkdown(line.replace(/^[-\d]+[.) ] */, ''))}</li>`;
+        }
+        if (line.trim() === '') return '<br>';
+        return `<p>${inlineMarkdown(line)}</p>`;
+      })
+      .join('');
+  }
 
-	/** Minimal markdown-to-HTML converter for the infoMarkdown field. */
-	function renderMarkdown(md: string): string {
-		return md
-			.split('\n')
-			.map((line) => {
-				if (line.startsWith('## ')) {
-					return `<h3>${escapeHtml(line.slice(3))}</h3>`;
-				}
-				if (line.startsWith('# ')) {
-					return `<h2>${escapeHtml(line.slice(2))}</h2>`;
-				}
-				if (line.startsWith('- ') || line.match(/^\d+\. /)) {
-					return `<li>${inlineMarkdown(line.replace(/^[-\d]+[.) ] */, ''))}</li>`;
-				}
-				if (line.trim() === '') return '<br>';
-				return `<p>${inlineMarkdown(line)}</p>`;
-			})
-			.join('');
-	}
+  function inlineMarkdown(text: string): string {
+    return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
 
-	function inlineMarkdown(text: string): string {
-		return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-	}
-
-	function escapeHtml(text: string): string {
-		return text
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;');
-	}
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 </script>
 
 <svelte:head>
@@ -92,24 +91,19 @@
               onclick={() => recheck(err.connectorId, err.id)}
               disabled={recheckingIds.has(err.id)}
             >
-              {recheckingIds.has(err.id)
-                ? $_('errorsPage.rechecking')
-                : $_('errorsPage.recheck')}
+              {recheckingIds.has(err.id) ? $_('errorsPage.rechecking') : $_('errorsPage.recheck')}
             </button>
             <button
               class="btn-primary btn-sm"
-              onclick={() => { fixingConnectorId = err.connectorId; }}
+              onclick={() => {
+                fixingConnectorId = err.connectorId;
+              }}
             >
               {$_('errorsPage.fix')}
             </button>
             {#if def?.infoMarkdown}
-              <button
-                class="btn-info btn-sm"
-                onclick={() => toggleInfo(err.id)}
-              >
-                {expandedInfoIds.has(err.id)
-                  ? $_('errorsPage.closeInfo')
-                  : $_('errorsPage.info')}
+              <button class="btn-info btn-sm" onclick={() => toggleInfo(err.id)}>
+                {expandedInfoIds.has(err.id) ? $_('errorsPage.closeInfo') : $_('errorsPage.info')}
               </button>
             {/if}
           </div>
@@ -129,7 +123,9 @@
 {#if fixingConnectorId !== null}
   <ConnectorFixModal
     connectorId={fixingConnectorId}
-    onClose={() => { fixingConnectorId = null; }}
+    onClose={() => {
+      fixingConnectorId = null;
+    }}
   />
 {/if}
 

@@ -17,27 +17,27 @@ type Story = StoryObj<typeof meta>;
 
 export const Text: Story = {
   args: {
-    shape: "text",
+    shape: 'text',
   },
 };
 
 export const Paragraph: Story = {
   args: {
-    shape: "text",
+    shape: 'text',
     lines: 3,
   },
 };
 
 export const Label: Story = {
   args: {
-    shape: "label",
-    width: "120px",
+    shape: 'label',
+    width: '120px',
   },
 };
 
 export const Block: Story = {
   args: {
-    shape: "block",
+    shape: 'block',
   },
 };
 

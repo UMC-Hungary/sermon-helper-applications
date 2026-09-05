@@ -6,12 +6,12 @@ import type { PresenterState, WsClientInfo } from '@metocast/core-client/schemas
 export const useWebPresenter = writable<boolean>(false);
 
 const emptyState: PresenterState = PresenterStateSchema.parse({
-	loaded: false,
-	filePath: null,
-	currentSlide: 0,
-	totalSlides: 0,
-	slides: [],
-	muted: false,
+  loaded: false,
+  filePath: null,
+  currentSlide: 0,
+  totalSlides: 0,
+  slides: [],
+  muted: false,
 });
 
 export const presenterState = writable<PresenterState>(emptyState);

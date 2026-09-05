@@ -74,8 +74,14 @@
       <article>
         <header>
           <p>
-            <Dot color={live.streaming ? 'var(--status-live)' : 'var(--text-muted)'} size={8} pulse={live.streaming} />
-            <span class:live={live.streaming}>{live.streaming ? $_('dash.onAir') : $_('dash.offAir')}</span>
+            <Dot
+              color={live.streaming ? 'var(--status-live)' : 'var(--text-muted)'}
+              size={8}
+              pulse={live.streaming}
+            />
+            <span class:live={live.streaming}
+              >{live.streaming ? $_('dash.onAir') : $_('dash.offAir')}</span
+            >
           </p>
           <time>{live.streaming ? '00:42:18' : '—'}</time>
         </header>
@@ -83,17 +89,32 @@
         <p class="sub">{live.streaming ? $_('dash.activeContext') : $_('dash.idleHint')}</p>
         <div class="stats">
           <Stat label={$_('dash.viewers')} value={live.streaming ? '1,284' : '—'} />
-          <Stat label={$_('dash.bitrate')} value={live.streaming ? '6.2' : '—'} unit={live.streaming ? 'Mb/s' : ''} />
-          <Stat label={$_('dash.dropped')} value={live.streaming ? '0.00' : '—'} unit={live.streaming ? '%' : ''} />
+          <Stat
+            label={$_('dash.bitrate')}
+            value={live.streaming ? '6.2' : '—'}
+            unit={live.streaming ? 'Mb/s' : ''}
+          />
+          <Stat
+            label={$_('dash.dropped')}
+            value={live.streaming ? '0.00' : '—'}
+            unit={live.streaming ? '%' : ''}
+          />
         </div>
       </article>
     </section>
 
-    <SectionLabel hint={nextEvent ? timeShort(nextEvent.dateTime, loc) : ''}>{$_('dash.upNext')}</SectionLabel>
+    <SectionLabel hint={nextEvent ? timeShort(nextEvent.dateTime, loc) : ''}
+      >{$_('dash.upNext')}</SectionLabel
+    >
     {#if phase === 'loading'}
       <div class="pad"><Skeleton height="64px" /></div>
     {:else if phase === 'error'}
-      <ErrorState title={$_('common.errorTitle')} body={$_('common.errorBody')} retryLabel={$_('common.retry')} onretry={load} />
+      <ErrorState
+        title={$_('common.errorTitle')}
+        body={$_('common.errorBody')}
+        retryLabel={$_('common.retry')}
+        onretry={load}
+      />
     {:else if nextEvent}
       <List>
         <Row
@@ -102,7 +123,10 @@
           href={`/events/${nextEvent.id}`}
           last
         >
-          {#snippet icon()}<DateBlock month={monthAbbr(nextEvent.dateTime, loc)} day={dayNum(nextEvent.dateTime, loc)} />{/snippet}
+          {#snippet icon()}<DateBlock
+              month={monthAbbr(nextEvent.dateTime, loc)}
+              day={dayNum(nextEvent.dateTime, loc)}
+            />{/snippet}
         </Row>
       </List>
     {:else}
@@ -116,7 +140,11 @@
       <Row title={$_('dash.newEvent')} meta={$_('dash.newEventMeta')} href="/events/new">
         {#snippet icon()}<TextIcon char="+" />{/snippet}
       </Row>
-      <Row title={$_('dash.presentations')} meta={$_('dash.presentationsMeta')} href="/presentations">
+      <Row
+        title={$_('dash.presentations')}
+        meta={$_('dash.presentationsMeta')}
+        href="/presentations"
+      >
         {#snippet icon()}<TextIcon char="▥" />{/snippet}
       </Row>
       <Row

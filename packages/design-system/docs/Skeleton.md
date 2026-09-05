@@ -10,12 +10,12 @@ One or more blocks, the last of a multi-line set shortened, pulsing slowly.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `shape` | `'text' \| 'label' \| 'block'` | `'text', width = '100%', height, lines = 1` | `text` matches a body line, `label` a mono micro-label, `block` an arbitrary box. |
-| `width` | `string` | — | CSS width. A skeleton stands in for content whose width is not known. |
-| `height` | `string` | — | — |
-| `lines` | `number` | — | — |
+| Prop     | Type                           | Default                                     | Meaning                                                                           |
+| -------- | ------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| `shape`  | `'text' \| 'label' \| 'block'` | `'text', width = '100%', height, lines = 1` | `text` matches a body line, `label` a mono micro-label, `block` an arbitrary box. |
+| `width`  | `string`                       | —                                           | CSS width. A skeleton stands in for content whose width is not known.             |
+| `height` | `string`                       | —                                           | —                                                                                 |
+| `lines`  | `number`                       | —                                           | —                                                                                 |
 
 ## Variants
 
@@ -27,15 +27,15 @@ Static, pulsing; stilled under reduced motion.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-skeleton-block-height` | `56px` |
-| `--c-skeleton-gap` | `8px` |
-| `--c-skeleton-label-height` | `8px` |
-| `--c-skeleton-text-height` | `14px` |
-| `--motion-ease-default` | `ease` |
-| `--motion-pulse` | `1.8s` |
-| `--surface-sunken` | `#e4ddcd / #23201a` |
+| Token                       | Resolves to         |
+| --------------------------- | ------------------- |
+| `--c-skeleton-block-height` | `56px`              |
+| `--c-skeleton-gap`          | `8px`               |
+| `--c-skeleton-label-height` | `8px`               |
+| `--c-skeleton-text-height`  | `14px`              |
+| `--motion-ease-default`     | `ease`              |
+| `--motion-pulse`            | `1.8s`              |
+| `--surface-sunken`          | `#e4ddcd / #23201a` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -62,4 +62,3 @@ None. The reference has no loading state at all. The blocks take the sunken surf
 ## Recorded deviations
 
 None.
-

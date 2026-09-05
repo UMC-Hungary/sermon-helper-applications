@@ -32,7 +32,13 @@ export function createCronJob(body: {
 
 export function updateCronJob(
   id: string,
-  body: { name: string; cronExpression: string; enabled: boolean; pullYoutube: boolean; autoUpload: boolean },
+  body: {
+    name: string;
+    cronExpression: string;
+    enabled: boolean;
+    pullYoutube: boolean;
+    autoUpload: boolean;
+  },
 ): Promise<CronJob> {
   return apiFetch(`/api/cron-jobs/${id}`, CronJobSchema, { method: 'PUT', body });
 }

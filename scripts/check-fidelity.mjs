@@ -69,7 +69,9 @@ for (const [component, entry] of Object.entries(fidelity.components)) {
     const deviation = entry.deviations?.[token];
     const implemented = resolve(token);
     if (implemented === null) {
-      failures.push(`${component}: --${token} is mapped to a measurement but is not a declared token`);
+      failures.push(
+        `${component}: --${token} is mapped to a measurement but is not a declared token`,
+      );
       continue;
     }
     const key = `${entry.source}|${spec.selector}|${spec.property}|${spec.breakpoint ?? 'base'}`;
@@ -90,7 +92,8 @@ for (const [component, entry] of Object.entries(fidelity.components)) {
       }
       continue;
     }
-    if (deviation) notes.push(`${component}: --${token} is ${implemented}, measured ${measured} — ${deviation}`);
+    if (deviation)
+      notes.push(`${component}: --${token} is ${implemented}, measured ${measured} — ${deviation}`);
     else {
       failures.push(
         `${component}: --${token} drifted — implemented ${implemented}, measured ${measured} at ${entry.source} › \`${spec.selector}\` › ${spec.property}`,
@@ -102,16 +105,62 @@ for (const [component, entry] of Object.entries(fidelity.components)) {
 // ── Rules 2 and 3: component styles ─────────────────────────────────────────────────────────
 /** Properties whose values must resolve through a token rather than being written literally. */
 const TOKENISED = new Set([
-  'color', 'background', 'background-color', 'border', 'border-top', 'border-right',
-  'border-bottom', 'border-left', 'border-color', 'border-width', 'border-radius',
-  'border-top-left-radius', 'border-top-right-radius', 'border-bottom-left-radius',
-  'border-bottom-right-radius', 'outline', 'outline-color', 'outline-width', 'outline-offset',
-  'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-  'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-  'gap', 'row-gap', 'column-gap', 'width', 'height', 'min-width', 'min-height', 'max-width',
-  'max-height', 'font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing',
-  'box-shadow', 'z-index', 'transition', 'transition-duration', 'animation', 'animation-duration',
-  'top', 'right', 'bottom', 'left', 'inset', 'fill', 'stroke',
+  'color',
+  'background',
+  'background-color',
+  'border',
+  'border-top',
+  'border-right',
+  'border-bottom',
+  'border-left',
+  'border-color',
+  'border-width',
+  'border-radius',
+  'border-top-left-radius',
+  'border-top-right-radius',
+  'border-bottom-left-radius',
+  'border-bottom-right-radius',
+  'outline',
+  'outline-color',
+  'outline-width',
+  'outline-offset',
+  'padding',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+  'margin',
+  'margin-top',
+  'margin-right',
+  'margin-bottom',
+  'margin-left',
+  'gap',
+  'row-gap',
+  'column-gap',
+  'width',
+  'height',
+  'min-width',
+  'min-height',
+  'max-width',
+  'max-height',
+  'font-family',
+  'font-size',
+  'font-weight',
+  'line-height',
+  'letter-spacing',
+  'box-shadow',
+  'z-index',
+  'transition',
+  'transition-duration',
+  'animation',
+  'animation-duration',
+  'top',
+  'right',
+  'bottom',
+  'left',
+  'inset',
+  'fill',
+  'stroke',
 ]);
 
 /**
@@ -168,8 +217,7 @@ for (const file of walk(srcDir)) {
       .filter(Boolean)
       .filter(
         (part) =>
-          LITERAL.test(part) &&
-          !(LAYOUT_PERCENT.has(part) && LAYOUT_PROPERTY.test(decl.prop)),
+          LITERAL.test(part) && !(LAYOUT_PERCENT.has(part) && LAYOUT_PROPERTY.test(decl.prop)),
       );
     if (COLOR_FUNCTION.test(remainder)) leftovers.push(remainder.match(COLOR_FUNCTION)[0]);
     if (leftovers.length > 0) {

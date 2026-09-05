@@ -41,7 +41,8 @@
       <span class="mark" aria-hidden="true"></span>
       <label for={`${name}-${option.value}`}>
         {option.label}
-        {#if option.hint}<span id={`${name}-${option.value}-hint`} class="hint">{option.hint}</span>{/if}
+        {#if option.hint}<span id={`${name}-${option.value}-hint`} class="hint">{option.hint}</span
+          >{/if}
       </label>
     </div>
   {/each}

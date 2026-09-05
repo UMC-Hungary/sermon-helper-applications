@@ -17,28 +17,28 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: "Jelenet",
-    value: "worship",
+    label: 'Jelenet',
+    value: 'worship',
     options: [
       {
-        value: "worship",
-        label: "Dicsőítés",
+        value: 'worship',
+        label: 'Dicsőítés',
       },
       {
-        value: "sermon",
-        label: "Igehirdetés",
+        value: 'sermon',
+        label: 'Igehirdetés',
       },
       {
-        value: "prayer",
-        label: "Imádság",
+        value: 'prayer',
+        label: 'Imádság',
       },
       {
-        value: "announcements",
-        label: "Hirdetések",
+        value: 'announcements',
+        label: 'Hirdetések',
       },
       {
-        value: "offline",
-        label: "Szünet",
+        value: 'offline',
+        label: 'Szünet',
         disabled: true,
       },
     ],
@@ -47,28 +47,28 @@ export const Default: Story = {
 
 export const Invalid: Story = {
   args: {
-    label: "Jelenet",
-    value: "worship",
+    label: 'Jelenet',
+    value: 'worship',
     options: [
       {
-        value: "worship",
-        label: "Dicsőítés",
+        value: 'worship',
+        label: 'Dicsőítés',
       },
       {
-        value: "sermon",
-        label: "Igehirdetés",
+        value: 'sermon',
+        label: 'Igehirdetés',
       },
       {
-        value: "prayer",
-        label: "Imádság",
+        value: 'prayer',
+        label: 'Imádság',
       },
       {
-        value: "announcements",
-        label: "Hirdetések",
+        value: 'announcements',
+        label: 'Hirdetések',
       },
       {
-        value: "offline",
-        label: "Szünet",
+        value: 'offline',
+        label: 'Szünet',
         disabled: true,
       },
     ],
@@ -78,28 +78,28 @@ export const Invalid: Story = {
 
 export const Disabled: Story = {
   args: {
-    label: "Jelenet",
-    value: "worship",
+    label: 'Jelenet',
+    value: 'worship',
     options: [
       {
-        value: "worship",
-        label: "Dicsőítés",
+        value: 'worship',
+        label: 'Dicsőítés',
       },
       {
-        value: "sermon",
-        label: "Igehirdetés",
+        value: 'sermon',
+        label: 'Igehirdetés',
       },
       {
-        value: "prayer",
-        label: "Imádság",
+        value: 'prayer',
+        label: 'Imádság',
       },
       {
-        value: "announcements",
-        label: "Hirdetések",
+        value: 'announcements',
+        label: 'Hirdetések',
       },
       {
-        value: "offline",
-        label: "Szünet",
+        value: 'offline',
+        label: 'Szünet',
         disabled: true,
       },
     ],

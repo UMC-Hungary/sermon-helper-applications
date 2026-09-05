@@ -118,9 +118,7 @@ describe.skipIf(!isLive)('Connectors REST API', () => {
       apiKey: '',
       apiKeySet: true,
     });
-    const afterBlankSave = await apiClient.get<SzentirasConfig>(
-      '/api/connectors/szentiras/config',
-    );
+    const afterBlankSave = await apiClient.get<SzentirasConfig>('/api/connectors/szentiras/config');
     expect(afterBlankSave.body.enabled).toBe(false);
     expect(afterBlankSave.body.apiKeySet).toBe(true);
 

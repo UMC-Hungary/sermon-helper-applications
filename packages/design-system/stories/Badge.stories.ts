@@ -19,14 +19,14 @@ type Story = StoryObj<typeof meta>;
 export const Neutral: Story = {
   args: {
     children: s('12 elem'),
-    tone: "neutral",
+    tone: 'neutral',
   },
 };
 
 export const Live: Story = {
   args: {
     children: s('Adásban'),
-    tone: "live",
+    tone: 'live',
     dot: true,
   },
 };
@@ -34,7 +34,7 @@ export const Live: Story = {
 export const Ok: Story = {
   args: {
     children: s('Kapcsolódva'),
-    tone: "ok",
+    tone: 'ok',
     dot: true,
   },
 };
@@ -42,7 +42,7 @@ export const Ok: Story = {
 export const Warn: Story = {
   args: {
     children: s('Késleltetés'),
-    tone: "warn",
+    tone: 'warn',
     dot: true,
   },
 };
@@ -50,7 +50,7 @@ export const Warn: Story = {
 export const Error: Story = {
   args: {
     children: s('Megszakadt'),
-    tone: "error",
+    tone: 'error',
     dot: true,
   },
 };
@@ -58,7 +58,7 @@ export const Error: Story = {
 export const Off: Story = {
   args: {
     children: s('Készenlét'),
-    tone: "off",
+    tone: 'off',
     dot: true,
   },
 };

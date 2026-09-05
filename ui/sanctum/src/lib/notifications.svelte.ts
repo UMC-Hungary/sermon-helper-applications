@@ -60,7 +60,10 @@ function worst(list: Notification[]): Tier {
 
 /** The transient rail: newest first, capped, still-showing items only. */
 export function railItems(): Notification[] {
-  return items.filter((n) => !n.railDismissed).slice(-RAIL_CAP).reverse();
+  return items
+    .filter((n) => !n.railDismissed)
+    .slice(-RAIL_CAP)
+    .reverse();
 }
 
 /** The centre's full history, newest first. */
@@ -78,7 +81,11 @@ export function topTier(): Tier | 'off' {
   return unread.length ? worst(unread) : 'off';
 }
 
-export function notify(n: Omit<Notification, 'id' | 'createdAt' | 'railDismissed' | 'read' | 'persistent'> & { persistent?: boolean }): number {
+export function notify(
+  n: Omit<Notification, 'id' | 'createdAt' | 'railDismissed' | 'read' | 'persistent'> & {
+    persistent?: boolean;
+  },
+): number {
   if (n.key) {
     // A connector that is still down re-broadcasts the same failure every few
     // seconds. Without the mute the card the operator just deleted returns before
@@ -101,9 +108,16 @@ export function notify(n: Omit<Notification, 'id' | 'createdAt' | 'railDismissed
 }
 
 /** Clears a keyed failure when its source recovers, and announces the recovery. */
-export function resolveByKey(key: string, recovery?: Pick<Notification, 'kind' | 'source' | 'title' | 'body'>): void {
+export function resolveByKey(
+  key: string,
+  recovery?: Pick<Notification, 'kind' | 'source' | 'title' | 'body'>,
+): void {
   muted.delete(key);
-  for (const n of items) if (n.key === key) { n.railDismissed = true; n.resolved = true; }
+  for (const n of items)
+    if (n.key === key) {
+      n.railDismissed = true;
+      n.resolved = true;
+    }
   if (recovery) notify({ ...recovery, tier: 'ok', persistent: false });
 }
 
@@ -131,9 +145,16 @@ export function clearAll(): void {
 
 // ── Notification centre open state ───────────────────────────────────────────
 let centreOpen = $state(false);
-export function isCentreOpen(): boolean { return centreOpen; }
-export function openCentre(): void { centreOpen = true; markAllRead(); }
-export function closeCentre(): void { centreOpen = false; }
+export function isCentreOpen(): boolean {
+  return centreOpen;
+}
+export function openCentre(): void {
+  centreOpen = true;
+  markAllRead();
+}
+export function closeCentre(): void {
+  centreOpen = false;
+}
 
 // ── Back-compat shims for the connectors page, which speaks the old toast API ──
 export interface ToastItem {

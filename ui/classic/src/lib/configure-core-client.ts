@@ -8,8 +8,8 @@ import { appMode } from '$lib/stores/mode.js';
 import { configureCoreClient } from '@metocast/core-client';
 
 configureCoreClient(() => ({
-	serverUrl: get(serverUrl),
-	serverPort: get(serverPort),
-	authToken: get(authToken),
-	mode: get(appMode),
+  serverUrl: get(serverUrl),
+  serverPort: get(serverPort),
+  authToken: get(authToken),
+  mode: get(appMode),
 }));

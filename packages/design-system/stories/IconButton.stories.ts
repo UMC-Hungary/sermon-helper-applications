@@ -17,36 +17,36 @@ type Story = StoryObj<typeof meta>;
 
 export const Bare: Story = {
   args: {
-    icon: "gear",
-    label: "Beállítások",
-    variant: "bare",
+    icon: 'gear',
+    label: 'Beállítások',
+    variant: 'bare',
   },
 };
 
 export const Circle: Story = {
   args: {
-    icon: "gear",
-    label: "Beállítások",
-    variant: "circle",
+    icon: 'gear',
+    label: 'Beállítások',
+    variant: 'circle',
     size: 17,
   },
 };
 
 export const Disabled: Story = {
   args: {
-    icon: "gear",
-    label: "Beállítások",
-    variant: "circle",
+    icon: 'gear',
+    label: 'Beállítások',
+    variant: 'circle',
     disabled: true,
   },
 };
 
 export const Link: Story = {
   args: {
-    icon: "back",
-    label: "Vissza",
-    variant: "bare",
-    href: "#back",
+    icon: 'back',
+    label: 'Vissza',
+    variant: 'bare',
+    href: '#back',
   },
 };
 

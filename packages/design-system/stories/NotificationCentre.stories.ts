@@ -19,18 +19,18 @@ type Story = StoryObj<typeof meta>;
 export const Empty: Story = {
   args: {
     open: true,
-    title: "Minden rendben",
-    emptyTitle: "Csend van a vezérlőben.",
+    title: 'Minden rendben',
+    emptyTitle: 'Csend van a vezérlőben.',
     empty: true,
-    emptyHint: "A csatlakozók itt szólalnak meg",
+    emptyHint: 'A csatlakozók itt szólalnak meg',
   },
 };
 
 export const Populated: Story = {
   args: {
     open: true,
-    title: "3 elem",
-    emptyTitle: "Csend van a vezérlőben.",
+    title: '3 elem',
+    emptyTitle: 'Csend van a vezérlőben.',
     children: s('Az értesítések listája'),
     onclear: () => {},
   },
@@ -39,8 +39,8 @@ export const Populated: Story = {
 export const Closed: Story = {
   args: {
     open: false,
-    title: "3 elem",
-    emptyTitle: "Csend van a vezérlőben.",
+    title: '3 elem',
+    emptyTitle: 'Csend van a vezérlőben.',
   },
 };
 

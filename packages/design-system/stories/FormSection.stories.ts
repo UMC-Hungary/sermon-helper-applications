@@ -18,25 +18,25 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    number: "01",
-    label: "Alapadatok",
+    number: '01',
+    label: 'Alapadatok',
     children: s('A szakasz tartalma'),
   },
 };
 
 export const WithHint: Story = {
   args: {
-    number: "01",
-    label: "Alapadatok",
+    number: '01',
+    label: 'Alapadatok',
     children: s('A szakasz tartalma'),
-    hint: "Kötelező",
+    hint: 'Kötelező',
   },
 };
 
 export const Last: Story = {
   args: {
-    number: "04",
-    label: "Közvetítés",
+    number: '04',
+    label: 'Közvetítés',
     children: s('A szakasz tartalma'),
     last: true,
   },

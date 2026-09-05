@@ -17,47 +17,47 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: "Esemény neve",
-    value: "Vasárnapi istentisztelet",
+    label: 'Esemény neve',
+    value: 'Vasárnapi istentisztelet',
   },
 };
 
 export const WithHint: Story = {
   args: {
-    label: "Esemény neve",
-    value: "Vasárnapi istentisztelet",
-    hint: "Ez jelenik meg a közvetítés címeként",
+    label: 'Esemény neve',
+    value: 'Vasárnapi istentisztelet',
+    hint: 'Ez jelenik meg a közvetítés címeként',
   },
 };
 
 export const Empty: Story = {
   args: {
-    label: "Esemény neve",
-    value: "",
-    placeholder: "Add meg a nevet",
+    label: 'Esemény neve',
+    value: '',
+    placeholder: 'Add meg a nevet',
   },
 };
 
 export const Invalid: Story = {
   args: {
-    label: "Esemény neve",
-    value: "",
-    error: "A név nem lehet üres",
+    label: 'Esemény neve',
+    value: '',
+    error: 'A név nem lehet üres',
   },
 };
 
 export const Readonly: Story = {
   args: {
-    label: "Esemény neve",
-    value: "Vasárnapi istentisztelet",
+    label: 'Esemény neve',
+    value: 'Vasárnapi istentisztelet',
     readonly: true,
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: "Esemény neve",
-    value: "Vasárnapi istentisztelet",
+    label: 'Esemény neve',
+    value: 'Vasárnapi istentisztelet',
     disabled: true,
   },
 };

@@ -10,12 +10,12 @@ A `Dot` in the state's colour, then the word.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `status` *(required)* | `Status` | — | — |
-| `label` *(required)* | `string` | — | The word beside the dot. Required, because the colour alone must never be what tells a reader the state — the reference pairs every dot with one. |
-| `labelHidden` | `boolean` | — | Hides the label visually while leaving it to assistive technology. |
-| `size` | `number` | — | — |
+| Prop                  | Type      | Default | Meaning                                                                                                                                           |
+| --------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status` _(required)_ | `Status`  | —       | —                                                                                                                                                 |
+| `label` _(required)_  | `string`  | —       | The word beside the dot. Required, because the colour alone must never be what tells a reader the state — the reference pairs every dot with one. |
+| `labelHidden`         | `boolean` | —       | Hides the label visually while leaving it to assistive technology.                                                                                |
+| `size`                | `number`  | —       | —                                                                                                                                                 |
 
 ## Variants
 
@@ -27,15 +27,15 @@ Five, one per status.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--c-status-dot-gap` | `6px` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--type-label-sm-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-sm-size` | `9px` |
-| `--type-label-sm-track` | `1.2px` |
-| `--type-label-sm-transform` | `uppercase` |
-| `--type-label-sm-weight` | `500` |
+| Token                       | Resolves to                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `--c-status-dot-gap`        | `6px`                                                          |
+| `--text-muted`              | `#615e56 / #918b7e`                                            |
+| `--type-label-sm-family`    | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-sm-size`      | `9px`                                                          |
+| `--type-label-sm-track`     | `1.2px`                                                        |
+| `--type-label-sm-transform` | `uppercase`                                                    |
+| `--type-label-sm-weight`    | `500`                                                          |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
@@ -59,17 +59,16 @@ The `label` is required, and hiding it visually leaves it available to assistive
 
 Source: `src/components/primitives/OverviewCell.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `p` | `gap` | `6px` | `6px` | `--c-status-dot-gap` |
-| `span` | `font-size` | `9px` | `9px` | `--type-label-sm-size` |
-| `span` | `letter-spacing` | `1.5px` | `1.2px` | `--type-label-sm-track` |
+| Selector | Property         | Measured | Implemented | Token                   |
+| -------- | ---------------- | -------- | ----------- | ----------------------- |
+| `p`      | `gap`            | `6px`    | `6px`       | `--c-status-dot-gap`    |
+| `span`   | `font-size`      | `9px`    | `9px`       | `--type-label-sm-size`  |
+| `span`   | `letter-spacing` | `1.5px`  | `1.2px`     | `--type-label-sm-track` |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                    | Why                                                                                                                                                                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `--type-label-sm-track` | The reference writes the dot-and-word pairing four times, at 1.2px, 1.4px, 1.5px and 1.6px tracking. One component cannot carry four; the shared label-sm role at 1.2px is the value the pairing carries at its smallest and most frequent size. |
-

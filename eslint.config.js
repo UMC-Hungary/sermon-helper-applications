@@ -6,7 +6,16 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-  { ignores: ['**/build/', '**/.svelte-kit/', '**/storybook-static/', '**/node_modules/', 'src-tauri/', 'companion/dist/'] },
+  {
+    ignores: [
+      '**/build/',
+      '**/.svelte-kit/',
+      '**/storybook-static/',
+      '**/node_modules/',
+      'src-tauri/',
+      'companion/dist/',
+    ],
+  },
 
   // TypeScript files
   {

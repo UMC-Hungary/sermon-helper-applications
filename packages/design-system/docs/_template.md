@@ -9,12 +9,12 @@ The parts, named. A part that has no name here has no business having a style.
 ## Props
 
 | Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
+| ---- | ---- | ------- | ------- |
 
 ## Variants
 
 | Variant | When to use |
-| --- | --- |
+| ------- | ----------- |
 
 ## States
 
@@ -24,7 +24,7 @@ listed here must have a story.
 ## Tokens consumed
 
 | Token | Used for |
-| --- | --- |
+| ----- | -------- |
 
 Components consume semantic (`--ui-*`, `--type-*`, `--motion-*`) or component (`--c-*`) tokens
 only. A literal value in a component's styles is a defect.
@@ -32,7 +32,7 @@ only. A literal value in a component's styles is a defect.
 ## Keyboard
 
 | Key | Behaviour |
-| --- | --- |
+| --- | --------- |
 
 Non-interactive components state "Not interactive" and nothing else.
 
@@ -51,7 +51,7 @@ Roles, properties and states, and which WAI-ARIA Authoring Practices pattern the
 ## Reference correspondence
 
 | Property | Reference | Implemented |
-| --- | --- | --- |
+| -------- | --------- | ----------- |
 
 Source: `src/components/…` in the design reference. `None` for a component the reference lacks,
 with a note on which reference components its idiom is taken from.
@@ -59,6 +59,6 @@ with a note on which reference components its idiom is taken from.
 ## Recorded deviations
 
 | What | Why |
-| --- | --- |
+| ---- | --- |
 
 A deviation without a reason is a defect. "The grid said so" is not a reason.

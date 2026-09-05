@@ -27,7 +27,9 @@
 {#if as === 'ul'}
   <ul class:flush aria-label={ariaLabel} aria-labelledby={ariaLabelledby}>{@render children()}</ul>
 {:else}
-  <div class:flush aria-label={ariaLabel} aria-labelledby={ariaLabelledby}>{@render children()}</div>
+  <div class:flush aria-label={ariaLabel} aria-labelledby={ariaLabelledby}>
+    {@render children()}
+  </div>
 {/if}
 
 <style>

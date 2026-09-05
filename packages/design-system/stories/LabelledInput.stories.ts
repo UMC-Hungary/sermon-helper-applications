@@ -17,31 +17,31 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: "Kiszolgáló címe",
-    value: "http://192.168.1.10:1421",
+    label: 'Kiszolgáló címe',
+    value: 'http://192.168.1.10:1421',
   },
 };
 
 export const Empty: Story = {
   args: {
-    label: "Kiszolgáló címe",
-    value: "",
-    placeholder: "http://",
+    label: 'Kiszolgáló címe',
+    value: '',
+    placeholder: 'http://',
   },
 };
 
 export const Invalid: Story = {
   args: {
-    label: "Kiszolgáló címe",
-    value: "192.168",
-    error: "Nem érvényes cím",
+    label: 'Kiszolgáló címe',
+    value: '192.168',
+    error: 'Nem érvényes cím',
   },
 };
 
 export const Disabled: Story = {
   args: {
-    label: "Kiszolgáló címe",
-    value: "http://192.168.1.10:1421",
+    label: 'Kiszolgáló címe',
+    value: 'http://192.168.1.10:1421',
     disabled: true,
   },
 };

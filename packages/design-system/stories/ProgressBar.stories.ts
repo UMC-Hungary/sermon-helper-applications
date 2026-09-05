@@ -17,23 +17,23 @@ type Story = StoryObj<typeof meta>;
 
 export const Determinate: Story = {
   args: {
-    label: "Feltöltés",
+    label: 'Feltöltés',
     value: 62,
-    valueText: "62%",
+    valueText: '62%',
   },
 };
 
 export const Complete: Story = {
   args: {
-    label: "Feltöltés",
+    label: 'Feltöltés',
     value: 100,
-    valueText: "Kész",
+    valueText: 'Kész',
   },
 };
 
 export const Indeterminate: Story = {
   args: {
-    label: "Kapcsolódás",
+    label: 'Kapcsolódás',
     value: undefined,
     valueText: undefined,
   },

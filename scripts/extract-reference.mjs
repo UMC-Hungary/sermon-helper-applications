@@ -20,7 +20,8 @@ const jsonOut = join(outDir, 'measurements.json');
 const mdOut = join(outDir, 'measurements.md');
 
 const referenceRoot = resolve(
-  process.env.SANCTUM_REFERENCE ?? join(process.env.HOME ?? '', 'workspace/ui/sermon-helper-svelte'),
+  process.env.SANCTUM_REFERENCE ??
+    join(process.env.HOME ?? '', 'workspace/ui/sermon-helper-svelte'),
 );
 
 /**
@@ -151,14 +152,48 @@ function measurable(value) {
  * carry numbers that are not measurements.
  */
 const CATEGORIES = {
-  spacing: ['padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'gap', 'row-gap', 'column-gap', 'inset', 'top', 'right', 'bottom', 'left'],
+  spacing: [
+    'padding',
+    'padding-top',
+    'padding-right',
+    'padding-bottom',
+    'padding-left',
+    'margin',
+    'margin-top',
+    'margin-right',
+    'margin-bottom',
+    'margin-left',
+    'gap',
+    'row-gap',
+    'column-gap',
+    'inset',
+    'top',
+    'right',
+    'bottom',
+    'left',
+  ],
   sizing: ['width', 'height', 'min-width', 'min-height', 'max-width', 'max-height', 'flex-basis'],
   type: ['font-size'],
   leading: ['line-height'],
   tracking: ['letter-spacing'],
   weight: ['font-weight'],
-  radius: ['border-radius', 'border-top-left-radius', 'border-top-right-radius', 'border-bottom-left-radius', 'border-bottom-right-radius'],
-  border: ['border', 'border-top', 'border-right', 'border-bottom', 'border-left', 'border-width', 'outline', 'outline-width'],
+  radius: [
+    'border-radius',
+    'border-top-left-radius',
+    'border-top-right-radius',
+    'border-bottom-left-radius',
+    'border-bottom-right-radius',
+  ],
+  border: [
+    'border',
+    'border-top',
+    'border-right',
+    'border-bottom',
+    'border-left',
+    'border-width',
+    'outline',
+    'outline-width',
+  ],
   duration: ['transition', 'transition-duration', 'animation', 'animation-duration'],
   layer: ['z-index'],
 };
@@ -405,7 +440,9 @@ if (process.argv.includes('--check')) {
     console.error('Run `pnpm -F @metocast/design-system measure`.');
     process.exit(1);
   }
-  console.log(`Measurements are current: ${rows.length} declarations across ${files.length} files.`);
+  console.log(
+    `Measurements are current: ${rows.length} declarations across ${files.length} files.`,
+  );
 } else {
   writeFileSync(jsonOut, json);
   writeFileSync(mdOut, md);

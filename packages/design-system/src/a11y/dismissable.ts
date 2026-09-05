@@ -24,7 +24,14 @@ export function dismissable(node: HTMLElement, options: DismissableOptions) {
     if (!opts.closeOnOutsideClick || !isTopmost()) return;
     if (!node.contains(event.target as Node)) {
       opts.ondismiss();
-      document.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); }, { capture: true, once: true });
+      document.addEventListener(
+        'click',
+        (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        },
+        { capture: true, once: true },
+      );
     }
   }
 

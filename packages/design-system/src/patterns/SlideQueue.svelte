@@ -46,7 +46,9 @@
           class="open"
           type="button"
           disabled={!slot.title}
-          aria-label={slot.title ? `${openLabel} ${slot.index}: ${slot.title}` : `${emptyLabel} ${slot.index}`}
+          aria-label={slot.title
+            ? `${openLabel} ${slot.index}: ${slot.title}`
+            : `${emptyLabel} ${slot.index}`}
           onclick={() => onopen?.(slot)}
         >
           <code>{slot.index}</code>

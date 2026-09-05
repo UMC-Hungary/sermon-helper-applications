@@ -24,7 +24,13 @@ export function dateLong(iso: string, locale = 'en'): string {
 }
 
 export function dateTimeLabel(iso: string, locale = 'en'): string {
-  return fmt(iso, locale, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  return fmt(iso, locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /** "3 min ago" style relative age, from an ISO timestamp. */

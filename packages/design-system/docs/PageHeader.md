@@ -10,16 +10,16 @@ A top row — eyebrow or back on the left, actions on the right — over the tit
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `title` *(required)* | `string` | — | — |
-| `eyebrow` | `string` | — | The mono micro-label above the title. Ignored when `back` is given, as in the reference. |
-| `back` | `{ label: string; onclick: () => void } \| { label: string; href: string }` | — | Replaces the eyebrow with a back control. |
-| `level` | `1 \| 2` | — | Heading level. A screen has one h1; a header inside a region takes h2. |
-| `id` | `string` | — | — |
-| `eyebrowContent` | `Snippet` | — | — |
-| `trailing` | `Snippet` | — | — |
-| `titleTrailing` | `Snippet` | — | — |
+| Prop                 | Type                                                                        | Default | Meaning                                                                                  |
+| -------------------- | --------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `title` _(required)_ | `string`                                                                    | —       | —                                                                                        |
+| `eyebrow`            | `string`                                                                    | —       | The mono micro-label above the title. Ignored when `back` is given, as in the reference. |
+| `back`               | `{ label: string; onclick: () => void } \| { label: string; href: string }` | —       | Replaces the eyebrow with a back control.                                                |
+| `level`              | `1 \| 2`                                                                    | —       | Heading level. A screen has one h1; a header inside a region takes h2.                   |
+| `id`                 | `string`                                                                    | —       | —                                                                                        |
+| `eyebrowContent`     | `Snippet`                                                                   | —       | —                                                                                        |
+| `trailing`           | `Snippet`                                                                   | —       | —                                                                                        |
+| `titleTrailing`      | `Snippet`                                                                   | —       | —                                                                                        |
 
 ## Variants
 
@@ -31,41 +31,41 @@ Static.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--c-page-header-back-gap` | `4px` |
-| `--c-page-header-padding-bottom` | `16px` |
-| `--c-page-header-title-gap` | `12px` |
-| `--c-page-header-top-gap` | `14px` |
-| `--c-page-header-top-min-height` | `28px` |
-| `--text-muted` | `#615e56 / #918b7e` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--type-body-sm-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
-| `--type-body-sm-size` | `14px` |
-| `--type-display-family` | `"Cormorant Garamond", Georgia, serif` |
-| `--type-display-leading` | `1.02` |
-| `--type-display-size` | `44px` |
-| `--type-display-track` | `0` |
-| `--type-display-weight` | `500` |
-| `--type-label-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
-| `--type-label-size` | `10px` |
-| `--type-label-track` | `2px` |
-| `--type-label-transform` | `uppercase` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-gutter` | `24px` |
-| `--ui-stack` | `8px` |
-| `--ui-track-none` | `0` |
+| Token                            | Resolves to                                                                |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `--accent`                       | `#5c5c84 / #a9a6d6`                                                        |
+| `--c-page-header-back-gap`       | `4px`                                                                      |
+| `--c-page-header-padding-bottom` | `16px`                                                                     |
+| `--c-page-header-title-gap`      | `12px`                                                                     |
+| `--c-page-header-top-gap`        | `14px`                                                                     |
+| `--c-page-header-top-min-height` | `28px`                                                                     |
+| `--text-muted`                   | `#615e56 / #918b7e`                                                        |
+| `--text-primary`                 | `#1c1a16 / #ede6d6`                                                        |
+| `--type-body-sm-family`          | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
+| `--type-body-sm-size`            | `14px`                                                                     |
+| `--type-display-family`          | `"Cormorant Garamond", Georgia, serif`                                     |
+| `--type-display-leading`         | `1.02`                                                                     |
+| `--type-display-size`            | `44px`                                                                     |
+| `--type-display-track`           | `0`                                                                        |
+| `--type-display-weight`          | `500`                                                                      |
+| `--type-label-family`            | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`             |
+| `--type-label-size`              | `10px`                                                                     |
+| `--type-label-track`             | `2px`                                                                      |
+| `--type-label-transform`         | `uppercase`                                                                |
+| `--ui-focus-offset`              | `2px`                                                                      |
+| `--ui-focus-width`               | `2px`                                                                      |
+| `--ui-gutter`                    | `24px`                                                                     |
+| `--ui-stack`                     | `8px`                                                                      |
+| `--ui-track-none`                | `0`                                                                        |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Reaches the back control, then the trailing actions. |
-| `Enter`, `Space` | Activates the back control. |
+| Key              | Behaviour                                            |
+| ---------------- | ---------------------------------------------------- |
+| `Tab`            | Reaches the back control, then the trailing actions. |
+| `Enter`, `Space` | Activates the back control.                          |
 
 ## ARIA
 
@@ -83,30 +83,29 @@ The title is a real heading. A back control given `href` renders as a link, beca
 
 Source: `src/components/primitives/PageHeader.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `header` | `padding` | `24px` | `24px` | `--ui-gutter` |
-| `header` | `padding` | `16px` | `16px` | `--c-page-header-padding-bottom` |
-| `.top` | `min-height` | `28px` | `28px` | `--c-page-header-top-min-height` |
-| `.top` | `margin-bottom` | `14px` | `14px` | `--c-page-header-top-gap` |
-| `.actions` | `gap` | `8px` | `8px` | `--ui-stack` |
-| `.eyebrow, .back` | `font-size` | `10px` | `10px` | `--type-label-size` |
-| `.eyebrow, .back` | `letter-spacing` | `2px` | `2px` | `--type-label-track` |
-| `.back` | `gap` | `4px` | `4px` | `--c-page-header-back-gap` |
-| `.back` | `font-size` | `14px` | `14px` | `--type-body-sm-size` |
-| `.back` | `letter-spacing` | `0` | `0` | `--ui-track-none` |
-| `h1` | `font-size` | `44px` | `44px` | `--type-display-size` |
-| `h1` | `line-height` | `1.02` | `1.02` | `--type-display-leading` |
-| `h1` | `font-weight` | `500` | `500` | `--type-display-weight` |
-| `h1` | `letter-spacing` | `0` | `0` | `--type-display-track` |
-| `.title-row` | `gap` | `12px` | `12px` | `--c-page-header-title-gap` |
+| Selector          | Property         | Measured | Implemented | Token                            |
+| ----------------- | ---------------- | -------- | ----------- | -------------------------------- |
+| `header`          | `padding`        | `24px`   | `24px`      | `--ui-gutter`                    |
+| `header`          | `padding`        | `16px`   | `16px`      | `--c-page-header-padding-bottom` |
+| `.top`            | `min-height`     | `28px`   | `28px`      | `--c-page-header-top-min-height` |
+| `.top`            | `margin-bottom`  | `14px`   | `14px`      | `--c-page-header-top-gap`        |
+| `.actions`        | `gap`            | `8px`    | `8px`       | `--ui-stack`                     |
+| `.eyebrow, .back` | `font-size`      | `10px`   | `10px`      | `--type-label-size`              |
+| `.eyebrow, .back` | `letter-spacing` | `2px`    | `2px`       | `--type-label-track`             |
+| `.back`           | `gap`            | `4px`    | `4px`       | `--c-page-header-back-gap`       |
+| `.back`           | `font-size`      | `14px`   | `14px`      | `--type-body-sm-size`            |
+| `.back`           | `letter-spacing` | `0`      | `0`         | `--ui-track-none`                |
+| `h1`              | `font-size`      | `44px`   | `44px`      | `--type-display-size`            |
+| `h1`              | `line-height`    | `1.02`   | `1.02`      | `--type-display-leading`         |
+| `h1`              | `font-weight`    | `500`    | `500`       | `--type-display-weight`          |
+| `h1`              | `letter-spacing` | `0`      | `0`         | `--type-display-track`           |
+| `.title-row`      | `gap`            | `12px`   | `12px`      | `--c-page-header-title-gap`      |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
-| The notification bell is no longer built in. | The reference reaches into a global store from inside the header, which makes the component unusable without that store. The bell goes in the `trailing` slot. |
-| A focus indicator was added to the back control. | The reference has none. |
-
+| What                                             | Why                                                                                                                                                            |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The notification bell is no longer built in.     | The reference reaches into a global store from inside the header, which makes the component unusable without that store. The bell goes in the `trailing` slot. |
+| A focus indicator was added to the back control. | The reference has none.                                                                                                                                        |

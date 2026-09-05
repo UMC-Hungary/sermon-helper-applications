@@ -10,15 +10,15 @@ An `Icon` centred in a target at least 44px square.
 
 ## Props
 
-| Prop | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `icon` *(required)* | `IconName` | — | — |
-| `label` *(required)* | `string` | — | Required: an icon-only control has no other name. |
-| `variant` | `'bare' \| 'circle'` | — | `circle` is the reference's outlined 38px settings button; `bare` is its header icon. |
-| `size` | `number` | — | — |
-| `disabled` | `boolean` | — | — |
-| `onclick` | `(event: MouseEvent) => void` | — | — |
-| `href` | `string` | — | — |
+| Prop                 | Type                          | Default | Meaning                                                                               |
+| -------------------- | ----------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| `icon` _(required)_  | `IconName`                    | —       | —                                                                                     |
+| `label` _(required)_ | `string`                      | —       | Required: an icon-only control has no other name.                                     |
+| `variant`            | `'bare' \| 'circle'`          | —       | `circle` is the reference's outlined 38px settings button; `bare` is its header icon. |
+| `size`               | `number`                      | —       | —                                                                                     |
+| `disabled`           | `boolean`                     | —       | —                                                                                     |
+| `onclick`            | `(event: MouseEvent) => void` | —       | —                                                                                     |
+| `href`               | `string`                      | —       | —                                                                                     |
 
 ## Variants
 
@@ -30,28 +30,28 @@ Default, hover, focus-visible, disabled.
 
 ## Tokens consumed
 
-| Token | Resolves to |
-| --- | --- |
-| `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-control` | `#857c68 / #716b5c` |
-| `--c-icon-button-circle-size` | `38px` |
-| `--c-icon-button-padding` | `6px` |
-| `--text-primary` | `#1c1a16 / #ede6d6` |
-| `--ui-border-hairline` | `1px` |
-| `--ui-focus-offset` | `2px` |
-| `--ui-focus-width` | `2px` |
-| `--ui-radius-pill` | `999px` |
-| `--ui-target-min` | `44px` |
+| Token                         | Resolves to         |
+| ----------------------------- | ------------------- |
+| `--accent`                    | `#5c5c84 / #a9a6d6` |
+| `--border-control`            | `#857c68 / #716b5c` |
+| `--c-icon-button-circle-size` | `38px`              |
+| `--c-icon-button-padding`     | `6px`               |
+| `--text-primary`              | `#1c1a16 / #ede6d6` |
+| `--ui-border-hairline`        | `1px`               |
+| `--ui-focus-offset`           | `2px`               |
+| `--ui-focus-width`            | `2px`               |
+| `--ui-radius-pill`            | `999px`             |
+| `--ui-target-min`             | `44px`              |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 
 ## Keyboard
 
-| Key | Behaviour |
-| --- | --- |
-| `Tab` | Moves to and from the control. |
+| Key     | Behaviour                                       |
+| ------- | ----------------------------------------------- |
+| `Tab`   | Moves to and from the control.                  |
 | `Enter` | Activates; on a link variant, follows the link. |
-| `Space` | Activates the button variant. |
+| `Space` | Activates the button variant.                   |
 
 ## ARIA
 
@@ -69,17 +69,16 @@ Every value resolves through a semantic or component token; `scripts/check-fidel
 
 Source: `src/components/settings/SettingsIconButton.svelte`.
 
-| Selector | Property | Measured | Implemented | Token |
-| --- | --- | --- | --- | --- |
-| `button` | `width` | `38px` | `38px` | `--c-icon-button-circle-size` |
-| `button` | `border-radius` | `999px` | `999px` | `--ui-radius-pill` |
-| `button` | `border` | `1px` | `1px` | `--ui-border-hairline` |
+| Selector | Property        | Measured | Implemented | Token                         |
+| -------- | --------------- | -------- | ----------- | ----------------------------- |
+| `button` | `width`         | `38px`   | `38px`      | `--c-icon-button-circle-size` |
+| `button` | `border-radius` | `999px`  | `999px`     | `--ui-radius-pill`            |
+| `button` | `border`        | `1px`    | `1px`       | `--ui-border-hairline`        |
 
 Re-checked mechanically by `scripts/check-fidelity.mjs`.
 
 ## Recorded deviations
 
-| What | Why |
-| --- | --- |
+| What                          | Why                                                                                                                                                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The target was grown to 44px. | The reference's header icon is a 20px mark with 6px of padding, a 32px target — under the minimum this system holds every touch target to. The drawn size is unchanged; only the target grew. |
-

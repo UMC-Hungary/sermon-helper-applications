@@ -1,9 +1,4 @@
-import {
-	InstanceBase,
-	InstanceStatus,
-	runEntrypoint,
-	type SomeCompanionConfigField,
-} from '@companion-module/base'
+import { InstanceBase, InstanceStatus, runEntrypoint, type SomeCompanionConfigField } from '@companion-module/base'
 import { GetConfigFields, GetDefaultConfig } from './config.js'
 import { GetActions } from './actions.js'
 import { GetFeedbacks } from './feedbacks.js'

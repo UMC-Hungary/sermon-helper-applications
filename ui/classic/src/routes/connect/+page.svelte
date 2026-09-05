@@ -11,7 +11,9 @@
   async function copyNetworkUrl() {
     await navigator.clipboard.writeText($localNetworkUrl);
     copiedNetworkUrl = true;
-    setTimeout(() => { copiedNetworkUrl = false; }, 2000);
+    setTimeout(() => {
+      copiedNetworkUrl = false;
+    }, 2000);
   }
 </script>
 
@@ -41,7 +43,6 @@
 </section>
 
 {#if $appMode === 'server'}
-
   <section>
     <h2>Auth Token</h2>
     <TokenDisplay />
@@ -54,7 +55,6 @@
   <PresenterInstallCard />
 
   <SshAccessCard />
-
 {:else}
   <p>In client mode. Connect to a server to manage events.</p>
 {/if}
@@ -114,6 +114,4 @@
   .meta dd {
     margin: 0;
   }
-
-
 </style>
