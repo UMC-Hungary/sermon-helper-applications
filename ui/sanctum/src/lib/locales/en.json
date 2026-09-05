@@ -506,7 +506,8 @@
     }
   },
   "ui": {
-    "activeInterface": "Active interface"
+    "activeInterface": "Active interface",
+    "current": "Current"
   },
   "login": {
     "signIn": "Sign in",

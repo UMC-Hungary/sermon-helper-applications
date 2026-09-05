@@ -39,6 +39,7 @@
   import { setLocale, locales } from '$lib/i18n';
   import { hasToken } from '$lib/core';
   import LoginSheet from '$lib/LoginSheet.svelte';
+  import UiSwitcher from '$lib/UiSwitcher.svelte';
   import { live } from '$lib/live.svelte';
   import NotifBell from '$lib/NotifBell.svelte';
 
@@ -210,6 +211,8 @@
         divider
       />
     </section>
+
+    <UiSwitcher />
 
     <SectionLabel>{$_('settings.language')}</SectionLabel>
     <List>

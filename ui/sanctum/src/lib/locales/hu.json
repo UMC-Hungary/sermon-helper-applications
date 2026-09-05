@@ -506,7 +506,8 @@
     }
   },
   "ui": {
-    "activeInterface": "Aktív felület"
+    "activeInterface": "Aktív felület",
+    "current": "Jelenlegi"
   },
   "login": {
     "signIn": "Bejelentkezés",
