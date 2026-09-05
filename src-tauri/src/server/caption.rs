@@ -237,6 +237,12 @@ pub async fn caption_handler(Query(params): Query<CaptionQuery>) -> Html<String>
             "logo-visibility--hidden"
         };
 
+        let logo_html = if show_logo {
+            r#"<img id="logo" src="/caption/logo" alt="Logo">"#
+        } else {
+            ""
+        };
+
         let bold_html = if !params.bold.is_empty() {
             format!(
                 r#"<span class="caption" id="text-bold">{}</span>"#,
@@ -344,7 +350,7 @@ pub async fn caption_handler(Query(params): Query<CaptionQuery>) -> Html<String>
     </style>
 </head>
 <body class="caption {logo_visibility_class}">
-    <img id="logo" src="/caption/logo" alt="Logo">
+    {logo_html}
 
     <div class="divider"></div>
 

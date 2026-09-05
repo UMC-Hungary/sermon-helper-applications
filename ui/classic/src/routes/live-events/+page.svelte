@@ -220,7 +220,13 @@
             <button class="video-card" onclick={() => openVideo(studioUrl(item))}>
               <div class="thumbnail-wrap">
                 {#if item.thumbnailUrl}
-                  <img class="thumbnail" src={item.thumbnailUrl} alt={item.title} loading="lazy" />
+                  <img
+                    class="thumbnail"
+                    src={item.thumbnailUrl}
+                    alt={item.title}
+                    loading="lazy"
+                    onerror={(e) => e.currentTarget.remove()}
+                  />
                 {:else}
                   <div class="thumbnail-placeholder" aria-hidden="true"></div>
                 {/if}
