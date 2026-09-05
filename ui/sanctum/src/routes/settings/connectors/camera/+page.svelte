@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { _, locale } from 'svelte-i18n';
   import {
     PageHeader,
@@ -30,7 +30,13 @@
   import { pushToast } from '$lib/notifications.svelte';
   import NotifBell from '$lib/NotifBell.svelte';
 
-  type Draft = { resolution: string; frameRate: string; codec: string; server: string; quality: string };
+  type Draft = {
+    resolution: string;
+    frameRate: string;
+    codec: string;
+    server: string;
+    quality: string;
+  };
 
   let settings = $state<CameraSettings | null>(null);
   let draft = $state<Draft | null>(null);
@@ -48,7 +54,9 @@
   const profiles = $derived(settings?.stream.platform.profiles ?? []);
   const ladder = $derived(profiles.find((p) => p.profile === draft?.quality)?.configs ?? []);
   const card = $derived(
-    settings?.storage.workingset.workingset.find((d) => d?.deviceName === settings?.storage.active?.deviceName) ?? null,
+    settings?.storage.workingset.workingset.find(
+      (d) => d?.deviceName === settings?.storage.active?.deviceName,
+    ) ?? null,
   );
   const recordDirty = $derived(
     !!settings &&
@@ -61,7 +69,8 @@
   const streamDirty = $derived(
     !!settings &&
       !!draft &&
-      (draft.server !== settings.stream.active.server || draft.quality !== settings.stream.active.quality),
+      (draft.server !== settings.stream.active.server ||
+        draft.quality !== settings.stream.active.quality),
   );
 
   function stage(next: CameraSettings): void {
@@ -99,7 +108,9 @@
     draft = {
       ...draft,
       resolution: key,
-      frameRate: next.frameRates.includes(draft.frameRate) ? draft.frameRate : (next.frameRates[0] ?? ''),
+      frameRate: next.frameRates.includes(draft.frameRate)
+        ? draft.frameRate
+        : (next.frameRates[0] ?? ''),
       codec: next.codecs.includes(draft.codec) ? draft.codec : (next.codecs[0] ?? ''),
     };
   }
@@ -188,12 +199,16 @@
   const streamBusy = $derived(wantStream !== null && wantStream !== streaming);
   const recordBusy = $derived(wantRecord !== null && wantRecord !== recording);
 
-  /** A refusal never changes the state, so the wait is capped as well as satisfied. */
+  const timers: Partial<Record<'stream' | 'record', ReturnType<typeof setTimeout>>> = {};
+
+  /** A refusal never changes the state, so the wait is capped as well as satisfied.
+   *  A second press restarts its own cap rather than inheriting the first one's. */
   function transport(kind: 'stream' | 'record', on: boolean) {
     if (kind === 'stream') wantStream = on;
     else wantRecord = on;
     sendWsCommand(`blackmagic-camera.${kind}.${on ? 'start' : 'stop'}`);
-    setTimeout(() => {
+    clearTimeout(timers[kind]);
+    timers[kind] = setTimeout(() => {
       if (kind === 'stream') wantStream = null;
       else wantRecord = null;
       // A refused command leaves the page showing what it asked for; ask the core
@@ -202,9 +217,18 @@
       void refresh();
     }, 8000);
   }
+
+  // Leaving mid-transition would otherwise fire the cap into a dead component.
+  onDestroy(() => {
+    clearTimeout(timers.stream);
+    clearTimeout(timers.record);
+  });
 </script>
 
-<PageHeader title={$_('camera.title')} back={{ label: $_('camera.back'), href: '/settings/connectors' }}>
+<PageHeader
+  title={$_('camera.title')}
+  back={{ label: $_('camera.back'), href: '/settings/connectors' }}
+>
   {#snippet trailing()}<NotifBell />{/snippet}
 </PageHeader>
 
@@ -278,7 +302,12 @@
         title={device?.volume || $_('camera.storage.empty')}
         meta={device
           ? $_('camera.storage.meta', {
-              values: { type: slot.type, clips: device.clipCount, free: bytes(device.remainingSpace), total: bytes(device.totalSpace) },
+              values: {
+                type: slot.type,
+                clips: device.clipCount,
+                free: bytes(device.remainingSpace),
+                total: bytes(device.totalSpace),
+              },
             })
           : $_('camera.storage.noCard', { values: { type: slot.type } })}
         detail={device ? clock(device.remainingRecordTime) : ''}
@@ -293,13 +322,17 @@
         <ProgressBar
           label={$_('camera.storage.used', { values: { volume: card.volume } })}
           value={((card.totalSpace - card.remainingSpace) / card.totalSpace) * 100}
-          valueText={$_('camera.storage.freeOf', { values: { free: bytes(card.remainingSpace), total: bytes(card.totalSpace) } })}
+          valueText={$_('camera.storage.freeOf', {
+            values: { free: bytes(card.remainingSpace), total: bytes(card.totalSpace) },
+          })}
         />
       </div>
     {/if}
   </List>
 
-  <SectionLabel hint={format ? `${format.recordResolution.width} × ${format.recordResolution.height}` : ''}>
+  <SectionLabel
+    hint={format ? `${format.recordResolution.width} × ${format.recordResolution.height}` : ''}
+  >
     {$_('camera.record.label')}
   </SectionLabel>
   <List>
@@ -325,13 +358,19 @@
       <Select
         label={$_('camera.record.frameRate')}
         value={draft.frameRate}
-        options={(format?.frameRates ?? []).map((r) => ({ value: r, label: $_('camera.record.fps', { values: { r } }) }))}
+        options={(format?.frameRates ?? []).map((r) => ({
+          value: r,
+          label: $_('camera.record.fps', { values: { r } }),
+        }))}
         onchange={(r) => (draft = draft ? { ...draft, frameRate: r } : draft)}
       />
       <Select
         label={$_('camera.record.codec')}
         value={draft.codec}
-        options={(format?.codecs ?? []).map((c) => ({ value: c, label: c.replace('BRaw:', 'BRaw ').replace('_', ':') }))}
+        options={(format?.codecs ?? []).map((c) => ({
+          value: c,
+          label: c.replace('BRaw:', 'BRaw ').replace('_', ':'),
+        }))}
         onchange={(c) => (draft = draft ? { ...draft, codec: c } : draft)}
       />
       {#if card}
@@ -346,7 +385,10 @@
       <Segmented
         label={$_('camera.stream.server')}
         value={draft.server}
-        options={settings.stream.platform.servers.map((s) => ({ value: s.server, label: s.server }))}
+        options={settings.stream.platform.servers.map((s) => ({
+          value: s.server,
+          label: s.server,
+        }))}
         onchange={(s) => (draft = draft ? { ...draft, server: s } : draft)}
       />
       <Select
@@ -364,7 +406,9 @@
     {#if ladder.length}
       {#each ladder as config (`${config.resolution}-${config.fps}`)}
         <Row
-          title={$_('camera.stream.rung', { values: { resolution: config.resolution, fps: config.fps } })}
+          title={$_('camera.stream.rung', {
+            values: { resolution: config.resolution, fps: config.fps },
+          })}
           meta={config.videoCodecs.join(' · ')}
           detail={$_('camera.stream.mbps', { values: { rate: (config.bitrate / 1e6).toFixed(1) } })}
           chevron={false}
@@ -377,7 +421,9 @@
       <Row
         title={$_('camera.stream.output')}
         meta={settings.stream.status.effectiveVideoFormat}
-        detail={settings.stream.available.available ? $_('camera.stream.ready') : settings.stream.available.reasons.join(', ')}
+        detail={settings.stream.available.available
+          ? $_('camera.stream.ready')
+          : settings.stream.available.reasons.join(', ')}
         chevron={false}
         last
       />
