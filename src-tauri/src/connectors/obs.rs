@@ -47,6 +47,20 @@ pub struct ObsConnector {
     stop_tx: Mutex<Option<watch::Sender<bool>>>,
 }
 
+struct ObsLoop {
+    config: ObsConfig,
+    app: Option<tauri::AppHandle>,
+    status: Arc<RwLock<ConnectorStatus>>,
+    output_state: Arc<RwLock<Option<ObsOutputState>>>,
+    client: Arc<Mutex<Option<Arc<obws::Client>>>>,
+    status_tx: broadcast::Sender<ConnectorStatus>,
+    recording_tx: broadcast::Sender<ObsRecordingEvent>,
+    state_tx: broadcast::Sender<ObsStateEvent>,
+    output_state_tx: broadcast::Sender<ObsOutputState>,
+    devices_tx: broadcast::Sender<()>,
+    stop_rx: watch::Receiver<bool>,
+}
+
 impl ObsConnector {
     pub fn new() -> Self {
         let (status_tx, _) = broadcast::channel(16);
@@ -74,29 +88,21 @@ impl ObsConnector {
         let (stop_tx, stop_rx) = watch::channel(false);
         *self.stop_tx.lock().await = Some(stop_tx);
 
-        let status = Arc::clone(&self.status);
-        let output_state = Arc::clone(&self.output_state);
-        let client_arc = Arc::clone(&self.client);
-        let status_tx = self.status_tx.clone();
-        let recording_tx = self.recording_tx.clone();
-        let state_tx = self.state_tx.clone();
-        let output_state_tx = self.output_state_tx.clone();
-        let devices_tx = self.devices_tx.clone();
+        let obs_loop = ObsLoop {
+            config,
+            app,
+            status: Arc::clone(&self.status),
+            output_state: Arc::clone(&self.output_state),
+            client: Arc::clone(&self.client),
+            status_tx: self.status_tx.clone(),
+            recording_tx: self.recording_tx.clone(),
+            state_tx: self.state_tx.clone(),
+            output_state_tx: self.output_state_tx.clone(),
+            devices_tx: self.devices_tx.clone(),
+            stop_rx,
+        };
         tauri::async_runtime::spawn(async move {
-            run_obs_loop(
-                config,
-                app,
-                status,
-                output_state,
-                client_arc,
-                status_tx,
-                recording_tx,
-                state_tx,
-                output_state_tx,
-                devices_tx,
-                stop_rx,
-            )
-            .await;
+            run_obs_loop(obs_loop).await;
         });
     }
 
@@ -144,19 +150,20 @@ async fn set_status(
     }
 }
 
-async fn run_obs_loop(
-    config: ObsConfig,
-    app: Option<tauri::AppHandle>,
-    status: Arc<RwLock<ConnectorStatus>>,
-    output_state: Arc<RwLock<Option<ObsOutputState>>>,
-    client_arc: Arc<Mutex<Option<Arc<obws::Client>>>>,
-    status_tx: broadcast::Sender<ConnectorStatus>,
-    recording_tx: broadcast::Sender<ObsRecordingEvent>,
-    state_tx: broadcast::Sender<ObsStateEvent>,
-    output_state_tx: broadcast::Sender<ObsOutputState>,
-    devices_tx: broadcast::Sender<()>,
-    mut stop_rx: watch::Receiver<bool>,
-) {
+async fn run_obs_loop(obs: ObsLoop) {
+    let ObsLoop {
+        config,
+        app,
+        status,
+        output_state,
+        client: client_arc,
+        status_tx,
+        recording_tx,
+        state_tx,
+        output_state_tx,
+        devices_tx,
+        mut stop_rx,
+    } = obs;
     let mut backoff = Duration::from_secs(5);
     loop {
         set_status(

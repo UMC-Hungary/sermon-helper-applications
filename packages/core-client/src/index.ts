@@ -73,7 +73,23 @@ export type {
   ConnectorConfigMap,
   ConnectorName,
   DiscoveredCamera,
+  DiscoveredMiddlecontrol,
+  MiddlecontrolState,
   ObsStreamSettings,
+  RodecasterChannel,
+  RodecasterMuteEvent,
+  RodecasterProfile,
+  RodecasterAudioSource,
+  RodecasterAudioRecordingConfig,
+  RodecasterAudioDiscovery,
+  RodecasterAudioRecorderState,
+} from './schemas/connectors.js';
+export {
+  DiscoveredMiddlecontrolSchema,
+  DiscoveredMiddlecontrolsSchema,
+  MiddlecontrolConfigSchema,
+  MiddlecontrolStateSchema,
 } from './schemas/connectors.js';
 export type { BiblePassage, BibleSuggestion } from './schemas/bible.js';
-export type { WsMessage } from './schemas/ws-messages.js';
+export { MiddlecontrolCommandSchema } from './schemas/ws-messages.js';
+export type { MiddlecontrolCommand, WsMessage } from './schemas/ws-messages.js';

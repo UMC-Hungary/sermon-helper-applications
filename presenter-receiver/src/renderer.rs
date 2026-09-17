@@ -7,6 +7,8 @@ use resvg::{
 };
 use std::f64::consts::PI;
 
+use crate::ws::PresenterTheme;
+
 const FONT: &str = "Helvetica Neue";
 const BG: (f64, f64, f64) = (0.05, 0.05, 0.08);
 const FG: (f64, f64, f64) = (1.0, 1.0, 1.0);
@@ -31,7 +33,17 @@ const COUNTER_BOTTOM_RATIO: f64 = 0.92;
 /// so the result looks identical whether the display is 720p, 1080p, or 4K.
 ///
 /// Returns raw RGB24 bytes: `width × height × 3` bytes, row-major.
-pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -> Vec<u8> {
+pub fn render_slide(
+    paragraphs: &[(&str, &str, f64)],
+    theme: PresenterTheme,
+    current_slide: u32,
+    total_slides: u32,
+    width: u32,
+    height: u32,
+) -> Vec<u8> {
+    if theme == PresenterTheme::Editorial {
+        return render_editorial_slide(paragraphs, current_slide, total_slides, width, height);
+    }
     let (sw, sh) = (width as i32, height as i32);
     let mut surface = ImageSurface::create(Format::Rgb24, sw, sh).unwrap();
     let ctx = Context::new(&surface).unwrap();
@@ -94,6 +106,7 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
     };
 
     if !main_paras.is_empty() {
+        let wrap_main = counter_para.is_some();
         let make_layouts = |font_size: i32| -> Vec<pango::Layout> {
             main_paras
                 .iter()
@@ -103,8 +116,10 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
                         "{FONT} Bold {font_size}"
                     ))));
                     layout.set_alignment(parse_alignment(align));
-                    layout.set_width(max_w * pango::SCALE);
-                    layout.set_wrap(WrapMode::WordChar);
+                    if wrap_main {
+                        layout.set_width(max_w * pango::SCALE);
+                        layout.set_wrap(WrapMode::WordChar);
+                    }
                     layout.set_text(text);
                     layout
                 })
@@ -142,8 +157,17 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
         let mut y = safe_top + (safe_h - used_h as f64) / 2.0;
 
         ctx.set_source_rgb(FG.0, FG.1, FG.2);
-        for layout in &layouts {
-            ctx.move_to(pad_x, y);
+        for (index, layout) in layouts.iter().enumerate() {
+            let line_width = layout.pixel_size().0 as f64;
+            let align = main_paras[index].1;
+            let x = if wrap_main || align == "left" || align == "justify" {
+                pad_x
+            } else if align == "right" {
+                pad_x + max_w as f64 - line_width
+            } else {
+                pad_x + (max_w as f64 - line_width) / 2.0
+            };
+            ctx.move_to(x, y);
             pc::show_layout(&ctx, layout);
             y += layout.pixel_size().1 as f64 + gap as f64;
         }
@@ -188,9 +212,282 @@ pub fn render_slide(paragraphs: &[(&str, &str, f64)], width: u32, height: u32) -
     out
 }
 
+fn render_editorial_slide(
+    paragraphs: &[(&str, &str, f64)],
+    current_slide: u32,
+    total_slides: u32,
+    width: u32,
+    height: u32,
+) -> Vec<u8> {
+    let (sw, sh) = (width as i32, height as i32);
+    let mut surface = ImageSurface::create(Format::Rgb24, sw, sh).unwrap();
+    let ctx = Context::new(&surface).unwrap();
+    let (w, h) = (width as f64, height as f64);
+
+    ctx.set_source_rgb(0.067, 0.063, 0.055);
+    ctx.paint().unwrap();
+
+    let non_empty: Vec<(&str, &str, f64)> = paragraphs
+        .iter()
+        .copied()
+        .filter(|(text, _, _)| !text.trim().is_empty())
+        .collect();
+    if non_empty.is_empty() {
+        drop(ctx);
+        surface.flush();
+        return surface_to_rgb(&mut surface, sw, sh);
+    }
+
+    ctx.set_source_rgba(0.81, 0.67, 0.41, 0.035);
+    ctx.move_to(w * 0.68, 0.0);
+    ctx.line_to(w * 0.86, 0.0);
+    ctx.line_to(w * 0.63, h);
+    ctx.line_to(w * 0.47, h);
+    ctx.close_path();
+    ctx.fill().unwrap();
+
+    let max_pt = non_empty
+        .iter()
+        .map(|(_, _, pt)| *pt)
+        .fold(0.0f64, f64::max);
+    let is_counter = |paragraph: (&str, &str, f64)| {
+        max_pt > 0.0 && paragraph.2 > 0.0 && paragraph.2 < max_pt * 0.85 && paragraph.1 == "center"
+    };
+    let counter = non_empty
+        .first()
+        .copied()
+        .filter(|paragraph| is_counter(*paragraph))
+        .or_else(|| {
+            non_empty
+                .last()
+                .copied()
+                .filter(|paragraph| is_counter(*paragraph))
+        });
+    let main: Vec<&str> = non_empty
+        .iter()
+        .filter(|paragraph| counter != Some(**paragraph))
+        .map(|(text, _, _)| *text)
+        .collect();
+    let is_bible = counter
+        .map(|(text, _, _)| text.starts_with("Textus") || text.starts_with("Lekció"))
+        .unwrap_or(false);
+
+    if is_bible {
+        let label = counter
+            .map(|(text, _, _)| clean_bible_label(text))
+            .unwrap_or_default();
+        show_text(
+            &ctx,
+            &label.to_uppercase(),
+            "monospace",
+            (h * 0.018).max(14.0) as i32,
+            w * 0.31,
+            h * 0.27,
+            w * 0.58,
+            Alignment::Left,
+            (0.81, 0.67, 0.41),
+        );
+
+        let number = counter
+            .and_then(|(text, _, _)| bible_verse_number(text))
+            .unwrap_or_default();
+        show_text(
+            &ctx,
+            &number,
+            "serif",
+            (h * 0.18) as i32,
+            w * 0.13,
+            h * 0.36,
+            w * 0.13,
+            Alignment::Right,
+            (0.81, 0.67, 0.41),
+        );
+
+        let text = main.join("\n\n");
+        let size = fitted_font_size(&ctx, &text, "serif", w * 0.56, h * 0.48, h * 0.095, true);
+        show_text(
+            &ctx,
+            &text,
+            "serif",
+            size,
+            w * 0.31,
+            h * 0.34,
+            w * 0.56,
+            Alignment::Left,
+            (0.957, 0.937, 0.89),
+        );
+    } else {
+        let is_title = current_slide == 1;
+        show_text(
+            &ctx,
+            "ÉNEK",
+            "monospace",
+            (h * 0.018).max(14.0) as i32,
+            w * 0.1,
+            h * 0.14,
+            w * 0.8,
+            Alignment::Center,
+            (0.81, 0.67, 0.41),
+        );
+
+        let text = main.join("\n\n");
+        let preferred = if is_title { h * 0.12 } else { h * 0.095 };
+        let size = fitted_font_size(&ctx, &text, "serif", w * 0.82, h * 0.54, preferred, false);
+        let layout = text_layout(
+            &ctx,
+            &text,
+            "serif",
+            size,
+            w * 0.82,
+            Alignment::Center,
+            false,
+        );
+        let (text_width, text_height) = layout.pixel_size();
+        ctx.set_source_rgb(0.957, 0.937, 0.89);
+        ctx.move_to(
+            (w - text_width as f64) / 2.0,
+            (h - text_height as f64) / 2.0,
+        );
+        pc::show_layout(&ctx, &layout);
+
+        if !is_title {
+            show_text(
+                &ctx,
+                &format!("{current_slide}/{total_slides} DIA"),
+                "monospace",
+                (h * 0.015).max(12.0) as i32,
+                w * 0.1,
+                h * 0.82,
+                w * 0.8,
+                Alignment::Center,
+                (0.81, 0.67, 0.41),
+            );
+        }
+    }
+
+    show_text(
+        &ctx,
+        "METOCAST",
+        "monospace",
+        (h * 0.013).max(11.0) as i32,
+        w * 0.78,
+        h * 0.91,
+        w * 0.17,
+        Alignment::Right,
+        (0.42, 0.41, 0.38),
+    );
+
+    drop(ctx);
+    surface.flush();
+    surface_to_rgb(&mut surface, sw, sh)
+}
+
+fn text_layout(
+    ctx: &Context,
+    text: &str,
+    family: &str,
+    size: i32,
+    width: f64,
+    alignment: Alignment,
+    wrap: bool,
+) -> pango::Layout {
+    let layout = pc::create_layout(ctx);
+    layout.set_font_description(Some(&FontDescription::from_string(&format!(
+        "{family} {size}"
+    ))));
+    if wrap {
+        layout.set_width(width as i32 * pango::SCALE);
+        layout.set_wrap(WrapMode::WordChar);
+    }
+    layout.set_alignment(alignment);
+    layout.set_spacing((size as f64 * 0.12) as i32 * pango::SCALE);
+    layout.set_text(text);
+    layout
+}
+
+fn fitted_font_size(
+    ctx: &Context,
+    text: &str,
+    family: &str,
+    width: f64,
+    height: f64,
+    preferred: f64,
+    wrap: bool,
+) -> i32 {
+    let mut size = preferred.max(18.0) as i32;
+    while size > 18 {
+        let layout = text_layout(ctx, text, family, size, width, Alignment::Left, wrap);
+        let (layout_width, layout_height) = layout.pixel_size();
+        if layout_width as f64 <= width && layout_height as f64 <= height {
+            break;
+        }
+        size -= 2;
+    }
+    size
+}
+
+fn show_text(
+    ctx: &Context,
+    text: &str,
+    family: &str,
+    size: i32,
+    x: f64,
+    y: f64,
+    width: f64,
+    alignment: Alignment,
+    color: (f64, f64, f64),
+) {
+    let layout = text_layout(ctx, text, family, size, width, alignment, true);
+    ctx.set_source_rgb(color.0, color.1, color.2);
+    ctx.move_to(x, y);
+    pc::show_layout(ctx, &layout);
+}
+
+fn clean_bible_label(counter: &str) -> String {
+    let without_page = counter
+        .rsplit_once(" (")
+        .map(|(label, _)| label)
+        .unwrap_or(counter);
+    without_page.replace('|', "·")
+}
+
+fn bible_verse_number(counter: &str) -> Option<String> {
+    counter
+        .split_whitespace()
+        .filter_map(|token| {
+            let (_, verse) = token.split_once(':')?;
+            let number: String = verse
+                .chars()
+                .take_while(|char| char.is_ascii_digit())
+                .collect();
+            (!number.is_empty()).then_some(number)
+        })
+        .next_back()
+}
+
+fn surface_to_rgb(surface: &mut ImageSurface, width: i32, height: i32) -> Vec<u8> {
+    let stride = surface.stride() as usize;
+    let data = surface.data().unwrap();
+    let mut out = Vec::with_capacity((width * height * 3) as usize);
+    for row in 0..height as usize {
+        for col in 0..width as usize {
+            let index = row * stride + col * 4;
+            out.push(data[index + 2]);
+            out.push(data[index + 1]);
+            out.push(data[index]);
+        }
+    }
+    out
+}
+
 /// Render a self-contained SVG slide into a framebuffer-sized 0x00RRGGBB frame.
 pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, String> {
-    eprintln!("[svg] parsing {} bytes for {}x{} display", svg.len(), width, height);
+    eprintln!(
+        "[svg] parsing {} bytes for {}x{} display",
+        svg.len(),
+        width,
+        height
+    );
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
     eprintln!("[svg] fontdb has {} faces", options.fontdb.len());
@@ -204,7 +501,11 @@ pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, 
     let render_height = ((svg_size.height() * scale).round().max(1.0) as u32).min(height);
     eprintln!(
         "[svg] SVG {}x{} → display scale={:.3} → render {}x{}",
-        svg_size.width(), svg_size.height(), scale, render_width, render_height
+        svg_size.width(),
+        svg_size.height(),
+        scale,
+        render_width,
+        render_height
     );
 
     let mut pixmap =
@@ -397,6 +698,24 @@ pub fn rgb_to_u32(rgb: &[u8]) -> Vec<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn editorial_theme_renders_bible_text_and_extracts_the_verse() {
+        let paragraphs = [
+            (
+                "Nincs tehát most már semmiféle kárhoztató ítélet.",
+                "left",
+                38.0,
+            ),
+            ("Textus Róma 8:1 | 8:1 (1/1)", "center", 18.0),
+        ];
+
+        let frame = render_slide(&paragraphs, PresenterTheme::Editorial, 1, 1, 640, 360);
+
+        assert_eq!(frame.len(), 640 * 360 * 3);
+        assert_eq!(bible_verse_number(paragraphs[1].0).as_deref(), Some("1"));
+        assert!(frame.chunks_exact(3).any(|pixel| pixel[0] > 150));
+    }
 
     #[test]
     fn svg_white_text_on_black_produces_white_pixels() {

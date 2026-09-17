@@ -1,7 +1,10 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Local, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
+
+/// How long after its start an event still counts as the one happening now.
+const CURRENT_EVENT_WINDOW_MINUTES: i64 = 4 * 60;
 
 /// Raw DB row for the `events` table — no platform fields, no connections, no bible refs.
 /// Used only with sqlx::FromRow inside [`fetch_event`]; never serialized directly.
@@ -138,30 +141,58 @@ pub struct EventSummary {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Find the earliest event today (UTC) that has no "completed" activity.
-/// Used for auto-assigning OBS recordings.
-pub async fn find_current_event(pool: &PgPool) -> anyhow::Result<Option<EventSummary>> {
-    let event = sqlx::query_as::<_, EventSummary>(
-        r#"
-        SELECT e.id, e.title, e.computed_title, e.date_time, e.speaker,
-               e.created_at, e.updated_at,
-               COUNT(r.id) AS recording_count,
-               false AS is_completed
-        FROM events e
-        LEFT JOIN recordings r ON r.event_id = e.id
-        WHERE DATE(e.date_time AT TIME ZONE 'UTC') = DATE(NOW() AT TIME ZONE 'UTC')
-          AND NOT EXISTS (
-              SELECT 1 FROM event_activities ea
-              WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
-          )
-        GROUP BY e.id
-        ORDER BY e.date_time ASC
-        LIMIT 1
-        "#,
+pub async fn fetch_event_summaries(pool: &PgPool) -> Result<Vec<EventSummary>, sqlx::Error> {
+    sqlx::query_as::<_, EventSummary>(
+        r#"SELECT e.id, e.title, e.computed_title, e.date_time, e.speaker,
+                  e.created_at, e.updated_at,
+                  COUNT(r.id) AS recording_count,
+                  EXISTS (
+                      SELECT 1 FROM event_activities ea
+                      WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
+                  ) AS is_completed
+           FROM events e
+           LEFT JOIN recordings r ON r.event_id = e.id
+           GROUP BY e.id
+           ORDER BY e.date_time DESC"#,
     )
-    .fetch_optional(pool)
-    .await?;
-    Ok(event)
+    .fetch_all(pool)
+    .await
+}
+
+/// The event happening now, and the only place that decides it: the latest
+/// uncompleted event that started within [`CURRENT_EVENT_WINDOW_MINUTES`] on the
+/// local current date, else the next uncompleted event. A caller that needs an
+/// answer when this returns `None` adds that fallback itself.
+pub fn current_event(events: &[EventSummary], now: DateTime<Utc>) -> Option<&EventSummary> {
+    let today = now.with_timezone(&Local).date_naive();
+    let window = Duration::minutes(CURRENT_EVENT_WINDOW_MINUTES);
+    events
+        .iter()
+        .filter(|event| {
+            !event.is_completed
+                && event.date_time.with_timezone(&Local).date_naive() == today
+                && event.date_time <= now
+                && now - event.date_time <= window
+        })
+        .max_by_key(|event| event.date_time)
+        .or_else(|| {
+            events
+                .iter()
+                .filter(|event| !event.is_completed && event.date_time >= now)
+                .min_by_key(|event| event.date_time)
+        })
+}
+
+/// The current event when it falls on today's local date — what an automatically
+/// detected recording is attached to. `None` leaves that recording untracked
+/// rather than filing it under an event on another day.
+pub async fn find_current_event(pool: &PgPool) -> anyhow::Result<Option<EventSummary>> {
+    let now = Utc::now();
+    let today = now.with_timezone(&Local).date_naive();
+    let events = fetch_event_summaries(pool).await?;
+    Ok(current_event(&events, now)
+        .filter(|event| event.date_time.with_timezone(&Local).date_naive() == today)
+        .cloned())
 }
 
 /// Template for the published title. Kept in step with `DEFAULT_TITLE_TEMPLATE`
@@ -229,4 +260,111 @@ pub struct UpdateEvent {
     pub auto_upload_enabled: Option<bool>,
     pub connections: Option<Vec<CreateConnection>>,
     pub bible_references: Option<Vec<CreateBibleReference>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    fn local_time(year: i32, month: u32, day: u32, hour: u32, minute: u32) -> DateTime<Utc> {
+        Local
+            .with_ymd_and_hms(year, month, day, hour, minute, 0)
+            .single()
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    fn event(id: Uuid, date_time: DateTime<Utc>, is_completed: bool) -> EventSummary {
+        EventSummary {
+            id,
+            title: id.to_string(),
+            computed_title: String::new(),
+            date_time,
+            speaker: String::new(),
+            recording_count: 0,
+            is_completed,
+            created_at: date_time,
+            updated_at: date_time,
+        }
+    }
+
+    fn selected(events: &[EventSummary], now: DateTime<Utc>) -> Option<Uuid> {
+        current_event(events, now).map(|event| event.id)
+    }
+
+    #[test]
+    fn selects_recent_same_day_past_event_before_later_future_event() {
+        let now = local_time(2026, 1, 11, 11, 0);
+        let service_id = Uuid::new_v4();
+        let later_id = Uuid::new_v4();
+        let events = vec![
+            event(service_id, local_time(2026, 1, 11, 10, 0), false),
+            event(later_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(selected(&events, now), Some(service_id));
+    }
+
+    #[test]
+    fn ignores_recent_past_event_after_current_window() {
+        let now = local_time(2026, 1, 11, 15, 1);
+        let old_service_id = Uuid::new_v4();
+        let later_id = Uuid::new_v4();
+        let events = vec![
+            event(old_service_id, local_time(2026, 1, 11, 10, 0), false),
+            event(later_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(selected(&events, now), Some(later_id));
+    }
+
+    #[test]
+    fn ignores_completed_recent_past_event() {
+        let now = local_time(2026, 1, 11, 11, 0);
+        let completed_id = Uuid::new_v4();
+        let later_id = Uuid::new_v4();
+        let events = vec![
+            event(completed_id, local_time(2026, 1, 11, 10, 0), true),
+            event(later_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(selected(&events, now), Some(later_id));
+    }
+
+    /// The morning service is rarely marked completed by hand, so the evening
+    /// recording used to be filed under it.
+    #[test]
+    fn second_service_of_the_day_wins_once_it_has_started() {
+        let now = local_time(2026, 1, 11, 18, 30);
+        let morning_id = Uuid::new_v4();
+        let evening_id = Uuid::new_v4();
+        let events = vec![
+            event(morning_id, local_time(2026, 1, 11, 10, 0), false),
+            event(evening_id, local_time(2026, 1, 11, 18, 0), false),
+        ];
+
+        assert_eq!(selected(&events, now), Some(evening_id));
+    }
+
+    #[test]
+    fn uses_the_local_date_not_the_utc_date() {
+        let now = local_time(2026, 1, 11, 0, 45);
+        let after_midnight_id = Uuid::new_v4();
+        let events = vec![event(
+            after_midnight_id,
+            local_time(2026, 1, 11, 0, 30),
+            false,
+        )];
+
+        assert_eq!(selected(&events, now), Some(after_midnight_id));
+    }
+
+    #[test]
+    fn returns_nothing_when_every_event_is_past() {
+        let now = local_time(2026, 1, 13, 9, 0);
+        let events = vec![event(Uuid::new_v4(), local_time(2026, 1, 11, 10, 0), false)];
+
+        assert_eq!(selected(&events, now), None);
+    }
 }

@@ -12,8 +12,9 @@ use std::sync::atomic::Ordering;
 use uuid::Uuid;
 
 use crate::connectors::{
-    blackmagic_camera, facebook, youtube, AtemConfig, BlackmagicCameraConfig, BroadlinkConfig,
-    DiscordConfig, FacebookConfig, ObsConfig, SzentirasConfig, VmixConfig, YouTubeConfig,
+    blackmagic_camera, facebook, middlecontrol, youtube, AtemConfig, BlackmagicCameraConfig,
+    BroadlinkConfig, DiscordConfig, FacebookConfig, MiddlecontrolConfig, ObsConfig,
+    RodecasterConfig, SzentirasConfig, VmixConfig, YouTubeConfig,
 };
 use crate::connectors::{ConnectorConfig, ConnectorStatus};
 use crate::database::settings;
@@ -57,6 +58,9 @@ const OAUTH_SUCCESS_HTML: &str = r#"<!DOCTYPE html>
 </body>
 </html>"#;
 
+const BIBLE_SLIDE_FOLDER_KEY: &str = "slide_folder";
+const SONG_SLIDE_FOLDER_KEY: &str = "song_slide_folder";
+
 const OAUTH_ERROR_HTML: &str = r#"<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -84,9 +88,11 @@ const OAUTH_ERROR_HTML: &str = r#"<!DOCTYPE html>
 pub async fn get_connector_state(State(state): State<AppState>) -> impl IntoResponse {
     let obs_state = state.obs_connector.get_output_state().await;
     let camera_state = state.blackmagic_camera_connector.get_state().await;
+    let middlecontrol_state = state.middlecontrol_connector.get_state().await;
     Json(json!({
         "obs": obs_state.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
-        "blackmagic-camera": camera_state.map(|s| json!({"isStreaming": s.is_streaming(), "streamStatus": s.stream_status, "isRecording": s.is_recording}))
+        "blackmagic-camera": camera_state.map(|s| json!({"isStreaming": s.is_streaming(), "streamStatus": s.stream_status, "isRecording": s.is_recording})),
+        "middlecontrol": middlecontrol_state,
     }))
 }
 
@@ -97,6 +103,8 @@ pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoR
     let fb = state.facebook_connector.get_status().await;
     let broadlink = state.broadlink_connector.get_status().await;
     let blackmagic_camera = state.blackmagic_camera_connector.get_status().await;
+    let middlecontrol = state.middlecontrol_connector.get_status().await;
+    let rodecaster = state.rodecaster_connector.get_status();
     // ATEM, Discord and Szentírás have no connector worker: they report Connected
     // when configured, so a UI can render them without a separate config round-trip.
     let configured = |ok: bool| {
@@ -124,6 +132,8 @@ pub async fn get_connector_statuses(State(state): State<AppState>) -> impl IntoR
     Json(json!({
         "obs": obs,
         "blackmagic-camera": blackmagic_camera,
+        "middlecontrol": middlecontrol,
+        "rodecaster": rodecaster,
         "vmix": vmix,
         "atem": atem,
         "broadlink": broadlink,
@@ -336,8 +346,8 @@ pub async fn reveal_connector_secrets(
         }
         "szentiras" => Json(settings::get_json::<SzentirasConfig>(pool, "szentiras_config").await)
             .into_response(),
-        // vmix, atem and broadlink hold no credentials.
-        "vmix" | "atem" | "broadlink" => (
+        // vmix, atem, middlecontrol, broadlink and rodecaster hold no credentials.
+        "vmix" | "atem" | "middlecontrol" | "broadlink" | "rodecaster" => (
             StatusCode::NO_CONTENT,
             Json(json!({ "error": "This connector stores no secrets" })),
         )
@@ -358,7 +368,9 @@ pub async fn get_connector_config(
         }
         "vmix" => stored_config::<VmixConfig>(pool, "vmix_config").await,
         "atem" => stored_config::<AtemConfig>(pool, "atem_config").await,
+        "middlecontrol" => stored_config::<MiddlecontrolConfig>(pool, "middlecontrol_config").await,
         "broadlink" => stored_config::<BroadlinkConfig>(pool, "broadlink_config").await,
+        "rodecaster" => stored_config::<RodecasterConfig>(pool, "rodecaster_config").await,
         "discord" => stored_config::<DiscordConfig>(pool, "discord_config").await,
         "szentiras" => stored_config::<SzentirasConfig>(pool, "szentiras_config").await,
         "youtube" => stored_config::<YouTubeConfig>(pool, "youtube_config").await,
@@ -409,10 +421,28 @@ pub async fn put_connector_config(
                 Err(e) => Err(e),
             }
         }
+        "middlecontrol" => {
+            match save_config::<MiddlecontrolConfig>(pool, "middlecontrol_config", body).await {
+                Ok(config) => {
+                    if config.enabled {
+                        state.middlecontrol_connector.start(config).await;
+                    } else {
+                        state.middlecontrol_connector.stop().await;
+                    }
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        }
         "youtube" => match save_config::<YouTubeConfig>(pool, "youtube_config", body).await {
             Ok(config) => {
                 *state.youtube_config.write().await = config.clone();
-                if !config.enabled {
+                if config.enabled {
+                    state
+                        .youtube_connector
+                        .start(pool.clone(), config, state.app_handle.clone())
+                        .await;
+                } else {
                     state.youtube_connector.stop().await;
                 }
                 Ok(())
@@ -422,7 +452,12 @@ pub async fn put_connector_config(
         "facebook" => match save_config::<FacebookConfig>(pool, "facebook_config", body).await {
             Ok(config) => {
                 *state.facebook_config.write().await = config.clone();
-                if !config.enabled {
+                if config.enabled {
+                    state
+                        .facebook_connector
+                        .start(pool.clone(), config, state.app_handle.clone())
+                        .await;
+                } else {
                     state.facebook_connector.stop().await;
                 }
                 Ok(())
@@ -438,6 +473,32 @@ pub async fn put_connector_config(
         "broadlink" => save_config::<BroadlinkConfig>(pool, "broadlink_config", body)
             .await
             .map(|_| ()),
+        "rodecaster" => match serde_json::from_value::<RodecasterConfig>(body) {
+            Ok(config) => {
+                if config.audio_recording.enabled {
+                    if let Err(error) = crate::connectors::rodecaster_audio::validate_config(
+                        &config.audio_recording,
+                    ) {
+                        return (StatusCode::BAD_REQUEST, Json(json!({ "error": error })))
+                            .into_response();
+                    }
+                }
+                if let Err(error) = settings::set_json(pool, "rodecaster_config", &config).await {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({ "error": error.to_string() })),
+                    )
+                        .into_response();
+                }
+                if config.enabled {
+                    state.rodecaster_connector.start(config);
+                } else {
+                    state.rodecaster_connector.stop();
+                }
+                Ok(())
+            }
+            Err(e) => Err(e.to_string()),
+        },
         "discord" => save_config::<DiscordConfig>(pool, "discord_config", body)
             .await
             .map(|_| ()),
@@ -726,6 +787,10 @@ pub async fn blackmagic_camera_discover(State(state): State<AppState>) -> impl I
     Json(json!({ "cameras": cameras }))
 }
 
+pub async fn middlecontrol_discover() -> impl IntoResponse {
+    Json(json!({ "devices": middlecontrol::discover().await }))
+}
+
 // ── YouTube OAuth ─────────────────────────────────────────────────────────────
 
 pub async fn youtube_auth_url(State(state): State<AppState>) -> impl IntoResponse {
@@ -809,7 +874,7 @@ pub async fn oauth_callback(
                 Ok(_) => {
                     state
                         .facebook_connector
-                        .start(state.pool.clone(), state.app_handle.clone())
+                        .start(state.pool.clone(), config, state.app_handle.clone())
                         .await;
                     Html(OAUTH_SUCCESS_HTML).into_response()
                 }
@@ -990,9 +1055,12 @@ pub async fn get_youtube_content(State(state): State<AppState>) -> impl IntoResp
         Err(e) => {
             tracing::error!("fetch_channel_content failed: {e}");
             if e.is::<youtube::AuthRequired>() {
-                // Tokens were already deleted by fetch_channel_content; stop
-                // the connector loop so the frontend sees the status change.
-                state.youtube_connector.stop().await;
+                // Tokens were already deleted by fetch_channel_content; restart the
+                // loop so it reports the missing login as an error the UI raises.
+                state
+                    .youtube_connector
+                    .start(state.pool.clone(), config, state.app_handle.clone())
+                    .await;
                 return (
                     StatusCode::UNAUTHORIZED,
                     Json(json!({ "error": "auth_required", "message": "Re-login required" })),
@@ -1316,7 +1384,7 @@ pub async fn set_title_template(
 /// The folder generated Bible slide decks are written into. An unset key returns
 /// an empty path, so this never 404s.
 pub async fn get_slide_folder(State(state): State<AppState>) -> impl IntoResponse {
-    Json(settings::get_json::<SlideFolder>(&state.pool, "slide_folder").await)
+    Json(settings::get_json::<SlideFolder>(&state.pool, BIBLE_SLIDE_FOLDER_KEY).await)
 }
 
 /// Every window sends a plain string — the desktop shell that *is* the core fills
@@ -1336,13 +1404,108 @@ pub async fn set_slide_folder(
         )
             .into_response();
     }
-    match settings::set_json(&state.pool, "slide_folder", &folder).await {
+    match settings::set_json(&state.pool, BIBLE_SLIDE_FOLDER_KEY, &folder).await {
         Ok(()) => (StatusCode::OK, Json(folder)).into_response(),
         Err(e) => {
             tracing::error!("set_slide_folder: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+/// The folder generated song slide decks are written into. An unset key returns
+/// an empty path, so this never 404s.
+pub async fn get_song_slide_folder(State(state): State<AppState>) -> impl IntoResponse {
+    Json(settings::get_json::<SlideFolder>(&state.pool, SONG_SLIDE_FOLDER_KEY).await)
+}
+
+pub async fn set_song_slide_folder(
+    State(state): State<AppState>,
+    Json(body): Json<SlideFolder>,
+) -> impl IntoResponse {
+    let folder = SlideFolder {
+        path: body.path.trim().to_string(),
+    };
+    if !folder.path.is_empty() && !std::path::Path::new(&folder.path).is_dir() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("No such folder: {}", folder.path)})),
+        )
+            .into_response();
+    }
+    match settings::set_json(&state.pool, SONG_SLIDE_FOLDER_KEY, &folder).await {
+        Ok(()) => (StatusCode::OK, Json(folder)).into_response(),
+        Err(e) => {
+            tracing::error!("set_song_slide_folder: {e}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSongSlidesBody {
+    title: String,
+    lyrics: String,
+}
+
+/// Turns pasted lyrics into a PowerPoint in the configured song output folder.
+pub async fn create_song_slides(
+    State(state): State<AppState>,
+    Json(body): Json<CreateSongSlidesBody>,
+) -> impl IntoResponse {
+    let title = body.title.trim();
+    let lyrics = body.lyrics.trim();
+    if title.is_empty()
+        || lyrics.is_empty()
+        || title.chars().count() > 200
+        || lyrics.chars().count() > 50_000
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Enter a title and lyrics"})),
+        )
+            .into_response();
+    }
+
+    let folder = settings::get_json::<SlideFolder>(&state.pool, SONG_SLIDE_FOLDER_KEY).await;
+    let dir = std::path::PathBuf::from(&folder.path);
+    if folder.path.is_empty() || !dir.is_dir() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "No song slide folder configured"})),
+        )
+            .into_response();
+    }
+
+    let Some(file_name) = presenter::song_file_name(title) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "The title must contain letters or numbers"})),
+        )
+            .into_response();
+    };
+    let slides = presenter::song_slides(title, lyrics);
+    let slide_count = slides.len();
+    let path = dir.join(file_name);
+    let theme = *state.presenter_theme.read().await;
+    if let Err(error) = presenter::write_pptx(&path, &slides, 12_192_000, 6_858_000, theme) {
+        tracing::error!("create_song_slides: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": error})),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "filePath": path.to_string_lossy(),
+            "slideCount": slide_count,
+        })),
+    )
+        .into_response()
 }
 
 /// Writes one `.pptx` per Bible reference on the event into the configured slide
@@ -1353,11 +1516,11 @@ pub async fn create_event_slides(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let folder = settings::get_json::<SlideFolder>(&state.pool, "slide_folder").await;
+    let folder = settings::get_json::<SlideFolder>(&state.pool, BIBLE_SLIDE_FOLDER_KEY).await;
     if folder.path.is_empty() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(json!({"error": "No slide folder configured"})),
+            Json(json!({"error": "No Bible slide folder configured"})),
         )
             .into_response();
     }
@@ -1379,6 +1542,7 @@ pub async fn create_event_slides(
         }
     };
 
+    let theme = *state.presenter_theme.read().await;
     let mut files: Vec<String> = Vec::new();
     for reference in &event.bible_references {
         let (kind, file_name) = match reference.r#type.as_str() {
@@ -1399,6 +1563,7 @@ pub async fn create_event_slides(
             &deck.slides,
             deck.slide_width_emu,
             deck.slide_height_emu,
+            theme,
         ) {
             tracing::error!("create_event_slides: {e}");
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e}))).into_response();
@@ -2922,6 +3087,11 @@ pub async fn clear_application_log(State(state): State<AppState>) -> impl IntoRe
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn song_and_bible_slides_use_different_folder_settings() {
+        assert_ne!(SONG_SLIDE_FOLDER_KEY, BIBLE_SLIDE_FOLDER_KEY);
+    }
 
     #[test]
     fn secret_comparison_rejects_wrong_and_shorter_values() {

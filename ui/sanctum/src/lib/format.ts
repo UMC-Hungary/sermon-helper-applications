@@ -33,6 +33,13 @@ export function dateTimeLabel(iso: string, locale = 'en'): string {
   });
 }
 
+/** Elapsed time as `HH:MM:SS`, from a count of seconds. */
+export function clock(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+}
+
 /** "3 min ago" style relative age, from an ISO timestamp. */
 export function relAge(iso: string, locale = 'en'): string {
   const d = new Date(iso);

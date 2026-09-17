@@ -12,6 +12,12 @@ export interface ConnectorState {
   isStreaming?: boolean;
   isRecording?: boolean;
   isLive?: boolean;
+  selectedCamera?: number | null;
+  recording?: boolean | null;
+  recordingCameraIds?: number[] | null;
+  connectedCameraIds?: number[] | null;
+  connectedApcrIds?: number[] | null;
+  presetMoveActive?: boolean | null;
 }
 
 export interface BaseConfig {

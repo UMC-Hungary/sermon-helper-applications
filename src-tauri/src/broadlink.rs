@@ -49,8 +49,8 @@ impl BroadlinkDevice {
         }
 
         // Parse device type (e.g., "0x520b")
-        let device_type = if devtype.starts_with("0x") {
-            u16::from_str_radix(&devtype[2..], 16).unwrap_or(0)
+        let device_type = if let Some(hex) = devtype.strip_prefix("0x") {
+            u16::from_str_radix(hex, 16).unwrap_or(0)
         } else {
             devtype.parse().unwrap_or(0)
         };
@@ -100,7 +100,7 @@ impl BroadlinkDevice {
     /// Encrypt data using AES-128-CBC with zero padding
     fn encrypt(&self, data: &[u8]) -> Vec<u8> {
         // Pad to 16-byte boundary with zeros
-        let padded_len = ((data.len() + 15) / 16) * 16;
+        let padded_len = data.len().div_ceil(16) * 16;
         let mut padded = vec![0u8; padded_len];
         padded[..data.len()].copy_from_slice(data);
 
@@ -124,7 +124,7 @@ impl BroadlinkDevice {
 
     /// Decrypt data using AES-128-CBC
     fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, String> {
-        if data.len() % 16 != 0 {
+        if !data.len().is_multiple_of(16) {
             return Err("Invalid encrypted data length".to_string());
         }
 
@@ -259,8 +259,8 @@ impl BroadlinkDevice {
         let mut payload = vec![0u8; 0x50];
 
         // Fill with device ID - 16 bytes (0x04 to 0x13 inclusive, matching python-broadlink)
-        for i in 0x04..0x14 {
-            payload[i] = 0x31;
+        for byte in payload.iter_mut().take(0x14).skip(0x04) {
+            *byte = 0x31;
         }
         payload[0x1e] = 0x01;
         payload[0x2d] = 0x01;
@@ -704,7 +704,7 @@ pub struct SendResult {
 static LEARN_CANCEL: AtomicBool = AtomicBool::new(false);
 
 /// Get all IPv4 addresses from network interfaces (excluding loopback and virtual)
-fn get_local_ipv4_addresses() -> Vec<Ipv4Addr> {
+pub(crate) fn get_local_ipv4_addresses() -> Vec<Ipv4Addr> {
     let mut addresses = Vec::new();
 
     if let Ok(interfaces) = local_ip_address::list_afinet_netifas() {

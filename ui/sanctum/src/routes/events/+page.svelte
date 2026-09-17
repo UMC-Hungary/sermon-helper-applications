@@ -25,6 +25,8 @@
 
   type Filter = 'upcoming' | 'live' | 'past';
   const filters: Filter[] = ['upcoming', 'live', 'past'];
+  const notificationPreview =
+    import.meta.env.DEV && import.meta.env.VITE_SANCTUM_UX_PREVIEW === 'connector-notifications';
 
   let events = $state<EventSummary[]>([]);
   let phase = $state<'loading' | 'ready' | 'error'>('loading');
@@ -65,6 +67,10 @@
   const monthLabel = $derived(featured ? monthAbbr(featured.dateTime, loc) : '');
 
   $effect(() => {
+    if (notificationPreview) {
+      detail = null;
+      return;
+    }
     const id = featured?.id;
     if (!id) {
       detail = null;
@@ -91,7 +97,25 @@
     }
   }
 
-  onMount(load);
+  function loadPreview(): void {
+    const dateTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    events = [
+      {
+        id: '8f671e76-4f38-4f38-9a0d-3d861fdbd8aa',
+        title: 'Sunday Worship Service',
+        computedTitle: 'Sunday Worship Service',
+        dateTime,
+        speaker: 'Rev. Anna Kovács',
+        recordingCount: 0,
+        isCompleted: false,
+        createdAt: dateTime,
+        updatedAt: dateTime,
+      },
+    ];
+    phase = 'ready';
+  }
+
+  onMount(notificationPreview ? loadPreview : load);
 </script>
 
 <PageHeader

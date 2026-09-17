@@ -190,6 +190,18 @@ The presenter receiver speaks a subset of the Metocast WebSocket protocol. All m
 
 The receiver ignores all message types it does not recognise. Unknown types do not cause an error or disconnection.
 
+**Presentation settings** — sent on connection and whenever the operator changes the presenter design:
+
+```json
+{
+  "type": "presentation.settings",
+  "useWebPresenter": true,
+  "presenterTheme": "editorial"
+}
+```
+
+`presenterTheme` is `"classic"` or `"editorial"`. For imported decks, Classic displays the source SVG while Editorial renders the extracted song text; generated Bible slides use the matching text design. This lets a design change update the live output without reopening the deck. Older servers that omit the field are treated as Classic.
+
 **Full presenter state** — sent by the server on load, unload, slide change, and mute toggle. Replaces the entire local state:
 
 ```json
@@ -281,9 +293,10 @@ Field notes:
 A server is compatible with the receiver if it:
 
 1. Accepts a WebSocket connection at any path (the receiver connects to whatever URL is passed on the command line).
-2. Sends `presenter.state` on connection (in response to `presenter.status`) and whenever state changes.
-3. Sends `presenter.slide_changed` on navigation.
-4. Sends periodic `ping` messages and expects `pong` replies.
-5. Accepts `presenter.register` for informational purposes (the receiver sends it but does not require a response).
+2. Sends `presentation.settings` on connection, defaulting `presenterTheme` to `"classic"` when no theme setting exists.
+3. Sends `presenter.state` on connection (in response to `presenter.status`) and whenever state changes.
+4. Sends `presenter.slide_changed` on navigation.
+5. Sends periodic `ping` messages and expects `pong` replies.
+6. Accepts `presenter.register` for informational purposes (the receiver sends it but does not require a response).
 
 The active render array must be complete in every `presenter.state` message — partial content updates are not supported. If `loaded` is `false`, `slides` and `svgSlides` should be empty and `currentSlide` should be `0`.

@@ -2,7 +2,7 @@
  * E2E tests for Connectors REST API.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { apiClient } from '../helpers/client.js';
 
 interface ConnectorStatus {
@@ -19,6 +19,21 @@ interface ConnectorStatuses {
   facebook: ConnectorStatus;
   discord: ConnectorStatus;
   szentiras: ConnectorStatus;
+  rodecaster: ConnectorStatus;
+  middlecontrol: ConnectorStatus;
+}
+
+interface RodecasterConfig {
+  enabled: boolean;
+  notifyOnMute: boolean;
+  audioRecording: {
+    schemaVersion: 1;
+    enabled: boolean;
+    directory: string;
+    processingMode: 'preFader' | 'preFaderBypass' | 'postFader';
+    outputMode: 'mainMix' | 'separate' | 'combinedStereo' | 'multichannelFlac';
+    sources: Array<{ kind: 'mainMix' } | { kind: 'faderSlot'; number: number }>;
+  };
 }
 
 interface SzentirasConfig {
@@ -31,6 +46,16 @@ interface VmixConfig {
   enabled: boolean;
   host: string;
   port: number;
+}
+
+interface MiddlecontrolConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+}
+
+interface MiddlecontrolDiscovery {
+  devices: Array<{ host: string; port: number }>;
 }
 
 interface CameraSettings {
@@ -59,6 +84,8 @@ describe.skipIf(!isLive)('Connectors REST API', () => {
       'facebook',
       'discord',
       'szentiras',
+      'rodecaster',
+      'middlecontrol',
     ]) {
       expect(res.body).toHaveProperty(name);
     }
@@ -88,9 +115,103 @@ describe.skipIf(!isLive)('Connectors REST API', () => {
     expect(res.body).toEqual({ enabled: false, host: 'e2e-vmix.local', port: 8099 });
   });
 
+  it('middlecontrol config defaults and round-trips host, port, and enabled', async () => {
+    const initial = await apiClient.get<MiddlecontrolConfig>(
+      '/api/connectors/middlecontrol/config',
+    );
+    expect(initial.status).toBe(200);
+    expect(initial.body).toMatchObject({ enabled: expect.any(Boolean), port: expect.any(Number) });
+
+    const saved = await apiClient.put('/api/connectors/middlecontrol/config', {
+      enabled: false,
+      host: 'e2e-middlecontrol.local',
+      port: 11581,
+    });
+    expect(saved.status).toBe(204);
+
+    const read = await apiClient.get<MiddlecontrolConfig>('/api/connectors/middlecontrol/config');
+    expect(read.body).toEqual({
+      enabled: false,
+      host: 'e2e-middlecontrol.local',
+      port: 11581,
+    });
+  });
+
+  it('middlecontrol discovery returns only shaped endpoints', async () => {
+    const res = await apiClient.post<MiddlecontrolDiscovery>(
+      '/api/connectors/middlecontrol/discover',
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.devices).toEqual(expect.any(Array));
+    for (const device of res.body.devices) {
+      expect(device).toEqual({ host: expect.any(String), port: expect.any(Number) });
+    }
+  }, 10_000);
+
+  it('rodecaster config round-trips enabled and notifyOnMute', async () => {
+    const saved = await apiClient.put('/api/connectors/rodecaster/config', {
+      enabled: false,
+      notifyOnMute: true,
+      audioRecording: {
+        schemaVersion: 1,
+        enabled: false,
+        directory: '',
+        processingMode: 'preFader',
+        outputMode: 'mainMix',
+        sources: [],
+      },
+    });
+    expect(saved.status).toBe(204);
+
+    const res = await apiClient.get<RodecasterConfig>('/api/connectors/rodecaster/config');
+    expect(res.body).toEqual({
+      enabled: false,
+      notifyOnMute: true,
+      audioRecording: {
+        schemaVersion: 1,
+        enabled: false,
+        directory: '',
+        processingMode: 'preFader',
+        outputMode: 'mainMix',
+        sources: [],
+      },
+    });
+  });
+
   it('PUT /api/connectors/{name}/config rejects a mismatched body → 400', async () => {
     const res = await apiClient.put('/api/connectors/vmix/config', { enabled: 'yes' });
     expect(res.status).toBe(400);
+  });
+
+  // An enabled OAuth connector that cannot work has to report `error`, not the silent
+  // `disconnected`: that status edge is what raises the toast and the notification.
+  it.each([
+    { name: 'youtube', credentials: { clientId: 'e2e-id', clientSecret: 'e2e-secret' } },
+    { name: 'facebook', credentials: { appId: 'e2e-id', appSecret: 'e2e-secret', pageId: 'e2e' } },
+  ])('$name enabled without a login reports an error status', async ({ name, credentials }) => {
+    const enable = await apiClient.put(`/api/connectors/${name}/config`, {
+      enabled: true,
+      ...credentials,
+    });
+    expect(enable.status).toBe(204);
+
+    await vi.waitFor(
+      async () => {
+        const res = await apiClient.get<ConnectorStatuses>('/api/connectors/status');
+        expect(res.body[name as 'youtube' | 'facebook']).toMatchObject({
+          type: 'error',
+          message: 'login_required',
+        });
+      },
+      { timeout: 5000, interval: 100 },
+    );
+
+    // Disabling stops the loop, so the connector falls quiet again.
+    await apiClient.put(`/api/connectors/${name}/config`, { enabled: false, ...credentials });
+    await vi.waitFor(async () => {
+      const res = await apiClient.get<ConnectorStatuses>('/api/connectors/status');
+      expect(res.body[name as 'youtube' | 'facebook'].type).toBe('disconnected');
+    });
   });
 
   it('GET /api/connectors/nope/config on an unknown connector → 404', async () => {

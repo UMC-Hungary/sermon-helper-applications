@@ -22,6 +22,18 @@ export function getSlideFolder(): Promise<SlideFolder> {
   return apiFetch('/api/settings/slide-folder', SlideFolderSchema);
 }
 
+/** Where the core writes generated song slide decks. Empty means unconfigured. */
+export function getSongSlideFolder(): Promise<SlideFolder> {
+  return apiFetch('/api/settings/song-slide-folder', SlideFolderSchema);
+}
+
+export function setSongSlideFolder(path: string): Promise<SlideFolder> {
+  return apiFetch('/api/settings/song-slide-folder', SlideFolderSchema, {
+    method: 'PUT',
+    body: { path },
+  });
+}
+
 export function setSlideFolder(path: string): Promise<SlideFolder> {
   return apiFetch('/api/settings/slide-folder', SlideFolderSchema, {
     method: 'PUT',

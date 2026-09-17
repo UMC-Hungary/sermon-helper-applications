@@ -58,6 +58,10 @@ encryption at rest, TLS): [plans/PLAN-api-access-contracts.md](plans/PLAN-api-ac
 
 A standalone binary that connects to the Metocast server over WebSocket and renders slides directly on a display — no browser required. Designed for Raspberry Pi / Linux framebuffer setups or macOS secondary screens.
 
+Presentations have two persisted designs: **Classic** and **Editorial**. Editorial uses the shared warm-black, ivory and antique-gold treatment for both imported song decks and generated Bible slides; choose it from the Presentations settings in either Tauri UI. The presenter keeps both the source SVG and extracted text for imported decks, so switching the design updates the live output immediately: Classic shows the source artwork and Editorial shows the styled text.
+
+In Sanctum, use **Slides → + → Create song PPT**, enter a title, and paste lyrics with two empty lines between slides. Metocast keeps every entered line intact, adds a title slide and a final blank slide, and writes the generated `.pptx` into the song output folder shown in **Slides → Settings**. Bible decks continue to use their separate folder under **Settings → Event settings**.
+
 See [presenter-receiver/PRESENTER_RECEIVER.md](presenter-receiver/PRESENTER_RECEIVER.md) for full documentation: installation, auto-start on boot, supported platforms, update instructions, and WebSocket protocol reference.
 
 ### Quick start
@@ -77,6 +81,27 @@ cargo run --manifest-path presenter-receiver/Cargo.toml --bin presenter-receiver
 ## Companion Module
 
 The Companion module communicates with Metocast only through the app WebSocket. Its Textus and Lekcio presets call `presenter.load_bible_reference` without an `event_id`, so the backend-selected current/next event is used.
+The active Classic/Editorial presenter design is selected in Metocast and is applied automatically when Companion opens a text-mode song or Bible presentation.
+
+RØDECaster audio capture is core-owned and uses the authenticated WebSocket commands
+`rodecaster.audio.discover`, `rodecaster.audio.record.start` (with `event_id`),
+`rodecaster.audio.record.stop`, and `rodecaster.audio.record.state`. It writes lossless FLAC files
+through `.partial` paths, atomically finalizes them, and records source/mapping provenance on the
+event media row.
+
+The RØDECaster channel profile keeps the mixer's `mute` separate from the Wireless PRO
+transmitter's `wirelessMute`. Live `rodecaster.mute` events identify transmitter-button changes
+with `remote: true`; the UI flags those as **Remote mic muted** without changing the channel toggle.
+
+Middle Control connects over its line-oriented TCP External API and remains the sole transport to
+APC-R / APC-R Mini units. Its host and port are configured under Connectors (current macOS default
+`11584`, observed Middle Control 3.2.0 macOS `11581`, Windows `11580`). The shared WebSocket accepts
+typed `middlecontrol.camera.select`, `middlecontrol.record.start`/`stop`,
+`middlecontrol.record.start_all`/`stop_all`, and `middlecontrol.preset.recall` commands; live camera,
+recording, APC-R presence, and preset-move state arrive in `connector.state` messages. Use
+`localhost` when Middle Control runs on the Metocast server computer. The authenticated
+`POST /api/connectors/middlecontrol/discover` scan checks localhost and the server's local `/24` on
+the known ports, and returns only endpoints that send a valid Middle Control feedback frame.
 
 ## Development
 

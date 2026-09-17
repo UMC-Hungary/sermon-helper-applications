@@ -35,8 +35,12 @@ const AUTHENTICATED = [
   { method: 'GET', path: '/api/auth/facebook/url' },
   { method: 'POST', path: '/api/auth/facebook/logout' },
   { method: 'POST', path: '/api/connectors/blackmagic-camera/discover' },
+  { method: 'POST', path: '/api/connectors/middlecontrol/discover' },
   { method: 'POST', path: '/api/connectors/blackmagic-camera/stream/youtube' },
   { method: 'GET', path: '/api/queues' },
+  { method: 'GET', path: '/api/settings/song-slide-folder' },
+  { method: 'PUT', path: '/api/settings/song-slide-folder' },
+  { method: 'POST', path: '/api/ppt/song' },
   { method: 'GET', path: '/api/connectors/szentiras/config/secrets' },
 ];
 

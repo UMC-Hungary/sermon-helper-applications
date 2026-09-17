@@ -7,6 +7,11 @@ import {
   CameraStreamTargetSchema,
   ConnectorStatusPayloadSchema,
   DiscoveredCameraSchema,
+  MiddlecontrolStateSchema,
+  RodecasterMuteEventSchema,
+  RodecasterProfileSchema,
+  RodecasterAudioDiscoverySchema,
+  RodecasterAudioRecorderStateSchema,
 } from './connectors.js';
 
 // ── OBS Device types ──────────────────────────────────────────────────────────
@@ -121,6 +126,7 @@ export const SlideContentSchema = z.object({
 });
 
 export const PresenterRenderModeSchema = z.enum(['text', 'svg']);
+export const PresenterThemeSchema = z.enum(['classic', 'editorial']);
 
 export const SvgSlideContentSchema = z.object({
   index: z.number().int().positive(),
@@ -159,12 +165,37 @@ export type PptFolder = z.infer<typeof PptFolderSchema>;
 export type ParagraphContent = z.infer<typeof ParagraphContentSchema>;
 export type SlideContent = z.infer<typeof SlideContentSchema>;
 export type PresenterRenderMode = z.infer<typeof PresenterRenderModeSchema>;
+export type PresenterTheme = z.infer<typeof PresenterThemeSchema>;
 export type SvgSlideContent = z.infer<typeof SvgSlideContentSchema>;
 export type PresenterState = z.infer<typeof PresenterStateSchema>;
 export type WsClientInfo = z.infer<typeof WsClientInfoSchema>;
 export type CronJob = z.infer<typeof CronJobSchema>;
 export type BroadlinkDevice = z.infer<typeof BroadlinkDeviceSchema>;
 export type BroadlinkCommand = z.infer<typeof BroadlinkCommandSchema>;
+
+export const MiddlecontrolCommandSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('middlecontrol.camera.select'),
+    camera_id: z.number().int().min(1).max(99),
+  }),
+  z.object({
+    type: z.literal('middlecontrol.record.start'),
+    camera_id: z.number().int().min(1).max(99).optional(),
+  }),
+  z.object({
+    type: z.literal('middlecontrol.record.stop'),
+    camera_id: z.number().int().min(1).max(99).optional(),
+  }),
+  z.object({ type: z.literal('middlecontrol.record.start_all') }),
+  z.object({ type: z.literal('middlecontrol.record.stop_all') }),
+  z.object({
+    type: z.literal('middlecontrol.preset.recall'),
+    preset: z.number().int().min(1).max(12),
+    camera_id: z.number().int().min(1).max(99).optional(),
+  }),
+]);
+
+export type MiddlecontrolCommand = z.infer<typeof MiddlecontrolCommandSchema>;
 
 export const WsMessageSchema = z.discriminatedUnion('type', [
   // ── Core ───────────────────────────────────────────────────────────────────
@@ -196,6 +227,8 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
       'discord',
       'broadlink',
       'blackmagic-camera',
+      'middlecontrol',
+      'rodecaster',
     ]),
     status: ConnectorStatusPayloadSchema,
   }),
@@ -210,12 +243,14 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
       'facebook',
       'discord',
       'blackmagic-camera',
+      'middlecontrol',
     ]),
     isStreaming: z.boolean().optional(),
     /** The camera's own livestream word, so a client can tell `Connecting` from `Idle`.
      *  Absent for every connector but the Blackmagic camera. */
     streamStatus: z.string().optional(),
     isRecording: z.boolean().optional(),
+    state: MiddlecontrolStateSchema.optional(),
   }),
   z.object({
     type: z.literal('cron.youtube_pull'),
@@ -320,7 +355,11 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ppt.folders.list'), folders: z.array(PptFolderSchema) }),
   z.object({ type: z.literal('ppt.folders.add'), folder: PptFolderSchema.nullable() }),
   // ── Presentation settings (push + command response) ────────────────────────
-  z.object({ type: z.literal('presentation.settings'), useWebPresenter: z.boolean() }),
+  z.object({
+    type: z.literal('presentation.settings'),
+    useWebPresenter: z.boolean(),
+    presenterTheme: PresenterThemeSchema.default('classic'),
+  }),
   // ── Presenter (push + command responses) ───────────────────────────────────
   z.object({ type: z.literal('presenter.state'), state: PresenterStateSchema }),
   z.object({
@@ -341,6 +380,8 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     youtube: ConnectorStatusPayloadSchema,
     facebook: ConnectorStatusPayloadSchema,
     'blackmagic-camera': ConnectorStatusPayloadSchema,
+    middlecontrol: ConnectorStatusPayloadSchema,
+    rodecaster: ConnectorStatusPayloadSchema,
   }),
   z.object({
     type: z.literal('connectors.state'),
@@ -352,6 +393,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
         isRecording: z.boolean(),
       })
       .nullable(),
+    middlecontrol: MiddlecontrolStateSchema.nullable(),
   }),
   z.object({ type: z.literal('connectors.youtube.stream_key'), rtmpUrl: z.string() }),
   z.object({ type: z.literal('connectors.facebook.stream_key'), rtmpUrl: z.string() }),
@@ -410,6 +452,17 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   }),
   CameraStreamTargetSchema.extend({
     type: z.literal('blackmagic-camera.stream.platform'),
+  }),
+  // ── RØDECaster ──────────────────────────────────────────────────────────────
+  z.object({ type: z.literal('rodecaster.profile'), profile: RodecasterProfileSchema }),
+  RodecasterMuteEventSchema.extend({ type: z.literal('rodecaster.mute') }),
+  z.object({
+    type: z.literal('rodecaster.audio.discovery'),
+    discovery: RodecasterAudioDiscoverySchema,
+  }),
+  z.object({
+    type: z.literal('rodecaster.audio.record.state'),
+    state: RodecasterAudioRecorderStateSchema,
   }),
   // ── OBS Devices ────────────────────────────────────────────────────────────
   z.object({

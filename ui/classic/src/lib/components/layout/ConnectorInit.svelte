@@ -38,6 +38,8 @@
     facebookState,
     discordStatus,
     discordConfig,
+    middlecontrolStatus,
+    middlecontrolConfig,
     szentirasConfig,
     youtubeLiveActive,
     mapConnectorStatus,
@@ -92,6 +94,9 @@
   });
   $effect(() => {
     syncErrorStore('discord', $discordStatus);
+  });
+  $effect(() => {
+    syncErrorStore('middlecontrol', $middlecontrolStatus);
   });
 
   $effect(() => {
@@ -163,6 +168,7 @@
         loadConfig('youtube', youtubeConfig),
         loadConfig('facebook', facebookConfig),
         loadConfig('discord', discordConfig),
+        loadConfig('middlecontrol', middlecontrolConfig),
         loadConfig('szentiras', szentirasConfig),
       ]);
     }

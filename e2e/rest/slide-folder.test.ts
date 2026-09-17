@@ -1,5 +1,5 @@
 /**
- * E2E tests for the slide output folder setting. The core stores the path
+ * E2E tests for the Bible and song output folder settings. The core stores the paths
  * because the core is what writes the decks, so it — not the UI — is what has
  * to reject a folder that is not there.
  */
@@ -19,6 +19,7 @@ const isLive = !!process.env.TAURI_TEST_TOKEN;
 describe.skipIf(!isLive)('Slide folder REST API', () => {
   afterAll(async () => {
     await apiClient.put('/api/settings/slide-folder', { path: '' });
+    await apiClient.put('/api/settings/song-slide-folder', { path: '' });
   });
 
   it('GET → 200 with an empty path when unset', async () => {
@@ -42,6 +43,18 @@ describe.skipIf(!isLive)('Slide folder REST API', () => {
       path: '/definitely/not/a/real/folder',
     });
     expect(res.status).toBe(400);
+  });
+
+  it('stores the song and Bible folders separately', async () => {
+    const songDir = await mkdtemp(join(tmpdir(), 'metocast-song-folder-'));
+    await apiClient.put('/api/settings/slide-folder', { path: process.cwd() });
+    await apiClient.put('/api/settings/song-slide-folder', { path: songDir });
+
+    const bible = await apiClient.get<SlideFolder>('/api/settings/slide-folder');
+    const song = await apiClient.get<SlideFolder>('/api/settings/song-slide-folder');
+    expect(bible.body.path).toBe(process.cwd());
+    expect(song.body.path).toBe(songDir);
+    await rm(songDir, { recursive: true, force: true });
   });
 });
 
@@ -85,5 +98,29 @@ describe.skipIf(!isLive)('Bible slide deck generation', () => {
     await apiClient.put('/api/settings/slide-folder', { path: '' });
     const res = await apiClient.post(`/api/events/${eventId}/slides`);
     expect(res.status).toBe(400);
+  });
+});
+
+describe.skipIf(!isLive)('Song slide deck generation', () => {
+  let dir = '';
+
+  afterAll(async () => {
+    await apiClient.put('/api/settings/song-slide-folder', { path: '' });
+    if (dir) await rm(dir, { recursive: true, force: true });
+  });
+
+  it('writes a safely named deck and paginates song sections', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'metocast-song-slides-'));
+    await apiClient.put('/api/settings/song-slide-folder', { path: dir });
+
+    const res = await apiClient.post<{ filePath: string; slideCount: number }>('/api/ppt/song', {
+      title: '../Kegyelemből: ének',
+      lyrics: 'egy\n\nkettő\n\n\nRefr.: hat\nhét',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.slideCount).toBe(4);
+    expect(res.body.filePath).toBe(join(dir, 'Kegyelemből ének.pptx'));
+    expect(await readdir(dir)).toEqual(['Kegyelemből ének.pptx']);
   });
 });

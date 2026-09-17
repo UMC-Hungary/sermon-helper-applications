@@ -42,6 +42,10 @@
     justify-content: space-between;
     gap: var(--ui-stack);
     min-height: var(--ui-target-min);
+    padding: var(--c-text-field-padding-block) var(--ui-gutter-inset);
+    background: var(--surface-sunken);
+    border: var(--ui-border-hairline) solid var(--border-control);
+    border-radius: var(--ui-radius-square);
   }
 
   label {

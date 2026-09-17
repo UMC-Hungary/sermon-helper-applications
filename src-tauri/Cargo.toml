@@ -56,6 +56,9 @@ quick-xml = "0.39.2"
 tauri-plugin-updater = "2.10.0"
 usvg = "0.47"
 blackmagic-camera = { path = "../blackmagic-camera" }
+rodecaster = { path = "../rodecaster" }
+cpal = "0.18.2"
+flac-bound = { version = "0.5.0", default-features = false, features = ["libflac-noogg"] }
 
 [patch.crates-io]
 tauri-plugin-liquid-glass = { path = "vendor/tauri-plugin-liquid-glass" }

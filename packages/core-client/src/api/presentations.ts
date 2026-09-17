@@ -1,5 +1,14 @@
+import { z } from 'zod';
 import { coreConfig } from '../config.js';
 import type { PptFolder, PptFile, KeynoteStatus } from '../schemas/ws-messages.js';
+import { apiFetch as typedApiFetch } from './client.js';
+
+const SongPresentationResultSchema = z.object({
+  filePath: z.string(),
+  slideCount: z.number().int().positive(),
+});
+
+export type SongPresentationResult = z.infer<typeof SongPresentationResultSchema>;
 
 function getBaseUrl(): string {
   const { mode, serverPort, serverUrl } = coreConfig();
@@ -59,6 +68,16 @@ export async function searchFiles(filter: string): Promise<PptFile[]> {
   const params = filter ? `?filter=${encodeURIComponent(filter)}` : '';
   const result = await apiFetch<PptFile[]>(`/api/ppt/files${params}`);
   return result.success && result.data ? result.data : [];
+}
+
+export function createSongPresentation(
+  title: string,
+  lyrics: string,
+): Promise<SongPresentationResult> {
+  return typedApiFetch('/api/ppt/song', SongPresentationResultSchema, {
+    method: 'POST',
+    body: { title, lyrics },
+  });
 }
 
 // ── Keynote control ───────────────────────────────────────────────────────────

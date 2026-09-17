@@ -37,15 +37,15 @@ Default, focus-within, readonly, disabled, invalid.
 | Token | Resolves to |
 | --- | --- |
 | `--accent` | `#5c5c84 / #a9a6d6` |
-| `--border-hairline` | `rgba(28, 26, 22, 0.1) / rgba(237, 230, 214, 0.09)` |
+| `--border-control` | `#857c68 / #716b5c` |
 | `--c-field-hint-gap` | `2px` |
 | `--c-field-hint-track` | `1.2px` |
 | `--c-field-input-gap` | `4px` |
-| `--c-field-input-padding-bottom` | `4px` |
-| `--c-field-input-padding-top` | `8px` |
 | `--c-field-label-track` | `1.5px` |
 | `--c-field-padding-block` | `10px` |
+| `--c-text-field-padding-block` | `9px` |
 | `--status-error` | `#b5321c / #e66a4f` |
+| `--surface-sunken` | `#e4ddcd / #23201a` |
 | `--text-faint` | `#676051 / #8f8879` |
 | `--text-muted` | `#615e56 / #918b7e` |
 | `--text-primary` | `#1c1a16 / #ede6d6` |
@@ -57,6 +57,11 @@ Default, focus-within, readonly, disabled, invalid.
 | `--type-label-sm-transform` | `uppercase` |
 | `--type-label-sm-weight` | `500` |
 | `--ui-border-hairline` | `1px` |
+| `--ui-focus-offset` | `2px` |
+| `--ui-focus-width` | `2px` |
+| `--ui-gutter-inset` | `14px` |
+| `--ui-radius-square` | `0` |
+| `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
 

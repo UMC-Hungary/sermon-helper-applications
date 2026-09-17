@@ -7,7 +7,10 @@ pub mod discord;
 pub mod facebook;
 #[cfg(target_os = "macos")]
 pub mod keynote;
+pub mod middlecontrol;
 pub mod obs;
+pub mod rodecaster;
+pub mod rodecaster_audio;
 pub mod vmix;
 pub mod youtube;
 
@@ -104,20 +107,34 @@ impl ConnectorConfig for AtemConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct MiddlecontrolConfig {
+    pub enabled: bool,
+    pub host: String,
+    pub port: u16,
+}
+
+impl Default for MiddlecontrolConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            host: String::new(),
+            port: 11584,
+        }
+    }
+}
+
+impl ConnectorConfig for MiddlecontrolConfig {
+    fn is_configured(&self) -> bool {
+        self.enabled && !self.host.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct YouTubeConfig {
     pub enabled: bool,
     pub client_id: String,
     pub client_secret: String,
-}
-
-impl Default for YouTubeConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            client_id: String::new(),
-            client_secret: String::new(),
-        }
-    }
 }
 
 impl ConnectorConfig for YouTubeConfig {
@@ -126,7 +143,7 @@ impl ConnectorConfig for YouTubeConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FacebookConfig {
     pub enabled: bool,
@@ -135,37 +152,17 @@ pub struct FacebookConfig {
     pub page_id: String,
 }
 
-impl Default for FacebookConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            app_id: String::new(),
-            app_secret: String::new(),
-            page_id: String::new(),
-        }
-    }
-}
-
 impl ConnectorConfig for FacebookConfig {
     fn is_configured(&self) -> bool {
         self.enabled && !self.app_id.is_empty() && !self.app_secret.is_empty()
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscordConfig {
     pub enabled: bool,
     pub webhook_url: String,
-}
-
-impl Default for DiscordConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            webhook_url: String::new(),
-        }
-    }
 }
 
 impl ConnectorConfig for DiscordConfig {
@@ -218,5 +215,74 @@ pub struct BlackmagicCameraConfig {
 impl ConnectorConfig for BlackmagicCameraConfig {
     fn is_configured(&self) -> bool {
         self.enabled && !self.host.is_empty()
+    }
+}
+
+/// RØDECaster Pro II over USB HID. No host or port: the device is found by its USB
+/// vendor and product id on the machine running the core.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+pub enum RodecasterAudioSource {
+    MainMix,
+    FaderSlot { number: usize },
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum RodecasterProcessingMode {
+    #[default]
+    PreFader,
+    PreFaderBypass,
+    PostFader,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum RodecasterAudioOutputMode {
+    #[default]
+    MainMix,
+    Separate,
+    CombinedStereo,
+    MultichannelFlac,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RodecasterAudioRecordingConfig {
+    pub schema_version: u8,
+    pub enabled: bool,
+    pub directory: String,
+    pub processing_mode: RodecasterProcessingMode,
+    pub output_mode: RodecasterAudioOutputMode,
+    pub sources: Vec<RodecasterAudioSource>,
+}
+
+impl Default for RodecasterAudioRecordingConfig {
+    fn default() -> Self {
+        Self {
+            schema_version: 1,
+            enabled: false,
+            directory: String::new(),
+            processing_mode: RodecasterProcessingMode::PreFader,
+            output_mode: RodecasterAudioOutputMode::MainMix,
+            sources: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RodecasterConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub notify_on_mute: bool,
+    #[serde(default)]
+    pub audio_recording: RodecasterAudioRecordingConfig,
+}
+
+impl ConnectorConfig for RodecasterConfig {
+    fn is_configured(&self) -> bool {
+        self.enabled
     }
 }

@@ -11,3 +11,11 @@ export const SlideFolderSchema = z.object({
 });
 
 export type SlideFolder = z.infer<typeof SlideFolderSchema>;
+
+export const PresentationFontsStatusSchema = z.object({
+  supported: z.boolean(),
+  installed: z.boolean(),
+  installDir: z.string().nullable(),
+});
+
+export type PresentationFontsStatus = z.infer<typeof PresentationFontsStatusSchema>;

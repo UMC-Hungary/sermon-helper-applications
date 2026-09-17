@@ -30,6 +30,23 @@ describe.skipIf(!isLive)('Presenter WebSocket Commands', () => {
     expect(Array.isArray((msg['state'] as { slides: unknown[] }).slides)).toBe(true);
   });
 
+  it('presentation.set_presenter_theme updates the shared presenter design', async () => {
+    // Consume the settings snapshot pushed automatically when this client connected.
+    await ws.waitForMessage('presentation.settings');
+
+    const editorial = await ws.command(
+      { type: 'presentation.set_presenter_theme', theme: 'editorial' },
+      'presentation.settings',
+    );
+    expect(editorial['presenterTheme']).toBe('editorial');
+
+    const restored = await ws.command(
+      { type: 'presentation.set_presenter_theme', theme: 'classic' },
+      'presentation.settings',
+    );
+    expect(restored['presenterTheme']).toBe('classic');
+  });
+
   it('presenter.load with non-existent file → error response', async () => {
     const msg = await ws.command(
       { type: 'presenter.load', file_path: '/tmp/e2e-nonexistent.pptx' },

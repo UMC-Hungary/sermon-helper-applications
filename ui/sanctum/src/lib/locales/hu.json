@@ -70,7 +70,22 @@
     "presentations": "Prezentációk",
     "presentationsMeta": "Diák és dalszövegek",
     "connectors": "Csatlakozók",
-    "connectorsMeta": "{n} csatlakoztatva"
+    "connectorsMeta": "{n} csatlakoztatva",
+    "audioRecording": "RØDECaster hang",
+    "recReady": "Készenlét",
+    "recActive": "Felvétel",
+    "noRecordEvent": "Nincs esemény a felvételhez",
+    "noRecordEventHint": "Ütemezz eseményt, és a felvétel ahhoz kerül",
+    "outputMode": {
+      "mainMix": "Fő mix",
+      "separate": "Külön sávok",
+      "combinedStereo": "Összevont sztereó",
+      "multichannelFlac": "Többcsatornás FLAC"
+    },
+    "recordAudio": "Hangfelvétel",
+    "stopAudio": "Felvétel leállítása",
+    "connectMixer": "Felvétel előtt csatlakoztasd a RØDECastert a maghoz.",
+    "lastRecording": "Legutóbbi felvétel"
   },
   "events": {
     "eyebrow": "{n} megjelenítve",
@@ -116,6 +131,7 @@
     "pickTime": "Válassz időpontot",
     "speaker": "Előadó",
     "speakerPlaceholder": "Kovács Mária lelkész",
+    "speakerAccept": "elfogadás",
     "scripture": "Igék",
     "scriptureHint": "A keresés lekéri a versek szövegét",
     "textus": "Textus",
@@ -196,6 +212,18 @@
       "web": "Webes megjelenítő",
       "keynote": "Keynote híd"
     },
+    "themeLabel": "Vetítési megjelenés",
+    "fontsTitle": "PowerPoint betűtípusok",
+    "fontsNames": "Cormorant Garamond + Geist Mono",
+    "fontsRequired": "Az Editorial PowerPointokhoz szükséges — telepítsd a Betűtárban",
+    "fontsInstall": "Betűtár megnyitása",
+    "fontsInstalled": "Telepítve",
+    "fontsFontBook": "A Betűtárban kattints mindkét betűtípus Telepítés gombjára, majd térj vissza ide",
+    "fontsRestart": "Telepítve — indítsd újra a Keynote-ot vagy a PowerPointot",
+    "theme": {
+      "classic": "Klasszikus",
+      "editorial": "Editorial"
+    },
     "presenting": "Vetítés",
     "standby": "Készenlét",
     "transport": "Diavezérlés",
@@ -232,18 +260,81 @@
     "folderPath": "Mappa útvonala a szerver gépen",
     "folderPathPlaceholder": "/Users/nev/Prezentaciok",
     "addFolder": "Mappa hozzáadása",
-    "removeFolder": "Mappa eltávolítása"
+    "removeFolder": "Mappa eltávolítása",
+    "newSong": "Ének PPT készítése",
+    "songKind": "Énekdiák",
+    "songTitle": "Ének címe",
+    "songTitlePlaceholder": "Kegyelemből léphetünk be",
+    "songLyrics": "Dalszöveg",
+    "songLyricsHint": "A diák között hagyj két üres sort",
+    "songLyricsPlaceholder": "Illeszd be a versszakokat és a refrént…",
+    "songStructureHint": "A cím- és az utolsó üres dia automatikusan elkészül. A beírt sorok egyben maradnak.",
+    "outputFolder": "Ének PPT-k célmappája",
+    "outputFolderHint": "Ide mentjük az elkészült ének PowerPointokat",
+    "outputFolderNone": "Nincs beállítva",
+    "outputFolderChoose": "Mappa kiválasztása",
+    "outputFolderChange": "Mappa módosítása",
+    "outputFolderSave": "Mappa mentése",
+    "searchFolders": "Prezentációk keresési mappái",
+    "songRequired": "Add meg az ének címét és szövegét.",
+    "createSong": "PowerPoint készítése",
+    "creatingSong": "PowerPoint készítése…",
+    "songCreated": "PowerPoint elkészült · {n} dia",
+    "songFailed": "Nem sikerült elkészíteni a PowerPointot"
   },
   "notif": {
     "bell": "Értesítések, {n} olvasatlan",
+    "bellIssue": "Értesítések, 1 fennálló hiba, {n} olvasatlan",
+    "bellIssues": "Értesítések, {issues} fennálló hiba, {n} olvasatlan",
     "eyebrow": "Értesítések",
     "count": "{n} tétel",
+    "activeCountOne": "1 fennálló hiba",
+    "activeCount": "{n} fennálló hiba",
+    "activeIssues": "Fennálló hibák",
+    "recentNotifications": "Legutóbbi értesítések",
     "allClear": "Minden rendben",
     "emptyTitle": "Nincs várakozó.",
     "emptyHint": "A csatlakozók itt jeleznek",
     "clearAll": "Összes törlése",
+    "clearHistory": "Előzmények törlése",
     "showSteps": "Lépések mutatása",
-    "hideSteps": "Lépések elrejtése"
+    "hideSteps": "Lépések elrejtése",
+    "kind": {
+      "encoder": "Kódoló",
+      "streaming": "Streamelés",
+      "camera": "Kamera",
+      "cameraControl": "Kameravezérlés",
+      "switcher": "Képkeverő",
+      "mixer": "Keverő",
+      "webhooks": "Webhookok",
+      "connector": "Csatlakozó",
+      "system": "Rendszer"
+    },
+    "action": {
+      "edit": "Szerkesztés",
+      "reconnect": "Újracsatlakozás",
+      "relogin": "Újra bejelentkezés"
+    },
+    "remediation": {
+      "open": "Nyisd meg a Beállítások → Csatlakozók oldalt",
+      "check": "Ellenőrizd a(z) {name} beállításait",
+      "enable": "Kapcsold be újra a csatlakozót"
+    },
+    "mute": {
+      "remoteMuted": "{label}: távoli mikrofon némítva",
+      "remoteUnmuted": "{label}: távoli mikrofon némítás feloldva",
+      "muted": "{label} némítva",
+      "unmuted": "{label} némítás feloldva"
+    },
+    "conn": {
+      "disconnected": "{name} lekapcsolódott",
+      "reconnected": "{name} újracsatlakozott",
+      "reconnecting": "újracsatlakozás"
+    },
+    "core": {
+      "source": "Core",
+      "commandFailed": "A parancs nem sikerült"
+    }
   },
   "settings": {
     "eyebrow": "Vezérlőfelület",
@@ -335,7 +426,7 @@
     },
     "eventsRow": {
       "title": "Esemény beállítások",
-      "meta": "Cím sablon, diasor mappa"
+      "meta": "Cím sablon, bibliai diasor mappa"
     }
   },
   "logs": {
@@ -376,6 +467,7 @@
   "toast": {
     "region": "Értesítések",
     "dismiss": "Bezárás",
+    "minimize": "Értesítés kicsinyítése",
     "connector": "Csatlakozó"
   },
   "conn": {
@@ -408,7 +500,9 @@
       "vmix": "Konfiguráció eltárolva későbbi támogatáshoz",
       "atem": "Switcher támogatás hamarosan",
       "discord": "Webhook támogatás hamarosan",
-      "blackmagic-camera": "REST API · felvétel- és élő adás vezérlés"
+      "blackmagic-camera": "REST API · felvétel- és élő adás vezérlés",
+      "middlecontrol": "TCP API · kamera-, felvétel- és presetvezérlés",
+      "rodecaster": "USB HID · csatornaprofil és némítás"
     },
     "lockedNote": "Ez a csatlakozó még nincs megvalósítva. A Metocast készen tartja a konfigurációt egy jövőbeli verzióhoz.",
     "note": "A csatlakozó beállításai először helyben mentődnek, majd Tauri parancsokon vagy a szerver API-n keresztül egyeztetődnek.",
@@ -459,7 +553,8 @@
       "webhookUrl": "Webhook URL",
       "apiKey": "API kulcs",
       "username": "Felhasználónév",
-      "fingerprint": "Tanúsítvány ujjlenyomat"
+      "fingerprint": "Tanúsítvány ujjlenyomat",
+      "notifyOnMute": "Értesítés némításkor"
     },
     "cameraDiscovery": {
       "title": "Kamerák keresése",
@@ -473,6 +568,40 @@
       "control": "Kameravezérlés",
       "controlMeta": "Vezérlés, tárhely, felvételi és adásminőség",
       "open": "Megnyitás"
+    },
+    "fieldHint": {
+      "notifyOnMute": "Értesítés, ha egy csatornát a pulton némítanak vagy feloldanak."
+    },
+    "rodecaster": {
+      "exclusive": "Az USB-kábelnek a magot futtató géphez kell érnie, és a pult egyszerre csak egy klienst enged — a RØDE Central és a RØDE Connect nem lehet nyitva, amíg ez a csatlakozó tartja.",
+      "mixer": "Keverő",
+      "mixerMeta": "Csatornaprofil és némítás"
+    },
+    "middlecontrol": {
+      "help": "A Middle Controlnak futnia kell. Ha a Metocast szervergépén fut, használd a localhost címet — nincs szükség IP-címre. A jelenlegi macOS-verziók a 11584-es portot használják; a megfigyelt 3.2.0-s macOS build a 11581-est; Windows alatt a port 11580.",
+      "sdk": "Külső SDK / API",
+      "devicesTitle": "Middle Control eszközök",
+      "devicesSummary": "{cameras} kamera · {ptz} APC-R/PTZ",
+      "devicesDisconnected": "Csatlakoztasd a Middle Controlt a kamerák és APC-R PTZ egységek megjelenítéséhez.",
+      "devicesWaiting": "Várakozás a Middle Control első visszajelzésére…",
+      "devicesEmpty": "A Middle Control nem jelez csatlakoztatott kamerát vagy APC-R PTZ egységet.",
+      "camera": "{id}. kamera",
+      "connected": "Csatlakoztatva",
+      "cameraOffline": "A kamera nem elérhető",
+      "selected": "Kiválasztva",
+      "recording": "Felvétel",
+      "ptz": "APC-R · PTZ",
+      "useLocal": "Ennek a gépnek a használata",
+      "useEndpoint": "{address} használata",
+      "discoveryTitle": "Middle Control keresése",
+      "discoveryDescription": "Ellenőrzi ezt a gépet és a Metocast szerver helyi hálózatát az ismert Middle Control portokon. Csak érvényes visszajelzési adatfolyamot fogad el.",
+      "discoveryReady": "Indíts keresést, miközben a Middle Control fut.",
+      "discoveryEmpty": "Egy Middle Control példány sem válaszolt. Győződj meg róla, hogy fut, majd keress újra. Kézi megadáshoz Macen nyisd meg a Rendszerbeállítások → Hálózat lapot, Windowson a Beállítások → Hálózat és internet → Tulajdonságok lapot, majd másold a gép IPv4-címét a fenti Gazdagép mezőbe."
+    },
+    "status": {
+      "login_required": "Bejelentkezés szükséges",
+      "relogin_required": "Újbóli bejelentkezés szükséges",
+      "credentials_required": "Hiányzó belépési adatok"
     }
   },
   "setup": {
@@ -603,13 +732,13 @@
   },
   "eventSettings": {
     "templateSaved": "Sablon mentve",
-    "folderSaved": "Diasor mappa mentve",
+    "folderSaved": "Bibliai diasor mappa mentve",
     "saveFailed": "Nem sikerült menteni",
     "slides": {
       "section": "Diasorok",
-      "hint": "Textus és Lekció",
-      "title": "Célmappa",
-      "none": "Nincs beállítva — diasor nem generálható",
+      "hint": "Textus és Lekció PowerPointok",
+      "title": "Bibliai PPT-k célmappája",
+      "none": "Nincs beállítva — bibliai diasor nem generálható",
       "choose": "Mappa választása",
       "clear": "Törlés",
       "field": "Mappa a kiszolgáló gépén",
@@ -619,5 +748,60 @@
     "copied": "{token} vágólapra másolva",
     "copyFailed": "Nem sikerült másolni",
     "copyHint": "Másolás a vágólapra"
+  },
+  "rodecaster": {
+    "title": "RØDECaster Pro II",
+    "back": "Csatlakozók",
+    "unavailable": "A keverő nem érhető el",
+    "notConnected": "A RØDECaster nincs csatlakoztatva. Csatlakoztasd a magot futtató géphez, engedélyezd a csatlakozót, és győződj meg róla, hogy más alkalmazás nem tartja az eszközt.",
+    "retry": "Újra",
+    "channels": "Csatornák",
+    "readOnlyHint": "A némításon kívül csak olvasható",
+    "channelMeta": "Szint {level}% · {blocks} feldolgozó blokk bekapcsolva",
+    "remoteMicMuted": "Távoli mikrofon némítva",
+    "level": "Fader szint",
+    "cue": "A cue be van kapcsolva ezen a csatornán.",
+    "noSettings": "Az eszköz nem jelent további tulajdonságot ehhez a csatornához.",
+    "note": "Minden érték a pultról érkezik. Az alkalmazás csak a némítást írja.",
+    "recording": {
+      "title": "Hangfelvétel",
+      "description": "A hangot a Metocast Core rögzíti, és FLAC-fájlokba menti. Engedélyezd a felvételt, válassz egy létező mappát a Core-t futtató számítógépen, majd mentsd a beállításokat. Távoli Core használatakor a távoli számítógép abszolút mappaútvonalát add meg.",
+      "enabled": "Mag által végzett felvétel engedélyezése",
+      "enabledHint": "A RØDECaster USB multitrack kimenetének veszteségmentes FLAC rögzítése.",
+      "endpointUnavailable": "A Metocast nem találja a RØDECaster többcsatornás hangbemenetét. Csatlakoztasd a Metocast Core-t futtató számítógépet a keverő USB 1 portjához, kapcsold be az USB 1 Multitrack módot a RØDECasteren, majd keress újra.",
+      "scanAudio": "Hangeszköz újrakeresése",
+      "directory": "A felvételek mentési mappája",
+      "directoryPlaceholder": "/Users/nev/Music/Metocast felvételek",
+      "directoryHint": "Válassz egy létező mappát ezen a számítógépen. A Core-nak írási jogosultságra van szüksége.",
+      "remoteHint": "Add meg a távoli Metocast Core gépén létező, írható mappa abszolút elérési útját.",
+      "chooseDirectory": "Hangfelvételi mappa kiválasztása",
+      "choose": "Kiválasztás",
+      "outputMode": "Kimenet",
+      "processingMode": "Egyedi sávok feldolgozása",
+      "sources": "Fader sávok",
+      "sourcesRequired": "Ehhez a kimeneti módhoz válassz legalább egy fader sávot.",
+      "sourcesUnavailable": "Nem található külön fader sáv. Kapcsold be az USB 1 Multitrack módot a RØDECasteren, majd keress újra.",
+      "save": "Felvételi beállítások mentése",
+      "saved": "Felvételi beállítások mentve",
+      "mode": {
+        "mainMix": "Fő mix — azonnal használható",
+        "separate": "Külön FLAC minden faderhez",
+        "combinedStereo": "Összevont sztereó FLAC",
+        "multichannelFlac": "Egy összegzés nélküli többcsatornás FLAC"
+      },
+      "processing": {
+        "preFader": "Fader előtti, feldolgozott",
+        "preFaderBypass": "Fader előtti, feldolgozás nélkül",
+        "postFader": "Fader utáni, feldolgozott"
+      }
+    },
+    "overview": {
+      "device": "Eszköz",
+      "channels": "Csatornák",
+      "muted": "Némítva"
+    },
+    "toast": {
+      "muteFail": "Nem sikerült a némítás"
+    }
   }
 }
