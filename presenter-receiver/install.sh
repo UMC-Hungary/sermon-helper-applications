@@ -41,13 +41,12 @@ ARCH="$(uname -m)"
 
 case "${OS}-${ARCH}" in
     Darwin-arm64)   BINARY="presenter-receiver-macos-arm64"  ;;
-    Darwin-x86_64)  BINARY="presenter-receiver-macos-x86_64" ;;
     Linux-aarch64)  BINARY="presenter-receiver-linux-arm64"  ;;
     Linux-armv7l)   BINARY="presenter-receiver-linux-arm64"  ;;
     Linux-x86_64)   BINARY="presenter-receiver-linux-x86_64" ;;
     *)
         echo "Unsupported platform: ${OS}-${ARCH}"
-        echo "Supported: macOS arm64/x86_64, Linux arm64/x86_64"
+        echo "Supported: macOS arm64, Linux arm64/x86_64"
         exit 1
         ;;
 esac

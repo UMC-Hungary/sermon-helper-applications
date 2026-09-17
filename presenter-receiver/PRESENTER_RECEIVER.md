@@ -12,7 +12,6 @@ A standalone binary that connects to the Metocast server over WebSocket and rend
 | Linux armv7l (Raspberry Pi 3)   | `presenter-receiver-linux-arm64`  |
 | Linux x86_64                    | `presenter-receiver-linux-x86_64` |
 | macOS Apple Silicon             | `presenter-receiver-macos-arm64`  |
-| macOS Intel                     | `presenter-receiver-macos-x86_64` |
 
 ---
 

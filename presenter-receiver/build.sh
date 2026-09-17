@@ -5,7 +5,6 @@
 # Run this script on each target machine to get a native binary:
 #
 #   macOS (Apple Silicon) : ./build.sh
-#   macOS (Intel)         : ./build.sh
 #   Linux ARM64 (RPi)     : ./build.sh
 #   Linux x86_64          : ./build.sh
 #
@@ -26,10 +25,6 @@ case "${OS}-${ARCH}" in
         PLATFORM="macos-arm64"
         # Homebrew on Apple Silicon
         PKG_CONFIG_PATH_EXTRA="/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/cairo/lib/pkgconfig:/opt/homebrew/opt/pango/lib/pkgconfig"
-        ;;
-    Darwin-x86_64)
-        PLATFORM="macos-x86_64"
-        PKG_CONFIG_PATH_EXTRA="/usr/local/lib/pkgconfig:/usr/local/opt/cairo/lib/pkgconfig:/usr/local/opt/pango/lib/pkgconfig"
         ;;
     Linux-aarch64)
         PLATFORM="linux-arm64"

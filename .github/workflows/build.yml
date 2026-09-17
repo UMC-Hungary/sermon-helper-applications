@@ -653,7 +653,7 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Presenter Receiver — standalone CLI binary
-  # Builds for: macOS arm64/x86_64, Linux arm64 (RPi), Linux x86_64
+  # Builds for: macOS arm64, Linux arm64 (RPi), Linux x86_64
   # No Node/pnpm needed — pure Rust + Cairo/Pango system libs.
   # Note: linux-arm64 uses GitHub's hosted ubuntu-24.04-arm runner.
   # ──────────────────────────────────────────────
@@ -668,11 +668,6 @@ jobs:
         include:
           - runner: macos-latest
             artifact: presenter-receiver-macos-arm64
-
-          - runner: macos-latest
-            artifact: presenter-receiver-macos-x86_64
-            cargo_target: x86_64-apple-darwin
-            brew_prefix: /usr/local
 
           - runner: ubuntu-22.04
             artifact: presenter-receiver-linux-x86_64
@@ -694,24 +689,10 @@ jobs:
             brew list "$pkg" >/dev/null 2>&1 || brew install "$pkg"
           done
 
-      - name: Install macOS x86_64 dependencies via x86_64 Homebrew
-        if: matrix.brew_prefix != ''
-        run: |
-          NONINTERACTIVE=1 arch -x86_64 /bin/bash -c \
-            "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          for pkg in glib cairo pango harfbuzz pkg-config; do
-            arch -x86_64 /usr/local/bin/brew list "$pkg" >/dev/null 2>&1 || arch -x86_64 /usr/local/bin/brew install "$pkg"
-          done
-
-      - name: Get Homebrew library versions for cache key (arm64)
-        if: runner.os == 'macOS' && matrix.brew_prefix == ''
-        id: brew-versions-arm64
+      - name: Get Homebrew library versions for cache key
+        if: runner.os == 'macOS'
+        id: brew-versions
         run: echo "ver=$(brew list --versions harfbuzz cairo pango glib | tr ' \n' '_')" >> $GITHUB_OUTPUT
-
-      - name: Get Homebrew library versions for cache key (x86_64)
-        if: runner.os == 'macOS' && matrix.brew_prefix != ''
-        id: brew-versions-x86
-        run: echo "ver=$(arch -x86_64 /usr/local/bin/brew list --versions harfbuzz cairo pango glib | tr ' \n' '_')" >> $GITHUB_OUTPUT
 
       - name: Install Linux dependencies (Cairo + Pango via apt)
         if: runner.os == 'Linux'
@@ -721,41 +702,25 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.cargo_target }}
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './presenter-receiver -> target'
-          shared-key: ${{ matrix.artifact }}-${{ steps.brew-versions-arm64.outputs.ver || steps.brew-versions-x86.outputs.ver || 'linux' }}
+          shared-key: ${{ matrix.artifact }}-${{ steps.brew-versions.outputs.ver || 'linux' }}
 
       - name: Build release binary
         working-directory: presenter-receiver
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
-            if [ -n "${{ matrix.brew_prefix }}" ]; then
-              export PKG_CONFIG_x86_64_apple_darwin=/usr/local/bin/pkg-config
-              export PKG_CONFIG_ALLOW_CROSS=1
-            else
-              export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
-            fi
+            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix cairo)/lib/pkgconfig:$(brew --prefix pango)/lib/pkgconfig"
           fi
-          if [ -n "${{ matrix.cargo_target }}" ]; then
-            cargo build --release --target ${{ matrix.cargo_target }}
-          else
-            cargo build --release
-          fi
+          cargo build --release
 
       - name: Rename binary with platform suffix
         shell: bash
-        run: |
-          if [ -n "${{ matrix.cargo_target }}" ]; then
-            cp presenter-receiver/target/${{ matrix.cargo_target }}/release/presenter-receiver ${{ matrix.artifact }}
-          else
-            cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
-          fi
+        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
@@ -1008,7 +973,7 @@ jobs:
             ```bash
             curl -fsSL https://raw.githubusercontent.com/UMC-Hungary/sermon-helper-applications/main/presenter-receiver/install.sh | bash -s -- ws://YOUR_SERVER_IP:3737/ws
             ```
-            Detects macOS/Linux and arm64/x86_64 automatically, downloads the right binary, and starts it.
+            Detects macOS (Apple Silicon) and Linux arm64/x86_64 automatically, downloads the right binary, and starts it.
 
             To install without running:
             ```bash
@@ -1050,7 +1015,6 @@ jobs:
             artifacts/**/*.apk
             artifacts/**/*.aab
             artifacts/presenter-receiver-macos-arm64/presenter-receiver-macos-arm64
-            artifacts/presenter-receiver-macos-x86_64/presenter-receiver-macos-x86_64
             artifacts/presenter-receiver-linux-x86_64/presenter-receiver-linux-x86_64
             artifacts/presenter-receiver-linux-arm64/presenter-receiver-linux-arm64
             artifacts/companion-plugin/companion-module-metocast-*.tar.gz

@@ -1,20 +1,18 @@
 <script lang="ts">
   import { serverUrl, localNetworkUrl } from '$lib/stores/server-url.js';
 
-  type Platform = 'linux-x86_64' | 'linux-arm64' | 'macos-arm64' | 'macos-x86_64';
+  type Platform = 'linux-x86_64' | 'linux-arm64' | 'macos-arm64';
 
   const platforms: { id: Platform; label: string }[] = [
     { id: 'linux-arm64', label: 'Linux ARM64 (RPi)' },
     { id: 'linux-x86_64', label: 'Linux (x86_64)' },
     { id: 'macos-arm64', label: 'macOS (Apple Silicon)' },
-    { id: 'macos-x86_64', label: 'macOS (Intel)' },
   ];
 
   const binaryName: Record<Platform, string> = {
     'linux-x86_64': 'presenter-receiver-linux-x86_64',
     'linux-arm64': 'presenter-receiver-linux-arm64',
     'macos-arm64': 'presenter-receiver-macos-arm64',
-    'macos-x86_64': 'presenter-receiver-macos-x86_64',
   };
   const githubRepository = 'UMC-Hungary/sermon-helper-applications';
 
