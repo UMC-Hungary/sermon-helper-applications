@@ -287,7 +287,11 @@
         "The state is in the accessible name.",
         "The reference's label is the bare word \"Notifications\", so nothing about the waiting state reaches a screen reader."
       ],
-      ["The target was grown to 44px.", "As `IconButton`; the drawn size is unchanged."]
+      ["The target was grown to 44px.", "As `IconButton`; the drawn size is unchanged."],
+      [
+        "The count replaces the mark instead of sitting on top of it.",
+        "The reference draws both in the same corner, and the count is too narrow to cover the mark, so its edge shows beside the number."
+      ]
     ]
   },
   "NotificationCentre": {
@@ -592,9 +596,9 @@
     "purpose": "Single-line text. Used with a `FormField`, which owns the label and the notes.",
     "anatomy": "A bordered field on the sunken surface.",
     "variants": "None. The reference's own two field treatments are `Field` and `LabelledInput`.",
-    "states": "Default, focus-visible, readonly, disabled, invalid.",
-    "keyboard": "| Key | Behaviour |\n| --- | --- |\n| `Tab` | Moves to and from the field. |",
-    "aria": "A native `<input>`. It applies whatever `id`, `describedby` and `invalid` its `FormField` gives it; standing alone it takes an `aria-label`.",
+    "states": "Default, focus-visible, suggesting, readonly, disabled, invalid. Suggesting: while focused, the first of `suggestions` that extends the value shows as faint inline text, with a Tab key cap and `acceptHint` on the right. No list opens.",
+    "keyboard": "| Key | Behaviour |\n| --- | --- |\n| `Tab` | Accepts the inline suggestion when one shows; otherwise moves to and from the field. |\n| `Escape` | Dismisses the inline suggestion until the value changes. |",
+    "aria": "A native `<input>`. It applies whatever `id`, `describedby` and `invalid` its `FormField` gives it; standing alone it takes an `aria-label`. A showing suggestion is added to `aria-describedby`, naming the full completion and the Tab hint; the browser's own autocomplete is turned off when `suggestions` are given.",
     "noReference": "None as a standalone control. It takes `LabelledInput`'s fill, boundary and type, without the built-in label — which is what lets `FormField` own the labelling for every control alike."
   },
   "TextIcon": {

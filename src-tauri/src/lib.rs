@@ -47,6 +47,8 @@ pub struct AppRuntime {
     #[cfg(desktop)]
     pub blackmagic_camera_connector: Arc<connectors::blackmagic_camera::BlackmagicCameraConnector>,
     #[cfg(desktop)]
+    pub middlecontrol_connector: Arc<connectors::middlecontrol::MiddlecontrolConnector>,
+    #[cfg(desktop)]
     pub vmix_connector: Arc<connectors::vmix::VmixConnector>,
     #[cfg(desktop)]
     pub atem_connector: Arc<connectors::atem::AtemConnector>,
@@ -92,6 +94,8 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::collections::save_bruno_collection,
+        commands::fonts::presentation_fonts_status,
+        commands::fonts::install_presentation_fonts,
         commands::token::get_token,
         commands::token::refresh_token,
         commands::server::get_server_port,
@@ -136,7 +140,7 @@ pub fn run() {
 
     builder
         .setup(|app| {
-            match logging::init_application_logging(&app.handle()) {
+            match logging::init_application_logging(app.handle()) {
                 Ok(path) => {
                     tracing::info!(log_path = %path.display(), "Application logging initialized");
                 }
@@ -210,6 +214,9 @@ pub fn run() {
             let blackmagic_camera_connector =
                 Arc::new(connectors::blackmagic_camera::BlackmagicCameraConnector::new());
             #[cfg(desktop)]
+            let middlecontrol_connector =
+                Arc::new(connectors::middlecontrol::MiddlecontrolConnector::new());
+            #[cfg(desktop)]
             let vmix_connector = Arc::new(connectors::vmix::VmixConnector::new());
             #[cfg(desktop)]
             let atem_connector = Arc::new(connectors::atem::AtemConnector::new());
@@ -254,6 +261,8 @@ pub fn run() {
                 obs_connector: Arc::clone(&obs_connector),
                 #[cfg(desktop)]
                 blackmagic_camera_connector: Arc::clone(&blackmagic_camera_connector),
+                #[cfg(desktop)]
+                middlecontrol_connector: Arc::clone(&middlecontrol_connector),
                 #[cfg(desktop)]
                 vmix_connector: Arc::clone(&vmix_connector),
                 #[cfg(desktop)]

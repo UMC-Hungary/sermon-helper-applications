@@ -46,6 +46,14 @@ pub enum PresenterRenderMode {
     Svg,
 }
 
+#[derive(Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PresenterTheme {
+    #[default]
+    Classic,
+    Editorial,
+}
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SvgSlideContent {
@@ -70,6 +78,11 @@ pub struct PresenterState {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 enum ServerMsg {
+    #[serde(rename = "presentation.settings")]
+    PresentationSettings {
+        #[serde(rename = "presenterTheme", default)]
+        presenter_theme: PresenterTheme,
+    },
     #[serde(rename = "presenter.state")]
     PresenterState { state: PresenterState },
     #[serde(rename = "presenter.slide_changed")]
@@ -173,6 +186,7 @@ async fn connect_and_receive(
         svg_slides: Vec::new(),
         muted: false,
     };
+    let mut presenter_theme = PresenterTheme::Classic;
     let mut svg_frame_cache: HashMap<u32, Frame> = HashMap::new();
 
     let idle_timeout = std::time::Duration::from_secs(60);
@@ -195,11 +209,29 @@ async fn connect_and_receive(
         };
 
         match msg {
+            ServerMsg::PresentationSettings {
+                presenter_theme: next_theme,
+            } => {
+                presenter_theme = next_theme;
+                render_state(
+                    &presenter_state,
+                    presenter_theme,
+                    tx,
+                    dims,
+                    &mut svg_frame_cache,
+                );
+            }
             ServerMsg::PresenterState { state } => {
                 presenter_state = state;
                 log_presenter_state("state", &presenter_state);
                 svg_frame_cache.clear();
-                render_state(&presenter_state, tx, dims, &mut svg_frame_cache);
+                render_state(
+                    &presenter_state,
+                    presenter_theme,
+                    tx,
+                    dims,
+                    &mut svg_frame_cache,
+                );
             }
             ServerMsg::SlideChanged {
                 current_slide: new_slide,
@@ -212,7 +244,13 @@ async fn connect_and_receive(
                     presenter_state.slides.len(),
                     presenter_state.svg_slides.len()
                 );
-                render_state(&presenter_state, tx, dims, &mut svg_frame_cache);
+                render_state(
+                    &presenter_state,
+                    presenter_theme,
+                    tx,
+                    dims,
+                    &mut svg_frame_cache,
+                );
             }
             ServerMsg::Ping { ping_id } => {
                 write
@@ -245,6 +283,7 @@ fn log_presenter_state(source: &str, state: &PresenterState) {
 
 fn render_state(
     state: &PresenterState,
+    theme: PresenterTheme,
     tx: &std::sync::mpsc::Sender<Frame>,
     dims: DisplayDims,
     svg_frame_cache: &mut HashMap<u32, Frame>,
@@ -254,7 +293,7 @@ fn render_state(
         return;
     }
 
-    if state.render_mode == PresenterRenderMode::Svg {
+    if theme == PresenterTheme::Classic && state.render_mode == PresenterRenderMode::Svg {
         let frame = svg_frame_cache
             .entry(state.current_slide)
             .or_insert_with(|| {
@@ -295,6 +334,13 @@ fn render_state(
         .map(|(t, a, pt)| (t.as_str(), a.as_str(), *pt))
         .collect();
 
-    let rgb = crate::renderer::render_slide(&paragraphs, dims.width, dims.height);
+    let rgb = crate::renderer::render_slide(
+        &paragraphs,
+        theme,
+        state.current_slide,
+        state.slides.len() as u32,
+        dims.width,
+        dims.height,
+    );
     let _ = tx.send(crate::renderer::rgb_to_u32(&rgb));
 }

@@ -6,6 +6,7 @@
     PageHeader,
     FormSection,
     TextArea,
+    TextField,
     NativeDateInput,
     ReferenceInput,
     Segmented,
@@ -21,6 +22,7 @@
   import type { ReferenceResult } from '@metocast/design-system';
   import {
     getEvent,
+    listEvents,
     createEvent,
     updateEvent,
     createEventSlides,
@@ -28,15 +30,18 @@
     listJobs,
     openExternal,
     getTitleTemplate,
+    listRecordings,
     renderTitle,
     DEFAULT_TITLE_TEMPLATE,
   } from '@metocast/core-client';
   import type { Event, BibleVerse, EventConnection } from '@metocast/core-client/schemas/event';
   import type { Job } from '@metocast/core-client/schemas/queue';
+  import type { Recording } from '@metocast/core-client/schemas/recording';
   import { live } from '$lib/live.svelte';
   import { goto } from '$app/navigation';
   import { notify } from '$lib/notifications.svelte';
   import { dateLong, toDateInput, toTimeInput, fromDateTimeInput } from '$lib/format';
+  import NotifBell from '$lib/NotifBell.svelte';
   import TitlePreview from '$lib/TitlePreview.svelte';
 
   let { eventId }: { eventId?: string } = $props();
@@ -67,6 +72,17 @@
   let leckioData = $state<RefData | null>(null);
   let existingConnections = $state<Event['connections']>([]);
   let template = $state(DEFAULT_TITLE_TEMPLATE);
+  let recordings = $state<Recording[]>([]);
+  let pastSpeakers = $state<string[]>([]);
+
+  const speakers = $derived(
+    pastSpeakers
+      .filter((s, i) => pastSpeakers.indexOf(s) === i)
+      .sort(
+        (a, b) =>
+          pastSpeakers.filter((s) => s === b).length - pastSpeakers.filter((s) => s === a).length,
+      ),
+  );
 
   const loc = $derived($locale ?? 'en');
 
@@ -178,6 +194,9 @@
   }
 
   onMount(async () => {
+    listEvents()
+      .then((events) => (pastSpeakers = events.map((e) => e.speaker.trim()).filter(Boolean)))
+      .catch(() => {});
     template = (await getTitleTemplate().catch(() => null))?.template || DEFAULT_TITLE_TEMPLATE;
     if (!eventId) {
       const service = nextService();
@@ -188,7 +207,8 @@
     }
     loading = true;
     try {
-      const e = await getEvent(eventId);
+      const [e, eventRecordings] = await Promise.all([getEvent(eventId), listRecordings(eventId)]);
+      recordings = eventRecordings;
       title = e.title;
       date = toDateInput(e.dateTime);
       time = toTimeInput(e.dateTime);
@@ -320,6 +340,13 @@
     return out;
   }
 
+  function duration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}:${Math.floor(seconds % 60)
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
   function buildConnections() {
     const others = existingConnections.filter((c) => c.platform !== 'youtube');
     const conns = others.map((c) => ({
@@ -398,7 +425,9 @@
 <PageHeader
   back={{ label: $_('editor.back'), href: '/events' }}
   title={eventId ? $_('editor.editTitle') : $_('editor.newTitle')}
-/>
+>
+  {#snippet trailing()}<NotifBell />{/snippet}
+</PageHeader>
 
 {#if loading}
   <div class="pad"><Skeleton height="120px" lines={4} /></div>
@@ -456,11 +485,12 @@
         </div>
         <div class="field">
           <span class="cap">{$_('editor.speaker')}</span>
-          <TextArea
+          <TextField
             bind:value={speaker}
-            rows={1}
             label={$_('editor.speaker')}
             placeholder={$_('editor.speakerPlaceholder')}
+            suggestions={speakers}
+            acceptHint={$_('editor.speakerAccept')}
           />
         </div>
       </FormSection>
@@ -525,6 +555,19 @@
           sub={$_('editor.autoUploadHint')}
           bind:checked={autoUpload}
         />
+        {#if eventId && recordings.length}
+          <List>
+            {#each recordings as recording, index (recording.id)}
+              <Row
+                title={recording.fileName}
+                meta={`${recording.source} · ${recording.mediaKind} · ${recording.filePath}`}
+                detail={duration(recording.durationSeconds)}
+                chevron={false}
+                last={index === recordings.length - 1}
+              />
+            {/each}
+          </List>
+        {/if}
       </FormSection>
 
       {#if eventId}

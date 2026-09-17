@@ -31,6 +31,19 @@ struct PendingUpload {
     custom_description: Option<String>,
 }
 
+struct UploadSource<'a> {
+    file_path: &'a str,
+    file_size: i64,
+    title: &'a str,
+    description: &'a str,
+    visibility: &'a str,
+}
+
+struct UploadResume {
+    locator: Option<String>,
+    progress_bytes: i64,
+}
+
 pub struct UploadService {
     pool: PgPool,
     youtube_connector: Arc<YouTubeConnector>,
@@ -175,12 +188,17 @@ impl UploadService {
                     &self.pool,
                     &self.ws_clients,
                     row.recording_id,
-                    &row.file_path,
-                    row.file_size,
-                    &title,
-                    &description,
-                    &row.visibility,
-                    row.upload_uri.clone(),
+                    UploadSource {
+                        file_path: &row.file_path,
+                        file_size: row.file_size,
+                        title: &title,
+                        description: &description,
+                        visibility: &row.visibility,
+                    },
+                    UploadResume {
+                        locator: row.upload_uri.clone(),
+                        progress_bytes: row.progress_bytes,
+                    },
                     &token.access_token,
                 )
                 .await?;
@@ -223,13 +241,17 @@ impl UploadService {
                     &self.pool,
                     &self.ws_clients,
                     row.recording_id,
-                    &row.file_path,
-                    row.file_size,
-                    &title,
-                    &description,
-                    &row.visibility,
-                    row.upload_session_id.clone(),
-                    row.progress_bytes,
+                    UploadSource {
+                        file_path: &row.file_path,
+                        file_size: row.file_size,
+                        title: &title,
+                        description: &description,
+                        visibility: &row.visibility,
+                    },
+                    UploadResume {
+                        locator: row.upload_session_id.clone(),
+                        progress_bytes: row.progress_bytes,
+                    },
                     &token.access_token,
                     &page_id,
                 )

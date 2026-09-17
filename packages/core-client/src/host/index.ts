@@ -11,6 +11,11 @@
  */
 
 import { ApplicationLogPathSchema, ApplicationLogTextSchema } from '../schemas/logs.js';
+import {
+  PresentationFontsStatusSchema,
+  type PresentationFontsStatus,
+} from '../schemas/settings.js';
+export type { PresentationFontsStatus } from '../schemas/settings.js';
 
 /** Thrown when a UI calls a host capability that this environment does not have. */
 export class HostUnavailableError extends Error {
@@ -47,6 +52,10 @@ export const hostCapabilities = {
   },
   /** Native file/folder dialogs. */
   get dialogs(): boolean {
+    return isHost();
+  },
+  /** Installing the fonts used by generated PowerPoints on this Mac. */
+  get fonts(): boolean {
     return isHost();
   },
 };
@@ -216,6 +225,20 @@ export async function getAppVersion(): Promise<string | null> {
 
 export function saveBrunoCollection(dir: string, files: Record<string, string>): Promise<void> {
   return invokeHost('dialogs', 'save_bruno_collection', { dir, files });
+}
+
+// ── Presentation fonts ───────────────────────────────────────────────────────
+
+export async function getPresentationFontsStatus(): Promise<PresentationFontsStatus> {
+  return PresentationFontsStatusSchema.parse(
+    await invokeHost<unknown>('fonts', 'presentation_fonts_status'),
+  );
+}
+
+export async function installPresentationFonts(): Promise<PresentationFontsStatus> {
+  return PresentationFontsStatusSchema.parse(
+    await invokeHost<unknown>('fonts', 'install_presentation_fonts'),
+  );
 }
 
 // ── OS integrations ───────────────────────────────────────────────────────────

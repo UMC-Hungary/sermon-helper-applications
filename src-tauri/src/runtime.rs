@@ -9,7 +9,8 @@ use tokio::sync::RwLock;
 
 use crate::connectors::{
     blackmagic_camera::BlackmagicCameraConnector, broadlink::BroadlinkConnector,
-    facebook::FacebookConnector, obs::ObsConnector, vmix::VmixConnector, youtube::YouTubeConnector,
+    facebook::FacebookConnector, middlecontrol::MiddlecontrolConnector, obs::ObsConnector,
+    rodecaster::RodecasterConnector, vmix::VmixConnector, youtube::YouTubeConnector,
     ConnectorConfig, ConnectorStatus, FacebookConfig, YouTubeConfig,
 };
 use crate::{database, scheduler::CronScheduler, server};
@@ -32,6 +33,8 @@ pub struct CoreOptions {
     pub admin_token: Arc<String>,
     pub obs_connector: Arc<ObsConnector>,
     pub blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
+    pub middlecontrol_connector: Arc<MiddlecontrolConnector>,
+    pub rodecaster_connector: Arc<RodecasterConnector>,
     pub vmix_connector: Arc<VmixConnector>,
     pub youtube_connector: Arc<YouTubeConnector>,
     pub facebook_connector: Arc<FacebookConnector>,
@@ -59,6 +62,8 @@ impl CoreOptions {
             ),
             obs_connector: Arc::new(ObsConnector::new()),
             blackmagic_camera_connector: Arc::new(BlackmagicCameraConnector::new()),
+            middlecontrol_connector: Arc::new(MiddlecontrolConnector::new()),
+            rodecaster_connector: Arc::new(RodecasterConnector::new()),
             vmix_connector: Arc::new(VmixConnector::new()),
             youtube_connector: Arc::new(YouTubeConnector::new()),
             facebook_connector: Arc::new(FacebookConnector::new()),
@@ -79,6 +84,7 @@ impl CoreOptions {
             app_handle: Some(app),
             obs_connector: Arc::clone(&rt.obs_connector),
             blackmagic_camera_connector: Arc::clone(&rt.blackmagic_camera_connector),
+            middlecontrol_connector: Arc::clone(&rt.middlecontrol_connector),
             vmix_connector: Arc::clone(&rt.vmix_connector),
             youtube_connector: Arc::clone(&rt.youtube_connector),
             facebook_connector: Arc::clone(&rt.facebook_connector),
@@ -204,17 +210,33 @@ pub async fn start(options: CoreOptions) -> anyhow::Result<()> {
             .start(camera_cfg, options.app_handle.clone())
             .await;
     }
+    let middlecontrol_cfg: crate::connectors::MiddlecontrolConfig =
+        database::settings::get_json(&pool, "middlecontrol_config").await;
+    if middlecontrol_cfg.is_configured() {
+        options
+            .middlecontrol_connector
+            .start(middlecontrol_cfg)
+            .await;
+    }
+    let rodecaster_cfg: crate::connectors::RodecasterConfig =
+        database::settings::get_json(&pool, "rodecaster_config").await;
+    if rodecaster_cfg.is_configured() {
+        options.rodecaster_connector.start(rodecaster_cfg);
+    }
+    // Started whenever enabled, not only when fully set up: the connector itself
+    // reports a missing credential or login as an error the UI can raise.
     let yt_cfg = options.youtube_config.read().await.clone();
-    if yt_cfg.is_configured() {
+    if yt_cfg.enabled {
         options
             .youtube_connector
             .start(pool.clone(), yt_cfg, options.app_handle.clone())
             .await;
     }
-    if options.facebook_config.read().await.is_configured() {
+    let fb_cfg = options.facebook_config.read().await.clone();
+    if fb_cfg.enabled {
         options
             .facebook_connector
-            .start(pool.clone(), options.app_handle.clone())
+            .start(pool.clone(), fb_cfg, options.app_handle.clone())
             .await;
     }
 
@@ -231,27 +253,29 @@ pub async fn start(options: CoreOptions) -> anyhow::Result<()> {
     }
 
     tracing::info!("Starting Axum on port {}", options.port);
-    server::build_and_serve(
+    server::build_and_serve(server::ServerOptions {
         pool,
-        options.auth_token,
+        auth_token: options.auth_token,
         connection_url,
-        options.port,
-        options.static_dir,
-        options.obs_connector,
-        options.blackmagic_camera_connector,
-        options.vmix_connector,
-        options.youtube_connector,
-        options.facebook_connector,
-        options.broadlink_connector,
-        options.youtube_config,
-        options.facebook_config,
-        options.oauth_states,
-        options.app_handle,
-        options.admin_token,
-        Arc::new(CronScheduler::new()),
+        port: options.port,
+        static_dir: options.static_dir,
+        obs_connector: options.obs_connector,
+        blackmagic_camera_connector: options.blackmagic_camera_connector,
+        middlecontrol_connector: options.middlecontrol_connector,
+        rodecaster_connector: options.rodecaster_connector,
+        vmix_connector: options.vmix_connector,
+        youtube_connector: options.youtube_connector,
+        facebook_connector: options.facebook_connector,
+        broadlink_connector: options.broadlink_connector,
+        youtube_config: options.youtube_config,
+        facebook_config: options.facebook_config,
+        oauth_states: options.oauth_states,
+        app_handle: options.app_handle,
+        admin_token: options.admin_token,
+        cron_scheduler: Arc::new(CronScheduler::new()),
         #[cfg(target_os = "macos")]
-        options.keynote_connector,
-    )
+        keynote_connector: options.keynote_connector,
+    })
     .await?;
 
     embedded.stop().await?;

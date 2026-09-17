@@ -102,4 +102,5 @@ Re-checked mechanically by `scripts/check-fidelity.mjs`.
 | --- | --- |
 | The state is in the accessible name. | The reference's label is the bare word "Notifications", so nothing about the waiting state reaches a screen reader. |
 | The target was grown to 44px. | As `IconButton`; the drawn size is unchanged. |
+| The count replaces the mark instead of sitting on top of it. | The reference draws both in the same corner, and the count is too narrow to cover the mark, so its edge shows beside the number. |
 

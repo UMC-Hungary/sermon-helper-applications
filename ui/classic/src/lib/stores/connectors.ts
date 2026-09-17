@@ -7,6 +7,7 @@ export type ConnectorStatus = 'disconnected' | 'connecting' | 'connected' | 'err
 export type ObsConfig = ConnectorConfigMap['obs'];
 export type VmixConfig = ConnectorConfigMap['vmix'];
 export type AtemConfig = ConnectorConfigMap['atem'];
+export type MiddlecontrolConfig = ConnectorConfigMap['middlecontrol'];
 export type BroadlinkConfig = ConnectorConfigMap['broadlink'];
 export type YouTubeConfig = ConnectorConfigMap['youtube'];
 export type FacebookConfig = ConnectorConfigMap['facebook'];
@@ -29,6 +30,7 @@ export function mapConnectorStatus(payload: ConnectorStatusPayload): ConnectorSt
 export const obsStatus = writable<ConnectorStatus>('disconnected');
 export const vmixStatus = writable<ConnectorStatus>('disconnected');
 export const atemStatus = writable<ConnectorStatus>('disconnected');
+export const middlecontrolStatus = writable<ConnectorStatus>('disconnected');
 export const broadlinkStatus = writable<ConnectorStatus>('disconnected');
 export const youtubeStatus = writable<ConnectorStatus>('disconnected');
 export const facebookStatus = writable<ConnectorStatus>('disconnected');
@@ -54,6 +56,12 @@ export const atemConfig = writable<AtemConfig>({
   enabled: false,
   host: '',
   port: 9910,
+});
+
+export const middlecontrolConfig = writable<MiddlecontrolConfig>({
+  enabled: false,
+  host: '',
+  port: 11584,
 });
 
 export const broadlinkConfig = writable<BroadlinkConfig>({
@@ -94,6 +102,7 @@ export const obsState = writable<ConnectorState>({
 });
 export const vmixState = writable<ConnectorState>({ connection: 'disconnected' });
 export const atemState = writable<ConnectorState>({ connection: 'disconnected' });
+export const middlecontrolState = writable<ConnectorState>({ connection: 'disconnected' });
 export const broadlinkState = writable<ConnectorState>({ connection: 'disconnected' });
 export const youtubeState = writable<ConnectorState>({ connection: 'disconnected' });
 export const facebookState = writable<ConnectorState>({ connection: 'disconnected' });
@@ -108,6 +117,7 @@ export const connectorStores = {
   obs: { status: obsStatus, state: obsState },
   vmix: { status: vmixStatus, state: vmixState },
   atem: { status: atemStatus, state: atemState },
+  middlecontrol: { status: middlecontrolStatus, state: middlecontrolState },
   broadlink: { status: broadlinkStatus, state: broadlinkState },
   youtube: { status: youtubeStatus, state: youtubeState },
   facebook: { status: facebookStatus, state: facebookState },

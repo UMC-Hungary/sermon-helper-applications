@@ -7,7 +7,7 @@ use tauri::Emitter;
 use tokio::sync::{broadcast, watch, Mutex, RwLock};
 use tokio::time::Duration;
 
-use super::{ConnectorStatus, FacebookConfig};
+use super::{ConnectorConfig, ConnectorStatus, FacebookConfig};
 
 // ── Token types ──────────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ impl FacebookConnector {
         }
     }
 
-    pub async fn start(&self, pool: PgPool, app: Option<tauri::AppHandle>) {
+    pub async fn start(&self, pool: PgPool, config: FacebookConfig, app: Option<tauri::AppHandle>) {
         *self.app_handle.lock().await = app.clone();
         self.stop_internal().await;
 
@@ -73,7 +73,7 @@ impl FacebookConnector {
         let status = Arc::clone(&self.status);
         let status_tx = self.status_tx.clone();
         tokio::spawn(async move {
-            run_token_loop(pool, status, status_tx, stop_rx, app).await;
+            run_token_loop(pool, config, status, status_tx, stop_rx, app).await;
         });
     }
 
@@ -238,11 +238,27 @@ pub async fn exchange_code(
 
 async fn run_token_loop(
     pool: PgPool,
+    config: FacebookConfig,
     status: Arc<RwLock<ConnectorStatus>>,
     status_tx: broadcast::Sender<ConnectorStatus>,
     mut stop_rx: watch::Receiver<bool>,
     app: Option<tauri::AppHandle>,
 ) {
+    // An enabled connector that cannot work is an error, not a quiet absence: the
+    // UI only raises a notification on `Error`, and the operator has to be told.
+    if !config.is_configured() {
+        set_status(
+            &status,
+            &status_tx,
+            app.as_ref(),
+            ConnectorStatus::Error {
+                message: "credentials_required".to_string(),
+            },
+        )
+        .await;
+        return;
+    }
+
     let token = match load_tokens(&pool).await {
         Some(t) => t,
         None => {
@@ -250,7 +266,9 @@ async fn run_token_loop(
                 &status,
                 &status_tx,
                 app.as_ref(),
-                ConnectorStatus::Disconnected,
+                ConnectorStatus::Error {
+                    message: "login_required".to_string(),
+                },
             )
             .await;
             return;
@@ -289,7 +307,7 @@ async fn run_token_loop(
         // Facebook long-lived tokens last ~60 days; warn when < 10 days remain
         let needs_renewal = token
             .expires_at
-            .map_or(false, |exp| exp - Utc::now() < chrono::Duration::days(10));
+            .is_some_and(|exp| exp - Utc::now() < chrono::Duration::days(10));
 
         if needs_renewal {
             tracing::warn!("Facebook token expiring soon; prompting re-login");
@@ -298,7 +316,7 @@ async fn run_token_loop(
                 &status_tx,
                 app.as_ref(),
                 ConnectorStatus::Error {
-                    message: "Re-login required".to_string(),
+                    message: "relogin_required".to_string(),
                 },
             )
             .await;

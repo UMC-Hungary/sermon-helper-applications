@@ -132,8 +132,9 @@ struct TextBox {
     fill: Option<String>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 enum BodyAnchor {
+    #[default]
     Top,
     Center,
     Bottom,
@@ -169,12 +170,6 @@ struct ShapeState {
     no_fill: bool,
     lines: Vec<TextLine>,
     body_anchor: BodyAnchor,
-}
-
-impl Default for BodyAnchor {
-    fn default() -> Self {
-        Self::Top
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -302,10 +297,12 @@ fn slide_entry_names(
     for i in 0..archive.len() {
         let entry = archive.by_index(i)?;
         let name = entry.name();
-        if name.starts_with("ppt/slides/") && name.ends_with(".xml") && !name.contains("_rels") {
-            if slide_number(name).is_some() {
-                names.push(name.to_string());
-            }
+        if name.starts_with("ppt/slides/")
+            && name.ends_with(".xml")
+            && !name.contains("_rels")
+            && slide_number(name).is_some()
+        {
+            names.push(name.to_string());
         }
     }
     names.sort_by_key(|name| slide_number(name).unwrap_or(0));
@@ -619,8 +616,7 @@ fn parse_slide(
                         name,
                         &mut shape,
                         &mut pic,
-                        in_text,
-                        in_rpr,
+                        (in_text, in_rpr),
                         &mut editing_style,
                         theme,
                     ),
@@ -663,8 +659,7 @@ fn parse_slide(
                         name,
                         &mut shape,
                         &mut pic,
-                        in_text,
-                        in_rpr,
+                        (in_text, in_rpr),
                         &mut editing_style,
                         theme,
                     ),
@@ -747,11 +742,11 @@ fn handle_common_start(
     name: &[u8],
     shape: &mut Option<ShapeState>,
     pic: &mut Option<PicState>,
-    in_text: bool,
-    in_rpr: bool,
+    text_context: (bool, bool),
     editing_style: &mut Option<RunStyle>,
     theme: &Theme,
 ) {
+    let (in_text, in_rpr) = text_context;
     match name {
         b"off" => {
             let x = attr_i64(e, b"x").unwrap_or(0);

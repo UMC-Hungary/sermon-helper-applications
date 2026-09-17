@@ -6,6 +6,7 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 
+use super::{UploadResume, UploadSource};
 use crate::server::websocket::{
     broadcast_upload_completed, broadcast_upload_failed, broadcast_upload_progress,
 };
@@ -163,18 +164,25 @@ pub async fn upload_chunk(
 
 /// Run the full YouTube resumable upload for a recording.
 /// Handles initiation, chunking, progress broadcasting, and completion.
-pub async fn run_upload(
+pub(super) async fn run_upload(
     pool: &sqlx::PgPool,
     ws_clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
     recording_id: Uuid,
-    file_path: &str,
-    file_size: i64,
-    title: &str,
-    description: &str,
-    visibility: &str,
-    existing_uri: Option<String>,
+    source: UploadSource<'_>,
+    resume: UploadResume,
     token: &str,
 ) -> anyhow::Result<()> {
+    let UploadSource {
+        file_path,
+        file_size,
+        title,
+        description,
+        visibility,
+    } = source;
+    let UploadResume {
+        locator: existing_uri,
+        progress_bytes: _,
+    } = resume;
     let client = reqwest::Client::new();
     let total = file_size as u64;
 

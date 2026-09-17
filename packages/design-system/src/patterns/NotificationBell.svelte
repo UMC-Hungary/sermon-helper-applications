@@ -27,11 +27,10 @@
 
 <button type="button" aria-label={label} {onclick}>
   <Icon name="bell" size={20} />
-  {#if color}
-    <span class="mark"><Dot {color} size={8} pulse={tier === 'live'} /></span>
-  {/if}
   {#if unread > 0 && (tier === 'live' || tier === 'error')}
     <em aria-hidden="true">{unread}</em>
+  {:else if color}
+    <span class="mark"><Dot {color} size={8} pulse={tier === 'live'} /></span>
   {/if}
 </button>
 

@@ -60,15 +60,6 @@
   .field {
     display: block;
     padding: var(--c-field-padding-block) 0;
-    border-bottom: var(--ui-border-hairline) solid var(--border-hairline);
-  }
-
-  .field:focus-within {
-    border-bottom-color: var(--accent);
-  }
-
-  .invalid {
-    border-bottom-color: var(--status-error);
   }
 
   label {
@@ -85,10 +76,12 @@
 
   input {
     width: 100%;
-    padding: var(--c-field-input-padding-top) 0 var(--c-field-input-padding-bottom);
+    min-height: var(--ui-target-min);
+    padding: var(--c-text-field-padding-block) var(--ui-gutter-inset);
     margin-top: var(--c-field-input-gap);
-    border: 0;
-    background: transparent;
+    background: var(--surface-sunken);
+    border: var(--ui-border-hairline) solid var(--border-control);
+    border-radius: var(--ui-radius-square);
     font-family: var(--type-body-family);
     font-size: var(--type-body-size);
     color: var(--text-primary);
@@ -96,11 +89,18 @@
     caret-color: var(--text-primary);
   }
 
-  /* The reference uses no focus box on the input — the field's underline turns to
-     the accent (`.field:focus-within`) as the focus indicator. A box outline here
-     would also fire on mouse click, since text inputs match :focus-visible then. */
-  input:focus {
-    outline: 0;
+  input::placeholder {
+    color: var(--text-faint);
+  }
+
+  input:focus-visible {
+    outline: var(--ui-focus-width) solid var(--accent);
+    outline-offset: var(--ui-focus-offset);
+    border-color: var(--accent);
+  }
+
+  .invalid input {
+    border-color: var(--status-error);
   }
 
   input:disabled {

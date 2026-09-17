@@ -12,6 +12,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import Dot from '../primitives/Dot.svelte';
+  import Icon from '../primitives/Icon.svelte';
   import Spinner from '../primitives/Spinner.svelte';
 
   interface Props {
@@ -101,7 +102,7 @@
       {/if}
       {#if ondismiss}
         <button class="dismiss" type="button" aria-label={dismissLabel} onclick={ondismiss}>
-          ×
+          <Icon name="close" size={22} stroke={1.6} />
         </button>
       {/if}
     </header>
@@ -212,12 +213,24 @@
   .dismiss {
     min-width: var(--ui-target-min);
     min-height: var(--ui-target-min);
+    flex: 0 0 var(--ui-target-min);
+    padding: 0;
     background: transparent;
     border: 0;
     cursor: pointer;
     color: var(--text-muted);
-    font-family: var(--type-label-family);
-    font-size: var(--type-caption-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dismiss:hover {
+    color: var(--text-primary);
+    background: var(--surface-sunken);
+  }
+
+  .dismiss:active {
+    color: var(--sanctum-toast-accent);
   }
 
   button:focus-visible {

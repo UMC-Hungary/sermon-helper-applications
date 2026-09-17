@@ -27,6 +27,12 @@ export const AtemConfigSchema = z.object({
   port: z.number(),
 });
 
+export const MiddlecontrolConfigSchema = z.object({
+  enabled: z.boolean(),
+  host: z.string(),
+  port: z.number().int().min(1).max(65535),
+});
+
 /** Blackmagic camera. A blank `fingerprint` means trust-on-first-use. */
 export const BlackmagicCameraConfigSchema = z.object({
   enabled: z.boolean(),
@@ -40,6 +46,31 @@ export const BlackmagicCameraConfigSchema = z.object({
 export const BroadlinkConfigSchema = z.object({
   enabled: z.boolean(),
 });
+
+export const RodecasterAudioSourceSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('mainMix') }).strict(),
+  z.object({ kind: z.literal('faderSlot'), number: z.number().int().positive() }).strict(),
+]);
+
+export const RodecasterAudioRecordingConfigSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    enabled: z.boolean(),
+    directory: z.string(),
+    processingMode: z.enum(['preFader', 'preFaderBypass', 'postFader']),
+    outputMode: z.enum(['mainMix', 'separate', 'combinedStereo', 'multichannelFlac']),
+    sources: z.array(RodecasterAudioSourceSchema),
+  })
+  .strict();
+
+/** RØDECaster Pro II. Found by USB id, so there is nothing to address it by. */
+export const RodecasterConfigSchema = z
+  .object({
+    enabled: z.boolean(),
+    notifyOnMute: z.boolean(),
+    audioRecording: RodecasterAudioRecordingConfigSchema,
+  })
+  .strict();
 
 export const YouTubeConfigSchema = z.object({
   enabled: z.boolean(),
@@ -73,8 +104,10 @@ export const ConnectorConfigSchemas = {
   obs: ObsConfigSchema,
   vmix: VmixConfigSchema,
   atem: AtemConfigSchema,
+  middlecontrol: MiddlecontrolConfigSchema,
   broadlink: BroadlinkConfigSchema,
   'blackmagic-camera': BlackmagicCameraConfigSchema,
+  rodecaster: RodecasterConfigSchema,
   youtube: YouTubeConfigSchema,
   facebook: FacebookConfigSchema,
   discord: DiscordConfigSchema,
@@ -85,6 +118,28 @@ export type ConnectorName = keyof typeof ConnectorConfigSchemas;
 export type ConnectorConfigMap = {
   [K in ConnectorName]: z.infer<(typeof ConnectorConfigSchemas)[K]>;
 };
+
+export const MiddlecontrolStateSchema = z.object({
+  selectedCamera: z.number().int().min(1).max(99).nullable(),
+  recording: z.boolean().nullable(),
+  recordingCameraIds: z.array(z.number().int().min(1).max(99)).nullable(),
+  connectedCameraIds: z.array(z.number().int().min(1).max(99)).nullable(),
+  connectedApcrIds: z.array(z.number().int().min(1).max(99)).nullable(),
+  presetMoveActive: z.boolean().nullable(),
+});
+
+export type MiddlecontrolState = z.infer<typeof MiddlecontrolStateSchema>;
+
+export const DiscoveredMiddlecontrolSchema = z.object({
+  host: z.string().min(1),
+  port: z.number().int().min(1).max(65535),
+});
+
+export const DiscoveredMiddlecontrolsSchema = z.object({
+  devices: z.array(DiscoveredMiddlecontrolSchema),
+});
+
+export type DiscoveredMiddlecontrol = z.infer<typeof DiscoveredMiddlecontrolSchema>;
 
 /** One camera returned by an mDNS scan. `host` is what the config field takes. */
 export const DiscoveredCameraSchema = z.object({
@@ -239,6 +294,101 @@ export type CameraMediaDevice = z.infer<typeof MediaDeviceSchema>;
 export type CameraPlatform = z.infer<typeof CameraPlatformSchema>;
 export type CameraPlatformProfile = z.infer<typeof PlatformProfileSchema>;
 export type CameraSettingsUpdate = z.infer<typeof CameraSettingsUpdateSchema>;
+
+/**
+ * One channel of the desk, as the device reports it. `processing` names the blocks
+ * it has switched on and `settings` the rest of the channel's and its input's
+ * properties — both carry the device's own property names, so nothing is a guess.
+ */
+export const RodecasterChannelSchema = z.object({
+  channel: z.number().int(),
+  label: z.string(),
+  source: z.number().int().nullable(),
+  level: z.number(),
+  mute: z.boolean(),
+  wirelessMute: z.boolean(),
+  cue: z.boolean(),
+  processing: z.array(z.string()),
+  settings: z.array(z.object({ name: z.string(), value: z.string() })),
+});
+
+export const RodecasterProfileSchema = z.object({
+  model: z.string(),
+  firmware: z.string(),
+  channels: z.array(RodecasterChannelSchema),
+});
+
+/** A mute the device reported. `remote` distinguishes the wireless transmitter from the mixer. */
+export const RodecasterMuteEventSchema = z.object({
+  channel: z.number().int(),
+  label: z.string(),
+  muted: z.boolean(),
+  remote: z.boolean(),
+  notify: z.boolean(),
+});
+
+export const RodecasterAudioSourceMappingSchema = z
+  .object({
+    identity: RodecasterAudioSourceSchema,
+    label: z.string(),
+    layout: z.literal('stereo'),
+    hostChannels: z.array(z.number().int().nonnegative()),
+  })
+  .strict();
+
+export const RodecasterAudioEndpointSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    model: z.string(),
+    firmware: z.string(),
+    sampleRate: z.number().int().positive(),
+    channels: z.number().int().positive(),
+    sampleFormat: z.string(),
+    sources: z.array(RodecasterAudioSourceMappingSchema),
+  })
+  .strict();
+
+export const RodecasterAudioDiscoverySchema = z
+  .object({
+    endpoint: RodecasterAudioEndpointSchema.nullable(),
+    unavailableReason: z.string().nullable(),
+  })
+  .strict();
+
+export const RodecasterFinalizedAudioFileSchema = z
+  .object({
+    path: z.string(),
+    fileName: z.string(),
+    fileSize: z.number().int().nonnegative(),
+    durationSeconds: z.number().nonnegative(),
+    mediaKind: z.string(),
+    source: z.literal('rodecaster'),
+    metadata: z.record(z.string(), z.unknown()),
+  })
+  .strict();
+
+export const RodecasterAudioRecorderStateSchema = z
+  .object({
+    status: z.enum(['idle', 'recording', 'failed']),
+    sessionId: z.string().uuid().nullable(),
+    eventId: z.string().uuid().nullable(),
+    outputMode: z.enum(['mainMix', 'separate', 'combinedStereo', 'multichannelFlac']).nullable(),
+    startedAt: z.string().nullable(),
+    endpoint: RodecasterAudioEndpointSchema.nullable(),
+    error: z.string().nullable(),
+    partialFiles: z.array(z.string()),
+    finalizedFiles: z.array(RodecasterFinalizedAudioFileSchema),
+  })
+  .strict();
+
+export type RodecasterChannel = z.infer<typeof RodecasterChannelSchema>;
+export type RodecasterProfile = z.infer<typeof RodecasterProfileSchema>;
+export type RodecasterMuteEvent = z.infer<typeof RodecasterMuteEventSchema>;
+export type RodecasterAudioSource = z.infer<typeof RodecasterAudioSourceSchema>;
+export type RodecasterAudioRecordingConfig = z.infer<typeof RodecasterAudioRecordingConfigSchema>;
+export type RodecasterAudioDiscovery = z.infer<typeof RodecasterAudioDiscoverySchema>;
+export type RodecasterAudioRecorderState = z.infer<typeof RodecasterAudioRecorderStateSchema>;
 
 export const ConnectorStatusPayloadSchema = z.object({
   type: z.enum(['disconnected', 'connecting', 'connected', 'error']),

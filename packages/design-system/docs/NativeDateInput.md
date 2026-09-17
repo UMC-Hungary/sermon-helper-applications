@@ -33,14 +33,20 @@ Default, focus-visible, disabled.
 | Token | Resolves to |
 | --- | --- |
 | `--accent` | `#5c5c84 / #a9a6d6` |
+| `--border-control` | `#857c68 / #716b5c` |
+| `--c-text-field-padding-block` | `9px` |
+| `--surface-sunken` | `#e4ddcd / #23201a` |
 | `--text-muted` | `#615e56 / #918b7e` |
 | `--text-primary` | `#1c1a16 / #ede6d6` |
 | `--type-body-strong-family` | `"Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` |
 | `--type-body-strong-size` | `14.5px` |
 | `--type-body-strong-track` | `-0.1px` |
 | `--type-body-strong-weight` | `500` |
+| `--ui-border-hairline` | `1px` |
 | `--ui-focus-offset` | `2px` |
 | `--ui-focus-width` | `2px` |
+| `--ui-gutter-inset` | `14px` |
+| `--ui-radius-square` | `0` |
 | `--ui-stack` | `8px` |
 | `--ui-target-min` | `44px` |
 

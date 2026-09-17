@@ -66,6 +66,7 @@ rmSync(STAGE, { recursive: true, force: true });
 const staged = [];
 for (const ui of selected) {
   cpSync(resolve(root, ui.buildDir), join(STAGE, ui.id), { recursive: true });
+  bootAtBundleRoot(join(STAGE, ui.id, ui.entry));
   staged.push(describe(ui, `/ui/${ui.id}/${ui.entry}`));
 }
 
@@ -83,7 +84,12 @@ for (const ui of selected) {
 // The copied `/presenter` URL must work whichever UI is active.
 const withPresenter = selected.find((ui) => existsSync(join(OUT, 'ui', ui.id, 'presenter.html')));
 if (withPresenter) {
-  cpSync(join(OUT, 'ui', withPresenter.id, 'presenter.html'), join(OUT, 'presenter.html'));
+  const presenterRoot = join(OUT, 'ui', withPresenter.id);
+  cpSync(join(presenterRoot, 'presenter.html'), join(OUT, 'presenter.html'));
+  const presenterFonts = join(presenterRoot, 'presenter-fonts');
+  if (existsSync(presenterFonts)) {
+    cpSync(presenterFonts, join(OUT, 'presenter-fonts'), { recursive: true });
+  }
 }
 
 writeFileSync(
@@ -92,6 +98,17 @@ writeFileSync(
 );
 writeFileSync(join(OUT, 'index.html'), chooser(selected));
 console.log(`[build-ui] staged ${staged.length} UIs under build/ui/`);
+
+// Each UI is built for the bundle root (`base: ""`) and its assets are copied
+// there, but its shell is served from `/ui/<id>/`. Left alone, the router reads
+// that file path as a route and renders the UI's own 404.
+function bootAtBundleRoot(entry) {
+  const html = readFileSync(entry, 'utf8');
+  writeFileSync(
+    entry,
+    html.replace(/<head[^>]*>/, `$&\n    <script>history.replaceState(null, '', '/');</script>`),
+  );
+}
 
 function describe(ui, path) {
   return {

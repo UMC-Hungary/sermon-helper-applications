@@ -794,6 +794,22 @@
   "appSettings": {
     "title": "Beállítások",
     "language": "Nyelv",
+    "presentationFonts": {
+      "title": "PowerPoint betűtípusok",
+      "names": "Cormorant Garamond és Geist Mono",
+      "install": "Betűtár megnyitása",
+      "installing": "Megnyitás…",
+      "required": "Telepítsd a Betűtárban, hogy a Keynote is elérje a betűtípusokat.",
+      "fontBook": "A Betűtárban kattints mindkét betűtípus Telepítés gombjára, majd térj vissza ide.",
+      "restart": "Telepítve — indítsd újra a Keynote-ot vagy a PowerPointot"
+    },
+    "presentationFolders": {
+      "title": "PowerPoint célmappák",
+      "song": "Ének PPT-k mappája",
+      "bible": "Bibliai PPT-k mappája (Textus és Lekció)",
+      "save": "Mentés",
+      "saving": "Mentés…"
+    },
     "appMode": {
       "title": "App Mód",
       "current": "Jelenlegi mód",
@@ -837,6 +853,34 @@
         "save": "Mentés",
         "saving": "Mentés…",
         "comingSoon": "A VMix integráció még nem érhető el. A konfiguráció mentésre kerül a jövőbeli használathoz."
+      },
+      "middlecontrol": {
+        "title": "Middle Control",
+        "subtitle": "Kamera-, felvétel- és presetvezérlés a Middle Controlon keresztül",
+        "host": "Gazdagép",
+        "port": "Port",
+        "enabled": "Middle Control csatlakozó engedélyezése",
+        "save": "Mentés és újracsatlakozás",
+        "saving": "Mentés…",
+        "help": "A Middle Controlnak futnia kell. Ha a Metocast szervergépén fut, használd a localhost címet — nincs szükség IP-címre. A jelenlegi macOS-verziók a 11584-es portot használják; a megfigyelt 3.2.0-s macOS build a 11581-est; Windows alatt a port 11580.",
+        "sdk": "Külső SDK / API",
+        "devicesTitle": "Middle Control eszközök",
+        "devicesSummary": "{cameras} kamera · {ptz} APC-R/PTZ",
+        "devicesDisconnected": "Csatlakoztasd a Middle Controlt a kamerák és APC-R PTZ egységek megjelenítéséhez.",
+        "devicesEmpty": "A Middle Control nem jelez csatlakoztatott kamerát vagy APC-R PTZ egységet.",
+        "camera": "{id}. kamera",
+        "connected": "Csatlakoztatva",
+        "cameraOffline": "A kamera nem elérhető",
+        "selected": "Kiválasztva",
+        "recording": "Felvétel",
+        "ptz": "APC-R · PTZ",
+        "useLocal": "Ennek a gépnek a használata",
+        "scan": "Hálózat keresése",
+        "scanAgain": "Keresés újra",
+        "scanning": "Keresés…",
+        "useEndpoint": "{address} használata",
+        "discoveryDescription": "Ellenőrzi ezt a gépet és a Metocast szerver helyi hálózatát az ismert Middle Control portokon. Csak érvényes visszajelzési adatfolyamot fogad el.",
+        "discoveryEmpty": "Egy Middle Control példány sem válaszolt. Győződj meg róla, hogy fut, majd keress újra. Kézi megadáshoz Macen nyisd meg a Rendszerbeállítások → Hálózat lapot, Windowson a Beállítások → Hálózat és internet → Tulajdonságok lapot, majd másold a gép IPv4-címét a fenti Gazdagép mezőbe."
       },
       "youtube": {
         "title": "YouTube",

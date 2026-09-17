@@ -22,6 +22,8 @@ A bordered field on the sunken surface.
 | `id` | `string` | — | Supplied by `FormField`, which owns the label and the notes. |
 | `describedby` | `string` | — | — |
 | `label` | `string` | — | Only when the field stands outside a `FormField`. |
+| `suggestions` | `string[]` | `[]` | Completions in the caller's order; the first that extends the value is offered inline. |
+| `acceptHint` | `string` | `''` | The word beside the Tab key cap — "accept". |
 
 ## Variants
 
@@ -29,7 +31,7 @@ None. The reference's own two field treatments are `Field` and `LabelledInput`.
 
 ## States
 
-Default, focus-visible, readonly, disabled, invalid.
+Default, focus-visible, suggesting, readonly, disabled, invalid. Suggesting: while focused, the first of `suggestions` that extends the value shows as faint inline text, with a Tab key cap and `acceptHint` on the right. No list opens.
 
 ## Tokens consumed
 
@@ -37,6 +39,9 @@ Default, focus-visible, readonly, disabled, invalid.
 | --- | --- |
 | `--accent` | `#5c5c84 / #a9a6d6` |
 | `--border-control` | `#857c68 / #716b5c` |
+| `--border-strong` | `rgba(28, 26, 22, 0.18) / rgba(237, 230, 214, 0.16)` |
+| `--c-form-section-number-padding-block` | `2px` |
+| `--c-form-section-number-padding-inline` | `5px` |
 | `--c-text-field-padding-block` | `9px` |
 | `--status-error` | `#b5321c / #e66a4f` |
 | `--surface-sunken` | `#e4ddcd / #23201a` |
@@ -47,11 +52,18 @@ Default, focus-visible, readonly, disabled, invalid.
 | `--type-body-strong-size` | `14.5px` |
 | `--type-body-strong-track` | `-0.1px` |
 | `--type-body-strong-weight` | `500` |
+| `--type-label-xs-family` | `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace` |
+| `--type-label-xs-size` | `8.5px` |
+| `--type-label-xs-track` | `1.5px` |
+| `--type-label-xs-transform` | `uppercase` |
+| `--type-label-xs-weight` | `500` |
 | `--ui-border-hairline` | `1px` |
 | `--ui-focus-offset` | `2px` |
 | `--ui-focus-width` | `2px` |
 | `--ui-gutter-inset` | `14px` |
+| `--ui-radius-chip` | `2px` |
 | `--ui-radius-square` | `0` |
+| `--ui-stack` | `8px` |
 | `--ui-target-min` | `44px` |
 
 Every value resolves through a semantic or component token; `scripts/check-fidelity.mjs` fails on a literal.
@@ -60,11 +72,12 @@ Every value resolves through a semantic or component token; `scripts/check-fidel
 
 | Key | Behaviour |
 | --- | --- |
-| `Tab` | Moves to and from the field. |
+| `Tab` | Accepts the inline suggestion when one shows; otherwise moves to and from the field. |
+| `Escape` | Dismisses the inline suggestion until the value changes. |
 
 ## ARIA
 
-A native `<input>`. It applies whatever `id`, `describedby` and `invalid` its `FormField` gives it; standing alone it takes an `aria-label`.
+A native `<input>`. It applies whatever `id`, `describedby` and `invalid` its `FormField` gives it; standing alone it takes an `aria-label`. A showing suggestion is added to `aria-describedby`, naming the full completion and the Tab hint; the browser's own autocomplete is turned off when `suggestions` are given.
 
 ## Accessibility acceptance criteria
 

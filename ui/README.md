@@ -92,7 +92,9 @@ METOCAST_UI=sanctum,classic pnpm build  # both, with a chooser in settings
 
 With a single UI the output is staged at `build/` exactly as before — an ordinary build is
 unchanged. With several, each lands in `build/ui/<id>/` with its `appDir` copied to the bundle
-root, `build/bundled-uis.json` lists them,
+root and its shell rewriting the URL back to `/` on load — a UI is built for the root it serves
+its assets from, and a router left at `/ui/<id>/index.html` reads that as a route and 404s.
+`build/bundled-uis.json` lists them,
 and `build/index.html` becomes a small chooser page that sends the window to the UI selected in
 each UI's own settings. Every bundled UI must offer that selector (over the shared
 `metocast.activeUi` key), so no UI can be entered without a way out. Selecting a different UI

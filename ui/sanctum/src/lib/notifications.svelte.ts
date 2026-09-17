@@ -34,10 +34,14 @@ export interface Notification {
   group?: { source: string; label: string }[];
   /** Persistent items never self-dismiss from the transient rail. */
   persistent: boolean;
+  /** An unresolved machine condition, distinct from an unread history item. */
+  issue?: boolean;
   /** Dedupe/resolve handle — a connector id, so recovery clears its own failure. */
   key?: string;
   /** simple-icons path for the source's brand logo, masked into the Glyph tile. */
   brand?: string;
+  /** Only for a mark that is not drawn in `simple-icons`' 24x24 box. */
+  brandBox?: string;
   /** Set once the source recovers; a resolved failure no longer blocks a fresh one. */
   resolved?: boolean;
   createdAt: number;
@@ -58,6 +62,10 @@ function worst(list: Notification[]): Tier {
   return list.reduce<Tier>((t, n) => (RANK[n.tier] > RANK[t] ? n.tier : t), 'live');
 }
 
+function isActiveIssue(n: Notification): boolean {
+  return n.issue === true && !n.resolved;
+}
+
 /** The transient rail: newest first, capped, still-showing items only. */
 export function railItems(): Notification[] {
   return items
@@ -71,12 +79,32 @@ export function allNotifications(): Notification[] {
   return items.slice().reverse();
 }
 
+/** Unresolved conditions, separate from ordinary notification history. */
+export function activeIssues(): Notification[] {
+  return items.filter(isActiveIssue).reverse();
+}
+
+/** Everything the user may clear without hiding an unresolved condition. */
+export function historyNotifications(): Notification[] {
+  return items.filter((n) => !isActiveIssue(n)).reverse();
+}
+
+export function activeIssueCount(): number {
+  return items.filter(isActiveIssue).length;
+}
+
 export function unreadCount(): number {
   return items.filter((n) => !n.read).length;
 }
 
-/** The worst tier still unread — what the bell's mark should show. `off` when clear. */
+/** Unread history only, so the bell label does not count active issues twice. */
+export function unreadHistoryCount(): number {
+  return items.filter((n) => !isActiveIssue(n) && !n.read).length;
+}
+
+/** Active health wins over read state; otherwise show the worst unread tier. */
 export function topTier(): Tier | 'off' {
+  if (items.some(isActiveIssue)) return 'error';
   const unread = items.filter((n) => !n.read);
   return unread.length ? worst(unread) : 'off';
 }
@@ -93,16 +121,21 @@ export function notify(
     if (muted.has(n.key)) return 0;
     const active = items.find((i) => i.key === n.key && !i.resolved);
     if (active) {
-      // Dedupe collapses a repeat onto the card that is already showing — it must not
-      // silence one the operator dismissed earlier. A fresh occurrence is news again,
-      // so it returns to the rail unread rather than updating a hidden record.
-      Object.assign(active, n, { railDismissed: false, read: false });
+      // A repeated status packet refreshes the diagnosis without undoing the user's
+      // decision to minimize/read this still-unresolved condition.
+      const railDismissed = active.railDismissed;
+      const read = active.read;
+      Object.assign(active, n, { railDismissed, read });
       return active.id;
     }
   }
   const id = ++seq;
   const persistent = n.persistent ?? n.tier === 'error';
-  items.push({ ...n, persistent, id, createdAt: Date.now(), railDismissed: false, read: false });
+  // One connector issue may interrupt at a time. Further issues in the same burst
+  // start in the compact bell/centre state and never form a delayed popup queue.
+  const railDismissed =
+    n.issue === true && items.some((item) => isActiveIssue(item) && !item.railDismissed);
+  items.push({ ...n, persistent, id, createdAt: Date.now(), railDismissed, read: false });
   if (!persistent) setTimeout(() => dismissRail(id), 6000);
   return id;
 }
@@ -113,11 +146,8 @@ export function resolveByKey(
   recovery?: Pick<Notification, 'kind' | 'source' | 'title' | 'body'>,
 ): void {
   muted.delete(key);
-  for (const n of items)
-    if (n.key === key) {
-      n.railDismissed = true;
-      n.resolved = true;
-    }
+  // Do not leave a red failure card behind in history after the condition recovers.
+  items = items.filter((n) => n.key !== key);
   if (recovery) notify({ ...recovery, tier: 'ok', persistent: false });
 }
 
@@ -130,6 +160,10 @@ export function dismissRail(id: number): void {
 /** Deletes a notification outright — the centre's dismiss. */
 export function dismiss(id: number): void {
   const n = items.find((i) => i.id === id);
+  if (n && isActiveIssue(n)) {
+    n.railDismissed = true;
+    return;
+  }
   if (n?.key && n.state) muted.add(n.key);
   items = items.filter((i) => i.id !== id);
 }
@@ -139,8 +173,7 @@ export function markAllRead(): void {
 }
 
 export function clearAll(): void {
-  for (const n of items) if (n.key && n.state) muted.add(n.key);
-  items = [];
+  items = items.filter(isActiveIssue);
 }
 
 // ── Notification centre open state ───────────────────────────────────────────

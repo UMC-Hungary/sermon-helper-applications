@@ -88,6 +88,11 @@ pub fn spec() -> Value {
                         "heightPx": { "type": "integer", "minimum": 1 }
                     }
                 },
+                "PresenterTheme": {
+                    "type": "string",
+                    "enum": ["classic", "editorial"],
+                    "description": "Persisted design returned as presenterTheme in presentation.settings and changed with presentation.set_presenter_theme. Classic shows source SVG whenever it is available; Editorial renders the extracted song or Bible text in the shared warm-black design."
+                },
                 "PresenterState": {
                     "type": "object",
                     "required": ["loaded", "filePath", "currentSlide", "totalSlides", "renderMode", "slides", "svgSlides", "muted"],
@@ -161,7 +166,7 @@ pub fn spec() -> Value {
                 },
                 "SlideFolder": {
                     "type": "object",
-                    "description": "Folder on the core's machine where generated Bible slide decks are written. Empty means not configured.",
+                    "description": "A generated-slide output folder on the core's machine. Empty means not configured.",
                     "required": ["path"],
                     "properties": {
                         "path": { "type": "string", "example": "/Users/me/Documents/Slides" }
@@ -243,10 +248,10 @@ pub fn spec() -> Value {
                 },
                 "Recording": {
                     "type": "object",
-                    "description": "Video recording file linked to an event.",
+                    "description": "Video or audio recording file linked to an event.",
                     "required": [
                         "id", "eventId", "filePath", "fileName", "fileSize",
-                        "durationSeconds", "detectedAt", "whitelisted", "uploaded",
+                        "durationSeconds", "mediaKind", "source", "metadata", "detectedAt", "whitelisted", "uploaded",
                         "createdAt", "updatedAt"
                     ],
                     "properties": {
@@ -256,6 +261,9 @@ pub fn spec() -> Value {
                         "fileName":        { "type": "string", "example": "service-2025-01-19.mp4" },
                         "fileSize":        { "type": "integer", "format": "int64", "description": "File size in bytes" },
                         "durationSeconds": { "type": "number",  "format": "double",  "description": "Duration in seconds" },
+                        "mediaKind":      { "type": "string", "description": "Media kind such as video, deviceMix, deviceTrack, derivedMix, or deviceMultichannel" },
+                        "source":         { "type": "string", "description": "Originating recorder, such as obs or rodecaster" },
+                        "metadata":       { "type": "object", "additionalProperties": true, "description": "Recorder-specific source mapping and provenance snapshot" },
                         "detectedAt":      { "type": "string",  "format": "date-time", "description": "When the file was detected or added" },
                         "whitelisted":     { "type": "boolean", "description": "Approved for YouTube upload" },
                         "uploaded":        { "type": "boolean", "description": "Whether the file has been uploaded to YouTube" },
@@ -325,10 +333,12 @@ pub fn spec() -> Value {
                 "ConnectorStatuses": {
                     "type": "object",
                     "description": "Current status of all connectors.",
-                    "required": ["obs", "blackmagic-camera", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
+                    "required": ["obs", "blackmagic-camera", "middlecontrol", "rodecaster", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"],
                     "properties": {
                         "obs":       { "$ref": "#/components/schemas/ConnectorStatus" },
                         "blackmagic-camera": { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "middlecontrol": { "$ref": "#/components/schemas/ConnectorStatus" },
+                        "rodecaster": { "$ref": "#/components/schemas/ConnectorStatus" },
                         "vmix":      { "$ref": "#/components/schemas/ConnectorStatus" },
                         "atem":      { "$ref": "#/components/schemas/ConnectorStatus" },
                         "broadlink": { "$ref": "#/components/schemas/ConnectorStatus" },
@@ -368,11 +378,13 @@ pub fn spec() -> Value {
                     }
                 },
                 "ConnectorConfig": {
-                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `blackmagic-camera` (enabled, host, fingerprint, username, password), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
+                    "description": "Configuration for one connector. The shape depends on the connector: `obs` (enabled, host, port, password), `blackmagic-camera` (enabled, host, fingerprint, username, password), `middlecontrol` (enabled, host, port; default 11584), `vmix`/`atem` (enabled, host, port), `broadlink` (enabled), `rodecaster` (enabled, notifyOnMute, audioRecording), `youtube` (enabled, clientId, clientSecret), `facebook` (enabled, appId, appSecret, pageId), `discord` (enabled, webhookUrl), `szentiras` (enabled, apiKey).",
                     "type": "object",
                     "required": ["enabled"],
                     "properties": {
                         "enabled":      { "type": "boolean" },
+                        "notifyOnMute": { "type": "boolean", "description": "RODECaster: raise a notification when a channel mute state changes on the device." },
+                        "audioRecording": { "type": "object", "description": "RØDECaster FLAC recording configuration: schemaVersion, enabled, server directory, processingMode, outputMode, and typed sources." },
                         "host":         { "type": "string" },
                         "port":         { "type": "integer" },
                         "fingerprint":  { "type": "string", "description": "Blackmagic camera: pinned SHA-256 of the camera's self-signed certificate. Blank means trust-on-first-use." },
@@ -497,6 +509,15 @@ pub fn spec() -> Value {
                         "softwareVersion": { "type": "string", "example": "10.2.2" }
                     }
                 },
+                "DiscoveredMiddlecontrol": {
+                    "type": "object",
+                    "description": "A Middle Control endpoint that sent a valid feedback frame during discovery.",
+                    "required": ["host", "port"],
+                    "properties": {
+                        "host": { "type": "string", "example": "localhost" },
+                        "port": { "type": "integer", "minimum": 1, "maximum": 65535, "example": 11584 }
+                    }
+                },
                 "ObsStreamSettings": {
                     "type": "object",
                     "description": "The RTMP destination OBS streams to.",
@@ -522,7 +543,7 @@ pub fn spec() -> Value {
                     "required": ["type", "connector", "status"],
                     "properties": {
                         "type":      { "type": "string", "enum": ["connector.status"] },
-                        "connector": { "type": "string", "enum": ["obs", "vmix"] },
+                        "connector": { "type": "string", "enum": ["obs", "vmix", "middlecontrol"] },
                         "status":    { "$ref": "#/components/schemas/ConnectorStatus" }
                     }
                 },
@@ -645,7 +666,7 @@ pub fn spec() -> Value {
             "/api/settings/slide-folder": {
                 "get": {
                     "tags": ["Settings"],
-                    "summary": "Get the slide output folder",
+                    "summary": "Get the Bible slide output folder",
                     "description": "Never 404s — an unset key returns an empty path.",
                     "operationId": "getSlideFolder",
                     "responses": {
@@ -662,7 +683,7 @@ pub fn spec() -> Value {
                 },
                 "put": {
                     "tags": ["Settings"],
-                    "summary": "Set the slide output folder",
+                    "summary": "Set the Bible slide output folder",
                     "description": "The core checks the folder exists on its own machine; an empty path clears the setting.",
                     "operationId": "setSlideFolder",
                     "requestBody": {
@@ -685,6 +706,95 @@ pub fn spec() -> Value {
                         "400": { "description": "The folder does not exist on the core's machine" },
                         "401": { "description": "Unauthorized — missing or invalid token" },
                         "500": { "description": "Database error" }
+                    }
+                }
+            },
+            "/api/settings/song-slide-folder": {
+                "get": {
+                    "tags": ["Settings"],
+                    "summary": "Get the song slide output folder",
+                    "description": "Never 404s — an unset key returns an empty path.",
+                    "operationId": "getSongSlideFolder",
+                    "responses": {
+                        "200": {
+                            "description": "The stored folder, or an empty path when unset",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized — missing or invalid token" }
+                    }
+                },
+                "put": {
+                    "tags": ["Settings"],
+                    "summary": "Set the song slide output folder",
+                    "description": "The core checks the folder exists on its own machine; an empty path clears the setting.",
+                    "operationId": "setSongSlideFolder",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "The stored folder",
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/SlideFolder" }
+                                }
+                            }
+                        },
+                        "400": { "description": "The folder does not exist on the core's machine" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "500": { "description": "Database error" }
+                    }
+                }
+            },
+            "/api/ppt/song": {
+                "post": {
+                    "tags": ["Presentations"],
+                    "summary": "Create a song PowerPoint",
+                    "description": "Splits pasted lyrics only at two empty lines, preserves every entered line without wrapping it onto another line, adds a title slide and a final blank slide, and writes the `.pptx` into the configured song slide output folder.",
+                    "operationId": "createSongPresentation",
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["title", "lyrics"],
+                                    "properties": {
+                                        "title": { "type": "string", "maxLength": 200 },
+                                        "lyrics": { "type": "string", "maxLength": 50000 }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "The written file and slide count",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["filePath", "slideCount"],
+                                        "properties": {
+                                            "filePath": { "type": "string" },
+                                            "slideCount": { "type": "integer", "minimum": 1 }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "400": { "description": "Missing content or no song slide output folder configured" },
+                        "401": { "description": "Unauthorized — missing or invalid token" },
+                        "500": { "description": "Could not write the deck" }
                     }
                 }
             },
@@ -1041,7 +1151,7 @@ pub fn spec() -> Value {
                         "in": "path",
                         "required": true,
                         "description": "Connector name",
-                        "schema": { "type": "string", "enum": ["obs", "blackmagic-camera", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
+                        "schema": { "type": "string", "enum": ["obs", "blackmagic-camera", "middlecontrol", "rodecaster", "vmix", "atem", "broadlink", "youtube", "facebook", "discord", "szentiras"] }
                     }
                 ],
                 "get": {
@@ -1066,7 +1176,7 @@ pub fn spec() -> Value {
                 "put": {
                     "tags": ["Connectors"],
                     "summary": "Save connector configuration",
-                    "description": "Persists the configuration and applies it: OBS reconnects (or disconnects when `enabled` is false), YouTube and Facebook refresh the config used by the OAuth routes and stop when disabled.\n\n**Secret handling:** send a non-empty secret to replace it, leave it empty or omit it to keep the stored one, or send `\"<field>Set\": false` to clear it. This lets a client save a config whose secrets it was never allowed to read.",
+                    "description": "Persists the configuration and applies it: OBS, Blackmagic Camera, and Middle Control reconnect (or disconnect when `enabled` is false); YouTube and Facebook refresh the config used by the OAuth routes and stop when disabled.\n\n**Secret handling:** send a non-empty secret to replace it, leave it empty or omit it to keep the stored one, or send `\"<field>Set\": false` to clear it. This lets a client save a config whose secrets it was never allowed to read.",
                     "operationId": "putConnectorConfig",
                     "requestBody": {
                         "required": true,
@@ -1088,7 +1198,7 @@ pub fn spec() -> Value {
                 "get": {
                     "tags": ["Connectors"],
                     "summary": "Read a connector's stored secrets (host only)",
-                    "description": "Returns the connector config **including** its secrets.\n\nRestricted to the desktop app hosting this server: it requires the normal auth token, an `X-Admin-Token` header matching the running server's admin token (regenerated every run, delivered to the host window over Tauri IPC, never over the network), and a request originating from loopback. Remote clients cannot obtain the admin token, and a leaked one is unusable off-host.\n\nConnectors that store no credentials (`vmix`, `atem`, `broadlink`) return 204.",
+                    "description": "Returns the connector config **including** its secrets.\n\nRestricted to the desktop app hosting this server: it requires the normal auth token, an `X-Admin-Token` header matching the running server's admin token (regenerated every run, delivered to the host window over Tauri IPC, never over the network), and a request originating from loopback. Remote clients cannot obtain the admin token, and a leaked one is unusable off-host.\n\nConnectors that store no credentials (`vmix`, `atem`, `middlecontrol`, `broadlink`, `rodecaster`) return 204.",
                     "operationId": "revealConnectorSecrets",
                     "parameters": [
                         {
@@ -1211,6 +1321,34 @@ pub fn spec() -> Value {
                                 }
                             }
                         }
+                    }
+                }
+            },
+            "/api/connectors/middlecontrol/discover": {
+                "post": {
+                    "tags": ["Connectors"],
+                    "summary": "Find Middle Control",
+                    "description": "Checks localhost and the Metocast server's local /24 network on ports 11584, 11581 and 11580. A TCP listener is returned only after it sends a valid Middle Control feedback frame. The scan does not save or reconnect the connector; use the returned host and port in its config. Routed and VLAN networks may require manual host entry.",
+                    "operationId": "discoverMiddlecontrol",
+                    "responses": {
+                        "200": {
+                            "description": "Middle Control endpoints found, possibly none",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["devices"],
+                                        "properties": {
+                                            "devices": {
+                                                "type": "array",
+                                                "items": { "$ref": "#/components/schemas/DiscoveredMiddlecontrol" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "401": { "description": "Unauthorized" }
                     }
                 }
             },

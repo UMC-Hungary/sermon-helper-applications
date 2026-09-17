@@ -43,6 +43,8 @@ Control Broadlink IR/RF devices and presentations through the Metocast desktop a
 - **Presentation: Toggle Blank Screen**
 - **Presentation: Show Bible Reference** — show Textus or Lekció through the app WebSocket presenter. Leave Event set to “Backend selected event” to let Metocast choose the current/next event.
 
+Song and Bible slides use the Classic or Editorial design selected in the Metocast Presentations settings. Classic shows an imported deck's source artwork; Editorial renders its extracted text in the selected design, and a live design change does not require reopening the deck.
+
 ## Presets
 
 - **Show Textus** — sends `presenter.load_bible_reference` with `reference_type: "textus"` and no `event_id`, so the app backend chooses the event.

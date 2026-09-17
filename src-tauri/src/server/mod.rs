@@ -30,8 +30,9 @@ use sqlx::PgPool;
 use crate::connectors::keynote::KeynoteConnector;
 use crate::connectors::{
     blackmagic_camera::BlackmagicCameraConnector, broadlink::BroadlinkConnector,
-    facebook::FacebookConnector, obs::ObsConnector, vmix::VmixConnector, youtube::YouTubeConnector,
-    FacebookConfig, YouTubeConfig,
+    facebook::FacebookConnector, middlecontrol::MiddlecontrolConnector, obs::ObsConnector,
+    rodecaster::RodecasterConnector, rodecaster_audio::RodecasterAudioRecorder,
+    vmix::VmixConnector, youtube::YouTubeConnector, FacebookConfig, YouTubeConfig,
 };
 use crate::models::event::find_current_event;
 use crate::obs_devices::ObsAvailableDevices;
@@ -51,6 +52,9 @@ pub struct AppState {
     pub server_id: String,
     pub obs_connector: Arc<ObsConnector>,
     pub blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
+    pub middlecontrol_connector: Arc<MiddlecontrolConnector>,
+    pub rodecaster_connector: Arc<RodecasterConnector>,
+    pub rodecaster_audio_recorder: Arc<RodecasterAudioRecorder>,
     pub vmix_connector: Arc<VmixConnector>,
     pub youtube_connector: Arc<YouTubeConnector>,
     pub facebook_connector: Arc<FacebookConnector>,
@@ -71,10 +75,36 @@ pub struct AppState {
     pub presenter_state: Arc<tokio::sync::RwLock<presenter::PresenterState>>,
     /// Whether to use the web presenter instead of Keynote; persisted in app_settings.
     pub use_web_presenter: Arc<AtomicBool>,
+    /// Visual treatment for text-mode song and Bible slides; persisted in app_settings.
+    pub presenter_theme: Arc<RwLock<presenter::PresenterTheme>>,
     /// Metadata for every currently-connected WebSocket client.
     pub ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>>,
     /// Wakes the job-queue worker as soon as `queue_changed` fires.
     pub queue_wake: Arc<tokio::sync::Notify>,
+    #[cfg(target_os = "macos")]
+    pub keynote_connector: Arc<KeynoteConnector>,
+}
+
+pub struct ServerOptions {
+    pub pool: PgPool,
+    pub auth_token: Arc<RwLock<String>>,
+    pub connection_url: String,
+    pub port: u16,
+    pub static_dir: Option<String>,
+    pub obs_connector: Arc<ObsConnector>,
+    pub blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
+    pub middlecontrol_connector: Arc<MiddlecontrolConnector>,
+    pub rodecaster_connector: Arc<RodecasterConnector>,
+    pub vmix_connector: Arc<VmixConnector>,
+    pub youtube_connector: Arc<YouTubeConnector>,
+    pub facebook_connector: Arc<FacebookConnector>,
+    pub broadlink_connector: Arc<BroadlinkConnector>,
+    pub youtube_config: Arc<RwLock<YouTubeConfig>>,
+    pub facebook_config: Arc<RwLock<FacebookConfig>>,
+    pub oauth_states: Arc<RwLock<HashMap<String, (String, Instant)>>>,
+    pub app_handle: Option<tauri::AppHandle>,
+    pub admin_token: Arc<String>,
+    pub cron_scheduler: Arc<CronScheduler>,
     #[cfg(target_os = "macos")]
     pub keynote_connector: Arc<KeynoteConnector>,
 }
@@ -94,26 +124,30 @@ fn serve_embedded_asset(handle: &tauri::AppHandle, path: &str) -> axum::response
     }
 }
 
-pub async fn build_and_serve(
-    pool: PgPool,
-    auth_token: Arc<RwLock<String>>,
-    connection_url: String,
-    port: u16,
-    static_dir: Option<String>,
-    obs_connector: Arc<ObsConnector>,
-    blackmagic_camera_connector: Arc<BlackmagicCameraConnector>,
-    vmix_connector: Arc<VmixConnector>,
-    youtube_connector: Arc<YouTubeConnector>,
-    facebook_connector: Arc<FacebookConnector>,
-    broadlink_connector: Arc<BroadlinkConnector>,
-    youtube_config: Arc<RwLock<YouTubeConfig>>,
-    facebook_config: Arc<RwLock<FacebookConfig>>,
-    oauth_states: Arc<RwLock<std::collections::HashMap<String, (String, std::time::Instant)>>>,
-    app_handle: Option<tauri::AppHandle>,
-    admin_token: Arc<String>,
-    cron_scheduler: Arc<CronScheduler>,
-    #[cfg(target_os = "macos")] keynote_connector: Arc<KeynoteConnector>,
-) -> anyhow::Result<()> {
+pub async fn build_and_serve(options: ServerOptions) -> anyhow::Result<()> {
+    let ServerOptions {
+        pool,
+        auth_token,
+        connection_url,
+        port,
+        static_dir,
+        obs_connector,
+        blackmagic_camera_connector,
+        middlecontrol_connector,
+        rodecaster_connector,
+        vmix_connector,
+        youtube_connector,
+        facebook_connector,
+        broadlink_connector,
+        youtube_config,
+        facebook_config,
+        oauth_states,
+        app_handle,
+        admin_token,
+        cron_scheduler,
+        #[cfg(target_os = "macos")]
+        keynote_connector,
+    } = options;
     let ws_clients: Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>> =
         Arc::new(RwLock::new(HashMap::new()));
     let server_id = Uuid::new_v4().to_string();
@@ -154,9 +188,18 @@ pub async fn build_and_serve(
             .and_then(|v: String| v.parse().ok())
             .unwrap_or(false);
     let use_web_presenter = Arc::new(AtomicBool::new(use_web_presenter_val));
+    let presenter_theme = Arc::new(RwLock::new(
+        sqlx::query_scalar("SELECT value FROM app_settings WHERE key = 'presenter_theme'")
+            .fetch_optional(&pool)
+            .await
+            .unwrap_or(None)
+            .and_then(|value: String| value.parse().ok())
+            .unwrap_or_default(),
+    ));
 
     let ws_client_info: Arc<tokio::sync::RwLock<HashMap<Uuid, websocket::WsClientInfo>>> =
         Arc::new(tokio::sync::RwLock::new(HashMap::new()));
+    let rodecaster_audio_recorder = Arc::new(RodecasterAudioRecorder::new());
 
     let state = AppState {
         pool,
@@ -165,6 +208,9 @@ pub async fn build_and_serve(
         server_id,
         obs_connector: obs_connector.clone(),
         blackmagic_camera_connector: blackmagic_camera_connector.clone(),
+        middlecontrol_connector: middlecontrol_connector.clone(),
+        rodecaster_connector: rodecaster_connector.clone(),
+        rodecaster_audio_recorder: rodecaster_audio_recorder.clone(),
         vmix_connector,
         youtube_connector: youtube_connector.clone(),
         facebook_connector: facebook_connector.clone(),
@@ -180,6 +226,7 @@ pub async fn build_and_serve(
         obs_available_devices: obs_available_devices.clone(),
         presenter_state: presenter_state.clone(),
         use_web_presenter: use_web_presenter.clone(),
+        presenter_theme,
         ws_client_info: ws_client_info.clone(),
         queue_wake: Arc::new(tokio::sync::Notify::new()),
         #[cfg(target_os = "macos")]
@@ -269,6 +316,118 @@ pub async fn build_and_serve(
                     "isStreaming": state.is_streaming(),
                     "streamStatus": state.stream_status,
                     "isRecording": state.is_recording,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    // Middle Control is healthy only after its first parsed feedback frame.
+    {
+        let clients = ws_clients.clone();
+        let mut status_rx = middlecontrol_connector.status_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(status) = status_rx.recv().await {
+                let msg = json!({
+                    "type": "connector.status",
+                    "connector": "middlecontrol",
+                    "status": status,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    {
+        let clients = ws_clients.clone();
+        let mut state_rx = middlecontrol_connector.state_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(state) = state_rx.recv().await {
+                let msg = json!({
+                    "type": "connector.state",
+                    "connector": "middlecontrol",
+                    "state": state,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    {
+        let clients = ws_clients.clone();
+        let mut status_rx = rodecaster_connector.status_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(status) = status_rx.recv().await {
+                let msg = json!({
+                    "type": "connector.status",
+                    "connector": "rodecaster",
+                    "status": status,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    {
+        let clients = ws_clients.clone();
+        let mut profile_rx = rodecaster_connector.profile_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(profile) = profile_rx.recv().await {
+                let msg = json!({ "type": "rodecaster.profile", "profile": profile }).to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    {
+        let clients = ws_clients.clone();
+        let mut mute_rx = rodecaster_connector.mute_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(event) = mute_rx.recv().await {
+                let msg = json!({
+                    "type": "rodecaster.mute",
+                    "channel": event.channel,
+                    "label": event.label,
+                    "muted": event.muted,
+                    "remote": event.remote,
+                    "notify": event.notify,
+                })
+                .to_string();
+                let guard = clients.read().await;
+                for tx in guard.values() {
+                    let _ = tx.send(Message::Text(msg.clone().into()));
+                }
+            }
+        });
+    }
+
+    {
+        let clients = ws_clients.clone();
+        let mut recorder_rx = rodecaster_audio_recorder.state_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(state) = recorder_rx.recv().await {
+                let msg = json!({
+                    "type": "rodecaster.audio.record.state",
+                    "state": state,
                 })
                 .to_string();
                 let guard = clients.read().await;
@@ -467,7 +626,8 @@ pub async fn build_and_serve(
     let ppt_routes = Router::new()
         .route("/ppt/folders", get(ppt::list_folders).post(ppt::add_folder))
         .route("/ppt/folders/{id}", delete(ppt::remove_folder))
-        .route("/ppt/files", get(ppt::search_files));
+        .route("/ppt/files", get(ppt::search_files))
+        .route("/ppt/song", post(routes::create_song_slides));
 
     // Keynote control routes (macOS only; 501 stub on other platforms).
     #[cfg(target_os = "macos")]
@@ -508,6 +668,10 @@ pub async fn build_and_serve(
         .route(
             "/settings/slide-folder",
             get(routes::get_slide_folder).put(routes::set_slide_folder),
+        )
+        .route(
+            "/settings/song-slide-folder",
+            get(routes::get_song_slide_folder).put(routes::set_song_slide_folder),
         )
         .route("/events/{id}/slides", post(routes::create_event_slides))
         .route(
@@ -568,6 +732,10 @@ pub async fn build_and_serve(
         .route(
             "/connectors/blackmagic-camera/discover",
             post(routes::blackmagic_camera_discover),
+        )
+        .route(
+            "/connectors/middlecontrol/discover",
+            post(routes::middlecontrol_discover),
         )
         .route(
             "/connectors/broadlink/discover",

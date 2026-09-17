@@ -11,6 +11,9 @@
     vmixStatus,
     atemConfig,
     atemStatus,
+    middlecontrolConfig,
+    middlecontrolStatus,
+    middlecontrolState,
     broadlinkConfig,
     broadlinkStatus,
     youtubeConfig,
@@ -26,6 +29,7 @@
     ObsConfig,
     VmixConfig,
     AtemConfig,
+    MiddlecontrolConfig,
     BroadlinkConfig,
     YouTubeConfig,
     FacebookConfig,
@@ -47,13 +51,18 @@
     youtubeAuthUrl,
     facebookAuthUrl,
     revealConnectorSecrets,
+    discoverMiddlecontrol,
   } from '@metocast/core-client';
+  import type { DiscoveredMiddlecontrol } from '@metocast/core-client';
   import type {
     ConnectorConfigMap,
     ConnectorName,
     ObsStreamSettings,
   } from '@metocast/core-client/schemas/connectors';
   import BroadlinkDiscoveryPanel from './broadlink/DiscoveryPanel.svelte';
+
+  const MIDDLECONTROL_SDK_URL =
+    'https://www.middlethings.co/support/docs/joysticks-and-controllers/external-sdk-api/';
 
   interface Props {
     connectorId: string;
@@ -256,6 +265,47 @@
     atemSaving = false;
   }
 
+  // ── Middle Control ────────────────────────────────────────────────────────
+  let middlecontrolForm: MiddlecontrolConfig = $state({ enabled: false, host: '', port: 11584 });
+  let middlecontrolSaving = $state(false);
+  let middlecontrolError = $state('');
+  let middlecontrolDevices = $state<DiscoveredMiddlecontrol[]>([]);
+  let middlecontrolScanning = $state(false);
+  let middlecontrolScanned = $state(false);
+  const middlecontrolCameraIds = $derived($middlecontrolState.connectedCameraIds ?? []);
+  const middlecontrolApcrIds = $derived($middlecontrolState.connectedApcrIds ?? []);
+  const middlecontrolRecordingIds = $derived($middlecontrolState.recordingCameraIds ?? []);
+  const middlecontrolDeviceIds = $derived(
+    [...new Set([...middlecontrolCameraIds, ...middlecontrolApcrIds])].sort((a, b) => a - b),
+  );
+
+  $effect(() => {
+    if (connectorId === 'middlecontrol') middlecontrolForm = { ...$middlecontrolConfig };
+  });
+
+  async function saveMiddlecontrol() {
+    middlecontrolSaving = true;
+    middlecontrolError = await persistConfig(
+      'middlecontrol',
+      middlecontrolForm,
+      middlecontrolConfig,
+    );
+    middlecontrolSaving = false;
+  }
+
+  async function scanMiddlecontrol() {
+    middlecontrolScanning = true;
+    middlecontrolError = '';
+    try {
+      middlecontrolDevices = await discoverMiddlecontrol();
+      middlecontrolScanned = true;
+    } catch (e) {
+      middlecontrolError = String(e);
+    } finally {
+      middlecontrolScanning = false;
+    }
+  }
+
   // ── YouTube ────────────────────────────────────────────────────────────────
   let ytForm: YouTubeConfig = $state({ enabled: false, clientId: '', clientSecret: '' });
   let ytSaving = $state(false);
@@ -404,6 +454,8 @@
           <p class="note">{$_('appSettings.connectors.vmix.subtitle')}</p>
         {:else if connectorId === 'atem'}
           <p class="note">{$_('appSettings.connectors.atem.subtitle')}</p>
+        {:else if connectorId === 'middlecontrol'}
+          <p class="note">{$_('appSettings.connectors.middlecontrol.subtitle')}</p>
         {:else if connectorId === 'broadlink'}
           <p class="note">{$_('appSettings.connectors.broadlink.subtitle')}</p>
         {:else if connectorId === 'youtube'}
@@ -422,6 +474,8 @@
         <ConnectorStatusBadge name="VMix" status={$vmixStatus} />
       {:else if connectorId === 'atem'}
         <ConnectorStatusBadge name="ATEM" status={$atemStatus} />
+      {:else if connectorId === 'middlecontrol'}
+        <ConnectorStatusBadge name="Middle Control" status={$middlecontrolStatus} />
       {:else if connectorId === 'broadlink'}
         <ConnectorStatusBadge name="BroadLink" status={$broadlinkStatus} />
       {:else if connectorId === 'youtube'}
@@ -615,6 +669,153 @@
           {vmixSaving
             ? $_('appSettings.connectors.vmix.saving')
             : $_('appSettings.connectors.vmix.save')}
+        </button>
+      </div>
+
+      <!-- ── Middle Control form ──────────────────────────────────────────── -->
+    {:else if connectorId === 'middlecontrol'}
+      <div class="form-row">
+        <label class="checkbox-label">
+          <input type="checkbox" bind:checked={middlecontrolForm.enabled} />
+          {$_('appSettings.connectors.middlecontrol.enabled')}
+        </label>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="middlecontrol-host">{$_('appSettings.connectors.middlecontrol.host')}</label>
+          <input
+            id="middlecontrol-host"
+            type="text"
+            placeholder="localhost"
+            bind:value={middlecontrolForm.host}
+          />
+        </div>
+        <div class="field">
+          <label for="middlecontrol-port">{$_('appSettings.connectors.middlecontrol.port')}</label>
+          <input
+            id="middlecontrol-port"
+            type="number"
+            min="1"
+            max="65535"
+            bind:value={middlecontrolForm.port}
+          />
+        </div>
+      </div>
+      <p class="note">{$_('appSettings.connectors.middlecontrol.help')}</p>
+
+      <button
+        class="btn-link middlecontrol-sdk-link"
+        type="button"
+        onclick={() => void openExternal(MIDDLECONTROL_SDK_URL)}
+      >
+        {$_('appSettings.connectors.middlecontrol.sdk')} ↗
+      </button>
+
+      <section class="middlecontrol-devices" aria-labelledby="middlecontrol-devices-title">
+        <div class="middlecontrol-devices-head">
+          <h4 id="middlecontrol-devices-title">
+            {$_('appSettings.connectors.middlecontrol.devicesTitle')}
+          </h4>
+          <span>
+            {$_('appSettings.connectors.middlecontrol.devicesSummary', {
+              values: {
+                cameras: middlecontrolCameraIds.length,
+                ptz: middlecontrolApcrIds.length,
+              },
+            })}
+          </span>
+        </div>
+        {#if $middlecontrolStatus !== 'connected'}
+          <p class="note">
+            {$_('appSettings.connectors.middlecontrol.devicesDisconnected')}
+          </p>
+        {:else if middlecontrolDeviceIds.length === 0}
+          <p class="note">{$_('appSettings.connectors.middlecontrol.devicesEmpty')}</p>
+        {:else}
+          <ul>
+            {#each middlecontrolDeviceIds as id (id)}
+              <li>
+                <span>
+                  <strong>
+                    {$_('appSettings.connectors.middlecontrol.camera', { values: { id } })}
+                  </strong>
+                  <small>
+                    {middlecontrolCameraIds.includes(id)
+                      ? $_('appSettings.connectors.middlecontrol.connected')
+                      : $_('appSettings.connectors.middlecontrol.cameraOffline')}
+                  </small>
+                </span>
+                <span class="middlecontrol-badges">
+                  {#if $middlecontrolState.selectedCamera === id}
+                    <span>{$_('appSettings.connectors.middlecontrol.selected')}</span>
+                  {/if}
+                  {#if middlecontrolRecordingIds.includes(id)}
+                    <span class="recording">
+                      {$_('appSettings.connectors.middlecontrol.recording')}
+                    </span>
+                  {/if}
+                  {#if middlecontrolApcrIds.includes(id)}
+                    <span class="ptz">{$_('appSettings.connectors.middlecontrol.ptz')}</span>
+                  {/if}
+                </span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </section>
+
+      <div class="button-row discovery-actions">
+        <button
+          class="btn-secondary"
+          type="button"
+          onclick={() => (middlecontrolForm.host = 'localhost')}
+        >
+          {$_('appSettings.connectors.middlecontrol.useLocal')}
+        </button>
+        <button
+          class="btn-secondary"
+          type="button"
+          onclick={scanMiddlecontrol}
+          disabled={middlecontrolScanning}
+        >
+          {middlecontrolScanning
+            ? $_('appSettings.connectors.middlecontrol.scanning')
+            : middlecontrolScanned
+              ? $_('appSettings.connectors.middlecontrol.scanAgain')
+              : $_('appSettings.connectors.middlecontrol.scan')}
+        </button>
+      </div>
+      <p class="note">{$_('appSettings.connectors.middlecontrol.discoveryDescription')}</p>
+      {#if middlecontrolScanned && middlecontrolDevices.length === 0}
+        <p class="note">{$_('appSettings.connectors.middlecontrol.discoveryEmpty')}</p>
+      {:else if middlecontrolDevices.length > 0}
+        <div class="button-row">
+          {#each middlecontrolDevices as device (`${device.host}:${device.port}`)}
+            <button
+              class="btn-secondary"
+              type="button"
+              onclick={() => {
+                middlecontrolForm.host = device.host;
+                middlecontrolForm.port = device.port;
+              }}
+            >
+              {$_('appSettings.connectors.middlecontrol.useEndpoint', {
+                values: { address: `${device.host}:${device.port}` },
+              })}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      {#if middlecontrolError}
+        <p class="error" role="alert">{middlecontrolError}</p>
+      {/if}
+
+      <div class="button-row">
+        <button class="btn-primary" onclick={saveMiddlecontrol} disabled={middlecontrolSaving}>
+          {middlecontrolSaving
+            ? $_('appSettings.connectors.middlecontrol.saving')
+            : $_('appSettings.connectors.middlecontrol.save')}
         </button>
       </div>
 
@@ -1050,6 +1251,78 @@
     margin: 0;
   }
 
+  .middlecontrol-sdk-link {
+    margin-top: 0.5rem;
+  }
+
+  .middlecontrol-devices {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--content-bg);
+  }
+
+  .middlecontrol-devices-head,
+  .middlecontrol-devices li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .middlecontrol-devices-head h4 {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .middlecontrol-devices-head > span,
+  .middlecontrol-devices small {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+  }
+
+  .middlecontrol-devices ul {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+  }
+
+  .middlecontrol-devices li {
+    min-height: 2.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .middlecontrol-devices li strong,
+  .middlecontrol-devices li small {
+    display: block;
+  }
+
+  .middlecontrol-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+
+  .middlecontrol-badges span {
+    padding: 0.15rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+  }
+
+  .middlecontrol-badges .recording {
+    border-color: var(--status-err-dot);
+    color: var(--status-err-text);
+  }
+
+  .middlecontrol-badges .ptz {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
   .form-row {
     margin-bottom: 0.75rem;
   }
@@ -1131,6 +1404,10 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+
+  .discovery-actions {
+    margin: 0.75rem 0;
   }
 
   .error {

@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { apiFetch } from './client.js';
+import { sendWsCommand } from '../ws/client.js';
 import { getAdminToken } from '../host/index.js';
 import {
   CameraSettingsSchema,
   CameraStreamTargetSchema,
   ConnectorConfigSchemas,
   DiscoveredCamerasSchema,
+  DiscoveredMiddlecontrolsSchema,
   ConnectorStatusesSchema,
   ObsStreamSettingsSchema,
   type ConnectorConfigMap,
@@ -14,6 +16,7 @@ import {
   type CameraSettingsUpdate,
   type CameraStreamTarget,
   type DiscoveredCamera,
+  type DiscoveredMiddlecontrol,
   type ObsStreamSettings,
 } from '../schemas/connectors.js';
 
@@ -79,6 +82,16 @@ export async function discoverCameras(): Promise<DiscoveredCamera[]> {
   return cameras;
 }
 
+/** Finds Middle Control by validating feedback on its known TCP ports. */
+export async function discoverMiddlecontrol(): Promise<DiscoveredMiddlecontrol[]> {
+  const { devices } = await apiFetch(
+    '/api/connectors/middlecontrol/discover',
+    DiscoveredMiddlecontrolsSchema,
+    { method: 'POST' },
+  );
+  return devices;
+}
+
 /** Storage, record format and livestream settings, read from the camera in one pass. */
 export function fetchCameraSettings(): Promise<CameraSettings> {
   return apiFetch('/api/connectors/blackmagic-camera/settings', CameraSettingsSchema);
@@ -100,6 +113,69 @@ export function pushCameraYouTubeSettings(): Promise<CameraStreamTarget> {
   return apiFetch('/api/connectors/blackmagic-camera/stream/youtube', CameraStreamTargetSchema, {
     method: 'POST',
   });
+}
+
+/**
+ * Sets a RØDECaster channel's mute. The value is absolute, so re-sending the same
+ * state is safe; the resulting state arrives as a `rodecaster.mute` event from the
+ * device, not from this call.
+ */
+export function setRodecasterMute(channel: number, mute: boolean): boolean {
+  return sendWsCommand('rodecaster.mute.set', { channel, mute });
+}
+
+/** Asks the core for the current channel profile, answered as `rodecaster.profile`. */
+export function requestRodecasterProfile(): boolean {
+  return sendWsCommand('rodecaster.profile');
+}
+
+export function discoverRodecasterAudio(): boolean {
+  return sendWsCommand('rodecaster.audio.discover');
+}
+
+export function requestRodecasterAudioRecordingState(): boolean {
+  return sendWsCommand('rodecaster.audio.record.state');
+}
+
+export function startRodecasterAudioRecording(eventId: string): boolean {
+  return sendWsCommand('rodecaster.audio.record.start', { event_id: eventId });
+}
+
+export function stopRodecasterAudioRecording(): boolean {
+  return sendWsCommand('rodecaster.audio.record.stop');
+}
+
+export function selectMiddlecontrolCamera(cameraId: number): boolean {
+  return sendWsCommand('middlecontrol.camera.select', { camera_id: cameraId });
+}
+
+export function startMiddlecontrolRecording(cameraId?: number): boolean {
+  return sendWsCommand(
+    'middlecontrol.record.start',
+    cameraId === undefined ? undefined : { camera_id: cameraId },
+  );
+}
+
+export function stopMiddlecontrolRecording(cameraId?: number): boolean {
+  return sendWsCommand(
+    'middlecontrol.record.stop',
+    cameraId === undefined ? undefined : { camera_id: cameraId },
+  );
+}
+
+export function startAllMiddlecontrolRecordings(): boolean {
+  return sendWsCommand('middlecontrol.record.start_all');
+}
+
+export function stopAllMiddlecontrolRecordings(): boolean {
+  return sendWsCommand('middlecontrol.record.stop_all');
+}
+
+export function recallMiddlecontrolPreset(preset: number, cameraId?: number): boolean {
+  return sendWsCommand(
+    'middlecontrol.preset.recall',
+    cameraId === undefined ? { preset } : { preset, camera_id: cameraId },
+  );
 }
 
 export function fetchObsStreamSettings(): Promise<ObsStreamSettings> {

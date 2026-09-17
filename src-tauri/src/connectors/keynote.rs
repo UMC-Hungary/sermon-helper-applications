@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct KeynoteStatus {
     pub app_running: bool,
@@ -10,18 +10,6 @@ pub struct KeynoteStatus {
     pub current_slide: Option<u32>,
     pub total_slides: Option<u32>,
     pub document_name: Option<String>,
-}
-
-impl Default for KeynoteStatus {
-    fn default() -> Self {
-        Self {
-            app_running: false,
-            slideshow_active: false,
-            current_slide: None,
-            total_slides: None,
-            document_name: None,
-        }
-    }
 }
 
 pub struct KeynoteConnector {
@@ -217,5 +205,11 @@ end tell"#;
                 tokio::time::sleep(delay).await;
             }
         });
+    }
+}
+
+impl Default for KeynoteConnector {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -4,6 +4,7 @@
   import '@metocast/design-system/base.css';
   import '$lib/i18n';
   import { onMount } from 'svelte';
+  import { page } from '$app/state';
   import { _ } from 'svelte-i18n';
   import { enableWindowGlass, connectWs, getAppMode, onConnectLink } from '@metocast/core-client';
   import type { WsStatus, HostMode, ConnectLink } from '@metocast/core-client';
@@ -23,7 +24,9 @@
     dismissRail,
     dismiss,
     allNotifications,
-    unreadCount,
+    activeIssues,
+    historyNotifications,
+    activeIssueCount,
     isCentreOpen,
     closeCentre,
     clearAll,
@@ -38,6 +41,9 @@
   let phase = $state<'loading' | 'setup' | 'app'>('loading');
   let pendingLink = $state<ConnectLink | null>(null);
   let overrideLink = $state<ConnectLink | null>(null);
+  const isPresenter = $derived(page.url.pathname === '/presenter');
+  const notificationPreview =
+    import.meta.env.DEV && import.meta.env.VITE_SANCTUM_UX_PREVIEW === 'connector-notifications';
 
   function receiveConnectLink(link: ConnectLink) {
     if (phase === 'setup') pendingLink = link;
@@ -50,11 +56,32 @@
     phase = 'setup';
   }
 
+  function centreTitle(): string {
+    const active = activeIssueCount();
+    if (active > 0)
+      return $_(active === 1 ? 'notif.activeCountOne' : 'notif.activeCount', {
+        values: { n: active },
+      });
+    const total = allNotifications().length;
+    return total > 0 ? $_('notif.count', { values: { n: total } }) : $_('notif.allClear');
+  }
+
   onMount(async () => {
+    if (isPresenter) return;
+
     initScheme();
     enableWindowGlass()
       .then(() => document.body.classList.add('glass'))
       .catch(() => {});
+
+    if (notificationPreview) {
+      status = 'connected';
+      phase = 'app';
+      const { seedConnectorNotificationPreview } =
+        await import('$lib/dev/connector-notification-preview');
+      seedConnectorNotificationPreview();
+      return;
+    }
 
     let mode: HostMode | null = 'server';
     try {
@@ -81,7 +108,10 @@
   });
 </script>
 
-<div class="titlebar" data-tauri-drag-region aria-hidden="true"></div>
+{#if isPresenter}
+  {@render children()}
+{:else}
+  <div class="titlebar" data-tauri-drag-region aria-hidden="true"></div>
 
 {#if phase === 'setup'}
   <Setup connect={pendingLink} />
@@ -90,7 +120,7 @@
     {#if t.brand}
       <Glyph size={34} label={t.source}>
         {#snippet mark()}<svg
-            viewBox="0 0 24 24"
+            viewBox={t.brandBox ?? '0 0 24 24'}
             width="19"
             height="19"
             fill="currentColor"
@@ -133,7 +163,7 @@
           remediation={t.remediation}
           whyLabel={$_('notif.showSteps')}
           hideWhyLabel={$_('notif.hideSteps')}
-          dismissLabel={$_('toast.dismiss')}
+          dismissLabel={$_('toast.minimize')}
           ondismiss={() => dismissRail(t.id)}
         >
           {#snippet mark()}{@render connectorGlyph(t)}{/snippet}
@@ -145,46 +175,93 @@
   <NotificationCentre
     open={isCentreOpen()}
     eyebrow={$_('notif.eyebrow')}
-    title={unreadCount() > 0 || allNotifications().length
-      ? $_('notif.count', { values: { n: allNotifications().length } })
-      : $_('notif.allClear')}
+    title={centreTitle()}
     empty={allNotifications().length === 0}
     emptyTitle={$_('notif.emptyTitle')}
     emptyHint={$_('notif.emptyHint')}
-    clearLabel={$_('notif.clearAll')}
-    onclear={clearAll}
+    clearLabel={$_('notif.clearHistory')}
+    onclear={historyNotifications().length > 0 ? clearAll : undefined}
     onclose={closeCentre}
   >
-    {#each allNotifications() as t (t.id)}
-      <Toast
-        kind={t.kind}
-        source={t.source}
-        title={t.title}
-        body={t.body}
-        mono={t.mono}
-        tone={t.tier}
-        state={t.state}
-        actions={(t.actions ?? []).map((a) => ({
-          label: a.label,
-          primary: a.primary,
-          onclick: a.run,
-        }))}
-        remediation={t.remediation}
-        whyLabel={$_('notif.showSteps')}
-        hideWhyLabel={$_('notif.hideSteps')}
-        dismissLabel={$_('toast.dismiss')}
-        ondismiss={() => dismiss(t.id)}
-      >
-        {#snippet mark()}{@render connectorGlyph(t)}{/snippet}
-        {#snippet detail()}
-          {#if t.group?.length}
-            <ul class="group">
-              {#each t.group as g (g.source)}<li>{g.source} — {g.label}</li>{/each}
-            </ul>
-          {/if}
-        {/snippet}
-      </Toast>
-    {/each}
+    {#if activeIssues().length > 0}
+      <section class="notification-section" aria-labelledby="active-issues-heading">
+        <h3 id="active-issues-heading">
+          <span>{$_('notif.activeIssues')}</span>
+          <small>{activeIssues().length}</small>
+        </h3>
+        <div class="notification-stack">
+          {#each activeIssues() as t (t.id)}
+            <Toast
+              kind={t.kind}
+              source={t.source}
+              title={t.title}
+              body={t.body}
+              mono={t.mono}
+              tone={t.tier}
+              state={t.state}
+              actions={(t.actions ?? []).map((a) => ({
+                label: a.label,
+                primary: a.primary,
+                onclick: a.run,
+              }))}
+              remediation={t.remediation}
+              whyLabel={$_('notif.showSteps')}
+              hideWhyLabel={$_('notif.hideSteps')}
+            >
+              {#snippet mark()}{@render connectorGlyph(t)}{/snippet}
+              {#snippet detail()}
+                {#if t.group?.length}
+                  <ul class="group">
+                    {#each t.group as g (g.source)}<li>{g.source} — {g.label}</li>{/each}
+                  </ul>
+                {/if}
+              {/snippet}
+            </Toast>
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    {#if historyNotifications().length > 0}
+      <section class="notification-section" aria-labelledby="recent-notifications-heading">
+        <h3 id="recent-notifications-heading">
+          <span>{$_('notif.recentNotifications')}</span>
+          <small>{historyNotifications().length}</small>
+        </h3>
+        <div class="notification-stack">
+          {#each historyNotifications() as t (t.id)}
+            <Toast
+              kind={t.kind}
+              source={t.source}
+              title={t.title}
+              body={t.body}
+              mono={t.mono}
+              tone={t.tier}
+              state={t.state}
+              actions={(t.actions ?? []).map((a) => ({
+                label: a.label,
+                primary: a.primary,
+                onclick: a.run,
+              }))}
+              remediation={t.remediation}
+              whyLabel={$_('notif.showSteps')}
+              hideWhyLabel={$_('notif.hideSteps')}
+              dismissLabel={$_('toast.dismiss')}
+              ondismiss={() => dismiss(t.id)}
+            >
+              {#snippet mark()}{@render connectorGlyph(t)}{/snippet}
+              {#snippet detail()}
+                {#if t.group?.length}
+                  <ul class="group">
+                    {#each t.group as g (g.source)}<li>{g.source} — {g.label}</li>{/each}
+                  </ul>
+                {/if}
+              {/snippet}
+            </Toast>
+          {/each}
+        </div>
+      </section>
+    {/if}
   </NotificationCentre>
 {/if}
 
@@ -205,7 +282,8 @@
   {/snippet}
 </Dialog>
 
-<div id="overlays"></div>
+  <div id="overlays"></div>
+{/if}
 
 <style>
   .titlebar {
@@ -254,6 +332,41 @@
     line-height: 1.5;
     list-style: none;
     padding-left: 0;
+  }
+
+  .notification-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-stack);
+  }
+
+  .notification-section + .notification-section {
+    margin-top: var(--ui-stack-loose);
+  }
+
+  .notification-section h3 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ui-stack);
+    margin: 0;
+    font-family: var(--type-label-family);
+    font-size: var(--type-label-size);
+    font-weight: var(--type-label-weight);
+    letter-spacing: var(--type-label-track);
+    text-transform: var(--type-label-transform);
+    color: var(--text-muted);
+  }
+
+  .notification-section h3 small {
+    color: var(--text-faint);
+    font: inherit;
+  }
+
+  .notification-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c-notification-centre-gap);
   }
 
   /* On tablet/desktop the toast rail settles to the right at a capped width, rather

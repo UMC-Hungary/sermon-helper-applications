@@ -22,6 +22,8 @@ import {
   vmixState,
   atemStatus,
   atemState,
+  middlecontrolStatus,
+  middlecontrolState,
   broadlinkStatus,
   broadlinkState,
   youtubeStatus,
@@ -34,7 +36,12 @@ import {
 } from '$lib/stores/connectors.js';
 import { broadlinkDiscoveredDevices, broadlinkLearnResult } from '$lib/stores/broadlink.js';
 import { keynoteStatus, pptResults, pptFolders, pptFilter } from '$lib/stores/presentations.js';
-import { presenterState, connectedClients, useWebPresenter } from '$lib/stores/presenter.js';
+import {
+  presenterState,
+  presenterTheme,
+  connectedClients,
+  useWebPresenter,
+} from '$lib/stores/presenter.js';
 import { uploadProgress } from '$lib/stores/uploads.js';
 import { queues } from '$lib/stores/queues.js';
 import {
@@ -128,6 +135,9 @@ function handleMessage(msg: WsMessage): void {
     } else if (msg.connector === 'atem') {
       atemStatus.set(status);
       atemState.update((s) => ({ ...s, connection: status }));
+    } else if (msg.connector === 'middlecontrol') {
+      middlecontrolStatus.set(status);
+      middlecontrolState.update((s) => ({ ...s, connection: status }));
     } else if (msg.connector === 'broadlink') {
       broadlinkStatus.set(status);
       broadlinkState.update((s) => ({ ...s, connection: status }));
@@ -151,6 +161,8 @@ function handleMessage(msg: WsMessage): void {
       vmixState.update((s) => ({ ...s, ...patch }));
     } else if (msg.connector === 'broadlink') {
       broadlinkState.update((s) => ({ ...s, ...patch }));
+    } else if (msg.connector === 'middlecontrol' && msg.state) {
+      middlecontrolState.update((s) => ({ ...s, ...msg.state }));
     }
   } else if (msg.type === 'broadlink.device.discovered') {
     broadlinkDiscoveredDevices.update((list) => {
@@ -164,6 +176,7 @@ function handleMessage(msg: WsMessage): void {
     youtubeState.update((s) => ({ ...s, isLive: msg.hasLive }));
   } else if (msg.type === 'presentation.settings') {
     useWebPresenter.set(msg.useWebPresenter);
+    presenterTheme.set(msg.presenterTheme);
   } else if (msg.type === 'presenter.state') {
     presenterState.set(msg.state);
   } else if (msg.type === 'presenter.slide_changed') {

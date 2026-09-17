@@ -70,7 +70,22 @@
     "presentations": "Presentations",
     "presentationsMeta": "Slides & lyrics",
     "connectors": "Connectors",
-    "connectorsMeta": "{n} linked"
+    "connectorsMeta": "{n} linked",
+    "audioRecording": "RØDECaster audio",
+    "recReady": "Ready",
+    "recActive": "Recording",
+    "noRecordEvent": "No event to record into",
+    "noRecordEventHint": "Schedule an event and the recording attaches to it",
+    "outputMode": {
+      "mainMix": "Main mix",
+      "separate": "Separate tracks",
+      "combinedStereo": "Combined stereo",
+      "multichannelFlac": "Multichannel FLAC"
+    },
+    "recordAudio": "Record audio",
+    "stopAudio": "Stop recording",
+    "connectMixer": "Connect the RØDECaster to the core before recording.",
+    "lastRecording": "Last recording"
   },
   "events": {
     "eyebrow": "{n} shown",
@@ -116,6 +131,7 @@
     "pickTime": "Pick a time",
     "speaker": "Speaker",
     "speakerPlaceholder": "Pastor Mira Okafor",
+    "speakerAccept": "accept",
     "scripture": "Scripture",
     "scriptureHint": "Inline fetch pulls verse text",
     "textus": "Textus",
@@ -196,6 +212,18 @@
       "web": "Web presenter",
       "keynote": "Keynote bridge"
     },
+    "themeLabel": "Presenter design",
+    "fontsTitle": "PowerPoint fonts",
+    "fontsNames": "Cormorant Garamond + Geist Mono",
+    "fontsRequired": "Required for Editorial PowerPoints — install through Font Book",
+    "fontsInstall": "Open Font Book",
+    "fontsInstalled": "Installed",
+    "fontsFontBook": "In Font Book, click Install for both fonts, then return here",
+    "fontsRestart": "Installed — restart Keynote or PowerPoint",
+    "theme": {
+      "classic": "Classic",
+      "editorial": "Editorial"
+    },
     "presenting": "Presenting",
     "standby": "Standby",
     "transport": "Slide transport",
@@ -232,18 +260,81 @@
     "folderPath": "Folder path on the core machine",
     "folderPathPlaceholder": "/Users/name/Presentations",
     "addFolder": "Add folder",
-    "removeFolder": "Remove folder"
+    "removeFolder": "Remove folder",
+    "newSong": "Create song PPT",
+    "songKind": "Song slides",
+    "songTitle": "Song title",
+    "songTitlePlaceholder": "Kegyelemből léphetünk be",
+    "songLyrics": "Lyrics",
+    "songLyricsHint": "Leave two empty lines between slides",
+    "songLyricsPlaceholder": "Paste the verses and refrain here…",
+    "songStructureHint": "A title slide and final blank slide are added automatically. Entered lines are kept intact.",
+    "outputFolder": "Song PPT output folder",
+    "outputFolderHint": "Generated song PowerPoints are saved here",
+    "outputFolderNone": "Not configured",
+    "outputFolderChoose": "Choose folder",
+    "outputFolderChange": "Change folder",
+    "outputFolderSave": "Save folder",
+    "searchFolders": "Presentation search folders",
+    "songRequired": "Enter a song title and lyrics.",
+    "createSong": "Create PowerPoint",
+    "creatingSong": "Creating PowerPoint…",
+    "songCreated": "PowerPoint created · {n} slides",
+    "songFailed": "Could not create the PowerPoint"
   },
   "notif": {
     "bell": "Notifications, {n} unread",
+    "bellIssue": "Notifications, 1 active issue, {n} unread",
+    "bellIssues": "Notifications, {issues} active issues, {n} unread",
     "eyebrow": "Notifications",
     "count": "{n} items",
+    "activeCountOne": "1 active issue",
+    "activeCount": "{n} active issues",
+    "activeIssues": "Active issues",
+    "recentNotifications": "Recent notifications",
     "allClear": "All clear",
     "emptyTitle": "Nothing waiting.",
     "emptyHint": "Connectors will speak up here",
     "clearAll": "Clear all",
+    "clearHistory": "Clear history",
     "showSteps": "Show steps",
-    "hideSteps": "Hide steps"
+    "hideSteps": "Hide steps",
+    "kind": {
+      "encoder": "Encoder",
+      "streaming": "Streaming",
+      "camera": "Camera",
+      "cameraControl": "Camera control",
+      "switcher": "Switcher",
+      "mixer": "Mixer",
+      "webhooks": "Webhooks",
+      "connector": "Connector",
+      "system": "System"
+    },
+    "action": {
+      "edit": "Edit",
+      "reconnect": "Reconnect",
+      "relogin": "Re-login"
+    },
+    "remediation": {
+      "open": "Open Settings → Connectors",
+      "check": "Check the {name} configuration",
+      "enable": "Re-enable the connector"
+    },
+    "mute": {
+      "remoteMuted": "{label}: remote mic muted",
+      "remoteUnmuted": "{label}: remote mic unmuted",
+      "muted": "{label} muted",
+      "unmuted": "{label} unmuted"
+    },
+    "conn": {
+      "disconnected": "{name} disconnected",
+      "reconnected": "{name} reconnected",
+      "reconnecting": "reconnecting"
+    },
+    "core": {
+      "source": "Core",
+      "commandFailed": "Command failed"
+    }
   },
   "settings": {
     "eyebrow": "Control surface",
@@ -335,7 +426,7 @@
     },
     "eventsRow": {
       "title": "Event settings",
-      "meta": "Title template, slide output folder"
+      "meta": "Title template, Bible slide folder"
     }
   },
   "logs": {
@@ -376,6 +467,7 @@
   "toast": {
     "region": "Notifications",
     "dismiss": "Dismiss",
+    "minimize": "Minimize notification",
     "connector": "Connector"
   },
   "conn": {
@@ -408,7 +500,9 @@
       "vmix": "Configuration stored for future support",
       "atem": "Switcher support coming soon",
       "discord": "Webhook support coming soon",
-      "blackmagic-camera": "REST API · record and livestream control"
+      "blackmagic-camera": "REST API · record and livestream control",
+      "middlecontrol": "TCP API · camera, recording and preset control",
+      "rodecaster": "USB HID · channel profile and mute control"
     },
     "lockedNote": "This connector is not implemented yet. Metocast keeps the configuration ready for a future build.",
     "note": "Connector settings are saved locally first, then reconciled through Tauri commands or the server API.",
@@ -459,7 +553,8 @@
       "webhookUrl": "Webhook URL",
       "apiKey": "API key",
       "username": "Username",
-      "fingerprint": "Certificate fingerprint"
+      "fingerprint": "Certificate fingerprint",
+      "notifyOnMute": "Notify on mute change"
     },
     "cameraDiscovery": {
       "title": "Find cameras",
@@ -473,6 +568,40 @@
       "control": "Camera control",
       "controlMeta": "Transport, storage, record and stream quality",
       "open": "Open"
+    },
+    "fieldHint": {
+      "notifyOnMute": "Raise a notification when a channel is muted or unmuted on the desk."
+    },
+    "rodecaster": {
+      "exclusive": "The USB cable must reach the machine running the core, and the desk allows one client at a time — RØDE Central and RØDE Connect cannot be open while this connector holds it.",
+      "mixer": "Mixer",
+      "mixerMeta": "Channel profile and mute control"
+    },
+    "middlecontrol": {
+      "help": "Middle Control must remain running. If it runs on the Metocast server computer, use localhost — no IP address is needed. Current macOS versions use port 11584; the observed 3.2.0 macOS build uses 11581; Windows uses 11580.",
+      "sdk": "External SDK / API",
+      "devicesTitle": "Middle Control devices",
+      "devicesSummary": "{cameras} cameras · {ptz} APC-R/PTZ",
+      "devicesDisconnected": "Connect Middle Control to see its cameras and APC-R PTZ units.",
+      "devicesWaiting": "Waiting for the first Middle Control feedback frame…",
+      "devicesEmpty": "Middle Control reports no connected cameras or APC-R PTZ units.",
+      "camera": "Camera {id}",
+      "connected": "Connected",
+      "cameraOffline": "Camera offline",
+      "selected": "Selected",
+      "recording": "Recording",
+      "ptz": "APC-R · PTZ",
+      "useLocal": "Use this computer",
+      "useEndpoint": "Use {address}",
+      "discoveryTitle": "Find Middle Control",
+      "discoveryDescription": "Checks this computer and the Metocast server's local network on the known Middle Control ports. Only a valid feedback stream is accepted.",
+      "discoveryReady": "Start a scan while Middle Control is running.",
+      "discoveryEmpty": "No Middle Control instance answered. Make sure it is running, then scan again. For manual entry, on its Mac open System Settings → Network and select the active connection; on Windows open Settings → Network & internet → Properties. Copy the IPv4 address into Host above."
+    },
+    "status": {
+      "login_required": "Login required",
+      "relogin_required": "Re-login required",
+      "credentials_required": "Credentials required"
     }
   },
   "setup": {
@@ -603,13 +732,13 @@
   },
   "eventSettings": {
     "templateSaved": "Template saved",
-    "folderSaved": "Slide folder saved",
+    "folderSaved": "Bible slide folder saved",
     "saveFailed": "Could not save",
     "slides": {
       "section": "Slide decks",
-      "hint": "Textus and Lekció",
-      "title": "Output folder",
-      "none": "Not set — slide decks cannot be generated",
+      "hint": "Textus and Lekció PowerPoints",
+      "title": "Bible PPT output folder",
+      "none": "Not set — Bible slide decks cannot be generated",
       "choose": "Choose folder",
       "clear": "Clear",
       "field": "Folder on the core’s machine",
@@ -619,5 +748,60 @@
     "copied": "Copied {token}",
     "copyFailed": "Could not copy",
     "copyHint": "Copy to clipboard"
+  },
+  "rodecaster": {
+    "title": "RØDECaster Pro II",
+    "back": "Connectors",
+    "unavailable": "Mixer unavailable",
+    "notConnected": "The RØDECaster is not connected. Attach it to the machine running the core, enable the connector, and make sure no other application holds the device.",
+    "retry": "Try again",
+    "channels": "Channels",
+    "readOnlyHint": "Read-only except mute",
+    "channelMeta": "Level {level}% · {blocks} processing blocks on",
+    "remoteMicMuted": "Remote mic muted",
+    "level": "Fader level",
+    "cue": "Cue is on for this channel.",
+    "noSettings": "The device reports no further properties for this channel.",
+    "note": "Everything here is read from the desk. Mute is the only value this app writes.",
+    "recording": {
+      "title": "Audio recording",
+      "description": "Metocast Core records the audio and writes the FLAC files. Enable recording, choose an existing folder on the computer running the Core, then save these settings. If this app connects to a remote Core, enter an absolute path on that remote computer.",
+      "enabled": "Enable core recording",
+      "enabledHint": "Capture the RØDECaster USB multitrack endpoint as lossless FLAC.",
+      "endpointUnavailable": "Metocast cannot find the RØDECaster multitrack audio input. Connect the computer running Metocast Core to USB 1 on the mixer, enable USB 1 Multitrack on the RØDECaster, then scan again.",
+      "scanAudio": "Scan audio device again",
+      "directory": "Folder where recordings are saved",
+      "directoryPlaceholder": "/Users/name/Music/Metocast Recordings",
+      "directoryHint": "Choose an existing folder on this computer. The Core must be able to write to it.",
+      "remoteHint": "Enter an absolute path to an existing writable folder on the remote computer running Metocast Core.",
+      "chooseDirectory": "Choose audio recording folder",
+      "choose": "Choose",
+      "outputMode": "Output",
+      "processingMode": "Individual-track processing",
+      "sources": "Fader tracks",
+      "sourcesRequired": "Select at least one fader track for this output mode.",
+      "sourcesUnavailable": "No individual fader tracks were discovered. Enable USB 1 Multitrack on the RØDECaster, then scan again.",
+      "save": "Save recording settings",
+      "saved": "Recording settings saved",
+      "mode": {
+        "mainMix": "Main mix — ready to use",
+        "separate": "Separate FLAC per fader",
+        "combinedStereo": "Combined stereo FLAC",
+        "multichannelFlac": "One unsummed multichannel FLAC"
+      },
+      "processing": {
+        "preFader": "Pre-fader, processed",
+        "preFaderBypass": "Pre-fader, processing bypassed",
+        "postFader": "Post-fader, processed"
+      }
+    },
+    "overview": {
+      "device": "Device",
+      "channels": "Channels",
+      "muted": "Muted"
+    },
+    "toast": {
+      "muteFail": "Couldn't set mute"
+    }
   }
 }

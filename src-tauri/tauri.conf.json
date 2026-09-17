@@ -31,6 +31,12 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
+    "resources": {
+        "resources/fonts/CormorantGaramond-Regular.ttf": "fonts/CormorantGaramond-Regular.ttf",
+        "resources/fonts/GeistMono-Regular.ttf": "fonts/GeistMono-Regular.ttf",
+      "resources/fonts/CormorantGaramond-OFL.txt": "fonts/CormorantGaramond-OFL.txt",
+      "resources/fonts/Geist-OFL.txt": "fonts/Geist-OFL.txt"
+    },
 
     "icon": [
       "icons/32x32.png",

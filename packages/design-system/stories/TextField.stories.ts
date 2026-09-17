@@ -54,6 +54,18 @@ export const Disabled: Story = {
   },
 };
 
+export const Suggesting: Story = {
+  args: {
+    label: "Kiszolgáló címe",
+    value: "192",
+    suggestions: [
+      "192.168.1.10",
+      "192.168.1.20",
+    ],
+    acceptHint: "elfogadás",
+  },
+};
+
 /** The component beside the reference declarations its values were taken from. */
 export const Anatomy_: Story = {
   name: 'Anatomy & reference',

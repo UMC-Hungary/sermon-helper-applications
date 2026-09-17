@@ -14,16 +14,27 @@
     Skeleton,
     ErrorState,
     EmptyState,
+    Button,
   } from '@metocast/design-system';
-  import { listEvents, fetchConnectorStatuses } from '@metocast/core-client';
+  import {
+    fetchConnectorConfig,
+    fetchConnectorStatuses,
+    listEvents,
+    startRodecasterAudioRecording,
+    stopRodecasterAudioRecording,
+    type RodecasterAudioRecordingConfig,
+  } from '@metocast/core-client';
   import type { EventSummary } from '@metocast/core-client/schemas/event';
   import { live } from '$lib/live.svelte';
-  import { monthAbbr, dayNum, timeShort, eventTitle } from '$lib/format';
+  import { monthAbbr, dayNum, timeShort, dateTimeLabel, clock, eventTitle } from '$lib/format';
   import NotifBell from '$lib/NotifBell.svelte';
 
   let events = $state<EventSummary[]>([]);
   let connected = $state(0);
   let phase = $state<'loading' | 'ready' | 'error'>('loading');
+  let recordingPending = $state(false);
+  let recordingConfig = $state<RodecasterAudioRecordingConfig | null>(null);
+  let tick = $state(Date.now());
 
   const loc = $derived($locale ?? 'en');
   const now = new Date();
@@ -43,11 +54,41 @@
       .filter((e) => new Date(e.dateTime).getTime() >= Date.now())
       .sort((a, b) => a.dateTime.localeCompare(b.dateTime))[0],
   );
+  const recorderState = $derived(live.rodecasterAudioRecorder);
+  const audioRecording = $derived(recorderState?.status === 'recording');
+  const sessionEvent = $derived(events.find((e) => e.id === recorderState?.eventId) ?? null);
+  // Idle, the card offers the event the core picked; recording, it names the one the
+  // running session is bound to, so a session never appears to move mid-recording.
+  const recordTarget = $derived(
+    audioRecording ? (sessionEvent ?? live.currentEvent) : live.currentEvent,
+  );
+  const canRecord = $derived(
+    recordTarget !== null &&
+      !recordTarget.isCompleted &&
+      recordingConfig?.enabled === true &&
+      live.connectorStatus.rodecaster === 'connected',
+  );
+  const elapsed = $derived(
+    audioRecording && recorderState?.startedAt
+      ? clock((tick - Date.parse(recorderState.startedAt)) / 1000)
+      : '—',
+  );
+
+  $effect(() => {
+    if (recorderState) recordingPending = false;
+  });
+
+  $effect(() => {
+    if (!audioRecording) return;
+    const id = setInterval(() => (tick = Date.now()), 1000);
+    return () => clearInterval(id);
+  });
 
   async function load() {
     phase = 'loading';
     try {
       events = await listEvents();
+      recordingConfig = (await fetchConnectorConfig('rodecaster')).audioRecording;
       phase = 'ready';
     } catch {
       phase = 'error';
@@ -61,48 +102,105 @@
   }
 
   onMount(load);
+
+  function sendRecordCommand(): boolean {
+    if (audioRecording) return stopRodecasterAudioRecording();
+    return recordTarget ? startRodecasterAudioRecording(recordTarget.id) : false;
+  }
+
+  function toggleAudioRecording(): void {
+    recordingPending = true;
+    const sent = sendRecordCommand();
+    if (!sent) recordingPending = false;
+    else setTimeout(() => (recordingPending = false), 5000);
+  }
 </script>
 
 <PageHeader title={$_(`dash.${greeting}`)} eyebrowContent={eyebrow}>
   {#snippet trailing()}<NotifBell />{/snippet}
 </PageHeader>
-{#snippet eyebrow()}<Lockup name="Sanctum" markSize={16} fontSize={15} tracking={1.6} />{/snippet}
+{#snippet eyebrow()}<Lockup name="Metocast" markSize={16} fontSize={15} tracking={1.6} />{/snippet}
 
 <div class="dashboard-grid">
-  <div class="main-col">
-    <section class="now">
+  <section class="now">
+    <article>
+      <header>
+        <p>
+          <Dot
+            color={live.streaming ? 'var(--status-live)' : 'var(--text-muted)'}
+            size={8}
+            pulse={live.streaming}
+          />
+          <span class:live={live.streaming}
+            >{live.streaming ? $_('dash.onAir') : $_('dash.offAir')}</span
+          >
+        </p>
+        <time>{live.streaming ? '00:42:18' : '—'}</time>
+      </header>
+      <h2>{live.streaming ? $_('dash.activeTitle') : $_('dash.noBroadcast')}</h2>
+      <p class="sub">{live.streaming ? $_('dash.activeContext') : $_('dash.idleHint')}</p>
+      <div class="stats">
+        <Stat label={$_('dash.viewers')} value={live.streaming ? '1,284' : '—'} />
+        <Stat
+          label={$_('dash.bitrate')}
+          value={live.streaming ? '6.2' : '—'}
+          unit={live.streaming ? 'Mb/s' : ''}
+        />
+        <Stat
+          label={$_('dash.dropped')}
+          value={live.streaming ? '0.00' : '—'}
+          unit={live.streaming ? '%' : ''}
+        />
+      </div>
+    </article>
+  </section>
+
+  {#if recordingConfig?.enabled}
+    <section class="recorder">
+      <SectionLabel hint={$_(`dash.outputMode.${recordingConfig.outputMode}`)}
+        >{$_('dash.audioRecording')}</SectionLabel
+      >
       <article>
         <header>
           <p>
             <Dot
-              color={live.streaming ? 'var(--status-live)' : 'var(--text-muted)'}
+              color={audioRecording ? 'var(--status-live)' : 'var(--text-muted)'}
               size={8}
-              pulse={live.streaming}
+              pulse={audioRecording}
             />
-            <span class:live={live.streaming}
-              >{live.streaming ? $_('dash.onAir') : $_('dash.offAir')}</span
+            <span class:live={audioRecording}
+              >{audioRecording ? $_('dash.recActive') : $_('dash.recReady')}</span
             >
           </p>
-          <time>{live.streaming ? '00:42:18' : '—'}</time>
+          <time>{elapsed}</time>
         </header>
-        <h2>{live.streaming ? $_('dash.activeTitle') : $_('dash.noBroadcast')}</h2>
-        <p class="sub">{live.streaming ? $_('dash.activeContext') : $_('dash.idleHint')}</p>
-        <div class="stats">
-          <Stat label={$_('dash.viewers')} value={live.streaming ? '1,284' : '—'} />
-          <Stat
-            label={$_('dash.bitrate')}
-            value={live.streaming ? '6.2' : '—'}
-            unit={live.streaming ? 'Mb/s' : ''}
-          />
-          <Stat
-            label={$_('dash.dropped')}
-            value={live.streaming ? '0.00' : '—'}
-            unit={live.streaming ? '%' : ''}
-          />
+        <h2>{recordTarget ? eventTitle(recordTarget) : $_('dash.noRecordEvent')}</h2>
+        <p class="sub">
+          {recordTarget ? dateTimeLabel(recordTarget.dateTime, loc) : $_('dash.noRecordEventHint')}
+        </p>
+        <div class="action">
+          <Button
+            variant={audioRecording ? 'danger' : 'primary'}
+            block
+            loading={recordingPending}
+            disabled={!audioRecording && !canRecord}
+            onclick={toggleAudioRecording}
+          >
+            {audioRecording ? $_('dash.stopAudio') : $_('dash.recordAudio')}
+          </Button>
+          {#if recorderState?.error}
+            <p class="hint error">{recorderState.error}</p>
+          {:else if live.connectorStatus.rodecaster !== 'connected'}
+            <p class="hint">{$_('dash.connectMixer')}</p>
+          {:else if recorderState?.finalizedFiles[0]}
+            <p class="hint">{$_('dash.lastRecording')}: {recorderState.finalizedFiles[0].path}</p>
+          {/if}
         </div>
       </article>
     </section>
+  {/if}
 
+  <div class="main-col">
     <SectionLabel hint={nextEvent ? timeShort(nextEvent.dateTime, loc) : ''}
       >{$_('dash.upNext')}</SectionLabel
     >
@@ -166,6 +264,25 @@
   .pad {
     padding: 0 24px;
   }
+  .recorder > article {
+    margin: 0 24px;
+  }
+  .action {
+    display: grid;
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
+  }
+  .hint {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .hint.error {
+    color: var(--status-error);
+  }
   article {
     border: 1px solid color-mix(in srgb, var(--text-primary) 16%, transparent);
     padding: 20px 20px 22px;
@@ -228,6 +345,9 @@
     .dashboard-grid {
       display: grid;
       grid-template-columns: minmax(320px, 1fr) minmax(260px, 340px);
+      /* Dense so the quick actions rise to the top of the right column on a core
+         with no RØDECaster, where the recorder card is not rendered at all. */
+      grid-auto-flow: row dense;
       gap: 18px;
       padding: 0 18px 56px;
       align-items: start;
@@ -238,8 +358,20 @@
       min-width: 0;
     }
     .now,
+    .main-col {
+      grid-column: 1;
+    }
+    .recorder,
+    .side-col {
+      grid-column: 2;
+    }
+    .now,
     .pad {
       padding-inline: 0;
+    }
+    /* Only the gutter margin goes: the card keeps the padding every card has. */
+    .recorder > article {
+      margin-inline: 0;
     }
     .side-col {
       position: sticky;

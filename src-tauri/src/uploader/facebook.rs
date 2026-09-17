@@ -6,6 +6,7 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 
+use super::{UploadResume, UploadSource};
 use crate::server::websocket::{
     broadcast_upload_completed, broadcast_upload_failed, broadcast_upload_progress,
 };
@@ -60,10 +61,11 @@ pub async fn transfer_chunk(
     page_id: &str,
     session_id: &str,
     file_path: &str,
-    start_offset: u64,
-    end_offset: u64,
+    offsets: std::ops::Range<u64>,
     file_size: u64,
 ) -> anyhow::Result<(u64, u64)> {
+    let start_offset = offsets.start;
+    let end_offset = offsets.end;
     let chunk_len = end_offset - start_offset;
 
     let mut file = tokio::fs::File::open(file_path).await?;
@@ -163,20 +165,26 @@ pub async fn finish_upload(
 }
 
 /// Run the full Facebook chunked upload for a recording.
-pub async fn run_upload(
+pub(super) async fn run_upload(
     pool: &sqlx::PgPool,
     ws_clients: &Arc<RwLock<HashMap<Uuid, mpsc::UnboundedSender<Message>>>>,
     recording_id: Uuid,
-    file_path: &str,
-    file_size: i64,
-    title: &str,
-    description: &str,
-    visibility: &str,
-    existing_session_id: Option<String>,
-    progress_bytes: i64,
+    source: UploadSource<'_>,
+    resume: UploadResume,
     token: &str,
     page_id: &str,
 ) -> anyhow::Result<()> {
+    let UploadSource {
+        file_path,
+        file_size,
+        title,
+        description,
+        visibility,
+    } = source;
+    let UploadResume {
+        locator: existing_session_id,
+        progress_bytes,
+    } = resume;
     let client = reqwest::Client::new();
     let total = file_size as u64;
 
@@ -218,8 +226,7 @@ pub async fn run_upload(
             page_id,
             &session_id,
             file_path,
-            start_offset,
-            end_offset,
+            start_offset..end_offset,
             total,
         )
         .await

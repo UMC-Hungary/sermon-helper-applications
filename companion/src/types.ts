@@ -79,6 +79,7 @@ export interface PresentationStatus {
 export const PresentationSettingsMessageSchema = z.object({
 	type: z.literal('presentation.settings'),
 	useWebPresenter: z.boolean(),
+	presenterTheme: z.enum(['classic', 'editorial']).default('classic'),
 })
 
 export const EventSummarySchema = z.object({

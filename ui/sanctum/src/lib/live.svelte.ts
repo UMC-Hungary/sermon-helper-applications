@@ -1,39 +1,91 @@
 import { goto } from '$app/navigation';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 import {
   sendWsCommand,
   connectObs,
   connectCamera,
   youtubeAuthUrl,
+  facebookAuthUrl,
   openExternal,
 } from '@metocast/core-client';
-import type { WsMessage } from '@metocast/core-client';
+import type {
+  MiddlecontrolState,
+  RodecasterAudioDiscovery,
+  RodecasterAudioRecorderState,
+  RodecasterProfile,
+  WsMessage,
+} from '@metocast/core-client';
 import type {
   PresenterState,
+  PresenterTheme,
   KeynoteStatus,
   WsClientInfo,
   PptFile,
 } from '@metocast/core-client/schemas/ws-messages';
+import type { EventSummary } from '@metocast/core-client/schemas/event';
 import { siObsstudio, siYoutube, siFacebook, siBlackmagicdesign, siDiscord } from 'simple-icons';
+import { rode } from './rode';
 import { notify, resolveByKey } from './notifications.svelte';
 
+/** Translates outside a component: notification text is built here, not in markup.
+ *  Wording is resolved when the notification is raised, so a card already on screen
+ *  keeps the language it was written in until its connector reports again. */
+const t = (key: string, values?: Record<string, string | number>): string =>
+  get(_)(key, values ? { values } : undefined);
+
+/** A status the core states as a stable code (`login_required`) becomes real prose;
+ *  a driver's own error text has spaces or capitals, so it is never looked up and
+ *  reaches the operator exactly as the device worded it. */
+function statusText(message: string | undefined): string | undefined {
+  if (!message || !/^[a-z][a-z0-9_]*$/.test(message)) return message;
+  const key = `conn.status.${message}`;
+  const translated = t(key);
+  return translated === key ? message : translated;
+}
+
 /** Display name, kind label and brand mark per connector — matches the reference spec. */
-const CONNECTOR_META: Record<string, { name: string; kind: string; brand?: string }> = {
-  obs: { name: 'OBS Studio', kind: 'Encoder', brand: siObsstudio.path },
-  youtube: { name: 'YouTube', kind: 'Streaming', brand: siYoutube.path },
-  facebook: { name: 'Facebook Live', kind: 'Streaming', brand: siFacebook.path },
+const CONNECTOR_META: Record<
+  string,
+  { name: string; kind: string; brand?: string; brandBox?: string }
+> = {
+  obs: { name: 'OBS Studio', kind: 'notif.kind.encoder', brand: siObsstudio.path },
+  youtube: { name: 'YouTube', kind: 'notif.kind.streaming', brand: siYoutube.path },
+  facebook: { name: 'Facebook Live', kind: 'notif.kind.streaming', brand: siFacebook.path },
   'blackmagic-camera': {
     name: 'Blackmagic Camera',
-    kind: 'Camera',
+    kind: 'notif.kind.camera',
     brand: siBlackmagicdesign.path,
   },
-  atem: { name: 'Blackmagic ATEM', kind: 'Switcher', brand: siBlackmagicdesign.path },
-  discord: { name: 'Discord', kind: 'Webhooks', brand: siDiscord.path },
+  atem: { name: 'Blackmagic ATEM', kind: 'notif.kind.switcher', brand: siBlackmagicdesign.path },
+  rodecaster: {
+    name: 'RØDECaster Pro II',
+    kind: 'notif.kind.mixer',
+    brand: rode.path,
+    brandBox: rode.viewBox,
+  },
+  middlecontrol: { name: 'Middle Control', kind: 'notif.kind.cameraControl' },
+  discord: { name: 'Discord', kind: 'notif.kind.webhooks', brand: siDiscord.path },
+};
+
+/** How a failing connector is put right: the settings row to open, plus the one-click
+ *  recovery it supports — a reconnect (the core dials out again) or an OAuth re-login. */
+const RECOVERY: Record<
+  string,
+  { open: string; reconnect?: () => Promise<unknown>; login?: () => Promise<string> }
+> = {
+  obs: { open: '', reconnect: connectObs },
+  'blackmagic-camera': { open: '?open=blackmagic-camera', reconnect: connectCamera },
+  middlecontrol: { open: '?open=middlecontrol' },
+  rodecaster: { open: '?open=rodecaster' },
+  youtube: { open: '?open=youtube', login: youtubeAuthUrl },
+  facebook: { open: '?open=facebook', login: facebookAuthUrl },
 };
 
 const REMEDIATION = (name: string) => [
-  'Open Settings → Connectors',
-  `Check the ${name} configuration`,
-  'Re-enable the connector',
+  t('notif.remediation.open'),
+  t('notif.remediation.check', { name }),
+  t('notif.remediation.enable'),
 ];
 
 // Sanctum's realtime state, in runes. The transport (core-client) validates every
@@ -55,6 +107,13 @@ let keynote = $state<KeynoteStatus | null>(null);
 let clients = $state<WsClientInfo[]>([]);
 let pptResults = $state<PptFile[]>([]);
 let useWebPresenter = $state(true);
+let presenterTheme = $state<PresenterTheme>('classic');
+let rodecasterProfile = $state<RodecasterProfile | null>(null);
+let rodecasterAudioDiscovery = $state<RodecasterAudioDiscovery | null>(null);
+let rodecasterAudioRecorder = $state<RodecasterAudioRecorderState | null>(null);
+let middlecontrolState = $state<MiddlecontrolState | null>(null);
+/** The event the core says is happening now — nobody in the UI decides this. */
+let currentEvent = $state<EventSummary | null>(null);
 
 export const live = {
   get streaming() {
@@ -90,6 +149,24 @@ export const live = {
   get useWebPresenter() {
     return useWebPresenter;
   },
+  get presenterTheme() {
+    return presenterTheme;
+  },
+  get rodecasterProfile() {
+    return rodecasterProfile;
+  },
+  get rodecasterAudioDiscovery() {
+    return rodecasterAudioDiscovery;
+  },
+  get rodecasterAudioRecorder() {
+    return rodecasterAudioRecorder;
+  },
+  get middlecontrolState() {
+    return middlecontrolState;
+  },
+  get currentEvent() {
+    return currentEvent;
+  },
 };
 
 /** Names a connector for a notification, without inventing prose the core didn't send. */
@@ -111,6 +188,8 @@ export function handleWs(msg: WsMessage): void {
         if (msg.isStreaming !== undefined) cameraStreaming = msg.isStreaming;
         if (msg.isRecording !== undefined) cameraRecording = msg.isRecording;
         if (msg.streamStatus !== undefined) cameraStreamStatus = msg.streamStatus;
+      } else if (msg.connector === 'middlecontrol' && msg.state) {
+        middlecontrolState = msg.state;
       }
       break;
     case 'connectors.state':
@@ -119,6 +198,7 @@ export function handleWs(msg: WsMessage): void {
       cameraStreaming = msg['blackmagic-camera']?.isStreaming ?? false;
       cameraRecording = msg['blackmagic-camera']?.isRecording ?? false;
       cameraStreamStatus = msg['blackmagic-camera']?.streamStatus ?? 'Idle';
+      middlecontrolState = msg.middlecontrol;
       break;
     case 'connectors.status':
       connectorStatus = {
@@ -128,42 +208,43 @@ export function handleWs(msg: WsMessage): void {
         youtube: msg.youtube.type,
         facebook: msg.facebook.type,
         'blackmagic-camera': msg['blackmagic-camera'].type,
+        middlecontrol: msg.middlecontrol.type,
+        rodecaster: msg.rodecaster.type,
       };
       break;
     case 'connector.status': {
       const prev = connectorStatus[msg.connector];
       const next = msg.status.type;
       connectorStatus = { ...connectorStatus, [msg.connector]: next };
+      if (msg.connector === 'middlecontrol' && next !== 'connected') middlecontrolState = null;
       const key = `connector:${msg.connector}`;
       const meta = CONNECTOR_META[msg.connector] ?? {
         name: sourceName(msg.connector),
-        kind: 'Connector',
+        kind: 'notif.kind.connector',
       };
+      const kind = t(meta.kind);
+      const recovery = RECOVERY[msg.connector];
       // Navigation is instant, so it stays a plain action — only work that takes
       // time (a reconnect, a re-login) returns its promise and animates.
-      const edit = (query = '') => ({
-        label: 'Edit',
-        run: () => void goto(`/settings/connectors${query}`),
-      });
-      const editFor =
-        msg.connector === 'obs'
-          ? edit()
-          : msg.connector === 'blackmagic-camera'
-            ? edit('?open=blackmagic-camera')
-            : msg.connector === 'youtube'
-              ? edit('?open=youtube')
-              : null;
+      const editFor = recovery
+        ? {
+            label: t('notif.action.edit'),
+            run: () => void goto(`/settings/connectors${recovery.open}`),
+          }
+        : null;
       // The backend restart only reports a status edge the card can already be sitting
       // on, so the click paints the reconnecting chip itself rather than waiting for one.
       const showReconnecting = (body?: string) =>
         notify({
           tier: 'warn',
-          kind: meta.kind,
+          issue: true,
+          kind,
           source: meta.name,
-          title: `${meta.name} disconnected`,
+          title: t('notif.conn.disconnected', { name: meta.name }),
           body,
-          state: 'reconnecting',
+          state: t('notif.conn.reconnecting'),
           brand: meta.brand,
+          brandBox: meta.brandBox,
           actions: editFor ? [editFor] : undefined,
           remediation: REMEDIATION(meta.name),
           key,
@@ -172,45 +253,98 @@ export function handleWs(msg: WsMessage): void {
         showReconnecting();
         return start();
       };
-      const retry =
-        msg.connector === 'obs'
-          ? { label: 'Reconnect', primary: true, run: reconnect(connectObs) }
-          : msg.connector === 'blackmagic-camera'
-            ? { label: 'Reconnect', primary: true, run: reconnect(connectCamera) }
-            : msg.connector === 'youtube'
-              ? { label: 'Re-login', primary: true, run: () => youtubeAuthUrl().then(openExternal) }
-              : null;
+      const login = recovery?.login;
+      const retry = recovery?.reconnect
+        ? { label: t('notif.action.reconnect'), primary: true, run: reconnect(recovery.reconnect) }
+        : login
+          ? {
+              label: t('notif.action.relogin'),
+              primary: true,
+              run: () => login().then(openExternal),
+            }
+          : null;
       const actions = retry && editFor ? [retry, editFor] : undefined;
       if (next === 'error') {
         notify({
           tier: 'error',
-          kind: meta.kind,
+          issue: true,
+          kind,
           source: meta.name,
-          title: `${meta.name} disconnected`,
-          body: msg.status.message,
+          title: t('notif.conn.disconnected', { name: meta.name }),
+          body: statusText(msg.status.message),
           state: 'error',
           brand: meta.brand,
+          brandBox: meta.brandBox,
           actions,
           remediation: REMEDIATION(meta.name),
           key,
         });
       } else if (next === 'connecting' && prev === 'error') {
         // Already retrying, so a Reconnect button here would just repeat the chip.
-        showReconnecting(msg.status.message);
+        showReconnecting(statusText(msg.status.message));
       } else if (next === 'connected' && (prev === 'error' || prev === 'connecting')) {
         resolveByKey(key, {
-          kind: meta.kind,
+          kind,
           source: meta.name,
-          title: `${meta.name} reconnected`,
+          title: t('notif.conn.reconnected', { name: meta.name }),
         });
       }
       break;
     }
+    case 'rodecaster.profile':
+      rodecasterProfile = msg.profile;
+      break;
+    case 'rodecaster.mute':
+      if (rodecasterProfile) {
+        rodecasterProfile = {
+          ...rodecasterProfile,
+          channels: rodecasterProfile.channels.map((c) =>
+            c.channel === msg.channel
+              ? msg.remote
+                ? { ...c, wirelessMute: msg.muted }
+                : { ...c, mute: msg.muted }
+              : c,
+          ),
+        };
+      }
+      if (msg.notify) {
+        notify({
+          tier: msg.remote && msg.muted ? 'warn' : 'ok',
+          kind: t('notif.kind.mixer'),
+          source: 'RØDECaster Pro II',
+          brand: rode.path,
+          brandBox: rode.viewBox,
+          title: t(
+            msg.remote
+              ? msg.muted
+                ? 'notif.mute.remoteMuted'
+                : 'notif.mute.remoteUnmuted'
+              : msg.muted
+                ? 'notif.mute.muted'
+                : 'notif.mute.unmuted',
+            { label: msg.label },
+          ),
+          key: `rodecaster:${msg.remote ? 'remote-' : ''}mute:${msg.channel}`,
+        });
+      }
+      break;
+    case 'events.presenter_list':
+      currentEvent = msg.events.find((e) => e.id === msg.selectedEventId) ?? null;
+      break;
+    case 'event.changed':
+      sendWsCommand('events.presenter_list');
+      break;
+    case 'rodecaster.audio.discovery':
+      rodecasterAudioDiscovery = msg.discovery;
+      break;
+    case 'rodecaster.audio.record.state':
+      rodecasterAudioRecorder = msg.state;
+      break;
     case 'notification':
       notify({
         tier: msg.level === 'error' ? 'error' : msg.level === 'warn' ? 'warn' : 'ok',
-        kind: 'System',
-        source: 'Core',
+        kind: t('notif.kind.system'),
+        source: t('notif.core.source'),
         title: msg.message,
       });
       break;
@@ -221,9 +355,9 @@ export function handleWs(msg: WsMessage): void {
       // Keyed on the text so a repeated refusal updates its card instead of stacking.
       notify({
         tier: 'error',
-        kind: 'System',
-        source: 'Core',
-        title: 'Command failed',
+        kind: t('notif.kind.system'),
+        source: t('notif.core.source'),
+        title: t('notif.core.commandFailed'),
         body: msg.message,
         mono: true,
         key: `error:${msg.message}`,
@@ -231,6 +365,7 @@ export function handleWs(msg: WsMessage): void {
       break;
     case 'presentation.settings':
       useWebPresenter = msg.useWebPresenter;
+      presenterTheme = msg.presenterTheme;
       break;
     case 'presenter.state':
       presenter = msg.state;
@@ -260,4 +395,5 @@ export function registerLive(): void {
   sendWsCommand('presenter.register', { label: 'Sanctum' });
   sendWsCommand('clients.list');
   sendWsCommand('connectors.status');
+  sendWsCommand('events.presenter_list');
 }

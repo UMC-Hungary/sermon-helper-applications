@@ -7,7 +7,7 @@ use tauri::Emitter;
 use tokio::sync::{broadcast, watch, Mutex, RwLock};
 use tokio::time::Duration;
 
-use super::{ConnectorStatus, YouTubeConfig};
+use super::{ConnectorConfig, ConnectorStatus, YouTubeConfig};
 
 // ── Token types ──────────────────────────────────────────────────────────────
 
@@ -269,6 +269,21 @@ async fn run_token_loop(
     mut stop_rx: watch::Receiver<bool>,
     app: Option<tauri::AppHandle>,
 ) {
+    // An enabled connector that cannot work is an error, not a quiet absence: the
+    // UI only raises a notification on `Error`, and the operator has to be told.
+    if !config.is_configured() {
+        set_status(
+            &status,
+            &status_tx,
+            app.as_ref(),
+            ConnectorStatus::Error {
+                message: "credentials_required".to_string(),
+            },
+        )
+        .await;
+        return;
+    }
+
     let mut token = match load_tokens(&pool).await {
         Some(t) => t,
         None => {
@@ -276,7 +291,9 @@ async fn run_token_loop(
                 &status,
                 &status_tx,
                 app.as_ref(),
-                ConnectorStatus::Disconnected,
+                ConnectorStatus::Error {
+                    message: "login_required".to_string(),
+                },
             )
             .await;
             return;
@@ -287,9 +304,9 @@ async fn run_token_loop(
     // setting the status to Connected. Without this, the page could load while
     // the connector appears connected, then fail with a 500 when the actual
     // refresh happens inside fetch_channel_content.
-    let needs_initial_refresh = token.expires_at.map_or(false, |exp| {
-        exp - Utc::now() < chrono::Duration::minutes(10)
-    });
+    let needs_initial_refresh = token
+        .expires_at
+        .is_some_and(|exp| exp - Utc::now() < chrono::Duration::minutes(10));
 
     if needs_initial_refresh {
         match refresh_tokens(&pool, &config, &token).await {
@@ -307,7 +324,7 @@ async fn run_token_loop(
                     &status_tx,
                     app.as_ref(),
                     ConnectorStatus::Error {
-                        message: "Re-login required".to_string(),
+                        message: "relogin_required".to_string(),
                     },
                 )
                 .await;
@@ -345,9 +362,9 @@ async fn run_token_loop(
             return;
         }
 
-        let needs_refresh = token.expires_at.map_or(false, |exp| {
-            exp - Utc::now() < chrono::Duration::minutes(10)
-        });
+        let needs_refresh = token
+            .expires_at
+            .is_some_and(|exp| exp - Utc::now() < chrono::Duration::minutes(10));
 
         if needs_refresh {
             match refresh_tokens(&pool, &config, &token).await {
@@ -365,7 +382,7 @@ async fn run_token_loop(
                         &status_tx,
                         app.as_ref(),
                         ConnectorStatus::Error {
-                            message: "Re-login required".to_string(),
+                            message: "relogin_required".to_string(),
                         },
                     )
                     .await;
@@ -674,7 +691,7 @@ pub async fn fetch_channel_content(
 
     let needs_refresh = token
         .expires_at
-        .map_or(false, |exp| exp - Utc::now() < chrono::Duration::minutes(5));
+        .is_some_and(|exp| exp - Utc::now() < chrono::Duration::minutes(5));
 
     if needs_refresh {
         token = match refresh_tokens(pool, config, &token).await {

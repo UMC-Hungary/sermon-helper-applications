@@ -6,7 +6,7 @@ use axum::{
     http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
-use chrono::{DateTime, Duration, Local, Utc};
+use chrono::{DateTime, Local, Utc};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -20,14 +20,15 @@ use uuid::Uuid;
 
 use sqlx::{PgPool, Row};
 
-use crate::connectors::{facebook, youtube, ConnectorStatus};
+use crate::connectors::rodecaster_audio::{FinalizedAudioFile, RecorderStatus};
+use crate::connectors::{facebook, youtube, ConnectorStatus, RodecasterConfig};
 use crate::models::{
     activity,
     cron_job::{self, CreateCronJob, UpdateCronJob},
     device_listener::DeviceListener,
     event::{
-        fetch_event, CreateBibleReference, CreateConnection, CreateEvent, Event, EventSummary,
-        UpdateEvent,
+        current_event, fetch_event, fetch_event_summaries, CreateBibleReference, CreateConnection,
+        CreateEvent, Event, EventSummary, UpdateEvent,
     },
     recording::{CreateRecording, FlagUploadItem, Recording, RecordingUpload},
     untracked_recording,
@@ -35,8 +36,6 @@ use crate::models::{
 use crate::server::ppt;
 use crate::server::presenter;
 use crate::server::AppState;
-
-const PRESENTER_EVENT_CURRENT_WINDOW_MINUTES: i64 = 4 * 60;
 
 // ── Connected client registry ─────────────────────────────────────────────────
 
@@ -296,6 +295,32 @@ enum WsCommand {
     /// livestream settings. Does not go live — send `blackmagic.stream.start` for that.
     #[serde(rename = "blackmagic-camera.stream.push_youtube")]
     BlackmagicCameraStreamPushYoutube,
+    // ── Middle Control ────────────────────────────────────────────────────────
+    #[serde(rename = "middlecontrol.camera.select")]
+    MiddlecontrolCameraSelect { camera_id: u8 },
+    #[serde(rename = "middlecontrol.record.start")]
+    MiddlecontrolRecordStart { camera_id: Option<u8> },
+    #[serde(rename = "middlecontrol.record.stop")]
+    MiddlecontrolRecordStop { camera_id: Option<u8> },
+    #[serde(rename = "middlecontrol.record.start_all")]
+    MiddlecontrolRecordStartAll,
+    #[serde(rename = "middlecontrol.record.stop_all")]
+    MiddlecontrolRecordStopAll,
+    #[serde(rename = "middlecontrol.preset.recall")]
+    MiddlecontrolPresetRecall { preset: u8, camera_id: Option<u8> },
+    // ── RØDECaster ───────────────────────────────────────────────────────────
+    #[serde(rename = "rodecaster.profile")]
+    RodecasterProfile,
+    #[serde(rename = "rodecaster.mute.set")]
+    RodecasterMuteSet { channel: usize, mute: bool },
+    #[serde(rename = "rodecaster.audio.discover")]
+    RodecasterAudioDiscover,
+    #[serde(rename = "rodecaster.audio.record.state")]
+    RodecasterAudioRecordState,
+    #[serde(rename = "rodecaster.audio.record.start")]
+    RodecasterAudioRecordStart { event_id: Uuid },
+    #[serde(rename = "rodecaster.audio.record.stop")]
+    RodecasterAudioRecordStop,
     // ── Presenter ────────────────────────────────────────────────────────────
     /// Register a human-readable label and hostname for this connection (shown in the UI).
     #[serde(rename = "presenter.register")]
@@ -356,6 +381,9 @@ enum WsCommand {
     /// Toggle the active presentation backend; closes any running presentation first.
     #[serde(rename = "presentation.set_use_web_presenter")]
     PresentationSetUseWebPresenter { enabled: bool },
+    /// Select the visual treatment used by text-mode song and Bible slides.
+    #[serde(rename = "presentation.set_presenter_theme")]
+    PresentationSetPresenterTheme { theme: presenter::PresenterTheme },
     /// Open a file: routes to web presenter or Keynote based on the stored setting.
     #[serde(rename = "presentation.open")]
     PresentationOpen {
@@ -448,6 +476,17 @@ async fn ws_upsert_bible_references(
     Ok(())
 }
 
+async fn make_presentation_settings(state: &AppState) -> String {
+    let enabled = state.use_web_presenter.load(Ordering::Relaxed);
+    let presenter_theme = *state.presenter_theme.read().await;
+    json!({
+        "type": "presentation.settings",
+        "useWebPresenter": enabled,
+        "presenterTheme": presenter_theme,
+    })
+    .to_string()
+}
+
 /// Build a unified `presentation.status` JSON string from current backend state.
 async fn make_presentation_status(state: &AppState) -> String {
     let (app_running, slideshow_active, current_slide, total_slides, document_name, blanked) =
@@ -456,7 +495,7 @@ async fn make_presentation_status(state: &AppState) -> String {
             let doc = ps
                 .file_path
                 .as_ref()
-                .and_then(|p| p.split('/').last())
+                .and_then(|p| p.split('/').next_back())
                 .map(str::to_owned);
             (
                 ps.loaded,
@@ -553,29 +592,11 @@ struct PresenterEventList {
     selected_event_id: Option<Uuid>,
 }
 
-async fn fetch_event_summaries(pool: &PgPool) -> Result<Vec<EventSummary>, sqlx::Error> {
-    sqlx::query_as::<_, EventSummary>(
-        r#"SELECT e.id, e.title, e.computed_title, e.date_time, e.speaker,
-                  e.created_at, e.updated_at,
-                  COUNT(r.id) AS recording_count,
-                  EXISTS (
-                      SELECT 1 FROM event_activities ea
-                      WHERE ea.event_id = e.id AND ea.activity_type = 'completed'
-                  ) AS is_completed
-           FROM events e
-           LEFT JOIN recordings r ON r.event_id = e.id
-           GROUP BY e.id
-           ORDER BY e.date_time DESC"#,
-    )
-    .fetch_all(pool)
-    .await
-}
-
 async fn fetch_presenter_event_list(pool: &PgPool) -> Result<PresenterEventList, sqlx::Error> {
     let now = Utc::now();
     let mut events = fetch_event_summaries(pool).await?;
     events.sort_by(|a, b| compare_presenter_events(a, b, now));
-    let selected_event_id = select_presenter_event_id(&events, now);
+    let selected_event_id = current_event(&events, now).map(|event| event.id);
     Ok(PresenterEventList {
         events,
         selected_event_id,
@@ -626,54 +647,9 @@ fn presenter_event_bucket(
     }
 }
 
-fn select_presenter_event_id(events: &[EventSummary], now: DateTime<Utc>) -> Option<Uuid> {
-    let today = now.with_timezone(&Local).date_naive();
-    let current_window = Duration::minutes(PRESENTER_EVENT_CURRENT_WINDOW_MINUTES);
-    events
-        .iter()
-        .filter(|event| {
-            !event.is_completed
-                && event.date_time.with_timezone(&Local).date_naive() == today
-                && event.date_time <= now
-                && now - event.date_time <= current_window
-        })
-        .max_by_key(|event| event.date_time)
-        .or_else(|| {
-            events
-                .iter()
-                .filter(|event| !event.is_completed && event.date_time >= now)
-                .min_by_key(|event| event.date_time)
-        })
-        .or_else(|| events.iter().max_by_key(|event| event.date_time))
-        .map(|event| event.id)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeZone;
-
-    fn local_time(year: i32, month: u32, day: u32, hour: u32, minute: u32) -> DateTime<Utc> {
-        Local
-            .with_ymd_and_hms(year, month, day, hour, minute, 0)
-            .single()
-            .unwrap()
-            .with_timezone(&Utc)
-    }
-
-    fn event(id: Uuid, date_time: DateTime<Utc>, is_completed: bool) -> EventSummary {
-        EventSummary {
-            id,
-            title: id.to_string(),
-            computed_title: String::new(),
-            date_time,
-            speaker: String::new(),
-            recording_count: 0,
-            is_completed,
-            created_at: date_time,
-            updated_at: date_time,
-        }
-    }
 
     #[test]
     fn blackmagic_camera_commands_parse_from_their_wire_names() {
@@ -705,42 +681,73 @@ mod tests {
     }
 
     #[test]
-    fn selects_recent_same_day_past_event_before_later_future_event() {
-        let now = local_time(2026, 1, 11, 11, 0);
-        let service_id = Uuid::new_v4();
-        let later_id = Uuid::new_v4();
-        let events = vec![
-            event(service_id, local_time(2026, 1, 11, 10, 0), false),
-            event(later_id, local_time(2026, 1, 11, 18, 0), false),
-        ];
+    fn middlecontrol_commands_parse_from_their_wire_names() {
+        let parsed = |text: &str| serde_json::from_str::<WsCommand>(text).expect(text);
 
-        assert_eq!(select_presenter_event_id(&events, now), Some(service_id));
+        assert!(matches!(
+            parsed(r#"{"type":"middlecontrol.camera.select","camera_id":3}"#),
+            WsCommand::MiddlecontrolCameraSelect { camera_id: 3 }
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"middlecontrol.record.start"}"#),
+            WsCommand::MiddlecontrolRecordStart { camera_id: None }
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"middlecontrol.record.stop","camera_id":2}"#),
+            WsCommand::MiddlecontrolRecordStop { camera_id: Some(2) }
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"middlecontrol.record.start_all"}"#),
+            WsCommand::MiddlecontrolRecordStartAll
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"middlecontrol.record.stop_all"}"#),
+            WsCommand::MiddlecontrolRecordStopAll
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"middlecontrol.preset.recall","preset":4,"camera_id":5}"#),
+            WsCommand::MiddlecontrolPresetRecall {
+                preset: 4,
+                camera_id: Some(5)
+            }
+        ));
     }
 
     #[test]
-    fn ignores_recent_past_event_after_current_window() {
-        let now = local_time(2026, 1, 11, 15, 1);
-        let old_service_id = Uuid::new_v4();
-        let later_id = Uuid::new_v4();
-        let events = vec![
-            event(old_service_id, local_time(2026, 1, 11, 10, 0), false),
-            event(later_id, local_time(2026, 1, 11, 18, 0), false),
-        ];
+    fn rodecaster_commands_parse_from_their_wire_names() {
+        let parsed = |text: &str| serde_json::from_str::<WsCommand>(text).expect(text);
 
-        assert_eq!(select_presenter_event_id(&events, now), Some(later_id));
-    }
-
-    #[test]
-    fn ignores_completed_recent_past_event() {
-        let now = local_time(2026, 1, 11, 11, 0);
-        let completed_id = Uuid::new_v4();
-        let later_id = Uuid::new_v4();
-        let events = vec![
-            event(completed_id, local_time(2026, 1, 11, 10, 0), true),
-            event(later_id, local_time(2026, 1, 11, 18, 0), false),
-        ];
-
-        assert_eq!(select_presenter_event_id(&events, now), Some(later_id));
+        assert!(matches!(
+            parsed(r#"{"type":"rodecaster.profile"}"#),
+            WsCommand::RodecasterProfile
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"rodecaster.mute.set","channel":3,"mute":true}"#),
+            WsCommand::RodecasterMuteSet {
+                channel: 3,
+                mute: true
+            }
+        ));
+        assert!(serde_json::from_str::<WsCommand>(r#"{"type":"rodecaster.mute.set"}"#).is_err());
+        assert!(matches!(
+            parsed(r#"{"type":"rodecaster.audio.discover"}"#),
+            WsCommand::RodecasterAudioDiscover
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"rodecaster.audio.record.state"}"#),
+            WsCommand::RodecasterAudioRecordState
+        ));
+        let event_id = Uuid::new_v4();
+        assert!(matches!(
+            parsed(&format!(
+                r#"{{"type":"rodecaster.audio.record.start","event_id":"{event_id}"}}"#
+            )),
+            WsCommand::RodecasterAudioRecordStart { event_id: parsed_id } if parsed_id == event_id
+        ));
+        assert!(matches!(
+            parsed(r#"{"type":"rodecaster.audio.record.stop"}"#),
+            WsCommand::RodecasterAudioRecordStop
+        ));
     }
 }
 
@@ -1069,9 +1076,7 @@ async fn handle_ws_command(
         }
         // ── Unified Presentation ──────────────────────────────────────────────
         WsCommand::PresentationGetSettings => {
-            let enabled = state.use_web_presenter.load(Ordering::Relaxed);
-            let msg =
-                json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+            let msg = make_presentation_settings(state).await;
             let _ = client_tx.send(Message::Text(msg.into()));
         }
         WsCommand::PresentationStatus => {
@@ -1101,8 +1106,29 @@ async fn handle_ws_command(
             // Update in-memory flag.
             state.use_web_presenter.store(enabled, Ordering::Relaxed);
             // Broadcast new setting to all clients.
-            let msg =
-                json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+            let msg = make_presentation_settings(state).await;
+            let clients = state.ws_clients.read().await;
+            for tx in clients.values() {
+                let _ = tx.send(Message::Text(msg.clone().into()));
+            }
+        }
+        WsCommand::PresentationSetPresenterTheme { theme } => {
+            if let Err(error) = sqlx::query(
+                "INSERT INTO app_settings (key, value) VALUES ('presenter_theme', $1) \
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()",
+            )
+            .bind(theme.as_str())
+            .execute(&state.pool)
+            .await
+            {
+                ws_error(
+                    client_tx,
+                    &format!("Could not save presenter theme: {error}"),
+                );
+                return;
+            }
+            *state.presenter_theme.write().await = theme;
+            let msg = make_presentation_settings(state).await;
             let clients = state.ws_clients.read().await;
             for tx in clients.values() {
                 let _ = tx.send(Message::Text(msg.clone().into()));
@@ -1453,7 +1479,7 @@ async fn handle_ws_command(
                 }
                 ws_upsert_bible_references(id, &body.bible_references, &mut tx).await?;
                 tx.commit().await?;
-                Ok(fetch_event(id, &state.pool).await?)
+                fetch_event(id, &state.pool).await
             }
             .await;
             match result {
@@ -2065,6 +2091,8 @@ async fn handle_ws_command(
             let fb = state.facebook_connector.get_status().await;
             let broadlink = state.broadlink_connector.get_status().await;
             let blackmagic_camera = state.blackmagic_camera_connector.get_status().await;
+            let middlecontrol = state.middlecontrol_connector.get_status().await;
+            let rodecaster = state.rodecaster_connector.get_status();
             let msg = json!({
                 "type": "connectors.status",
                 "obs": obs,
@@ -2073,6 +2101,8 @@ async fn handle_ws_command(
                 "youtube": yt,
                 "facebook": fb,
                 "blackmagic-camera": blackmagic_camera,
+                "middlecontrol": middlecontrol,
+                "rodecaster": rodecaster,
             })
             .to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
@@ -2080,10 +2110,12 @@ async fn handle_ws_command(
         WsCommand::ConnectorsState => {
             let obs_output = state.obs_connector.get_output_state().await;
             let camera = state.blackmagic_camera_connector.get_state().await;
+            let middlecontrol = state.middlecontrol_connector.get_state().await;
             let msg = json!({
                 "type": "connectors.state",
                 "obs": obs_output.map(|s| json!({"isStreaming": s.is_streaming, "isRecording": s.is_recording})),
                 "blackmagic-camera": camera.map(|s| json!({"isStreaming": s.is_streaming(), "streamStatus": s.stream_status, "isRecording": s.is_recording})),
+                "middlecontrol": middlecontrol,
             })
             .to_string();
             let _ = client_tx.send(Message::Text(msg.into()));
@@ -2790,6 +2822,118 @@ async fn handle_ws_command(
             }
         }
         // ── Blackmagic camera ────────────────────────────────────────────────
+        WsCommand::RodecasterProfile => match state.rodecaster_connector.get_profile() {
+            Some(profile) => {
+                let _ = client_tx.send(Message::Text(
+                    json!({ "type": "rodecaster.profile", "profile": profile })
+                        .to_string()
+                        .into(),
+                ));
+            }
+            None => ws_error(client_tx, "rodecaster_not_connected"),
+        },
+        WsCommand::RodecasterMuteSet { channel, mute } => {
+            match state.rodecaster_connector.set_mute(channel, mute).await {
+                Ok(()) => ws_ok(client_tx),
+                Err(e) => ws_error(client_tx, &e),
+            }
+        }
+        WsCommand::RodecasterAudioDiscover => {
+            let Some(profile) = state.rodecaster_connector.get_profile() else {
+                ws_error(client_tx, "rodecaster_not_connected");
+                return;
+            };
+            let recorder = Arc::clone(&state.rodecaster_audio_recorder);
+            match tokio::task::spawn_blocking(move || recorder.discover(&profile)).await {
+                Ok(discovery) => {
+                    let _ = client_tx.send(Message::Text(
+                        json!({ "type": "rodecaster.audio.discovery", "discovery": discovery })
+                            .to_string()
+                            .into(),
+                    ));
+                }
+                Err(error) => ws_error(client_tx, &format!("audio_discovery_failed: {error}")),
+            }
+        }
+        WsCommand::RodecasterAudioRecordState => {
+            let recorder_state = state.rodecaster_audio_recorder.state();
+            let _ = client_tx.send(Message::Text(
+                json!({ "type": "rodecaster.audio.record.state", "state": recorder_state })
+                    .to_string()
+                    .into(),
+            ));
+        }
+        WsCommand::RodecasterAudioRecordStart { event_id } => {
+            let event_available: Result<bool, sqlx::Error> = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM events e WHERE e.id = $1 AND NOT EXISTS(\
+                 SELECT 1 FROM event_activities a WHERE a.event_id = e.id \
+                 AND a.activity_type = 'completed'))",
+            )
+            .bind(event_id)
+            .fetch_one(&state.pool)
+            .await;
+            match event_available {
+                Ok(true) => {}
+                Ok(false) => {
+                    ws_error(client_tx, "recording_event_unavailable");
+                    return;
+                }
+                Err(error) => {
+                    ws_error(client_tx, &error.to_string());
+                    return;
+                }
+            }
+            let Some(profile) = state.rodecaster_connector.get_profile() else {
+                ws_error(client_tx, "rodecaster_not_connected");
+                return;
+            };
+            let config: RodecasterConfig =
+                crate::database::settings::get_json(&state.pool, "rodecaster_config").await;
+            let recorder = Arc::clone(&state.rodecaster_audio_recorder);
+            match tokio::task::spawn_blocking(move || {
+                recorder.start(event_id, &config.audio_recording, &profile)
+            })
+            .await
+            {
+                Ok(Ok(recorder_state)) => {
+                    let _ = client_tx.send(Message::Text(
+                        json!({ "type": "rodecaster.audio.record.state", "state": recorder_state })
+                            .to_string()
+                            .into(),
+                    ));
+                }
+                Ok(Err(error)) => ws_error(client_tx, &error),
+                Err(error) => ws_error(client_tx, &format!("recording_start_failed: {error}")),
+            }
+        }
+        WsCommand::RodecasterAudioRecordStop => {
+            let recorder_state = state.rodecaster_audio_recorder.state();
+            if recorder_state.status == RecorderStatus::Idle {
+                let _ = client_tx.send(Message::Text(
+                    json!({ "type": "rodecaster.audio.record.state", "state": recorder_state })
+                        .to_string()
+                        .into(),
+                ));
+                return;
+            }
+            let Some(event_id) = recorder_state.event_id else {
+                ws_error(client_tx, "recording_event_unavailable");
+                return;
+            };
+            let recorder = Arc::clone(&state.rodecaster_audio_recorder);
+            match tokio::task::spawn_blocking(move || recorder.stop()).await {
+                Ok(Ok(files)) => {
+                    match persist_audio_recordings(&state.pool, event_id, &files).await {
+                        Ok(()) => ws_ok(client_tx),
+                        Err(error) => {
+                            ws_error(client_tx, &format!("recording_metadata_failed: {error}"))
+                        }
+                    }
+                }
+                Ok(Err(error)) => ws_error(client_tx, &error),
+                Err(error) => ws_error(client_tx, &format!("recording_stop_failed: {error}")),
+            }
+        }
         WsCommand::BlackmagicCameraDiscover { timeout_secs } => {
             // Results reach every client as `blackmagic-camera.discovered`, and an
             // unconfigured camera is adopted and connected — see `discover_cameras`.
@@ -2859,7 +3003,82 @@ async fn handle_ws_command(
                 Err(e) => ws_error(client_tx, &e),
             }
         }
+        WsCommand::MiddlecontrolCameraSelect { camera_id } => {
+            match state.middlecontrol_connector.select_camera(camera_id).await {
+                Ok(()) => ws_ok(client_tx),
+                Err(error) => ws_error(client_tx, &error),
+            }
+        }
+        WsCommand::MiddlecontrolRecordStart { camera_id } => {
+            match state
+                .middlecontrol_connector
+                .start_recording(camera_id)
+                .await
+            {
+                Ok(()) => ws_ok(client_tx),
+                Err(error) => ws_error(client_tx, &error),
+            }
+        }
+        WsCommand::MiddlecontrolRecordStop { camera_id } => {
+            match state
+                .middlecontrol_connector
+                .stop_recording(camera_id)
+                .await
+            {
+                Ok(()) => ws_ok(client_tx),
+                Err(error) => ws_error(client_tx, &error),
+            }
+        }
+        WsCommand::MiddlecontrolRecordStartAll => {
+            match state.middlecontrol_connector.start_recording_all().await {
+                Ok(()) => ws_ok(client_tx),
+                Err(error) => ws_error(client_tx, &error),
+            }
+        }
+        WsCommand::MiddlecontrolRecordStopAll => {
+            match state.middlecontrol_connector.stop_recording_all().await {
+                Ok(()) => ws_ok(client_tx),
+                Err(error) => ws_error(client_tx, &error),
+            }
+        }
+        WsCommand::MiddlecontrolPresetRecall { preset, camera_id } => {
+            match state
+                .middlecontrol_connector
+                .recall_preset(preset, camera_id)
+                .await
+            {
+                Ok(()) => ws_ok(client_tx),
+                Err(error) => ws_error(client_tx, &error),
+            }
+        }
     }
+}
+
+async fn persist_audio_recordings(
+    pool: &PgPool,
+    event_id: Uuid,
+    files: &[FinalizedAudioFile],
+) -> Result<(), sqlx::Error> {
+    let mut transaction = pool.begin().await?;
+    for file in files {
+        sqlx::query(
+            "INSERT INTO recordings (event_id, file_path, file_name, file_size, \
+             duration_seconds, media_kind, source, metadata, detected_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        )
+        .bind(event_id)
+        .bind(&file.path)
+        .bind(&file.file_name)
+        .bind(i64::try_from(file.file_size).unwrap_or(i64::MAX))
+        .bind(file.duration_seconds)
+        .bind(&file.media_kind)
+        .bind(&file.source)
+        .bind(&file.metadata)
+        .bind(Utc::now())
+        .execute(&mut *transaction)
+        .await?;
+    }
+    transaction.commit().await
 }
 
 #[derive(Deserialize, Serialize)]
@@ -2961,16 +3180,23 @@ async fn handle_socket(
     let connected_msg = json!({ "type": "connected", "serverId": server_id }).to_string();
     let _ = tx.send(Message::Text(connected_msg.into()));
 
+    let recorder_state = state.rodecaster_audio_recorder.state();
+    let recorder_msg =
+        json!({ "type": "rodecaster.audio.record.state", "state": recorder_state }).to_string();
+    let _ = tx.send(Message::Text(recorder_msg.into()));
+
     // Push current connector statuses so the client doesn't have to poll.
     let obs_status = state.obs_connector.get_status().await;
     let vmix_status = state.vmix_connector.get_status();
     let yt_status = state.youtube_connector.get_status().await;
     let fb_status = state.facebook_connector.get_status().await;
+    let middlecontrol_status = state.middlecontrol_connector.get_status().await;
     for (connector, status) in [
         ("obs", obs_status),
         ("vmix", vmix_status),
         ("youtube", yt_status),
         ("facebook", fb_status),
+        ("middlecontrol", middlecontrol_status),
     ] {
         let msg = json!({
             "type": "connector.status",
@@ -2983,9 +3209,7 @@ async fn handle_socket(
 
     // Push current presentation settings, status, and presenter state.
     {
-        let enabled = state.use_web_presenter.load(Ordering::Relaxed);
-        let settings_msg =
-            json!({ "type": "presentation.settings", "useWebPresenter": enabled }).to_string();
+        let settings_msg = make_presentation_settings(&state).await;
         let _ = tx.send(Message::Text(settings_msg.into()));
         let status_msg = make_presentation_status(&state).await;
         let _ = tx.send(Message::Text(status_msg.into()));
@@ -3010,6 +3234,16 @@ async fn handle_socket(
             "connector": "obs",
             "isStreaming": output.is_streaming,
             "isRecording": output.is_recording,
+        })
+        .to_string();
+        let _ = tx.send(Message::Text(msg.into()));
+    }
+
+    if let Some(middlecontrol) = state.middlecontrol_connector.get_state().await {
+        let msg = json!({
+            "type": "connector.state",
+            "connector": "middlecontrol",
+            "state": middlecontrol,
         })
         .to_string();
         let _ = tx.send(Message::Text(msg.into()));
