@@ -10,6 +10,7 @@ import {
   openExternal,
 } from '@metocast/core-client';
 import type {
+  AtemState,
   MiddlecontrolState,
   RodecasterAudioDiscovery,
   RodecasterAudioRecorderState,
@@ -77,6 +78,7 @@ const RECOVERY: Record<
   obs: { open: '', reconnect: connectObs },
   'blackmagic-camera': { open: '?open=blackmagic-camera', reconnect: connectCamera },
   middlecontrol: { open: '?open=middlecontrol' },
+  atem: { open: '?open=atem' },
   rodecaster: { open: '?open=rodecaster' },
   youtube: { open: '?open=youtube', login: youtubeAuthUrl },
   facebook: { open: '?open=facebook', login: facebookAuthUrl },
@@ -112,6 +114,7 @@ let rodecasterProfile = $state<RodecasterProfile | null>(null);
 let rodecasterAudioDiscovery = $state<RodecasterAudioDiscovery | null>(null);
 let rodecasterAudioRecorder = $state<RodecasterAudioRecorderState | null>(null);
 let middlecontrolState = $state<MiddlecontrolState | null>(null);
+let atemState = $state<AtemState | null>(null);
 /** The event the core says is happening now — nobody in the UI decides this. */
 let currentEvent = $state<EventSummary | null>(null);
 
@@ -164,6 +167,9 @@ export const live = {
   get middlecontrolState() {
     return middlecontrolState;
   },
+  get atemState() {
+    return atemState;
+  },
   get currentEvent() {
     return currentEvent;
   },
@@ -190,6 +196,8 @@ export function handleWs(msg: WsMessage): void {
         if (msg.streamStatus !== undefined) cameraStreamStatus = msg.streamStatus;
       } else if (msg.connector === 'middlecontrol' && msg.state) {
         middlecontrolState = msg.state;
+      } else if (msg.connector === 'atem') {
+        atemState = msg.state;
       }
       break;
     case 'connectors.state':
@@ -199,6 +207,7 @@ export function handleWs(msg: WsMessage): void {
       cameraRecording = msg['blackmagic-camera']?.isRecording ?? false;
       cameraStreamStatus = msg['blackmagic-camera']?.streamStatus ?? 'Idle';
       middlecontrolState = msg.middlecontrol;
+      atemState = msg.atem;
       break;
     case 'connectors.status':
       connectorStatus = {
@@ -210,6 +219,7 @@ export function handleWs(msg: WsMessage): void {
         'blackmagic-camera': msg['blackmagic-camera'].type,
         middlecontrol: msg.middlecontrol.type,
         rodecaster: msg.rodecaster.type,
+        atem: msg.atem.type,
       };
       break;
     case 'connector.status': {
@@ -217,6 +227,7 @@ export function handleWs(msg: WsMessage): void {
       const next = msg.status.type;
       connectorStatus = { ...connectorStatus, [msg.connector]: next };
       if (msg.connector === 'middlecontrol' && next !== 'connected') middlecontrolState = null;
+      if (msg.connector === 'atem' && next !== 'connected') atemState = null;
       const key = `connector:${msg.connector}`;
       const meta = CONNECTOR_META[msg.connector] ?? {
         name: sourceName(msg.connector),
@@ -358,7 +369,7 @@ export function handleWs(msg: WsMessage): void {
         kind: t('notif.kind.system'),
         source: t('notif.core.source'),
         title: t('notif.core.commandFailed'),
-        body: msg.message,
+        body: statusText(msg.message) ?? msg.message,
         mono: true,
         key: `error:${msg.message}`,
       });

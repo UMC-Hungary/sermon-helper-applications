@@ -52,12 +52,12 @@ jobs:
         run: echo "ver=$(brew list --versions harfbuzz cairo pango glib | tr ' \n' '_')" >> $GITHUB_OUTPUT
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.98.1
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './presenter-receiver -> target'
+          workspaces: '. -> target'
           shared-key: ${{ matrix.artifact }}-${{ steps.brew-versions.outputs.ver || 'linux' }}
 
       - name: Build release binary
@@ -71,7 +71,7 @@ jobs:
 
       - name: Rename binary with platform suffix
         shell: bash
-        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
+        run: cp target/release/presenter-receiver ${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6

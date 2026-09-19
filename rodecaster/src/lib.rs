@@ -1,6 +1,6 @@
 mod labels;
 
-pub use labels::{source_label, Shape};
+pub use labels::{Shape, source_label};
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::RecvTimeoutError;
@@ -8,13 +8,13 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use hidapi::{HidApi, HidDevice};
-use rcp2_core::ops::fader;
 use rcp2_core::DeviceViewModel;
+use rcp2_core::ops::fader;
 use rcp2_protocol::device::{DeviceConnection, DeviceEvent, DeviceModel};
+use rcp2_protocol::transport::Transport;
 use rcp2_protocol::transport::hid::{
     HID_INTERFACE, PRODUCT_IDS_DUO, PRODUCT_IDS_PRO_II, VENDOR_ID,
 };
-use rcp2_protocol::transport::Transport;
 use rcp2_protocol::types::{Structured, Value};
 use serde::Serialize;
 
@@ -365,7 +365,7 @@ fn wait_for_state(conn: &DeviceConnection, timeout: Duration) -> Result<(), Erro
             Ok(_) => {}
             Err(RecvTimeoutError::Timeout) => return Err(Error::Handshake(timeout)),
             Err(RecvTimeoutError::Disconnected) => {
-                return Err(Error::Device("event channel closed".into()))
+                return Err(Error::Device("event channel closed".into()));
             }
         }
     }

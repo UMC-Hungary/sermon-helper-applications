@@ -24,7 +24,7 @@ export const VmixConfigSchema = z.object({
 export const AtemConfigSchema = z.object({
   enabled: z.boolean(),
   host: z.string(),
-  port: z.number(),
+  port: z.number().int().min(1).max(65535),
 });
 
 export const MiddlecontrolConfigSchema = z.object({
@@ -140,6 +140,33 @@ export const DiscoveredMiddlecontrolsSchema = z.object({
 });
 
 export type DiscoveredMiddlecontrol = z.infer<typeof DiscoveredMiddlecontrolSchema>;
+
+export const AtemStateSchema = z.object({
+  product: z.string(),
+  program: z.number().int().nullable(),
+  preview: z.number().int().nullable(),
+  inputs: z.array(z.object({ id: z.number().int(), name: z.string(), shortName: z.string() })),
+  streaming: z.enum(['idle', 'connecting', 'streaming', 'stopping']).nullable(),
+  recording: z.enum(['idle', 'recording', 'stopping']).nullable(),
+  streamService: z.string().nullable(),
+});
+
+export type AtemState = z.infer<typeof AtemStateSchema>;
+
+export const DiscoveredAtemSchema = z.object({
+  name: z.string(),
+  host: z.string().min(1),
+  port: z.number().int().min(1).max(65535),
+  usb: z.boolean(),
+});
+
+export const DiscoveredAtemsSchema = z.object({ devices: z.array(DiscoveredAtemSchema) });
+
+export type DiscoveredAtem = z.infer<typeof DiscoveredAtemSchema>;
+
+export const AtemStreamTargetSchema = z.object({ service: z.string(), url: z.string() });
+
+export type AtemStreamTarget = z.infer<typeof AtemStreamTargetSchema>;
 
 /** One camera returned by an mDNS scan. `host` is what the config field takes. */
 export const DiscoveredCameraSchema = z.object({

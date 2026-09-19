@@ -37,6 +37,8 @@ const AUTHENTICATED = [
   { method: 'POST', path: '/api/connectors/blackmagic-camera/discover' },
   { method: 'POST', path: '/api/connectors/middlecontrol/discover' },
   { method: 'POST', path: '/api/connectors/blackmagic-camera/stream/youtube' },
+  { method: 'POST', path: '/api/connectors/atem/stream/youtube' },
+  { method: 'POST', path: '/api/connectors/atem/discover' },
   { method: 'GET', path: '/api/queues' },
   { method: 'GET', path: '/api/settings/song-slide-folder' },
   { method: 'PUT', path: '/api/settings/song-slide-folder' },

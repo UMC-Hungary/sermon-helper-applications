@@ -3,13 +3,16 @@ import { apiFetch } from './client.js';
 import { sendWsCommand } from '../ws/client.js';
 import { getAdminToken } from '../host/index.js';
 import {
+  AtemStreamTargetSchema,
   CameraSettingsSchema,
   CameraStreamTargetSchema,
   ConnectorConfigSchemas,
   DiscoveredCamerasSchema,
   DiscoveredMiddlecontrolsSchema,
+  DiscoveredAtemsSchema,
   ConnectorStatusesSchema,
   ObsStreamSettingsSchema,
+  type AtemStreamTarget,
   type ConnectorConfigMap,
   type ConnectorName,
   type CameraSettings,
@@ -17,6 +20,7 @@ import {
   type CameraStreamTarget,
   type DiscoveredCamera,
   type DiscoveredMiddlecontrol,
+  type DiscoveredAtem,
   type ObsStreamSettings,
 } from '../schemas/connectors.js';
 
@@ -111,6 +115,19 @@ export function applyCameraSettings(update: CameraSettingsUpdate): Promise<Camer
  */
 export function pushCameraYouTubeSettings(): Promise<CameraStreamTarget> {
   return apiFetch('/api/connectors/blackmagic-camera/stream/youtube', CameraStreamTargetSchema, {
+    method: 'POST',
+  });
+}
+
+export async function discoverAtem(): Promise<DiscoveredAtem[]> {
+  const { devices } = await apiFetch('/api/connectors/atem/discover', DiscoveredAtemsSchema, {
+    method: 'POST',
+  });
+  return devices;
+}
+
+export function pushAtemYouTubeSettings(): Promise<AtemStreamTarget> {
+  return apiFetch('/api/connectors/atem/stream/youtube', AtemStreamTargetSchema, {
     method: 'POST',
   });
 }

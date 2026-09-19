@@ -74,12 +74,12 @@ jobs:
           restore-keys: Linux-pnpm-store-
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.98.1
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: '. -> target'
           shared-key: test-server
 
       - name: Install frontend dependencies
@@ -192,7 +192,7 @@ jobs:
 
       # Setup Rust
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.98.1
         with:
           targets: ${{ matrix.target }}
 
@@ -200,7 +200,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: '. -> target'
           shared-key: ${{ matrix.target }}
 
       # Update version from git tag
@@ -250,7 +250,7 @@ jobs:
       - name: Verify macOS app has no Homebrew runtime links
         if: runner.os == 'macOS'
         run: |
-          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle -name "*.app" -type d | head -1)
+          APP_PATH=$(find target/${{ matrix.target }}/release/bundle -name "*.app" -type d | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "No app bundle found"
             exit 1
@@ -273,7 +273,7 @@ jobs:
       - name: Sign macOS app
         if: runner.os == 'macOS'
         run: |
-          APP_PATH=$(find src-tauri/target/${{ matrix.target }}/release/bundle -name "*.app" -type d | head -1)
+          APP_PATH=$(find target/${{ matrix.target }}/release/bundle -name "*.app" -type d | head -1)
           if [ -n "$APP_PATH" ]; then
             echo "Signing: $APP_PATH"
             codesign --force --deep --sign - "$APP_PATH"
@@ -284,7 +284,7 @@ jobs:
       - name: Rename macOS tarballs with architecture
         if: runner.os == 'macOS'
         run: |
-          MACOS_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/macos"
+          MACOS_DIR="target/${{ matrix.target }}/release/bundle/macos"
           if [ -d "$MACOS_DIR" ]; then
             # Determine architecture suffix
             if [ "${{ matrix.target }}" = "aarch64-apple-darwin" ]; then
@@ -322,25 +322,25 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.nsis.zip
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.nsis.zip.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi.zip
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi.zip.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.rpm
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.rpm.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.sig
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.tar.gz
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage.tar.gz.sig
+            target/${{ matrix.target }}/release/bundle/**/*.exe
+            target/${{ matrix.target }}/release/bundle/**/*.exe.sig
+            target/${{ matrix.target }}/release/bundle/**/*.nsis.zip
+            target/${{ matrix.target }}/release/bundle/**/*.nsis.zip.sig
+            target/${{ matrix.target }}/release/bundle/**/*.msi
+            target/${{ matrix.target }}/release/bundle/**/*.msi.sig
+            target/${{ matrix.target }}/release/bundle/**/*.msi.zip
+            target/${{ matrix.target }}/release/bundle/**/*.msi.zip.sig
+            target/${{ matrix.target }}/release/bundle/**/*.dmg
+            target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz
+            target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz.sig
+            target/${{ matrix.target }}/release/bundle/**/*.deb
+            target/${{ matrix.target }}/release/bundle/**/*.deb.sig
+            target/${{ matrix.target }}/release/bundle/**/*.rpm
+            target/${{ matrix.target }}/release/bundle/**/*.rpm.sig
+            target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            target/${{ matrix.target }}/release/bundle/**/*.AppImage.sig
+            target/${{ matrix.target }}/release/bundle/**/*.AppImage.tar.gz
+            target/${{ matrix.target }}/release/bundle/**/*.AppImage.tar.gz.sig
           if-no-files-found: error
 
   # ──────────────────────────────────────────────
@@ -384,14 +384,14 @@ jobs:
           restore-keys: macOS-pnpm-store-
 
       - name: Setup Rust with iOS targets
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.98.1
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: '. -> target'
           shared-key: ios
 
       - name: Install frontend dependencies
@@ -567,14 +567,14 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
 
       - name: Setup Rust with Android targets
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.98.1
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: '. -> target'
           shared-key: android
 
       - name: Install frontend dependencies
@@ -701,12 +701,12 @@ jobs:
           sudo apt-get install -y libcairo2-dev libpango1.0-dev pkg-config
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.98.1
 
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './presenter-receiver -> target'
+          workspaces: '. -> target'
           shared-key: ${{ matrix.artifact }}-${{ steps.brew-versions.outputs.ver || 'linux' }}
 
       - name: Build release binary
@@ -720,7 +720,7 @@ jobs:
 
       - name: Rename binary with platform suffix
         shell: bash
-        run: cp presenter-receiver/target/release/presenter-receiver ${{ matrix.artifact }}
+        run: cp target/release/presenter-receiver ${{ matrix.artifact }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6

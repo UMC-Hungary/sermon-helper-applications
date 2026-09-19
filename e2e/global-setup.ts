@@ -19,7 +19,6 @@ const BASE_URL = process.env.TAURI_TEST_BASE_URL ?? 'http://localhost:3738';
 const HEALTH_URL = `${BASE_URL}/health`;
 const BINARY = join(
   process.cwd(),
-  'src-tauri',
   'target',
   'debug',
   process.platform === 'win32' ? 'metocast-server.exe' : 'metocast-server',

@@ -9,10 +9,10 @@ use std::time::Duration;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use tokio::sync::mpsc;
-use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::Connector;
+use tokio_tungstenite::tungstenite::Message;
 
-use crate::{tls, Camera, Trust};
+use crate::{Camera, Trust, tls};
 
 const MAX_BACKOFF: Duration = Duration::from_secs(30);
 

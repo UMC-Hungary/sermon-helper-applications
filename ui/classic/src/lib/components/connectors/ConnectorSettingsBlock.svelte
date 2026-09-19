@@ -821,9 +821,7 @@
 
       <!-- ── ATEM form ─────────────────────────────────────────────────────── -->
     {:else if connectorId === 'atem'}
-      <p class="coming-soon-notice">{$_('appSettings.connectors.atem.comingSoon')}</p>
-
-      <fieldset disabled>
+      <fieldset>
         <div class="form-row">
           <label class="checkbox-label">
             <input type="checkbox" bind:checked={atemForm.enabled} />

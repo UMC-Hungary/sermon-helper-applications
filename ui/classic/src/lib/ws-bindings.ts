@@ -151,7 +151,7 @@ function handleMessage(msg: WsMessage): void {
       discordStatus.set(status);
       discordState.update((s) => ({ ...s, connection: status }));
     }
-  } else if (msg.type === 'connector.state') {
+  } else if (msg.type === 'connector.state' && msg.connector !== 'atem') {
     const patch: { isStreaming?: boolean; isRecording?: boolean } = {};
     if (msg.isStreaming !== undefined) patch.isStreaming = msg.isStreaming;
     if (msg.isRecording !== undefined) patch.isRecording = msg.isRecording;

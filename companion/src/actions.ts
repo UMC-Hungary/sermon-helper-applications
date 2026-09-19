@@ -14,6 +14,9 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 			label: `${new Date(event.dateTime).toLocaleString()} · ${event.title}`,
 		})),
 	]
+	const sendAtem = (type: string, data?: Record<string, unknown>) => {
+		if (!instance.api.sendWsCommand(type, data)) instance.log('error', 'ATEM command failed: WebSocket not connected')
+	}
 
 	return {
 		execute_command: {
@@ -108,6 +111,91 @@ export function GetActions(instance: ModuleInstance): CompanionActionDefinitions
 				instance.log('info', 'Refreshing command list...')
 				await instance.refreshCommands()
 			},
+		},
+
+		atem_program: {
+			name: 'ATEM: Set Program Input',
+			description: 'Put an ATEM input on program',
+			options: [{ type: 'number', id: 'input', label: 'Input ID', default: 1, min: 0, max: 65535 }],
+			callback: (action: CompanionActionEvent) => {
+				sendAtem('atem.program.set', { input: action.options['input'] as number })
+			},
+		},
+
+		atem_preview: {
+			name: 'ATEM: Set Preview Input',
+			description: 'Put an ATEM input on preview',
+			options: [{ type: 'number', id: 'input', label: 'Input ID', default: 1, min: 0, max: 65535 }],
+			callback: (action: CompanionActionEvent) => {
+				sendAtem('atem.preview.set', { input: action.options['input'] as number })
+			},
+		},
+
+		atem_transition: {
+			name: 'ATEM: Transition',
+			description: 'Run a cut or auto transition',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'transition',
+					label: 'Transition',
+					default: 'cut',
+					choices: [
+						{ id: 'cut', label: 'Cut' },
+						{ id: 'auto', label: 'Auto' },
+					],
+				},
+			],
+			callback: (action: CompanionActionEvent) => {
+				sendAtem(`atem.${action.options['transition'] === 'auto' ? 'auto' : 'cut'}`)
+			},
+		},
+
+		atem_record: {
+			name: 'ATEM: Recording',
+			description: 'Start or stop recording on the ATEM',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'operation',
+					label: 'Operation',
+					default: 'start',
+					choices: [
+						{ id: 'start', label: 'Start' },
+						{ id: 'stop', label: 'Stop' },
+					],
+				},
+			],
+			callback: (action: CompanionActionEvent) => {
+				sendAtem(`atem.record.${action.options['operation'] === 'stop' ? 'stop' : 'start'}`)
+			},
+		},
+
+		atem_stream: {
+			name: 'ATEM: Streaming',
+			description: 'Start or stop streaming from the ATEM',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'operation',
+					label: 'Operation',
+					default: 'start',
+					choices: [
+						{ id: 'start', label: 'Start' },
+						{ id: 'stop', label: 'Stop' },
+					],
+				},
+			],
+			callback: (action: CompanionActionEvent) => {
+				sendAtem(`atem.stream.${action.options['operation'] === 'stop' ? 'stop' : 'start'}`)
+			},
+		},
+
+		atem_push_youtube: {
+			name: 'ATEM: Push YouTube Destination',
+			description: 'Copy the configured YouTube stream destination to the ATEM',
+			options: [],
+			callback: () => sendAtem('atem.stream.push_youtube'),
 		},
 
 		// PPT Selector Actions

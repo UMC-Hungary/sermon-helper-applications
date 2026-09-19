@@ -87,8 +87,7 @@ pub async fn complete_setup(
             let runtime_clone = Arc::clone(&runtime);
             let handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = crate::runtime::start_from_app_runtime(&runtime_clone, handle).await
-                {
+                if let Err(e) = crate::host::start_from_app_runtime(&runtime_clone, handle).await {
                     tracing::error!("Backend startup failed: {e}");
                 }
             });

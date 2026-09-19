@@ -169,13 +169,12 @@ async fn connect_and_receive(
     write
         .send(Message::Text(
             json!({"type": "presenter.register", "label": "Presenter Receiver", "hostname": hostname})
-                .to_string()
-                .into(),
+                .to_string(),
         ))
         .await?;
     write
         .send(Message::Text(
-            json!({"type": "presenter.status"}).to_string().into(),
+            json!({"type": "presenter.status"}).to_string(),
         ))
         .await?;
 
@@ -255,9 +254,7 @@ async fn connect_and_receive(
             ServerMsg::Ping { ping_id } => {
                 write
                     .send(Message::Text(
-                        json!({"type": "pong", "ping_id": ping_id})
-                            .to_string()
-                            .into(),
+                        json!({"type": "pong", "ping_id": ping_id}).to_string(),
                     ))
                     .await?;
             }

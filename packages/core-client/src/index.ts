@@ -62,6 +62,9 @@ export * from './uis.js';
 
 // ── Boundary types, inferred from the Zod schemas ─────────────────────────────
 export type {
+  AtemState,
+  AtemStreamTarget,
+  DiscoveredAtem,
   CameraFormat,
   CameraMediaDevice,
   CameraPlatform,

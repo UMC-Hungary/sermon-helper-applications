@@ -1,8 +1,11 @@
 # PLAN: Reusable Rust backend libraries for native Apple applications
 
-Status: proposed
+Status: implemented
 Scope: Rust workspace, Tauri host boundary, headless server, native iOS/macOS reuse, and Rust toolchain
 Planning assumption: iOS is a remote client; macOS may be either a remote client or a local server host.
+
+Implementation note: Apple device/simulator compilation and Swift package import verification run in
+`.github/workflows/rust-libraries.yml`; local execution still requires a complete Xcode installation.
 
 ## Goal
 
