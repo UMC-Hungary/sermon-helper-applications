@@ -1,6 +1,6 @@
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSImage, NSToolbar, NSToolbarDelegate, NSToolbarDisplayMode, NSToolbarItem, NSToolbarItemGroup,
     NSToolbarItemGroupSelectionMode, NSToolbarItemIdentifier, NSWindow, NSWindowToolbarStyle,
@@ -115,7 +115,7 @@ impl NavDelegate {
                 &NSArray::from_retained_slice(&images),
                 NSToolbarItemGroupSelectionMode::SelectOne,
                 Some(&NSArray::from_retained_slice(&labels)),
-                Some(&*self as &AnyObject),
+                Some(self as &AnyObject),
                 Some(sel!(navSelected:)),
                 mtm,
             )

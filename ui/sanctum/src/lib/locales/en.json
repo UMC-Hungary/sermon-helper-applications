@@ -498,7 +498,7 @@
       "facebook": "Pages API · stream destination",
       "broadlink": "Projector, screen and AV commands",
       "vmix": "Configuration stored for future support",
-      "atem": "Switcher support coming soon",
+      "atem": "UDP protocol · program, preview, record and stream",
       "discord": "Webhook support coming soon",
       "blackmagic-camera": "REST API · record and livestream control",
       "middlecontrol": "TCP API · camera, recording and preset control",
@@ -601,7 +601,26 @@
     "status": {
       "login_required": "Login required",
       "relogin_required": "Re-login required",
-      "credentials_required": "Credentials required"
+      "credentials_required": "Credentials required",
+      "atem_no_response": "The switcher did not answer",
+      "atem_timeout": "The switcher stopped answering",
+      "atem_no_ack": "The switcher did not confirm the command",
+      "atem_not_connected": "The switcher is not connected",
+      "atem_unknown_input": "The switcher has no such input",
+      "atem_recording_unsupported": "This switcher cannot record",
+      "atem_streaming_unsupported": "This switcher cannot stream"
+    },
+    "atem": {
+      "destination": "Stream destination on the switcher",
+      "control": "Switcher control",
+      "controlMeta": "Program, preview, cut, record and stream",
+      "discoveryTitle": "Find the switcher",
+      "discoveryDescription": "Looks for ATEM switchers connected to the Metocast server over USB or on its local network.",
+      "discoveryReady": "Start a scan with the switcher powered on and connected by USB or Ethernet.",
+      "discoveryEmpty": "No switcher answered. Check its USB or network cable, then scan again. For manual entry, find its IP address in ATEM Setup and type it into Host above.",
+      "use": "Use",
+      "usb": "USB",
+      "network": "Network"
     }
   },
   "setup": {
@@ -803,5 +822,29 @@
     "toast": {
       "muteFail": "Couldn't set mute"
     }
+  },
+  "switcher": {
+    "title": "Switcher control",
+    "back": "Connectors",
+    "connecting": "Connecting to the switcher",
+    "unavailable": "Switcher not connected",
+    "notConnected": "The Blackmagic ATEM connector is not connected. Enable it under Connectors and enter the switcher's IP address.",
+    "transport": "Switcher transport",
+    "cut": "Cut",
+    "auto": "Auto",
+    "program": "Program",
+    "preview": "Preview",
+    "stream": "Stream",
+    "record": "Record",
+    "destination": "Stream destination",
+    "unsupported": "Not on this model",
+    "state": {
+      "idle": "Idle",
+      "connecting": "Connecting",
+      "streaming": "Live",
+      "recording": "Recording",
+      "stopping": "Stopping"
+    },
+    "note": "Program and preview follow the switcher, including changes made on its panel or in ATEM Software Control."
   }
 }

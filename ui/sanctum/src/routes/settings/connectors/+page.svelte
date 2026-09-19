@@ -39,11 +39,14 @@
     discoverCameras,
     discoverMiddlecontrol,
     pushCameraYouTubeSettings,
+    pushAtemYouTubeSettings,
+    discoverAtem,
     type ConnectorName,
     type ConnectorConfigMap,
     type BroadlinkDevice,
     type DiscoveredCamera,
     type DiscoveredMiddlecontrol,
+    type DiscoveredAtem,
     type RodecasterAudioRecordingConfig,
   } from '@metocast/core-client';
   import { appMode } from '$lib/core';
@@ -144,19 +147,19 @@
       fields: [fld('host'), fld('port', 'number')],
     },
     {
+      id: 'atem',
+      name: 'Blackmagic ATEM',
+      cat: 'devices',
+      supported: true,
+      brand: siBlackmagicdesign.path,
+      fields: [fld('host'), fld('port', 'number')],
+    },
+    {
       id: 'vmix',
       name: 'vMix',
       cat: 'future',
       supported: false,
       char: '▣',
-      fields: [fld('host'), fld('port', 'number')],
-    },
-    {
-      id: 'atem',
-      name: 'Blackmagic ATEM',
-      cat: 'future',
-      supported: false,
-      brand: siBlackmagicdesign.path,
       fields: [fld('host'), fld('port', 'number')],
     },
     {
@@ -248,6 +251,11 @@
   let cameras = $state<DiscoveredCamera[]>([]);
   let cameraRtmp = $state('');
   let pushingCamera = $state(false);
+  let atemDestination = $state('');
+  let pushingAtem = $state(false);
+  let atemDevices = $state<DiscoveredAtem[]>([]);
+  let scanningAtem = $state(false);
+  let atemScanned = $state(false);
   let scanning = $state(false);
   let scanningCameras = $state(false);
   let middlecontrolDevices = $state<DiscoveredMiddlecontrol[]>([]);
@@ -313,13 +321,18 @@
 
   function detailText(meta: ConnMeta): string {
     if (!enabled[meta.id]) return $_('conn.disabled');
-    if (meta.id === 'obs' || meta.id === 'blackmagic-camera' || meta.id === 'middlecontrol') {
+    if (
+      meta.id === 'obs' ||
+      meta.id === 'blackmagic-camera' ||
+      meta.id === 'middlecontrol' ||
+      meta.id === 'atem'
+    ) {
       const f = forms[meta.id] ?? {};
       const address =
         meta.id === 'blackmagic-camera'
           ? f.host || '—'
           : `${f.host || (meta.id === 'obs' ? 'localhost' : '—')}:${
-              f.port || (meta.id === 'obs' ? '4455' : '11584')
+              f.port || { obs: '4455', middlecontrol: '11584', atem: '9910' }[meta.id]
             }`;
       return `${address} · ${statuses[meta.id] ?? 'disconnected'}`;
     }
@@ -524,6 +537,37 @@
       fail(cameraMeta, 'conn.toast.saveFail', String(e));
     } finally {
       pushingCamera = false;
+    }
+  }
+
+  const atemMeta = CONNECTORS.find((c) => c.id === 'atem')!;
+  async function scanAtem() {
+    scanningAtem = true;
+    try {
+      atemDevices = await discoverAtem();
+      atemScanned = true;
+    } catch (e) {
+      fail(atemMeta, 'conn.toast.scanFail', String(e));
+    } finally {
+      scanningAtem = false;
+    }
+  }
+
+  async function useAtem(device: DiscoveredAtem) {
+    forms.atem = { ...(forms.atem ?? {}), host: device.host, port: String(device.port) };
+    enabled.atem = true;
+    await save(atemMeta);
+  }
+
+  async function pushAtemYoutube() {
+    pushingAtem = true;
+    try {
+      const target = await pushAtemYouTubeSettings();
+      atemDestination = `${target.service} · ${target.url}`;
+    } catch (e) {
+      fail(atemMeta, 'conn.toast.saveFail', String(e));
+    } finally {
+      pushingAtem = false;
     }
   }
 
@@ -842,6 +886,70 @@
                                   values: { version: c.softwareVersion },
                                 })}</em
                               >{/if}
+                          </li>
+                        {/each}
+                      </ul>
+                    {/if}
+                  </DiscoveryPanel>
+                {/if}
+
+                {#if meta.id === 'atem'}
+                  <div class="actions">
+                    <Button
+                      variant="secondary"
+                      compact
+                      disabled={statuses.atem !== 'connected' ||
+                        pushingAtem ||
+                        live.atemState?.streaming !== 'idle'}
+                      onclick={pushAtemYoutube}
+                    >
+                      {$_('conn.camera.pushYoutube')}
+                    </Button>
+                  </div>
+                  <Field
+                    label={$_('conn.atem.destination')}
+                    value={atemDestination || (live.atemState?.streamService ?? '')}
+                    readonly
+                  />
+                  <List>
+                    <Row
+                      title={$_('conn.atem.control')}
+                      meta={$_('conn.atem.controlMeta')}
+                      detail={$_('conn.camera.open')}
+                      href="/settings/connectors/switcher"
+                      last
+                    >
+                      {#snippet icon()}<Glyph char="▶" size={28} />{/snippet}
+                    </Row>
+                  </List>
+
+                  <DiscoveryPanel
+                    title={$_('conn.atem.discoveryTitle')}
+                    description={$_('conn.atem.discoveryDescription')}
+                    scanLabel={atemScanned
+                      ? $_('conn.discovery.scanAgain')
+                      : $_('conn.discovery.scan')}
+                    scanning={scanningAtem}
+                    scanningLabel={$_('conn.discovery.scanning')}
+                    onscan={scanAtem}
+                  >
+                    {#if atemDevices.length === 0}
+                      <p class="empty">
+                        {$_(atemScanned ? 'conn.atem.discoveryEmpty' : 'conn.atem.discoveryReady')}
+                      </p>
+                    {:else}
+                      <ul class="devices">
+                        {#each atemDevices as device (device.host)}
+                          <li>
+                            <strong>{device.name}</strong>
+                            <Button variant="secondary" compact onclick={() => useAtem(device)}>
+                              {$_('conn.atem.use')}
+                            </Button>
+                            <code
+                              >{device.host} · {$_(
+                                device.usb ? 'conn.atem.usb' : 'conn.atem.network',
+                              )}</code
+                            >
                           </li>
                         {/each}
                       </ul>

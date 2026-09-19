@@ -27,7 +27,8 @@ Registered UIs today: `ui/classic/` (the original control surface, frozen) and `
 5. **Build to static files.** No server-side rendering at runtime — the output is plain files
    that Tauri embeds and the core serves. Both current UIs use `@sveltejs/adapter-static`.
 6. **Change no Rust.** If a UI needs something the API does not expose, that is a core change
-   with its own contract-surface updates (OpenAPI, Bruno, schemas), not a shortcut through IPC.
+   with its own contract-surface updates (`metocast-core`, server handler, OpenAPI, Bruno, Zod
+   schemas, and native bridge when applicable), not a shortcut through IPC.
 
 ## The shared package
 

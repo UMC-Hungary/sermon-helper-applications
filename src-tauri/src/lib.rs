@@ -1,31 +1,12 @@
 #![recursion_limit = "256"]
 
-#[cfg(desktop)]
-pub mod bible;
 mod commands;
+#[cfg(desktop)]
+mod host;
 mod logging;
 
-// Models, database, server, and connectors are desktop-only.
 #[cfg(desktop)]
-mod broadlink;
-#[cfg(desktop)]
-pub mod connectors;
-#[cfg(desktop)]
-pub mod database;
-#[cfg(desktop)]
-mod models;
-#[cfg(desktop)]
-mod obs_devices;
-#[cfg(desktop)]
-pub mod queue;
-#[cfg(desktop)]
-pub mod runtime;
-#[cfg(desktop)]
-pub mod scheduler;
-#[cfg(desktop)]
-pub mod server;
-#[cfg(desktop)]
-pub(crate) mod uploader;
+pub use metocast_server::{connectors, runtime};
 
 use std::sync::Arc;
 use tauri::Manager;
@@ -296,7 +277,7 @@ pub fn run() {
                 let handle = app.handle().clone();
                 let runtime_clone = Arc::clone(&runtime);
                 tauri::async_runtime::spawn(async move {
-                    if let Err(e) = runtime::start_from_app_runtime(&runtime_clone, handle).await {
+                    if let Err(e) = host::start_from_app_runtime(&runtime_clone, handle).await {
                         tracing::error!("Backend startup failed: {e}");
                     }
                 });

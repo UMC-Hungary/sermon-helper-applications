@@ -28,10 +28,10 @@ pub fn open_application_log(app: tauri::AppHandle) -> Result<(), String> {
                 return Ok(());
             }
 
-            if let Some(parent) = path.parent() {
-                if tauri_plugin_opener::open_path(parent, None::<&str>).is_ok() {
-                    return Ok(());
-                }
+            if let Some(parent) = path.parent()
+                && tauri_plugin_opener::open_path(parent, None::<&str>).is_ok()
+            {
+                return Ok(());
             }
 
             Err(format!("Failed to open application log: {open_error}"))

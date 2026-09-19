@@ -17,9 +17,9 @@ mod tls;
 
 use std::sync::{Arc, Mutex};
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-pub use tls::{fingerprint_of, Trust};
+pub use tls::{Trust, fingerprint_of};
 
 const API: &str = "/control/api/v1";
 
@@ -175,10 +175,10 @@ impl Camera {
     /// camera presented, so the operator has something to accept.
     fn transport_error(&self, e: reqwest::Error) -> Error {
         let chain = format!("{e:?}");
-        if chain.contains("fingerprint mismatch") || chain.contains("certificate") {
-            if let Some(fp) = self.presented_fingerprint() {
-                return Error::CertUntrusted(fp);
-            }
+        if (chain.contains("fingerprint mismatch") || chain.contains("certificate"))
+            && let Some(fp) = self.presented_fingerprint()
+        {
+            return Error::CertUntrusted(fp);
         }
         Error::Unreachable(e.to_string())
     }
@@ -617,9 +617,11 @@ mod tests {
             "/livestreams/0/stop",
             r#"{"error":"stream owned by Blackmagic Cloud"}"#,
         );
-        assert!(with_body
-            .to_string()
-            .contains("stream owned by Blackmagic Cloud"));
+        assert!(
+            with_body
+                .to_string()
+                .contains("stream owned by Blackmagic Cloud")
+        );
 
         // A blank or whitespace-only body falls back to the path alone.
         let no_body = Error::from_status(403, "/livestreams/0/stop", "   ");

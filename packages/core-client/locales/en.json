@@ -909,13 +909,12 @@
       },
       "atem": {
         "title": "Blackmagic ATEM",
-        "subtitle": "ATEM switcher support coming soon",
+        "subtitle": "Control program, preview, recording, and streaming",
         "host": "Host / IP",
         "port": "Port",
         "enabled": "Enable ATEM connector",
         "save": "Save",
-        "saving": "Saving…",
-        "comingSoon": "ATEM integration is not yet implemented. Configuration is saved for future use."
+        "saving": "Saving…"
       },
       "broadlink": {
         "title": "Broadlink RF/IR",

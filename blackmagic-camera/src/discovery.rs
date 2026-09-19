@@ -114,12 +114,11 @@ pub async fn browse(service: &str, timeout: Duration) -> Result<Vec<Discovered>,
     let deadline = tokio::time::Instant::now() + timeout;
 
     while let Ok(Ok(event)) = tokio::time::timeout_at(deadline, receiver.recv_async()).await {
-        if let ServiceEvent::ServiceResolved(info) = event {
-            if let Some(camera) = identify(&info) {
-                if !found.contains(&camera) {
-                    found.push(camera);
-                }
-            }
+        if let ServiceEvent::ServiceResolved(info) = event
+            && let Some(camera) = identify(&info)
+            && !found.contains(&camera)
+        {
+            found.push(camera);
         }
     }
 

@@ -1,7 +1,8 @@
 [package]
 name = "tauri-plugin-native-nav"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
 description = "Native liquid-glass navigation for Metocast on Apple platforms"
 links = "tauri-plugin-native-nav"
 

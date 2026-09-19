@@ -909,13 +909,12 @@
       },
       "atem": {
         "title": "Blackmagic ATEM",
-        "subtitle": "ATEM váltó támogatás hamarosan",
+        "subtitle": "Program, előnézet, felvétel és közvetítés vezérlése",
         "host": "Gazdagép / IP",
         "port": "Port",
         "enabled": "ATEM csatlakozó engedélyezése",
         "save": "Mentés",
-        "saving": "Mentés…",
-        "comingSoon": "Az ATEM integráció még nem elérhető. A konfiguráció mentésre kerül a jövőbeli használathoz."
+        "saving": "Mentés…"
       },
       "broadlink": {
         "title": "Broadlink RF/IR",

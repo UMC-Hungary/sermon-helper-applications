@@ -39,10 +39,10 @@ const PRO_II_SOURCES: [Option<&str>; 21] = [
 
 #[must_use]
 pub fn source_label(shape: Shape, source: usize) -> String {
-    if shape == PRO_II {
-        if let Some(Some(label)) = PRO_II_SOURCES.get(source) {
-            return (*label).to_string();
-        }
+    if shape == PRO_II
+        && let Some(Some(label)) = PRO_II_SOURCES.get(source)
+    {
+        return (*label).to_string();
     }
     format!("source {source}")
 }

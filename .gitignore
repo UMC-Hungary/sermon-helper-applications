@@ -30,8 +30,12 @@ dist-ssr
 !.env.test
 
 # Tauri
-/src-tauri/target
+/target
 /src-tauri/gen/schemas
+
+# Generated Apple package artifacts
+/apple/MetocastFFI.xcframework
+/apple/Sources/Metocast/Metocast.swift
 
 # IDE
 .vscode/

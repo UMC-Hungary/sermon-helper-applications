@@ -95,6 +95,29 @@ describe.skipIf(!isLive)('Connectors REST API', () => {
     const res = await apiClient.get<ConnectorState>('/api/connectors/state');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('obs');
+    expect(res.body).toHaveProperty('atem');
+  });
+
+  it('ATEM discovery returns only shaped switchers', async () => {
+    const res = await apiClient.post<{
+      devices: { name: string; host: string; port: number; usb: boolean }[];
+    }>('/api/connectors/atem/discover');
+    expect(res.status).toBe(200);
+    for (const device of res.body.devices) {
+      expect(device).toEqual({
+        name: expect.any(String),
+        host: expect.any(String),
+        port: expect.any(Number),
+        usb: expect.any(Boolean),
+      });
+    }
+  });
+
+  it('POST /api/connectors/atem/stream/youtube with no switcher → 409', async () => {
+    const status = await apiClient.get<ConnectorStatuses>('/api/connectors/status');
+    if (status.body.atem.type === 'connected') return;
+    const res = await apiClient.post('/api/connectors/atem/stream/youtube');
+    expect(res.status).toBe(409);
   });
 
   it('GET /api/connectors/{name}/config → defaults when unset', async () => {

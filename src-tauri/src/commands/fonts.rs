@@ -46,13 +46,13 @@ fn prepare_font_book(resource_dir: &Path, font_dir: &Path) -> Result<Vec<PathBuf
     }
     for legacy_name in LEGACY_PRESENTATION_FONTS {
         let legacy = font_dir.join(legacy_name);
-        if let Err(error) = std::fs::remove_file(&legacy) {
-            if error.kind() != std::io::ErrorKind::NotFound {
-                return Err(format!(
-                    "Cannot remove the old font {}: {error}",
-                    legacy.display()
-                ));
-            }
+        if let Err(error) = std::fs::remove_file(&legacy)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            return Err(format!(
+                "Cannot remove the old font {}: {error}",
+                legacy.display()
+            ));
         }
     }
     Ok(sources)
@@ -122,9 +122,11 @@ mod tests {
 
         assert_eq!(sources.len(), PRESENTATION_FONTS.len());
         assert!(sources.iter().all(|source| source.is_file()));
-        assert!(LEGACY_PRESENTATION_FONTS
-            .iter()
-            .all(|legacy| !fonts.join(legacy).exists()));
+        assert!(
+            LEGACY_PRESENTATION_FONTS
+                .iter()
+                .all(|legacy| !fonts.join(legacy).exists())
+        );
         std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -4,6 +4,8 @@ import { RecordingSchema, RecordingWithEventSchema } from './recording.js';
 import { UntrackedRecordingSchema } from './untracked-recording.js';
 import { QueueSummarySchema } from './queue.js';
 import {
+  AtemStateSchema,
+  AtemStreamTargetSchema,
   CameraStreamTargetSchema,
   ConnectorStatusPayloadSchema,
   DiscoveredCameraSchema,
@@ -232,26 +234,32 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     ]),
     status: ConnectorStatusPayloadSchema,
   }),
-  z.object({
-    type: z.literal('connector.state'),
-    connector: z.enum([
-      'obs',
-      'vmix',
-      'atem',
-      'broadlink',
-      'youtube',
-      'facebook',
-      'discord',
-      'blackmagic-camera',
-      'middlecontrol',
-    ]),
-    isStreaming: z.boolean().optional(),
-    /** The camera's own livestream word, so a client can tell `Connecting` from `Idle`.
-     *  Absent for every connector but the Blackmagic camera. */
-    streamStatus: z.string().optional(),
-    isRecording: z.boolean().optional(),
-    state: MiddlecontrolStateSchema.optional(),
-  }),
+  z.discriminatedUnion('connector', [
+    z.object({
+      type: z.literal('connector.state'),
+      connector: z.literal('atem'),
+      state: AtemStateSchema,
+    }),
+    z.object({
+      type: z.literal('connector.state'),
+      connector: z.enum([
+        'obs',
+        'vmix',
+        'broadlink',
+        'youtube',
+        'facebook',
+        'discord',
+        'blackmagic-camera',
+        'middlecontrol',
+      ]),
+      isStreaming: z.boolean().optional(),
+      /** The camera's own livestream word, so a client can tell `Connecting` from `Idle`.
+       *  Absent for every connector but the Blackmagic camera. */
+      streamStatus: z.string().optional(),
+      isRecording: z.boolean().optional(),
+      state: MiddlecontrolStateSchema.optional(),
+    }),
+  ]),
   z.object({
     type: z.literal('cron.youtube_pull'),
     hasLive: z.boolean(),
@@ -382,6 +390,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
     'blackmagic-camera': ConnectorStatusPayloadSchema,
     middlecontrol: ConnectorStatusPayloadSchema,
     rodecaster: ConnectorStatusPayloadSchema,
+    atem: ConnectorStatusPayloadSchema,
   }),
   z.object({
     type: z.literal('connectors.state'),
@@ -394,6 +403,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
       })
       .nullable(),
     middlecontrol: MiddlecontrolStateSchema.nullable(),
+    atem: AtemStateSchema.nullable(),
   }),
   z.object({ type: z.literal('connectors.youtube.stream_key'), rtmpUrl: z.string() }),
   z.object({ type: z.literal('connectors.facebook.stream_key'), rtmpUrl: z.string() }),
@@ -453,6 +463,7 @@ export const WsMessageSchema = z.discriminatedUnion('type', [
   CameraStreamTargetSchema.extend({
     type: z.literal('blackmagic-camera.stream.platform'),
   }),
+  AtemStreamTargetSchema.extend({ type: z.literal('atem.stream.destination') }),
   // ── RØDECaster ──────────────────────────────────────────────────────────────
   z.object({ type: z.literal('rodecaster.profile'), profile: RodecasterProfileSchema }),
   RodecasterMuteEventSchema.extend({ type: z.literal('rodecaster.mute') }),

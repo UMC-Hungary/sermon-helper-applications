@@ -28,6 +28,7 @@ describe.skipIf(!isLive)('Connectors WebSocket Commands', () => {
     expect(msg).toHaveProperty('facebook');
     expect(msg).toHaveProperty('rodecaster');
     expect(msg).toHaveProperty('middlecontrol');
+    expect(msg).toHaveProperty('atem');
   });
 
   it('connectors.state → connectors.state response', async () => {
@@ -35,6 +36,7 @@ describe.skipIf(!isLive)('Connectors WebSocket Commands', () => {
     expect(msg['type']).toBe('connectors.state');
     expect(msg).toHaveProperty('obs');
     expect(msg).toHaveProperty('middlecontrol');
+    expect(msg).toHaveProperty('atem');
   });
 
   it('broadcasts the initial middlecontrol connector status', async () => {
@@ -62,6 +64,21 @@ describe.skipIf(!isLive)('Connectors WebSocket Commands', () => {
   ])('$type is refused while Middle Control is not connected', async (command) => {
     const msg = await ws.command(command, 'error');
     expect(msg['message']).toBe('middlecontrol_not_connected');
+  });
+
+  it.each([
+    { type: 'atem.program.set', input: 1 },
+    { type: 'atem.preview.set', input: 2 },
+    { type: 'atem.cut' },
+    { type: 'atem.auto' },
+    { type: 'atem.record.start' },
+    { type: 'atem.record.stop' },
+    { type: 'atem.stream.start' },
+    { type: 'atem.stream.stop' },
+    { type: 'atem.stream.push_youtube' },
+  ])('$type is refused while the ATEM is not connected', async (command) => {
+    const msg = await ws.command(command, 'error');
+    expect(msg['message']).toBe('atem_not_connected');
   });
 
   // No RØDECaster is attached to CI, so these assert the refusal path. Muting a

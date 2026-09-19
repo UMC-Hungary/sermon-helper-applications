@@ -25,6 +25,34 @@ METOCAST_UI=classic,sanctum pnpm build  # both, with a chooser + in-app selector
 Registered UIs live in [`ui/registry.json`](ui/registry.json); [`ui/README.md`](ui/README.md) is
 the contract for writing one and what belongs in the shared package.
 
+## Rust workspace
+
+The backend is a Rust 1.98.1 workspace with one-way dependencies:
+
+```text
+metocast-core          shared wire records and pure rules
+├── metocast-client    typed HTTP/WebSocket client for native apps
+│   └── metocast-apple UniFFI Swift bridge and XCFramework
+└── metocast-server    Axum, PostgreSQL, workers, and connectors
+    └── metocast       thin Tauri host in src-tauri
+```
+
+`metocast-core` is the source of truth for Rust wire types. The server owns persistence and
+concrete integrations; it has no Tauri dependency. Both the desktop host and the headless
+`metocast-server` binary start the same server library. The Apple client links only core/client
+code and never embeds PostgreSQL or hardware connectors.
+
+```bash
+cargo build -p metocast-server --bin metocast-server
+cargo test --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+./scripts/build-apple.sh # creates apple/MetocastFFI.xcframework and runs swift test
+```
+
+When a public HTTP or WebSocket contract changes, update the core Rust record, server handler,
+OpenAPI/Bruno examples, `@metocast/core-client` Zod schema, and affected native bridge record in
+the same change.
+
 ## API access and secrets
 
 The core exposes one HTTP/WebSocket API, used by the desktop app, remote client-mode UIs,
@@ -103,11 +131,25 @@ recording, APC-R presence, and preset-move state arrive in `connector.state` mes
 `POST /api/connectors/middlecontrol/discover` scan checks localhost and the server's local `/24` on
 the known ports, and returns only endpoints that send a valid Middle Control feedback frame.
 
+The Blackmagic ATEM connector speaks the switcher's UDP control protocol (default port `9910`) and
+was verified against an ATEM Mini Pro (protocol 2.31). Enable it under Connectors with the
+switcher's IP address, or find it with the authenticated `POST /api/connectors/atem/discover`,
+which browses mDNS for `_switcher_ctrl._udp` and finds switchers both on the LAN and plugged into
+the server by USB (the switcher's USB-C port brings up a USB Ethernet link that carries the same
+protocol; those results are flagged `usb: true`). Program, preview, input labels, streaming and recording state arrive
+unprompted in `connector.state` messages (`connector: "atem"`, `state: {…}`); models without a
+streaming or recording engine report those as `null`. The shared WebSocket accepts
+`atem.program.set` / `atem.preview.set` (with `input`), `atem.cut`, `atem.auto`,
+`atem.record.start`/`stop`, `atem.stream.start`/`stop`, and `atem.stream.push_youtube`.
+`POST /api/connectors/atem/stream/youtube` writes the channel's ingestion address and stream key into
+the switcher's streaming service without going live.
+
 ## Development
 
 ```bash
 pnpm dev              # Vite dev server only (port 1420)
 pnpm tauri dev        # Full Tauri desktop app in dev mode
 pnpm tauri build      # Production build
+pnpm build:server     # Headless server binary (target/debug/metocast-server)
 pnpm check            # TypeScript + Svelte type checking
 ```

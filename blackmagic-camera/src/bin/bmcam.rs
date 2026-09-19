@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use blackmagic_camera::{discovery, notify, Camera, Trust};
+use blackmagic_camera::{Camera, Trust, discovery, notify};
 
 fn usage() -> ! {
     eprintln!(

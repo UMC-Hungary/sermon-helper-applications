@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
 use tauri::plugin::{Builder, TauriPlugin};
-use tauri::{command, AppHandle, Runtime, WebviewWindow};
+use tauri::{AppHandle, Runtime, WebviewWindow, command};
 
 #[cfg(target_os = "macos")]
 mod macos;

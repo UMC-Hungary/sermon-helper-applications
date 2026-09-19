@@ -18,6 +18,8 @@ const COUNTER_FONT_MIN_SIZE: i32 = 18;
 const COUNTER_FONT_MAX_SIZE: i32 = 54;
 const COUNTER_BOTTOM_RATIO: f64 = 0.92;
 
+type Paragraph<'a> = (&'a str, &'a str, f64);
+
 /// Render slide paragraphs into a pixel buffer sized to the given display dimensions.
 ///
 /// Each entry in `paragraphs` is `(text, align, font_size_pt)` where `align` is one of
@@ -68,7 +70,7 @@ pub fn render_slide(
     // font_size_pt is < 85 % of the max on the slide.  In some PPTXes the
     // counter text box appears first in the XML, in others it is last — so we
     // check both ends.
-    let non_empty: Vec<(&str, &str, f64)> = paragraphs
+    let non_empty: Vec<Paragraph<'_>> = paragraphs
         .iter()
         .copied()
         .filter(|(t, _, _)| !t.is_empty())
@@ -78,10 +80,10 @@ pub fn render_slide(
         .iter()
         .map(|(_, _, pt)| *pt)
         .fold(0.0f64, f64::max);
-    let is_counter = |p: (&str, &str, f64)| -> bool {
+    let is_counter = |p: Paragraph<'_>| -> bool {
         max_pt > 0.0 && p.2 > 0.0 && p.2 < max_pt * 0.85 && p.1 == "center"
     };
-    let (main_paras, counter_para): (Vec<(&str, &str, f64)>, Option<(&str, &str, f64)>) =
+    let (main_paras, counter_para): (Vec<Paragraph<'_>>, Option<Paragraph<'_>>) =
         if non_empty.len() >= 2 {
             let first = *non_empty.first().unwrap();
             let last = *non_empty.last().unwrap();
@@ -281,9 +283,7 @@ fn render_editorial_slide(
             &label.to_uppercase(),
             "monospace",
             (h * 0.018).max(14.0) as i32,
-            w * 0.31,
-            h * 0.27,
-            w * 0.58,
+            (w * 0.31, h * 0.27, w * 0.58),
             Alignment::Left,
             (0.81, 0.67, 0.41),
         );
@@ -296,9 +296,7 @@ fn render_editorial_slide(
             &number,
             "serif",
             (h * 0.18) as i32,
-            w * 0.13,
-            h * 0.36,
-            w * 0.13,
+            (w * 0.13, h * 0.36, w * 0.13),
             Alignment::Right,
             (0.81, 0.67, 0.41),
         );
@@ -310,9 +308,7 @@ fn render_editorial_slide(
             &text,
             "serif",
             size,
-            w * 0.31,
-            h * 0.34,
-            w * 0.56,
+            (w * 0.31, h * 0.34, w * 0.56),
             Alignment::Left,
             (0.957, 0.937, 0.89),
         );
@@ -323,9 +319,7 @@ fn render_editorial_slide(
             "ÉNEK",
             "monospace",
             (h * 0.018).max(14.0) as i32,
-            w * 0.1,
-            h * 0.14,
-            w * 0.8,
+            (w * 0.1, h * 0.14, w * 0.8),
             Alignment::Center,
             (0.81, 0.67, 0.41),
         );
@@ -356,9 +350,7 @@ fn render_editorial_slide(
                 &format!("{current_slide}/{total_slides} DIA"),
                 "monospace",
                 (h * 0.015).max(12.0) as i32,
-                w * 0.1,
-                h * 0.82,
-                w * 0.8,
+                (w * 0.1, h * 0.82, w * 0.8),
                 Alignment::Center,
                 (0.81, 0.67, 0.41),
             );
@@ -370,9 +362,7 @@ fn render_editorial_slide(
         "METOCAST",
         "monospace",
         (h * 0.013).max(11.0) as i32,
-        w * 0.78,
-        h * 0.91,
-        w * 0.17,
+        (w * 0.78, h * 0.91, w * 0.17),
         Alignment::Right,
         (0.42, 0.41, 0.38),
     );
@@ -431,12 +421,11 @@ fn show_text(
     text: &str,
     family: &str,
     size: i32,
-    x: f64,
-    y: f64,
-    width: f64,
+    position: (f64, f64, f64),
     alignment: Alignment,
     color: (f64, f64, f64),
 ) {
+    let (x, y, width) = position;
     let layout = text_layout(ctx, text, family, size, width, alignment, true);
     ctx.set_source_rgb(color.0, color.1, color.2);
     ctx.move_to(x, y);
@@ -528,7 +517,7 @@ pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, 
         .chunks_exact((render_width * 4) as usize)
         .enumerate()
     {
-        for (col, rgba) in chunk.chunks_exact(4).enumerate() {
+        for (col, rgba) in chunk.as_chunks::<4>().0.iter().enumerate() {
             let r = rgba[0] as u32;
             let g = rgba[1] as u32;
             let b = rgba[2] as u32;
@@ -546,7 +535,7 @@ pub fn render_svg_slide(svg: &str, width: u32, height: u32) -> Result<Vec<u32>, 
 /// - Orange = Connecting / Reconnecting
 /// - Red    = Failed (5+ consecutive connection errors)
 pub fn draw_status_overlay(
-    frame: &mut Vec<u32>,
+    frame: &mut [u32],
     width: u32,
     height: u32,
     state: crate::ConnectionState,
@@ -690,7 +679,9 @@ fn parse_alignment(align: &str) -> Alignment {
 
 /// Convert RGB24 bytes → 0x00RRGGBB u32 per pixel (minifb format).
 pub fn rgb_to_u32(rgb: &[u8]) -> Vec<u32> {
-    rgb.chunks_exact(3)
+    rgb.as_chunks::<3>()
+        .0
+        .iter()
         .map(|p| ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32)
         .collect()
 }
@@ -714,7 +705,7 @@ mod tests {
 
         assert_eq!(frame.len(), 640 * 360 * 3);
         assert_eq!(bible_verse_number(paragraphs[1].0).as_deref(), Some("1"));
-        assert!(frame.chunks_exact(3).any(|pixel| pixel[0] > 150));
+        assert!(frame.as_chunks::<3>().0.iter().any(|pixel| pixel[0] > 150));
     }
 
     #[test]

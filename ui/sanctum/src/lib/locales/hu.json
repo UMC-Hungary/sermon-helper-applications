@@ -498,7 +498,7 @@
       "facebook": "Pages API · streamelési cél",
       "broadlink": "Projektor, vászon és AV parancsok",
       "vmix": "Konfiguráció eltárolva későbbi támogatáshoz",
-      "atem": "Switcher támogatás hamarosan",
+      "atem": "UDP protokoll · program, előnézet, felvétel és adás",
       "discord": "Webhook támogatás hamarosan",
       "blackmagic-camera": "REST API · felvétel- és élő adás vezérlés",
       "middlecontrol": "TCP API · kamera-, felvétel- és presetvezérlés",
@@ -601,7 +601,26 @@
     "status": {
       "login_required": "Bejelentkezés szükséges",
       "relogin_required": "Újbóli bejelentkezés szükséges",
-      "credentials_required": "Hiányzó belépési adatok"
+      "credentials_required": "Hiányzó belépési adatok",
+      "atem_no_response": "A képkeverő nem válaszol",
+      "atem_timeout": "A képkeverő nem válaszol tovább",
+      "atem_no_ack": "A képkeverő nem igazolta vissza a parancsot",
+      "atem_not_connected": "A képkeverő nincs csatlakoztatva",
+      "atem_unknown_input": "A képkeverőnek nincs ilyen bemenete",
+      "atem_recording_unsupported": "Ez a képkeverő nem tud felvenni",
+      "atem_streaming_unsupported": "Ez a képkeverő nem tud adást küldeni"
+    },
+    "atem": {
+      "destination": "Adás célja a képkeverőn",
+      "control": "Képkeverő vezérlés",
+      "controlMeta": "Program, előnézet, vágás, felvétel és adás",
+      "discoveryTitle": "Képkeverő keresése",
+      "discoveryDescription": "Megkeresi a Metocast szerverhez USB-n vagy a helyi hálózaton csatlakozó ATEM képkeverőket.",
+      "discoveryReady": "Indíts keresést bekapcsolt, USB-n vagy Etherneten csatlakoztatott képkeverővel.",
+      "discoveryEmpty": "Nem válaszolt képkeverő. Ellenőrizd az USB- vagy hálózati kábelt, majd keress újra. Kézi megadáshoz nézd meg az IP-címét az ATEM Setupban, és írd be fent a Host mezőbe.",
+      "use": "Használat",
+      "usb": "USB",
+      "network": "Hálózat"
     }
   },
   "setup": {
@@ -803,5 +822,29 @@
     "toast": {
       "muteFail": "Nem sikerült a némítás"
     }
+  },
+  "switcher": {
+    "title": "Képkeverő vezérlés",
+    "back": "Összekötők",
+    "connecting": "Kapcsolódás a képkeverőhöz",
+    "unavailable": "A képkeverő nincs csatlakoztatva",
+    "notConnected": "A Blackmagic ATEM összekötő nincs csatlakoztatva. Kapcsold be az Összekötőknél, és add meg a képkeverő IP-címét.",
+    "transport": "Képkeverő vezérlés",
+    "cut": "Vágás",
+    "auto": "Auto",
+    "program": "Program",
+    "preview": "Előnézet",
+    "stream": "Adás",
+    "record": "Felvétel",
+    "destination": "Adás célja",
+    "unsupported": "Ezen a típuson nincs",
+    "state": {
+      "idle": "Tétlen",
+      "connecting": "Kapcsolódás",
+      "streaming": "Élő",
+      "recording": "Felvétel",
+      "stopping": "Leállítás"
+    },
+    "note": "A program és az előnézet követi a képkeverőt, a pultján vagy az ATEM Software Controlban végzett váltásokat is."
   }
 }
